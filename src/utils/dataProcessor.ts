@@ -1,7 +1,8 @@
 import { Lead } from "@/hooks/useGoogleSheetsData";
 
 export interface FilterOptions {
-  dateRange: string;
+  startDate: string;
+  endDate: string;
   canal: string;
   tier: string;
   urgency: string;
@@ -13,6 +14,17 @@ export interface FilterOptions {
 
 export const filterLeads = (leads: Lead[], filters: FilterOptions): Lead[] => {
   return leads.filter((lead) => {
+    // Date range filter
+    if (filters.startDate && filters.endDate) {
+      const leadDate = lead.DATA ? new Date(lead.DATA.split('/').reverse().join('-')) : null;
+      const startDate = new Date(filters.startDate);
+      const endDate = new Date(filters.endDate);
+      
+      if (leadDate && (leadDate < startDate || leadDate > endDate)) {
+        return false;
+      }
+    }
+
     // Canal filter
     if (filters.canal !== "all" && lead.CANAL !== filters.canal) {
       return false;
