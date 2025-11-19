@@ -9,25 +9,25 @@ interface InsightChartProps {
 
 const InsightChart = ({ title, data, dataKey, xAxisKey }: InsightChartProps) => {
   return (
-    <div className="rounded-sm border border-primary/30 bg-card p-6">
-      <h3 className="mb-6 font-heading text-xl text-primary">{title}</h3>
+    <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6 transition-all duration-300 hover:shadow-lg">
+      <h3 className="mb-6 font-body text-lg font-semibold text-foreground">{title}</h3>
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
           <XAxis 
             dataKey={xAxisKey} 
-            stroke="hsl(var(--foreground))" 
+            stroke="hsl(var(--muted-foreground))" 
             style={{ fontSize: "12px", fontFamily: "Montserrat" }}
           />
           <YAxis 
-            stroke="hsl(var(--foreground))"
+            stroke="hsl(var(--muted-foreground))"
             style={{ fontSize: "12px", fontFamily: "Montserrat" }}
           />
           <Tooltip 
             contentStyle={{ 
               backgroundColor: "hsl(var(--card))", 
-              border: "1px solid hsl(var(--primary))",
-              borderRadius: "4px"
+              border: "1px solid hsl(var(--border))",
+              borderRadius: "0.75rem"
             }}
             labelStyle={{ color: "hsl(var(--foreground))" }}
           />

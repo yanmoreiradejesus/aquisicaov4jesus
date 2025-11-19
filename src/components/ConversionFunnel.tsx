@@ -30,7 +30,7 @@ const ConversionFunnel = ({ data }: ConversionFunnelProps) => {
       conversionRate: 100,
       costLabel: "CPL médio",
       costValue: data.cplMedio,
-      barColor: "bg-blue-500",
+      barColor: "bg-[hsl(217,91%,60%)]",
     },
     {
       title: "Contato Realizado (C.R)",
@@ -38,7 +38,7 @@ const ConversionFunnel = ({ data }: ConversionFunnelProps) => {
       conversionRate: data.mql > 0 ? (data.cr / data.mql) * 100 : 0,
       costLabel: "Custo p/ C.R",
       costValue: data.custoCR,
-      barColor: "bg-purple-500",
+      barColor: "bg-[hsl(271,76%,53%)]",
     },
     {
       title: "Reunião Agendada (R.A)",
@@ -46,7 +46,7 @@ const ConversionFunnel = ({ data }: ConversionFunnelProps) => {
       conversionRate: data.cr > 0 ? (data.ra / data.cr) * 100 : 0,
       costLabel: "CPA",
       costValue: data.cpa,
-      barColor: "bg-orange-500",
+      barColor: "bg-[hsl(24,95%,53%)]",
     },
     {
       title: "Reunião Realizada (R.R)",
@@ -54,7 +54,7 @@ const ConversionFunnel = ({ data }: ConversionFunnelProps) => {
       conversionRate: data.ra > 0 ? (data.rr / data.ra) * 100 : 0,
       costLabel: "CPRR",
       costValue: data.cprr,
-      barColor: "bg-yellow-500",
+      barColor: "bg-[hsl(38,92%,50%)]",
     },
     {
       title: "Contrato Assinado (ASS)",
@@ -62,7 +62,7 @@ const ConversionFunnel = ({ data }: ConversionFunnelProps) => {
       conversionRate: data.rr > 0 ? (data.ass / data.rr) * 100 : 0,
       costLabel: "Ticket Médio",
       costValue: data.ticketMedio,
-      barColor: "bg-green-500",
+      barColor: "bg-[hsl(142,76%,36%)]",
     },
   ];
 
@@ -81,7 +81,7 @@ const ConversionFunnel = ({ data }: ConversionFunnelProps) => {
       <div className="flex items-center justify-center">
         <div className="text-center">
           <p className="mb-2 font-body text-xs text-muted-foreground">Taxa MQL → VENDA</p>
-          <p className="font-heading text-5xl text-green-500">{mqlToVenda.toFixed(1)}%</p>
+          <p className="font-heading text-5xl font-bold text-success">{mqlToVenda.toFixed(1)}%</p>
         </div>
       </div>
 
@@ -94,17 +94,17 @@ const ConversionFunnel = ({ data }: ConversionFunnelProps) => {
           return (
             <div
               key={index}
-              className="rounded-lg bg-[#111318] p-5 transition-all hover:bg-[#1a1d24]"
+              className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-5 transition-all duration-300 hover:shadow-lg hover:border-primary/30"
             >
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="font-heading text-lg tracking-wider text-foreground">
+                <h3 className="font-body text-base font-semibold text-foreground">
                   {stage.title}
                 </h3>
-                <span className="font-heading text-3xl text-foreground">{stage.total}</span>
+                <span className="font-heading text-3xl font-bold text-foreground">{stage.total}</span>
               </div>
 
               {/* Progress Bar */}
-              <div className="mb-3 h-3 overflow-hidden rounded-full bg-background">
+              <div className="mb-3 h-2 overflow-hidden rounded-full bg-muted/30">
                 <div
                   className={`h-full transition-all duration-500 ${stage.barColor}`}
                   style={{ width: `${barWidth}%` }}
@@ -113,10 +113,10 @@ const ConversionFunnel = ({ data }: ConversionFunnelProps) => {
 
               {/* Metrics */}
               <div className="flex items-center justify-between">
-                <span className="font-body text-sm text-muted-foreground">
+                <span className="font-body text-xs text-muted-foreground">
                   Conv: <span className="font-semibold text-foreground">{stage.conversionRate.toFixed(1)}%</span>
                 </span>
-                <span className="font-body text-sm text-muted-foreground">
+                <span className="font-body text-xs text-muted-foreground">
                   {stage.costLabel}: <span className="font-semibold text-foreground">R$ {stage.costValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                 </span>
               </div>
@@ -130,7 +130,7 @@ const ConversionFunnel = ({ data }: ConversionFunnelProps) => {
         {intermediateRates.map((rate, index) => (
           <div key={index} className="text-center">
             <p className="mb-1 font-body text-xs text-muted-foreground">{rate.label}</p>
-            <p className="font-heading text-2xl text-foreground">{rate.rate.toFixed(1)}%</p>
+            <p className="font-heading text-2xl font-bold text-foreground">{rate.rate.toFixed(1)}%</p>
           </div>
         ))}
       </div>

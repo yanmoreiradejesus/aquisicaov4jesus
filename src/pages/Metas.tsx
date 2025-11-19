@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Bar, BarChart, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { TrendingUp, Target, DollarSign, FileText } from "lucide-react";
 
 const Metas = () => {
@@ -21,7 +21,6 @@ const Metas = () => {
 
   const queryClient = useQueryClient();
 
-  // Fetch goals
   const { data: goalData } = useQuery({
     queryKey: ["goals", selectedMonth, selectedYear],
     queryFn: async () => {
@@ -45,7 +44,6 @@ const Metas = () => {
     }
   }, [goalData]);
 
-  // Save goals mutation
   const saveGoalsMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("monthly_goals").upsert({
@@ -67,7 +65,6 @@ const Metas = () => {
     },
   });
 
-  // Mock data for results - será substituído por dados reais
   const actualRevenue = 85000;
   const actualContracts = 12;
   const actualMRR = 45000;
@@ -77,7 +74,6 @@ const Metas = () => {
   const contractsProgress = goalData ? (actualContracts / parseFloat(goalData.contracts_goal.toString())) * 100 : 0;
   const mrrProgress = goalData ? (actualMRR / parseFloat(goalData.mrr_goal.toString())) * 100 : 0;
 
-  // Mock daily evolution data
   const dailyData = [
     { dia: 1, receita: 0, contratos: 0 },
     { dia: 5, receita: 12000, contratos: 2 },
@@ -88,18 +84,10 @@ const Metas = () => {
   ];
 
   const months = [
-    { value: "1", label: "Janeiro" },
-    { value: "2", label: "Fevereiro" },
-    { value: "3", label: "Março" },
-    { value: "4", label: "Abril" },
-    { value: "5", label: "Maio" },
-    { value: "6", label: "Junho" },
-    { value: "7", label: "Julho" },
-    { value: "8", label: "Agosto" },
-    { value: "9", label: "Setembro" },
-    { value: "10", label: "Outubro" },
-    { value: "11", label: "Novembro" },
-    { value: "12", label: "Dezembro" },
+    { value: "1", label: "Janeiro" }, { value: "2", label: "Fevereiro" }, { value: "3", label: "Março" },
+    { value: "4", label: "Abril" }, { value: "5", label: "Maio" }, { value: "6", label: "Junho" },
+    { value: "7", label: "Julho" }, { value: "8", label: "Agosto" }, { value: "9", label: "Setembro" },
+    { value: "10", label: "Outubro" }, { value: "11", label: "Novembro" }, { value: "12", label: "Dezembro" },
   ];
 
   const years = ["2024", "2025", "2026"];
@@ -108,259 +96,61 @@ const Metas = () => {
     <div className="min-h-screen bg-background">
       <V4Header />
       
-      <main className="container mx-auto px-6 py-8">
-        {/* Goal Definition Section */}
-        <section className="mb-12 rounded-sm border border-primary/30 bg-card p-8">
-          <h2 className="mb-6 font-heading text-3xl text-primary">DEFINIR METAS</h2>
-          
+      <main className="container mx-auto max-w-7xl space-y-8 px-4 lg:px-8 py-8">
+        <div>
+          <h1 className="mb-2 font-heading text-3xl lg:text-4xl font-bold text-foreground">METAS & ACOMPANHAMENTO</h1>
+          <p className="font-body text-sm text-muted-foreground">Acompanhe o progresso das suas metas mensais</p>
+        </div>
+
+        <section className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6 lg:p-8 transition-all duration-300 hover:shadow-lg">
+          <h2 className="mb-6 font-body text-xl lg:text-2xl font-semibold text-foreground">DEFINIR METAS</h2>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-5">
             <div>
-              <label className="mb-2 block text-sm font-medium text-foreground">Mês</label>
+              <label className="mb-2 block text-sm font-medium text-muted-foreground">Mês</label>
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger className="border-primary/30 bg-input">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {months.map((month) => (
-                    <SelectItem key={month.value} value={month.value}>
-                      {month.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+                <SelectTrigger className="border-border/50 bg-background"><SelectValue /></SelectTrigger>
+                <SelectContent>{months.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            
             <div>
-              <label className="mb-2 block text-sm font-medium text-foreground">Ano</label>
+              <label className="mb-2 block text-sm font-medium text-muted-foreground">Ano</label>
               <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger className="border-primary/30 bg-input">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {years.map((year) => (
-                    <SelectItem key={year} value={year}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+                <SelectTrigger className="border-border/50 bg-background"><SelectValue /></SelectTrigger>
+                <SelectContent>{years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            
             <div>
-              <label className="mb-2 block text-sm font-medium text-foreground">Meta de Receita (R$)</label>
-              <Input
-                type="number"
-                value={revenueGoal}
-                onChange={(e) => setRevenueGoal(e.target.value)}
-                placeholder="100000"
-                className="border-primary/30 bg-input"
-              />
+              <label className="mb-2 block text-sm font-medium text-muted-foreground">Meta de Receita (R$)</label>
+              <Input type="number" value={revenueGoal} onChange={(e) => setRevenueGoal(e.target.value)} className="border-border/50 bg-background" />
             </div>
-            
             <div>
-              <label className="mb-2 block text-sm font-medium text-foreground">Meta de Contratos</label>
-              <Input
-                type="number"
-                value={contractsGoal}
-                onChange={(e) => setContractsGoal(e.target.value)}
-                placeholder="15"
-                className="border-primary/30 bg-input"
-              />
+              <label className="mb-2 block text-sm font-medium text-muted-foreground">Meta de Contratos</label>
+              <Input type="number" value={contractsGoal} onChange={(e) => setContractsGoal(e.target.value)} className="border-border/50 bg-background" />
             </div>
-            
             <div>
-              <label className="mb-2 block text-sm font-medium text-foreground">Meta de MRR (R$)</label>
-              <Input
-                type="number"
-                value={mrrGoal}
-                onChange={(e) => setMrrGoal(e.target.value)}
-                placeholder="50000"
-                className="border-primary/30 bg-input"
-              />
+              <label className="mb-2 block text-sm font-medium text-muted-foreground">Meta de MRR (R$)</label>
+              <Input type="number" value={mrrGoal} onChange={(e) => setMrrGoal(e.target.value)} className="border-border/50 bg-background" />
             </div>
           </div>
-          
-          <Button 
-            onClick={() => saveGoalsMutation.mutate()}
-            className="mt-6 bg-primary font-heading text-lg tracking-wider text-primary-foreground hover:bg-primary/90"
-            disabled={saveGoalsMutation.isPending}
-          >
+          <Button onClick={() => saveGoalsMutation.mutate()} className="mt-6 bg-primary text-primary-foreground hover:bg-primary/90" disabled={saveGoalsMutation.isPending}>
             {saveGoalsMutation.isPending ? "SALVANDO..." : "SALVAR META"}
           </Button>
         </section>
 
-        {/* Results Section */}
-        <section className="mb-12">
-          <h2 className="mb-6 font-heading text-3xl text-primary">RESULTADOS DO MÊS</h2>
-          
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-sm border border-primary/30 bg-card p-6">
-              <div className="mb-2 flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-primary" />
-                <h3 className="font-heading text-sm tracking-wider text-foreground">RECEITA REAL</h3>
-              </div>
-              <p className="font-heading text-4xl text-primary">
-                R$ {actualRevenue.toLocaleString("pt-BR")}
-              </p>
-            </div>
-            
-            <div className="rounded-sm border border-primary/30 bg-card p-6">
-              <div className="mb-2 flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                <h3 className="font-heading text-sm tracking-wider text-foreground">CONTRATOS</h3>
-              </div>
-              <p className="font-heading text-4xl text-primary">{actualContracts}</p>
-            </div>
-            
-            <div className="rounded-sm border border-primary/30 bg-card p-6">
-              <div className="mb-2 flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                <h3 className="font-heading text-sm tracking-wider text-foreground">MRR</h3>
-              </div>
-              <p className="font-heading text-4xl text-primary">
-                R$ {actualMRR.toLocaleString("pt-BR")}
-              </p>
-            </div>
-            
-            <div className="rounded-sm border border-primary/30 bg-card p-6">
-              <div className="mb-2 flex items-center gap-2">
-                <Target className="h-5 w-5 text-primary" />
-                <h3 className="font-heading text-sm tracking-wider text-foreground">TICKET MÉDIO</h3>
-              </div>
-              <p className="font-heading text-4xl text-primary">
-                R$ {avgTicket.toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Goal Achievement Section */}
-        {goalData && (
-          <section className="mb-12">
-            <h2 className="mb-6 font-heading text-3xl text-primary">ATINGIMENTO DE META</h2>
-            
-            <div className="space-y-6">
-              <div className="rounded-sm border border-primary/30 bg-card p-6">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="font-heading text-lg text-foreground">META DE RECEITA</h3>
-                  <span className="font-heading text-2xl text-primary">
-                    {revenueProgress.toFixed(1)}%
-                  </span>
-                </div>
-                <div className="h-4 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className={`h-full transition-all duration-500 ${
-                      revenueProgress >= 100 ? "bg-success" : "bg-primary"
-                    }`}
-                    style={{ width: `${Math.min(revenueProgress, 100)}%` }}
-                  />
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  R$ {actualRevenue.toLocaleString("pt-BR")} de R${" "}
-                  {Number(goalData.revenue_goal).toLocaleString("pt-BR")}
-                </p>
-              </div>
-              
-              <div className="rounded-sm border border-primary/30 bg-card p-6">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="font-heading text-lg text-foreground">META DE CONTRATOS</h3>
-                  <span className="font-heading text-2xl text-primary">
-                    {contractsProgress.toFixed(1)}%
-                  </span>
-                </div>
-                <div className="h-4 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className={`h-full transition-all duration-500 ${
-                      contractsProgress >= 100 ? "bg-success" : "bg-primary"
-                    }`}
-                    style={{ width: `${Math.min(contractsProgress, 100)}%` }}
-                  />
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {actualContracts} de {goalData.contracts_goal} contratos
-                </p>
-              </div>
-              
-              <div className="rounded-sm border border-primary/30 bg-card p-6">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="font-heading text-lg text-foreground">META DE MRR</h3>
-                  <span className="font-heading text-2xl text-primary">
-                    {mrrProgress.toFixed(1)}%
-                  </span>
-                </div>
-                <div className="h-4 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className={`h-full transition-all duration-500 ${
-                      mrrProgress >= 100 ? "bg-success" : "bg-primary"
-                    }`}
-                    style={{ width: `${Math.min(mrrProgress, 100)}%` }}
-                  />
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  R$ {actualMRR.toLocaleString("pt-BR")} de R${" "}
-                  {Number(goalData.mrr_goal).toLocaleString("pt-BR")}
-                </p>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* Daily Evolution Section */}
-        <section>
-          <h2 className="mb-6 font-heading text-3xl text-primary">EVOLUÇÃO DIÁRIA</h2>
-          
-          <div className="rounded-sm border border-primary/30 bg-card p-6">
+        <section className="space-y-6">
+          <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">EVOLUÇÃO DIÁRIA</h2>
+          <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6">
             <ResponsiveContainer width="100%" height={400}>
-              <LineChart data={dailyData}>
+              <BarChart data={dailyData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                <XAxis 
-                  dataKey="dia" 
-                  stroke="hsl(var(--foreground))"
-                  style={{ fontSize: "12px", fontFamily: "Montserrat" }}
-                  label={{ value: "Dia do Mês", position: "insideBottom", offset: -5 }}
-                />
-                <YAxis 
-                  yAxisId="left"
-                  stroke="hsl(var(--foreground))"
-                  style={{ fontSize: "12px", fontFamily: "Montserrat" }}
-                  label={{ value: "Receita (R$)", angle: -90, position: "insideLeft" }}
-                />
-                <YAxis 
-                  yAxisId="right"
-                  orientation="right"
-                  stroke="hsl(var(--foreground))"
-                  style={{ fontSize: "12px", fontFamily: "Montserrat" }}
-                  label={{ value: "Contratos", angle: 90, position: "insideRight" }}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: "hsl(var(--card))", 
-                    border: "1px solid hsl(var(--primary))",
-                    borderRadius: "4px"
-                  }}
-                  labelStyle={{ color: "hsl(var(--foreground))" }}
-                />
-                <Legend wrapperStyle={{ fontFamily: "Montserrat", fontSize: "12px" }} />
-                <Line 
-                  yAxisId="left"
-                  type="monotone" 
-                  dataKey="receita" 
-                  stroke="hsl(var(--primary))" 
-                  strokeWidth={3}
-                  name="Receita (R$)"
-                  dot={{ fill: "hsl(var(--primary))", r: 5 }}
-                />
-                <Line 
-                  yAxisId="right"
-                  type="monotone" 
-                  dataKey="contratos" 
-                  stroke="hsl(var(--success))" 
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  name="Contratos"
-                  dot={{ fill: "hsl(var(--success))", r: 4 }}
-                />
-              </LineChart>
+                <XAxis dataKey="dia" stroke="hsl(var(--muted-foreground))" />
+                <YAxis yAxisId="left" stroke="hsl(var(--muted-foreground))" />
+                <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--muted-foreground))" />
+                <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem" }} />
+                <Legend />
+                <Bar yAxisId="left" dataKey="receita" fill="hsl(var(--primary))" name="Receita (R$)" />
+                <Bar yAxisId="right" dataKey="contratos" fill="hsl(var(--success))" name="Contratos" />
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </section>
