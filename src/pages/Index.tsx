@@ -166,21 +166,25 @@ const Index = () => {
             {/* CAC */}
             <div className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-6 transition-all duration-300 hover:shadow-lg">
               <p className="mb-2 font-body text-sm text-muted-foreground">CAC</p>
-              <p className="font-heading text-3xl font-bold text-foreground">R$ {conversionFunnelData.cpa.toFixed(2)}</p>
-              {previousPeriodData.cpa > 0 && (
+              <p className="font-heading text-3xl font-bold text-foreground">
+                R$ {conversionFunnelData.ass > 0 
+                  ? (conversionFunnelData.investimentoTotal / conversionFunnelData.ass).toFixed(2)
+                  : "0.00"}
+              </p>
+              {previousPeriodData.ass > 0 && conversionFunnelData.ass > 0 && (
                 <div className="mt-2 flex items-center gap-1 text-xs">
-                  {conversionFunnelData.cpa < previousPeriodData.cpa ? (
+                  {((conversionFunnelData.investimentoTotal / conversionFunnelData.ass) < (previousPeriodData.investimentoTotal / previousPeriodData.ass)) ? (
                     <>
                       <TrendingDown className="h-3 w-3 text-success" />
                       <span className="text-success">
-                        {((1 - conversionFunnelData.cpa / previousPeriodData.cpa) * 100).toFixed(1)}% vs período anterior
+                        {((1 - (conversionFunnelData.investimentoTotal / conversionFunnelData.ass) / (previousPeriodData.investimentoTotal / previousPeriodData.ass)) * 100).toFixed(1)}% vs período anterior
                       </span>
                     </>
                   ) : (
                     <>
                       <TrendingUp className="h-3 w-3 text-destructive" />
                       <span className="text-destructive">
-                        {((conversionFunnelData.cpa / previousPeriodData.cpa - 1) * 100).toFixed(1)}% vs período anterior
+                        {(((conversionFunnelData.investimentoTotal / conversionFunnelData.ass) / (previousPeriodData.investimentoTotal / previousPeriodData.ass) - 1) * 100).toFixed(1)}% vs período anterior
                       </span>
                     </>
                   )}
@@ -192,22 +196,22 @@ const Index = () => {
             <div className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-6 transition-all duration-300 hover:shadow-lg">
               <p className="mb-2 font-body text-sm text-muted-foreground">Investimento Total</p>
               <p className="font-heading text-3xl font-bold text-foreground">
-                R$ {(conversionFunnelData.mql * conversionFunnelData.cplMedio).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {conversionFunnelData.investimentoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              {previousPeriodData.mql > 0 && (
+              {previousPeriodData.investimentoTotal > 0 && (
                 <div className="mt-2 flex items-center gap-1 text-xs">
-                  {((conversionFunnelData.cplMedio * conversionFunnelData.mql) < (previousPeriodData.cplMedio * previousPeriodData.mql)) ? (
+                  {conversionFunnelData.investimentoTotal < previousPeriodData.investimentoTotal ? (
                     <>
                       <TrendingDown className="h-3 w-3 text-success" />
                       <span className="text-success">
-                        {((1 - (conversionFunnelData.cplMedio * conversionFunnelData.mql) / (previousPeriodData.cplMedio * previousPeriodData.mql)) * 100).toFixed(1)}% vs período anterior
+                        {((1 - conversionFunnelData.investimentoTotal / previousPeriodData.investimentoTotal) * 100).toFixed(1)}% vs período anterior
                       </span>
                     </>
                   ) : (
                     <>
                       <TrendingUp className="h-3 w-3 text-success" />
                       <span className="text-success">
-                        {(((conversionFunnelData.cplMedio * conversionFunnelData.mql) / (previousPeriodData.cplMedio * previousPeriodData.mql) - 1) * 100).toFixed(1)}% vs período anterior
+                        {((conversionFunnelData.investimentoTotal / previousPeriodData.investimentoTotal - 1) * 100).toFixed(1)}% vs período anterior
                       </span>
                     </>
                   )}
@@ -219,22 +223,22 @@ const Index = () => {
             <div className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-6 transition-all duration-300 hover:shadow-lg">
               <p className="mb-2 font-body text-sm text-muted-foreground">Faturamento Total</p>
               <p className="font-heading text-3xl font-bold text-success">
-                R$ {(conversionFunnelData.ass * conversionFunnelData.ticketMedio).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {conversionFunnelData.faturamentoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
               </p>
-              {previousPeriodData.ass > 0 && (
+              {previousPeriodData.faturamentoTotal > 0 && (
                 <div className="mt-2 flex items-center gap-1 text-xs">
-                  {((conversionFunnelData.ticketMedio * conversionFunnelData.ass) > (previousPeriodData.ticketMedio * previousPeriodData.ass)) ? (
+                  {conversionFunnelData.faturamentoTotal > previousPeriodData.faturamentoTotal ? (
                     <>
                       <TrendingUp className="h-3 w-3 text-success" />
                       <span className="text-success">
-                        {(((conversionFunnelData.ticketMedio * conversionFunnelData.ass) / (previousPeriodData.ticketMedio * previousPeriodData.ass) - 1) * 100).toFixed(1)}% vs período anterior
+                        {((conversionFunnelData.faturamentoTotal / previousPeriodData.faturamentoTotal - 1) * 100).toFixed(1)}% vs período anterior
                       </span>
                     </>
                   ) : (
                     <>
                       <TrendingDown className="h-3 w-3 text-destructive" />
                       <span className="text-destructive">
-                        {((1 - (conversionFunnelData.ticketMedio * conversionFunnelData.ass) / (previousPeriodData.ticketMedio * previousPeriodData.ass)) * 100).toFixed(1)}% vs período anterior
+                        {((1 - conversionFunnelData.faturamentoTotal / previousPeriodData.faturamentoTotal) * 100).toFixed(1)}% vs período anterior
                       </span>
                     </>
                   )}
