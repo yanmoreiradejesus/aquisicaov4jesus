@@ -77,16 +77,16 @@ const Index = () => {
   }, [sheetsData, filters]);
 
   const conversionFunnelData = useMemo(() => {
-    return calculateFunnelData(filteredLeads, filters);
-  }, [filteredLeads, filters]);
+    return calculateFunnelData(filteredLeads, filters, sheetsData?.leads || []);
+  }, [filteredLeads, filters, sheetsData]);
 
   const previousPeriodData = useMemo(() => {
     return calculateFunnelData(previousPeriodLeads, {
       ...filters,
       startDate: previousStartDate,
       endDate: previousEndDate
-    });
-  }, [previousPeriodLeads, previousStartDate, previousEndDate, filters]);
+    }, sheetsData?.leads || []);
+  }, [previousPeriodLeads, previousStartDate, previousEndDate, filters, sheetsData]);
 
   const uniqueValues = useMemo(() => {
     if (!sheetsData?.leads) return {
