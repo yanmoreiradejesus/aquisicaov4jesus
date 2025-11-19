@@ -186,6 +186,8 @@ export const calculateFunnelData = (leads: Lead[]) => {
     cpa,
     cprr,
     ticketMedio,
+    investimentoTotal: totalCPL,
+    faturamentoTotal: totalFee,
   };
 };
 
