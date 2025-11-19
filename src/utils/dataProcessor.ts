@@ -97,6 +97,7 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions) => {
     console.log("First lead data:", leads[0]);
     console.log("CPL value:", leads[0].CPL, "Type:", typeof leads[0].CPL);
     console.log("FEE value:", leads[0].FEE, "Type:", typeof leads[0].FEE);
+    console.log("E.F value:", leads[0]["E.F"], "Type:", typeof leads[0]["E.F"]);
     console.log("DATA DA ASSINATURA:", leads[0]["DATA DA ASSINATURA"]);
   }
   
@@ -108,6 +109,10 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions) => {
   // Count ASS based on "DATA DA ASSINATURA" being within the filtered period
   console.log("Filter dates:", filters.startDate, "to", filters.endDate);
   
+  // Parse filter dates to get month and year
+  const startDate = new Date(filters.startDate);
+  const endDate = new Date(filters.endDate);
+  
   // First, let's see all leads with DATA DA ASSINATURA filled
   const leadsWithSignature = leads.filter((l) => {
     const dataAssinatura = l["DATA DA ASSINATURA"];
@@ -118,7 +123,8 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions) => {
   if (leadsWithSignature.length > 0) {
     console.log("First 5 leads with signature dates:", leadsWithSignature.slice(0, 5).map(l => ({
       lead: l.LEAD,
-      data: l["DATA DA ASSINATURA"]
+      data: l["DATA DA ASSINATURA"],
+      ef: l["E.F"]
     })));
   }
   
@@ -127,14 +133,15 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions) => {
     if (!dataAssinatura || dataAssinatura.trim() === "") return false;
     
     // Parse date in DD/MM/YYYY format
-    const assinaturaDate = new Date(dataAssinatura.split('/').reverse().join('-'));
-    const startDate = new Date(filters.startDate);
-    const endDate = new Date(filters.endDate);
+    const dateParts = dataAssinatura.split('/');
+    if (dateParts.length !== 3) return false;
+    
+    const assinaturaDate = new Date(dateParts[2] + '-' + dateParts[1] + '-' + dateParts[0]);
     
     const isInPeriod = assinaturaDate >= startDate && assinaturaDate <= endDate;
     
     if (isInPeriod) {
-      console.log("Lead signed in period:", l.LEAD, "Date:", dataAssinatura, "Parsed:", assinaturaDate);
+      console.log("Lead signed in period:", l.LEAD, "Date:", dataAssinatura, "Parsed:", assinaturaDate, "E.F:", l["E.F"]);
     }
     
     return isInPeriod;
@@ -172,40 +179,44 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions) => {
   const cprr = rr > 0 ? totalCPL / rr : 0;
 
   // Calculate ticket médio - only for leads with "DATA DA ASSINATURA" within the filtered period
+  // Use E.F (MRR) column instead of FEE
   const totalFee = leads
     .filter((l) => {
       const dataAssinatura = l["DATA DA ASSINATURA"];
       if (!dataAssinatura || dataAssinatura.trim() === "") return false;
       
       // Parse date in DD/MM/YYYY format
-      const assinaturaDate = new Date(dataAssinatura.split('/').reverse().join('-'));
+      const dateParts = dataAssinatura.split('/');
+      if (dateParts.length !== 3) return false;
+      
+      const assinaturaDate = new Date(dateParts[2] + '-' + dateParts[1] + '-' + dateParts[0]);
       const startDate = new Date(filters.startDate);
       const endDate = new Date(filters.endDate);
       
       return assinaturaDate >= startDate && assinaturaDate <= endDate;
     })
     .reduce((sum, lead, index) => {
-      const feeValue = lead.FEE;
+      // Try E.F first, fallback to FEE if E.F is not available
+      const efValue = lead["E.F"] || lead.FEE;
       
-      if (!feeValue || feeValue === "" || feeValue === "-") return sum;
+      if (!efValue || efValue === "" || efValue === "-") return sum;
       
       // Remove currency symbols, spaces, and handle Brazilian format
-      // Brazilian format: R$ 1.332,00 (dot for thousands, comma for decimal)
-      const feeStr = feeValue.toString()
+      const efStr = efValue.toString()
         .replace(/[R$\s]/g, "") // Remove R, $, spaces
         .replace(/\./g, "") // Remove thousand separators (dots)
         .replace(",", "."); // Replace decimal comma with dot
       
-      const fee = parseFloat(feeStr);
+      const ef = parseFloat(efStr);
       
       if (index < 3) {
-        console.log(`Lead ${index}: Original FEE="${feeValue}" -> Cleaned="${feeStr}" -> Parsed=${fee}`);
+        console.log(`Lead ${index}: Original E.F="${efValue}" -> Cleaned="${efStr}" -> Parsed=${ef}`);
       }
       
-      return sum + (isNaN(fee) ? 0 : fee);
+      return sum + (isNaN(ef) ? 0 : ef);
     }, 0);
   
-  console.log("Total FEE sum:", totalFee, "for", ass, "signed contracts");
+  console.log("Total E.F (MRR) sum:", totalFee, "for", ass, "signed contracts");
   const ticketMedio = ass > 0 ? totalFee / ass : 0;
 
   console.log("Calculated values:", { 
