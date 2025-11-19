@@ -92,6 +92,13 @@ const isPositive = (value: string | undefined): boolean => {
 export const calculateFunnelData = (leads: Lead[]) => {
   console.log("Calculating funnel with", leads.length, "leads");
   
+  // Log first lead to see data structure
+  if (leads.length > 0) {
+    console.log("First lead data:", leads[0]);
+    console.log("CPL value:", leads[0].CPL, "Type:", typeof leads[0].CPL);
+    console.log("FEE value:", leads[0].FEE, "Type:", typeof leads[0].FEE);
+  }
+  
   const mql = leads.length;
   const cr = leads.filter((l) => isPositive(l["C.R"])).length;
   const ra = leads.filter((l) => isPositive(l["R.A"])).length;
@@ -100,13 +107,33 @@ export const calculateFunnelData = (leads: Lead[]) => {
 
   console.log("Funnel counts:", { mql, cr, ra, rr, ass });
 
-  // Calculate costs
-  const totalCPL = leads.reduce((sum, lead) => {
+  // Calculate costs - check for different possible formats
+  const totalCPL = leads.reduce((sum, lead, index) => {
+    const cplValue = lead.CPL;
+    
+    // Log first few to debug
+    if (index < 3) {
+      console.log(`Lead ${index} CPL:`, cplValue, "Type:", typeof cplValue);
+    }
+    
+    if (!cplValue || cplValue === "" || cplValue === "-") return sum;
+    
     // Try to parse CPL, handling both comma and dot as decimal separator
-    const cplStr = (lead.CPL || "0").toString().replace(",", ".");
+    // Also remove currency symbols and spaces
+    const cplStr = cplValue.toString()
+      .replace(/[R$\s]/g, "") // Remove R, $, spaces
+      .replace(",", "."); // Replace comma with dot
+    
     const cpl = parseFloat(cplStr);
+    
+    if (index < 3) {
+      console.log(`Parsed CPL:`, cpl, "isNaN:", isNaN(cpl));
+    }
+    
     return sum + (isNaN(cpl) ? 0 : cpl);
   }, 0);
+  
+  console.log("Total CPL sum:", totalCPL);
   const cplMedio = mql > 0 ? totalCPL / mql : 0;
 
   const custoCR = cr > 0 ? totalCPL / cr : 0;
@@ -116,12 +143,31 @@ export const calculateFunnelData = (leads: Lead[]) => {
   // Calculate ticket médio
   const totalFee = leads
     .filter((l) => isPositive(l.ASS))
-    .reduce((sum, lead) => {
+    .reduce((sum, lead, index) => {
+      const feeValue = lead.FEE;
+      
+      if (index < 3) {
+        console.log(`Lead ${index} FEE:`, feeValue, "Type:", typeof feeValue);
+      }
+      
+      if (!feeValue || feeValue === "" || feeValue === "-") return sum;
+      
       // Try to parse FEE, handling both comma and dot as decimal separator
-      const feeStr = (lead.FEE || "0").toString().replace(",", ".");
+      // Also remove currency symbols and spaces
+      const feeStr = feeValue.toString()
+        .replace(/[R$\s]/g, "") // Remove R, $, spaces
+        .replace(",", "."); // Replace comma with dot
+      
       const fee = parseFloat(feeStr);
+      
+      if (index < 3) {
+        console.log(`Parsed FEE:`, fee, "isNaN:", isNaN(fee));
+      }
+      
       return sum + (isNaN(fee) ? 0 : fee);
     }, 0);
+  
+  console.log("Total FEE sum:", totalFee, "for", ass, "signed contracts");
   const ticketMedio = ass > 0 ? totalFee / ass : 0;
 
   console.log("Calculated values:", { 
