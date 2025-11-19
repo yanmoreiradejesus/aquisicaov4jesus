@@ -89,7 +89,7 @@ const isPositive = (value: string | undefined): boolean => {
          val === "CONCLUÍDO" || val === "CONCLUIDO";
 };
 
-export const calculateFunnelData = (leads: Lead[]) => {
+export const calculateFunnelData = (leads: Lead[], filters: FilterOptions) => {
   console.log("Calculating funnel with", leads.length, "leads");
   
   // Log first lead to see data structure
@@ -105,10 +105,17 @@ export const calculateFunnelData = (leads: Lead[]) => {
   const ra = leads.filter((l) => isPositive(l["R.A"])).length;
   const rr = leads.filter((l) => isPositive(l["R.R"])).length;
   
-  // Count ASS based on "DATA DA ASSINATURA" being filled
+  // Count ASS based on "DATA DA ASSINATURA" being within the filtered period
   const ass = leads.filter((l) => {
     const dataAssinatura = l["DATA DA ASSINATURA"];
-    return dataAssinatura && dataAssinatura.trim() !== "";
+    if (!dataAssinatura || dataAssinatura.trim() === "") return false;
+    
+    // Parse date in DD/MM/YYYY format
+    const assinaturaDate = new Date(dataAssinatura.split('/').reverse().join('-'));
+    const startDate = new Date(filters.startDate);
+    const endDate = new Date(filters.endDate);
+    
+    return assinaturaDate >= startDate && assinaturaDate <= endDate;
   }).length;
 
   console.log("Funnel counts:", { mql, cr, ra, rr, ass });
@@ -142,11 +149,18 @@ export const calculateFunnelData = (leads: Lead[]) => {
   const cpa = ra > 0 ? totalCPL / ra : 0;
   const cprr = rr > 0 ? totalCPL / rr : 0;
 
-  // Calculate ticket médio - only for leads with "DATA DA ASSINATURA" filled
+  // Calculate ticket médio - only for leads with "DATA DA ASSINATURA" within the filtered period
   const totalFee = leads
     .filter((l) => {
       const dataAssinatura = l["DATA DA ASSINATURA"];
-      return dataAssinatura && dataAssinatura.trim() !== "";
+      if (!dataAssinatura || dataAssinatura.trim() === "") return false;
+      
+      // Parse date in DD/MM/YYYY format
+      const assinaturaDate = new Date(dataAssinatura.split('/').reverse().join('-'));
+      const startDate = new Date(filters.startDate);
+      const endDate = new Date(filters.endDate);
+      
+      return assinaturaDate >= startDate && assinaturaDate <= endDate;
     })
     .reduce((sum, lead, index) => {
       const feeValue = lead.FEE;
