@@ -106,6 +106,22 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions) => {
   const rr = leads.filter((l) => isPositive(l["R.R"])).length;
   
   // Count ASS based on "DATA DA ASSINATURA" being within the filtered period
+  console.log("Filter dates:", filters.startDate, "to", filters.endDate);
+  
+  // First, let's see all leads with DATA DA ASSINATURA filled
+  const leadsWithSignature = leads.filter((l) => {
+    const dataAssinatura = l["DATA DA ASSINATURA"];
+    return dataAssinatura && dataAssinatura.trim() !== "";
+  });
+  
+  console.log("Total leads with DATA DA ASSINATURA filled:", leadsWithSignature.length);
+  if (leadsWithSignature.length > 0) {
+    console.log("First 5 leads with signature dates:", leadsWithSignature.slice(0, 5).map(l => ({
+      lead: l.LEAD,
+      data: l["DATA DA ASSINATURA"]
+    })));
+  }
+  
   const ass = leads.filter((l) => {
     const dataAssinatura = l["DATA DA ASSINATURA"];
     if (!dataAssinatura || dataAssinatura.trim() === "") return false;
@@ -115,7 +131,13 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions) => {
     const startDate = new Date(filters.startDate);
     const endDate = new Date(filters.endDate);
     
-    return assinaturaDate >= startDate && assinaturaDate <= endDate;
+    const isInPeriod = assinaturaDate >= startDate && assinaturaDate <= endDate;
+    
+    if (isInPeriod) {
+      console.log("Lead signed in period:", l.LEAD, "Date:", dataAssinatura, "Parsed:", assinaturaDate);
+    }
+    
+    return isInPeriod;
   }).length;
 
   console.log("Funnel counts:", { mql, cr, ra, rr, ass });
