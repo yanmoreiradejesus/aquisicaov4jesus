@@ -97,13 +97,19 @@ export const calculateFunnelData = (leads: Lead[]) => {
     console.log("First lead data:", leads[0]);
     console.log("CPL value:", leads[0].CPL, "Type:", typeof leads[0].CPL);
     console.log("FEE value:", leads[0].FEE, "Type:", typeof leads[0].FEE);
+    console.log("DATA DA ASSINATURA:", leads[0]["DATA DA ASSINATURA"]);
   }
   
   const mql = leads.length;
   const cr = leads.filter((l) => isPositive(l["C.R"])).length;
   const ra = leads.filter((l) => isPositive(l["R.A"])).length;
   const rr = leads.filter((l) => isPositive(l["R.R"])).length;
-  const ass = leads.filter((l) => isPositive(l.ASS)).length;
+  
+  // Count ASS based on "DATA DA ASSINATURA" being filled
+  const ass = leads.filter((l) => {
+    const dataAssinatura = l["DATA DA ASSINATURA"];
+    return dataAssinatura && dataAssinatura.trim() !== "";
+  }).length;
 
   console.log("Funnel counts:", { mql, cr, ra, rr, ass });
 
@@ -136,9 +142,12 @@ export const calculateFunnelData = (leads: Lead[]) => {
   const cpa = ra > 0 ? totalCPL / ra : 0;
   const cprr = rr > 0 ? totalCPL / rr : 0;
 
-  // Calculate ticket médio
+  // Calculate ticket médio - only for leads with "DATA DA ASSINATURA" filled
   const totalFee = leads
-    .filter((l) => isPositive(l.ASS))
+    .filter((l) => {
+      const dataAssinatura = l["DATA DA ASSINATURA"];
+      return dataAssinatura && dataAssinatura.trim() !== "";
+    })
     .reduce((sum, lead, index) => {
       const feeValue = lead.FEE;
       
