@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import V4Header from "@/components/V4Header";
 import FilterBar from "@/components/FilterBar";
-import InsightChart from "@/components/InsightChart";
 import ConversionFunnel from "@/components/ConversionFunnel";
+import { useGoogleSheetsData } from "@/hooks/useGoogleSheetsData";
+import { filterLeads, calculateFunnelData } from "@/utils/dataProcessor";
+import { Loader2 } from "lucide-react";
 
 const Index = () => {
   const [filters, setFilters] = useState({
@@ -16,57 +18,42 @@ const Index = () => {
     hasDescription: "all",
   });
 
+  const { data: sheetsData, isLoading, error } = useGoogleSheetsData();
+
   const handleFilterChange = (key: string, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
-  const conversionFunnelData = {
-    mql: 150,
-    cr: 120,
-    ra: 80,
-    rr: 65,
-    ass: 25,
-    cplMedio: 45.80,
-    custoCR: 57.25,
-    cpa: 85.75,
-    cprr: 105.50,
-    ticketMedio: 3500.00,
-  };
+  const filteredLeads = useMemo(() => {
+    if (!sheetsData?.leads) return [];
+    return filterLeads(sheetsData.leads, filters);
+  }, [sheetsData, filters]);
 
-  const periodoData = [
-    { name: "Manhã", conversao: 35 },
-    { name: "Tarde", conversao: 28 },
-    { name: "Noite", conversao: 22 },
-    { name: "Madrugada", conversao: 15 },
-  ];
+  const conversionFunnelData = useMemo(() => {
+    return calculateFunnelData(filteredLeads);
+  }, [filteredLeads]);
 
-  const tierData = [
-    { name: "0-100k", conversao: 18 },
-    { name: "100k-500k", conversao: 32 },
-    { name: "500k+", conversao: 45 },
-  ];
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+          <p className="text-muted-foreground">Carregando dados do Google Sheets...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const urgencyData = [
-    { name: "Alta", conversao: 42 },
-    { name: "Média", conversao: 28 },
-    { name: "Baixa", conversao: 15 },
-  ];
-
-  const cargoData = [
-    { name: "Dono", conversao: 48 },
-    { name: "Gestor", conversao: 32 },
-    { name: "Outros", conversao: 12 },
-  ];
-
-  const descriptionData = [
-    { name: "Com descrição", conversao: 38 },
-    { name: "Sem descrição", conversao: 18 },
-  ];
-
-  const emailData = [
-    { name: "Domínio", conversao: 42 },
-    { name: "Gratuito", conversao: 22 },
-  ];
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4 max-w-md">
+          <p className="text-destructive font-semibold">Erro ao carregar dados</p>
+          <p className="text-muted-foreground text-sm">{error.message}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -75,7 +62,14 @@ const Index = () => {
       <main className="container mx-auto max-w-7xl space-y-8 px-4 lg:px-8 py-8">
         <div>
           <h1 className="mb-2 font-heading text-3xl lg:text-4xl font-bold text-foreground">DASHBOARD</h1>
-          <p className="font-body text-sm text-muted-foreground">Visão geral e funil de conversão</p>
+          <p className="font-body text-sm text-muted-foreground">
+            Visão geral e funil de conversão • {filteredLeads.length} leads
+            {sheetsData?.lastUpdated && (
+              <span className="ml-2 text-xs">
+                • Última atualização: {new Date(sheetsData.lastUpdated).toLocaleTimeString('pt-BR')}
+              </span>
+            )}
+          </p>
         </div>
 
         <FilterBar filters={filters} onFilterChange={handleFilterChange} />
