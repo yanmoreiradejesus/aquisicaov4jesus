@@ -89,8 +89,8 @@ const isPositive = (value: string | undefined): boolean => {
          val === "CONCLUÍDO" || val === "CONCLUIDO";
 };
 
-export const calculateFunnelData = (leads: Lead[], filters: FilterOptions) => {
-  console.log("Calculating funnel with", leads.length, "leads");
+export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLeads: Lead[]) => {
+  console.log("Calculating funnel with", leads.length, "filtered leads and", allLeads.length, "total leads");
   
   // Log first lead to see data structure
   if (leads.length > 0) {
@@ -107,28 +107,29 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions) => {
   const rr = leads.filter((l) => isPositive(l["R.R"])).length;
   
   // Count ASS based on "DATA DA ASSINATURA" being within the filtered period
-  console.log("Filter dates:", filters.startDate, "to", filters.endDate);
+  // IMPORTANT: Search in ALL leads, not just filtered ones
+  console.log("Filter dates for signature:", filters.startDate, "to", filters.endDate);
   
-  // Parse filter dates to get month and year
   const startDate = new Date(filters.startDate);
   const endDate = new Date(filters.endDate);
   
   // First, let's see all leads with DATA DA ASSINATURA filled
-  const leadsWithSignature = leads.filter((l) => {
+  const leadsWithSignature = allLeads.filter((l) => {
     const dataAssinatura = l["DATA DA ASSINATURA"];
     return dataAssinatura && dataAssinatura.trim() !== "";
   });
   
-  console.log("Total leads with DATA DA ASSINATURA filled:", leadsWithSignature.length);
+  console.log("Total leads with DATA DA ASSINATURA filled (from all leads):", leadsWithSignature.length);
   if (leadsWithSignature.length > 0) {
     console.log("First 5 leads with signature dates:", leadsWithSignature.slice(0, 5).map(l => ({
       lead: l.LEAD,
-      data: l["DATA DA ASSINATURA"],
+      dataLead: l.DATA,
+      dataAssinatura: l["DATA DA ASSINATURA"],
       ef: l["E.F"]
     })));
   }
   
-  const ass = leads.filter((l) => {
+  const ass = allLeads.filter((l) => {
     const dataAssinatura = l["DATA DA ASSINATURA"];
     if (!dataAssinatura || dataAssinatura.trim() === "") return false;
     
@@ -141,7 +142,7 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions) => {
     const isInPeriod = assinaturaDate >= startDate && assinaturaDate <= endDate;
     
     if (isInPeriod) {
-      console.log("Lead signed in period:", l.LEAD, "Date:", dataAssinatura, "Parsed:", assinaturaDate, "E.F:", l["E.F"]);
+      console.log("Lead signed in period:", l.LEAD, "Lead Date:", l.DATA, "Signature Date:", dataAssinatura, "E.F:", l["E.F"]);
     }
     
     return isInPeriod;
@@ -179,8 +180,9 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions) => {
   const cprr = rr > 0 ? totalCPL / rr : 0;
 
   // Calculate ticket médio - only for leads with "DATA DA ASSINATURA" within the filtered period
+  // IMPORTANT: Search in ALL leads, not just filtered ones
   // Use E.F (MRR) column instead of FEE
-  const totalFee = leads
+  const totalFee = allLeads
     .filter((l) => {
       const dataAssinatura = l["DATA DA ASSINATURA"];
       if (!dataAssinatura || dataAssinatura.trim() === "") return false;
@@ -210,7 +212,7 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions) => {
       const ef = parseFloat(efStr);
       
       if (index < 3) {
-        console.log(`Lead ${index}: Original E.F="${efValue}" -> Cleaned="${efStr}" -> Parsed=${ef}`);
+        console.log(`Signed lead ${index}: Lead="${lead.LEAD}" Lead Date="${lead.DATA}" Signature Date="${lead["DATA DA ASSINATURA"]}" E.F="${efValue}" -> Parsed=${ef}`);
       }
       
       return sum + (isNaN(ef) ? 0 : ef);
