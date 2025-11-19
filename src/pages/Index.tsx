@@ -74,8 +74,8 @@ const Index = () => {
       
       <main className="container mx-auto max-w-7xl space-y-8 px-4 lg:px-8 py-8">
         <div>
-          <h1 className="mb-2 font-heading text-3xl lg:text-4xl font-bold text-foreground">FUNIL & INSIGHTS</h1>
-          <p className="font-body text-sm text-muted-foreground">LeadBroker Dashboard</p>
+          <h1 className="mb-2 font-heading text-3xl lg:text-4xl font-bold text-foreground">DASHBOARD</h1>
+          <p className="font-body text-sm text-muted-foreground">Visão geral e funil de conversão</p>
         </div>
 
         <FilterBar filters={filters} onFilterChange={handleFilterChange} />
@@ -86,14 +86,24 @@ const Index = () => {
         </section>
 
         <section className="space-y-6">
-          <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">INSIGHTS DE COMPRA</h2>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <InsightChart title="CONVERSÃO POR PERÍODO" data={periodoData} dataKey="conversao" xAxisKey="name" />
-            <InsightChart title="TIER X CONVERSÃO" data={tierData} dataKey="conversao" xAxisKey="name" />
-            <InsightChart title="URGÊNCIA X QUALIDADE" data={urgencyData} dataKey="conversao" xAxisKey="name" />
-            <InsightChart title="CARGO X CONVERSÃO" data={cargoData} dataKey="conversao" xAxisKey="name" />
-            <InsightChart title="DESCRIÇÃO X CONVERSÃO" data={descriptionData} dataKey="conversao" xAxisKey="name" />
-            <InsightChart title="E-MAIL: DOMÍNIO X GRATUITO" data={emailData} dataKey="conversao" xAxisKey="name" />
+          <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">KPIs PRINCIPAIS</h2>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-6 transition-all duration-300 hover:shadow-lg">
+              <p className="mb-2 font-body text-sm text-muted-foreground">CPMQL (CPL Médio)</p>
+              <p className="font-heading text-3xl font-bold text-foreground">R$ {conversionFunnelData.cplMedio.toFixed(2)}</p>
+            </div>
+            <div className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-6 transition-all duration-300 hover:shadow-lg">
+              <p className="mb-2 font-body text-sm text-muted-foreground">CAC</p>
+              <p className="font-heading text-3xl font-bold text-foreground">R$ {conversionFunnelData.cpa.toFixed(2)}</p>
+            </div>
+            <div className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-6 transition-all duration-300 hover:shadow-lg">
+              <p className="mb-2 font-body text-sm text-muted-foreground">Investimento Total</p>
+              <p className="font-heading text-3xl font-bold text-foreground">R$ {(conversionFunnelData.mql * conversionFunnelData.cplMedio).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+            </div>
+            <div className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-6 transition-all duration-300 hover:shadow-lg">
+              <p className="mb-2 font-body text-sm text-muted-foreground">Faturamento Total</p>
+              <p className="font-heading text-3xl font-bold text-success">R$ {(conversionFunnelData.ass * conversionFunnelData.ticketMedio).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+            </div>
           </div>
         </section>
       </main>
