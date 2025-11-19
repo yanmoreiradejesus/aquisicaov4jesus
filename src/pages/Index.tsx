@@ -3,6 +3,7 @@ import V4Header from "@/components/V4Header";
 import FilterBar from "@/components/FilterBar";
 import FunnelCard from "@/components/FunnelCard";
 import InsightChart from "@/components/InsightChart";
+import ConversionFunnel from "@/components/ConversionFunnel";
 
 const Index = () => {
   const [filters, setFilters] = useState({
@@ -27,6 +28,19 @@ const Index = () => {
     reuniaoAgendada: 80,
     reuniaoRealizada: 65,
     contratoAssinado: 25,
+  };
+
+  const conversionFunnelData = {
+    mql: funnelData.leadsComprados,
+    cr: funnelData.contatoRealizado,
+    ra: funnelData.reuniaoAgendada,
+    rr: funnelData.reuniaoRealizada,
+    ass: funnelData.contratoAssinado,
+    cplMedio: 45.80,
+    custoCR: 57.25,
+    cpa: 85.75,
+    cprr: 105.50,
+    ticketMedio: 3500.00,
   };
 
   const calculatePercentage = (value: number, total: number) => {
@@ -83,23 +97,9 @@ const Index = () => {
       <main className="container mx-auto px-6 py-8">
         {/* Funil Section */}
         <section className="mb-12">
-          <h2 className="mb-6 font-heading text-3xl text-primary">FUNIL DE CONVERSÃO</h2>
+          <h2 className="mb-8 font-heading text-4xl tracking-wider text-foreground">FUNIL DE CONVERSÃO</h2>
           
-          <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
-            <FunnelCard title="LEADS COMPRADOS" value={funnelData.leadsComprados} />
-            <FunnelCard title="C.R" value={funnelData.contatoRealizado} />
-            <FunnelCard title="R.A" value={funnelData.reuniaoAgendada} />
-            <FunnelCard title="R.R" value={funnelData.reuniaoRealizada} />
-            <FunnelCard title="ASS" value={funnelData.contratoAssinado} />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
-            <FunnelCard title="CR%" value={crPercent} variant="small" isPercentage />
-            <FunnelCard title="RA%" value={raPercent} variant="small" isPercentage />
-            <FunnelCard title="RR%" value={rrPercent} variant="small" isPercentage />
-            <FunnelCard title="ASS%" value={assPercent} variant="small" isPercentage />
-            <FunnelCard title="WIN RATE" value={winRate} variant="small" isPercentage />
-          </div>
+          <ConversionFunnel data={conversionFunnelData} />
         </section>
 
         {/* Insights Section */}
