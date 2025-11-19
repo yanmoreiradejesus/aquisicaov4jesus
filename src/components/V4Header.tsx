@@ -19,7 +19,15 @@ const V4Header = () => {
                   isActive("/") ? "text-primary" : "text-muted-foreground"
                 }`}
               >
-                Funil & Insights
+                DASHBOARD
+              </Link>
+              <Link
+                to="/insights"
+                className={`font-body text-xs lg:text-sm font-medium tracking-wider transition-all duration-300 hover:text-primary ${
+                  isActive("/insights") ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                INSIGHTS
               </Link>
               <Link
                 to="/metas"
@@ -27,7 +35,7 @@ const V4Header = () => {
                   isActive("/metas") ? "text-primary" : "text-muted-foreground"
                 }`}
               >
-                Metas & Acompanhamento
+                METAS
               </Link>
             </nav>
           </div>
