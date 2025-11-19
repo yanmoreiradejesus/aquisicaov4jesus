@@ -67,17 +67,33 @@ export const filterLeads = (leads: Lead[], filters: FilterOptions): Lead[] => {
   });
 };
 
+// Helper to check if a value represents "yes/true/completed"
+const isPositive = (value: string | undefined): boolean => {
+  if (!value) return false;
+  const val = value.toString().trim().toUpperCase();
+  // Check for common positive values
+  return val === "SIM" || val === "YES" || val === "1" || val === "X" || 
+         val === "TRUE" || val === "VERDADEIRO" || val === "OK" || 
+         val === "CONCLUÍDO" || val === "CONCLUIDO";
+};
+
 export const calculateFunnelData = (leads: Lead[]) => {
+  console.log("Calculating funnel with", leads.length, "leads");
+  
   const mql = leads.length;
-  const cr = leads.filter((l) => l["C.R"] === "SIM" || l["C.R"] === "1").length;
-  const ra = leads.filter((l) => l["R.A"] === "SIM" || l["R.A"] === "1").length;
-  const rr = leads.filter((l) => l["R.R"] === "SIM" || l["R.R"] === "1").length;
-  const ass = leads.filter((l) => l.ASS === "SIM" || l.ASS === "1").length;
+  const cr = leads.filter((l) => isPositive(l["C.R"])).length;
+  const ra = leads.filter((l) => isPositive(l["R.A"])).length;
+  const rr = leads.filter((l) => isPositive(l["R.R"])).length;
+  const ass = leads.filter((l) => isPositive(l.ASS)).length;
+
+  console.log("Funnel counts:", { mql, cr, ra, rr, ass });
 
   // Calculate costs
   const totalCPL = leads.reduce((sum, lead) => {
-    const cpl = parseFloat(lead.CPL || "0");
-    return sum + cpl;
+    // Try to parse CPL, handling both comma and dot as decimal separator
+    const cplStr = (lead.CPL || "0").toString().replace(",", ".");
+    const cpl = parseFloat(cplStr);
+    return sum + (isNaN(cpl) ? 0 : cpl);
   }, 0);
   const cplMedio = mql > 0 ? totalCPL / mql : 0;
 
@@ -87,12 +103,19 @@ export const calculateFunnelData = (leads: Lead[]) => {
 
   // Calculate ticket médio
   const totalFee = leads
-    .filter((l) => l.ASS === "SIM" || l.ASS === "1")
+    .filter((l) => isPositive(l.ASS))
     .reduce((sum, lead) => {
-      const fee = parseFloat(lead.FEE || "0");
-      return sum + fee;
+      // Try to parse FEE, handling both comma and dot as decimal separator
+      const feeStr = (lead.FEE || "0").toString().replace(",", ".");
+      const fee = parseFloat(feeStr);
+      return sum + (isNaN(fee) ? 0 : fee);
     }, 0);
   const ticketMedio = ass > 0 ? totalFee / ass : 0;
+
+  console.log("Calculated values:", { 
+    totalCPL, cplMedio, custoCR, cpa, cprr, 
+    totalFee, ticketMedio 
+  });
 
   return {
     mql,

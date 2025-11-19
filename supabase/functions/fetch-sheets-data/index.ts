@@ -61,6 +61,8 @@ serve(async (req) => {
     });
 
     console.log('Processed leads:', leads.length);
+    console.log('Headers:', headers);
+    console.log('Sample lead (first row):', leads[0]);
 
     return new Response(
       JSON.stringify({ 
