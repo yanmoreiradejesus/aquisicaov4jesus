@@ -111,23 +111,19 @@ export const calculateFunnelData = (leads: Lead[]) => {
   const totalCPL = leads.reduce((sum, lead, index) => {
     const cplValue = lead.CPL;
     
-    // Log first few to debug
-    if (index < 3) {
-      console.log(`Lead ${index} CPL:`, cplValue, "Type:", typeof cplValue);
-    }
-    
     if (!cplValue || cplValue === "" || cplValue === "-") return sum;
     
-    // Try to parse CPL, handling both comma and dot as decimal separator
-    // Also remove currency symbols and spaces
+    // Remove currency symbols, spaces, and handle Brazilian format
+    // Brazilian format: R$ 1.332,00 (dot for thousands, comma for decimal)
     const cplStr = cplValue.toString()
       .replace(/[R$\s]/g, "") // Remove R, $, spaces
-      .replace(",", "."); // Replace comma with dot
+      .replace(/\./g, "") // Remove thousand separators (dots)
+      .replace(",", "."); // Replace decimal comma with dot
     
     const cpl = parseFloat(cplStr);
     
     if (index < 3) {
-      console.log(`Parsed CPL:`, cpl, "isNaN:", isNaN(cpl));
+      console.log(`Lead ${index}: Original="${cplValue}" -> Cleaned="${cplStr}" -> Parsed=${cpl}`);
     }
     
     return sum + (isNaN(cpl) ? 0 : cpl);
@@ -146,22 +142,19 @@ export const calculateFunnelData = (leads: Lead[]) => {
     .reduce((sum, lead, index) => {
       const feeValue = lead.FEE;
       
-      if (index < 3) {
-        console.log(`Lead ${index} FEE:`, feeValue, "Type:", typeof feeValue);
-      }
-      
       if (!feeValue || feeValue === "" || feeValue === "-") return sum;
       
-      // Try to parse FEE, handling both comma and dot as decimal separator
-      // Also remove currency symbols and spaces
+      // Remove currency symbols, spaces, and handle Brazilian format
+      // Brazilian format: R$ 1.332,00 (dot for thousands, comma for decimal)
       const feeStr = feeValue.toString()
         .replace(/[R$\s]/g, "") // Remove R, $, spaces
-        .replace(",", "."); // Replace comma with dot
+        .replace(/\./g, "") // Remove thousand separators (dots)
+        .replace(",", "."); // Replace decimal comma with dot
       
       const fee = parseFloat(feeStr);
       
       if (index < 3) {
-        console.log(`Parsed FEE:`, fee, "isNaN:", isNaN(fee));
+        console.log(`Lead ${index}: Original FEE="${feeValue}" -> Cleaned="${feeStr}" -> Parsed=${fee}`);
       }
       
       return sum + (isNaN(fee) ? 0 : fee);
