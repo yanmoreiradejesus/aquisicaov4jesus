@@ -42,8 +42,14 @@ const Index = () => {
     return filterLeads(sheetsData.leads, filters);
   }, [sheetsData, filters]);
 
-  const previousPeriodLeads = useMemo(() => {
-    if (!sheetsData?.leads || !filters.startDate || !filters.endDate) return [];
+  const { previousPeriodLeads, previousStartDate, previousEndDate } = useMemo(() => {
+    if (!sheetsData?.leads || !filters.startDate || !filters.endDate) {
+      return {
+        previousPeriodLeads: [],
+        previousStartDate: '',
+        previousEndDate: ''
+      };
+    }
     
     const start = new Date(filters.startDate);
     const end = new Date(filters.endDate);
@@ -54,22 +60,33 @@ const Index = () => {
     const prevEnd = new Date(start);
     prevEnd.setDate(prevEnd.getDate() - 1);
     
+    const prevStartStr = prevStart.toISOString().split('T')[0];
+    const prevEndStr = prevEnd.toISOString().split('T')[0];
+    
     const prevFilters = {
       ...filters,
-      startDate: prevStart.toISOString().split('T')[0],
-      endDate: prevEnd.toISOString().split('T')[0]
+      startDate: prevStartStr,
+      endDate: prevEndStr
     };
     
-    return filterLeads(sheetsData.leads, prevFilters);
+    return {
+      previousPeriodLeads: filterLeads(sheetsData.leads, prevFilters),
+      previousStartDate: prevStartStr,
+      previousEndDate: prevEndStr
+    };
   }, [sheetsData, filters]);
 
   const conversionFunnelData = useMemo(() => {
-    return calculateFunnelData(filteredLeads);
-  }, [filteredLeads]);
+    return calculateFunnelData(filteredLeads, filters);
+  }, [filteredLeads, filters]);
 
   const previousPeriodData = useMemo(() => {
-    return calculateFunnelData(previousPeriodLeads);
-  }, [previousPeriodLeads]);
+    return calculateFunnelData(previousPeriodLeads, {
+      ...filters,
+      startDate: previousStartDate,
+      endDate: previousEndDate
+    });
+  }, [previousPeriodLeads, previousStartDate, previousEndDate, filters]);
 
   const uniqueValues = useMemo(() => {
     if (!sheetsData?.leads) return {
