@@ -88,7 +88,11 @@ const Metas = () => {
         rr_to_ass_rate: parseFloat(goal.rr_to_ass_rate.toString()) || 38,
       }));
 
-      const { error } = await supabase.from("monthly_goals").upsert(goalsToUpsert);
+      const { error } = await supabase
+        .from("monthly_goals")
+        .upsert(goalsToUpsert, {
+          onConflict: "month,year"
+        });
       if (error) throw error;
     },
     onSuccess: () => {
