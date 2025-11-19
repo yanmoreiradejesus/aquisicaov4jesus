@@ -17,31 +17,43 @@ export type Database = {
       monthly_goals: {
         Row: {
           contracts_goal: number
+          cr_to_ra_rate: number | null
           created_at: string
           id: string
           month: number
+          mql_to_cr_rate: number | null
           mrr_goal: number
+          ra_to_rr_rate: number | null
           revenue_goal: number
+          rr_to_ass_rate: number | null
           updated_at: string
           year: number
         }
         Insert: {
           contracts_goal?: number
+          cr_to_ra_rate?: number | null
           created_at?: string
           id?: string
           month: number
+          mql_to_cr_rate?: number | null
           mrr_goal?: number
+          ra_to_rr_rate?: number | null
           revenue_goal?: number
+          rr_to_ass_rate?: number | null
           updated_at?: string
           year: number
         }
         Update: {
           contracts_goal?: number
+          cr_to_ra_rate?: number | null
           created_at?: string
           id?: string
           month?: number
+          mql_to_cr_rate?: number | null
           mrr_goal?: number
+          ra_to_rr_rate?: number | null
           revenue_goal?: number
+          rr_to_ass_rate?: number | null
           updated_at?: string
           year?: number
         }
