@@ -27,8 +27,8 @@ const ConversionFunnel = ({ data }: ConversionFunnelProps) => {
     {
       title: "Leads Comprados (MQL)",
       total: data.mql,
-      conversionRate: 100,
-      costLabel: "CPL médio",
+      conversionRate: 0, // Não mostrar conversão para MQL
+      costLabel: "CPMQL médio",
       costValue: data.cplMedio,
       barColor: "bg-[hsl(217,91%,60%)]",
     },
@@ -113,10 +113,12 @@ const ConversionFunnel = ({ data }: ConversionFunnelProps) => {
 
               {/* Metrics */}
               <div className="flex items-center justify-between">
-                <span className="font-body text-xs text-muted-foreground">
-                  Conv: <span className="font-semibold text-foreground">{stage.conversionRate.toFixed(1)}%</span>
-                </span>
-                <span className="font-body text-xs text-muted-foreground">
+                {stage.conversionRate > 0 && (
+                  <span className="font-body text-xs text-muted-foreground">
+                    Conv: <span className="font-semibold text-foreground">{stage.conversionRate.toFixed(1)}%</span>
+                  </span>
+                )}
+                <span className={`font-body text-xs text-muted-foreground ${stage.conversionRate === 0 ? 'ml-auto' : ''}`}>
                   {stage.costLabel}: <span className="font-semibold text-foreground">R$ {stage.costValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                 </span>
               </div>
