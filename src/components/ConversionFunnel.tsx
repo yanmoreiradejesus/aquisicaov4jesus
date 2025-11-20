@@ -176,7 +176,7 @@ const ConversionFunnel = ({ data, leads, allLeads, filters }: ConversionFunnelPr
   return (
     <div className="space-y-6">
       {/* Mobile: MQL to VENDA at top */}
-      <div className="flex items-center justify-center lg:hidden animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>
+      <div className="flex items-center justify-center lg:hidden opacity-0 animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>
         <div className="text-center rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-4 w-full">
           <p className="mb-2 font-body text-xs text-muted-foreground">MQL → VENDA</p>
           <p className="font-heading text-4xl font-bold text-success">{mqlToVenda.toFixed(1)}%</p>
@@ -185,7 +185,7 @@ const ConversionFunnel = ({ data, leads, allLeads, filters }: ConversionFunnelPr
 
       <div className="relative grid grid-cols-1 lg:grid-cols-[1fr_4fr_1fr] gap-6">
         {/* Desktop Left Side - MQL to VENDA */}
-        <div className="hidden lg:flex items-center justify-center animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>
+        <div className="hidden lg:flex items-center justify-center opacity-0 animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>
           <div className="text-center">
             <p className="mb-2 font-body text-xs text-muted-foreground">MQL → VENDA</p>
             <p className="font-heading text-5xl font-bold text-success">{mqlToVenda.toFixed(1)}%</p>
@@ -201,7 +201,7 @@ const ConversionFunnel = ({ data, leads, allLeads, filters }: ConversionFunnelPr
               <div
                 key={index}
                 onClick={() => handleStageClick(stage.stageKey)}
-                className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-4 lg:p-5 transition-all duration-300 hover:shadow-lg hover:border-primary/30 animate-fade-in cursor-pointer hover:scale-[1.02]"
+                className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-4 lg:p-5 transition-all duration-300 hover:shadow-lg hover:border-primary/30 opacity-0 animate-fade-in cursor-pointer hover:scale-[1.02]"
                 style={{ animationDelay: `${index * 150}ms`, animationFillMode: 'backwards' }}
               >
                 <div className="mb-2 lg:mb-3 flex items-center justify-between gap-2">
@@ -246,7 +246,7 @@ const ConversionFunnel = ({ data, leads, allLeads, filters }: ConversionFunnelPr
         {/* Right Side - Conversion Rates (Desktop) */}
         <div className="hidden lg:block space-y-8">
           {intermediateRates.map((rate, index) => (
-            <div key={index} className="text-center pt-6 animate-fade-in" style={{ animationDelay: `${(index + 5) * 150}ms`, animationFillMode: 'backwards' }}>
+            <div key={index} className="text-center pt-6 opacity-0 animate-fade-in" style={{ animationDelay: `${(index + 5) * 150}ms`, animationFillMode: 'backwards' }}>
               <p className="mb-1 font-body text-xs text-muted-foreground">{rate.label}</p>
               <p className="font-heading text-2xl font-bold text-foreground">{rate.rate.toFixed(1)}%</p>
             </div>
@@ -257,7 +257,7 @@ const ConversionFunnel = ({ data, leads, allLeads, filters }: ConversionFunnelPr
       {/* Mobile: Conversion Rates Grid */}
       <div className="lg:hidden grid grid-cols-2 gap-3">
         {intermediateRates.map((rate, index) => (
-          <div key={index} className="text-center p-3 rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 animate-fade-in" style={{ animationDelay: `${(index + 5) * 150}ms`, animationFillMode: 'backwards' }}>
+          <div key={index} className="text-center p-3 rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 opacity-0 animate-fade-in" style={{ animationDelay: `${(index + 5) * 150}ms`, animationFillMode: 'backwards' }}>
             <p className="mb-1 font-body text-xs text-muted-foreground">{rate.label}</p>
             <p className="font-heading text-xl font-bold text-foreground">{rate.rate.toFixed(1)}%</p>
           </div>
