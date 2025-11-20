@@ -5,7 +5,7 @@ import ConversionFunnel from "@/components/ConversionFunnel";
 import FunnelSkeleton from "@/components/FunnelSkeleton";
 import KPICardSkeleton from "@/components/KPICardSkeleton";
 import { useGoogleSheetsData } from "@/hooks/useGoogleSheetsData";
-import { filterLeads, calculateFunnelData, getUniqueValues } from "@/utils/dataProcessor";
+import { filterLeads, calculateFunnelData, getUniqueValuesWithCount } from "@/utils/dataProcessor";
 import { Loader2, TrendingUp, TrendingDown } from "lucide-react";
 const Index = () => {
   const getCurrentMonthRange = () => {
@@ -21,11 +21,11 @@ const Index = () => {
   const [filters, setFilters] = useState({
     startDate: initialRange.start,
     endDate: initialRange.end,
-    canal: "all",
-    tier: "all",
-    urgency: "all",
-    cargo: "all",
-    periodo: "all",
+    canal: [] as string[],
+    tier: [] as string[],
+    urgency: [] as string[],
+    cargo: [] as string[],
+    periodo: [] as string[],
     emailType: "all",
     hasDescription: "all"
   });
@@ -34,7 +34,7 @@ const Index = () => {
     isLoading,
     error
   } = useGoogleSheetsData();
-  const handleFilterChange = (key: string, value: string) => {
+  const handleFilterChange = (key: string, value: string | string[]) => {
     setFilters(prev => ({
       ...prev,
       [key]: value
@@ -95,11 +95,11 @@ const Index = () => {
       periodos: []
     };
     return {
-      canais: getUniqueValues(sheetsData.leads, "CANAL"),
-      tiers: getUniqueValues(sheetsData.leads, "TIER"),
-      urgencias: getUniqueValues(sheetsData.leads, "URGÊNCIA"),
-      cargos: getUniqueValues(sheetsData.leads, "CARGO"),
-      periodos: getUniqueValues(sheetsData.leads, "PERÍODO DE COMPRA")
+      canais: getUniqueValuesWithCount(sheetsData.leads, "CANAL"),
+      tiers: getUniqueValuesWithCount(sheetsData.leads, "TIER"),
+      urgencias: getUniqueValuesWithCount(sheetsData.leads, "URGÊNCIA"),
+      cargos: getUniqueValuesWithCount(sheetsData.leads, "CARGO"),
+      periodos: getUniqueValuesWithCount(sheetsData.leads, "PERÍODO DE COMPRA")
     };
   }, [sheetsData]);
   if (isLoading) {
