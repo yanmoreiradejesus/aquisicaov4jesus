@@ -182,7 +182,8 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
 
   // Calculate ticket médio - only for leads with "DATA DA ASSINATURA" within the filtered period
   // Use E.F (MRR) column instead of FEE
-  const totalFee = leads
+  // IMPORTANT: Use allLeads, not filtered leads, because signature date might be different from lead date
+  const totalFee = allLeads
     .filter((l) => {
       const dataAssinatura = l["DATA DA ASSINATURA"];
       if (!dataAssinatura || dataAssinatura.trim() === "") return false;
