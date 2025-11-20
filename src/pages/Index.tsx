@@ -5,7 +5,6 @@ import ConversionFunnel from "@/components/ConversionFunnel";
 import { useGoogleSheetsData } from "@/hooks/useGoogleSheetsData";
 import { filterLeads, calculateFunnelData, getUniqueValues } from "@/utils/dataProcessor";
 import { Loader2, TrendingUp, TrendingDown } from "lucide-react";
-
 const Index = () => {
   const getCurrentMonthRange = () => {
     const now = new Date();
@@ -16,9 +15,7 @@ const Index = () => {
       end: end.toISOString().split('T')[0]
     };
   };
-
   const initialRange = getCurrentMonthRange();
-  
   const [filters, setFilters] = useState({
     startDate: initialRange.start,
     endDate: initialRange.end,
@@ -28,21 +25,28 @@ const Index = () => {
     cargo: "all",
     periodo: "all",
     emailType: "all",
-    hasDescription: "all",
+    hasDescription: "all"
   });
-
-  const { data: sheetsData, isLoading, error } = useGoogleSheetsData();
-
+  const {
+    data: sheetsData,
+    isLoading,
+    error
+  } = useGoogleSheetsData();
   const handleFilterChange = (key: string, value: string) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
+    setFilters(prev => ({
+      ...prev,
+      [key]: value
+    }));
   };
-
   const filteredLeads = useMemo(() => {
     if (!sheetsData?.leads) return [];
     return filterLeads(sheetsData.leads, filters);
   }, [sheetsData, filters]);
-
-  const { previousPeriodLeads, previousStartDate, previousEndDate } = useMemo(() => {
+  const {
+    previousPeriodLeads,
+    previousStartDate,
+    previousEndDate
+  } = useMemo(() => {
     if (!sheetsData?.leads || !filters.startDate || !filters.endDate) {
       return {
         previousPeriodLeads: [],
@@ -50,36 +54,29 @@ const Index = () => {
         previousEndDate: ''
       };
     }
-    
     const start = new Date(filters.startDate);
     const end = new Date(filters.endDate);
     const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-    
     const prevStart = new Date(start);
     prevStart.setDate(prevStart.getDate() - daysDiff);
     const prevEnd = new Date(start);
     prevEnd.setDate(prevEnd.getDate() - 1);
-    
     const prevStartStr = prevStart.toISOString().split('T')[0];
     const prevEndStr = prevEnd.toISOString().split('T')[0];
-    
     const prevFilters = {
       ...filters,
       startDate: prevStartStr,
       endDate: prevEndStr
     };
-    
     return {
       previousPeriodLeads: filterLeads(sheetsData.leads, prevFilters),
       previousStartDate: prevStartStr,
       previousEndDate: prevEndStr
     };
   }, [sheetsData, filters]);
-
   const conversionFunnelData = useMemo(() => {
     return calculateFunnelData(filteredLeads, filters, sheetsData?.leads || []);
   }, [filteredLeads, filters, sheetsData]);
-
   const previousPeriodData = useMemo(() => {
     return calculateFunnelData(previousPeriodLeads, {
       ...filters,
@@ -87,7 +84,6 @@ const Index = () => {
       endDate: previousEndDate
     }, sheetsData?.leads || []);
   }, [previousPeriodLeads, previousStartDate, previousEndDate, filters, sheetsData]);
-
   const uniqueValues = useMemo(() => {
     if (!sheetsData?.leads) return {
       canais: [],
@@ -96,7 +92,6 @@ const Index = () => {
       cargos: [],
       periodos: []
     };
-    
     return {
       canais: getUniqueValues(sheetsData.leads, "CANAL"),
       tiers: getUniqueValues(sheetsData.leads, "TIER"),
@@ -105,31 +100,23 @@ const Index = () => {
       periodos: getUniqueValues(sheetsData.leads, "PERÍODO DE COMPRA")
     };
   }, [sheetsData]);
-
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+    return <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
           <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
           <p className="text-muted-foreground">Carregando dados do Google Sheets...</p>
         </div>
-      </div>
-    );
+      </div>;
   }
-
   if (error) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+    return <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4 max-w-md">
           <p className="text-destructive font-semibold">Erro ao carregar dados</p>
           <p className="text-muted-foreground text-sm">{error.message}</p>
         </div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       <V4Header />
       
       <main className="container mx-auto max-w-7xl space-y-8 px-4 lg:px-8 py-8">
@@ -137,11 +124,9 @@ const Index = () => {
           <h1 className="mb-2 font-heading text-3xl lg:text-4xl font-bold text-foreground">DASHBOARD</h1>
           <p className="font-body text-sm text-muted-foreground">
             Visão geral e funil de conversão • {filteredLeads.length} leads
-            {sheetsData?.lastUpdated && (
-              <span className="ml-2 text-xs">
+            {sheetsData?.lastUpdated && <span className="ml-2 text-xs">
                 • Última atualização: {new Date(sheetsData.lastUpdated).toLocaleTimeString('pt-BR')}
-              </span>
-            )}
+              </span>}
           </p>
         </div>
 
@@ -157,116 +142,92 @@ const Index = () => {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             {/* CPMQL */}
             <div className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-6 transition-all duration-300 hover:shadow-lg">
-              <p className="mb-2 font-body text-sm text-muted-foreground">CPMQL (CPL Médio)</p>
+              <p className="mb-2 font-body text-sm text-muted-foreground">CPMQL  </p>
               <p className="font-heading text-3xl font-bold text-foreground">R$ {conversionFunnelData.cplMedio.toFixed(2)}</p>
-              {previousPeriodData.cplMedio > 0 && (
-                <div className="mt-2 flex items-center gap-1 text-xs">
-                  {conversionFunnelData.cplMedio < previousPeriodData.cplMedio ? (
-                    <>
+              {previousPeriodData.cplMedio > 0 && <div className="mt-2 flex items-center gap-1 text-xs">
+                  {conversionFunnelData.cplMedio < previousPeriodData.cplMedio ? <>
                       <TrendingDown className="h-3 w-3 text-success" />
                       <span className="text-success">
                         {((1 - conversionFunnelData.cplMedio / previousPeriodData.cplMedio) * 100).toFixed(1)}% vs período anterior
                       </span>
-                    </>
-                  ) : (
-                    <>
+                    </> : <>
                       <TrendingUp className="h-3 w-3 text-destructive" />
                       <span className="text-destructive">
                         {((conversionFunnelData.cplMedio / previousPeriodData.cplMedio - 1) * 100).toFixed(1)}% vs período anterior
                       </span>
-                    </>
-                  )}
-                </div>
-              )}
+                    </>}
+                </div>}
             </div>
 
             {/* CAC */}
             <div className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-6 transition-all duration-300 hover:shadow-lg">
               <p className="mb-2 font-body text-sm text-muted-foreground">CAC</p>
               <p className="font-heading text-3xl font-bold text-foreground">
-                R$ {conversionFunnelData.ass > 0 
-                  ? (conversionFunnelData.investimentoTotal / conversionFunnelData.ass).toFixed(2)
-                  : "0.00"}
+                R$ {conversionFunnelData.ass > 0 ? (conversionFunnelData.investimentoTotal / conversionFunnelData.ass).toFixed(2) : "0.00"}
               </p>
-              {previousPeriodData.ass > 0 && conversionFunnelData.ass > 0 && (
-                <div className="mt-2 flex items-center gap-1 text-xs">
-                  {((conversionFunnelData.investimentoTotal / conversionFunnelData.ass) < (previousPeriodData.investimentoTotal / previousPeriodData.ass)) ? (
-                    <>
+              {previousPeriodData.ass > 0 && conversionFunnelData.ass > 0 && <div className="mt-2 flex items-center gap-1 text-xs">
+                  {conversionFunnelData.investimentoTotal / conversionFunnelData.ass < previousPeriodData.investimentoTotal / previousPeriodData.ass ? <>
                       <TrendingDown className="h-3 w-3 text-success" />
                       <span className="text-success">
-                        {((1 - (conversionFunnelData.investimentoTotal / conversionFunnelData.ass) / (previousPeriodData.investimentoTotal / previousPeriodData.ass)) * 100).toFixed(1)}% vs período anterior
+                        {((1 - conversionFunnelData.investimentoTotal / conversionFunnelData.ass / (previousPeriodData.investimentoTotal / previousPeriodData.ass)) * 100).toFixed(1)}% vs período anterior
                       </span>
-                    </>
-                  ) : (
-                    <>
+                    </> : <>
                       <TrendingUp className="h-3 w-3 text-destructive" />
                       <span className="text-destructive">
-                        {(((conversionFunnelData.investimentoTotal / conversionFunnelData.ass) / (previousPeriodData.investimentoTotal / previousPeriodData.ass) - 1) * 100).toFixed(1)}% vs período anterior
+                        {((conversionFunnelData.investimentoTotal / conversionFunnelData.ass / (previousPeriodData.investimentoTotal / previousPeriodData.ass) - 1) * 100).toFixed(1)}% vs período anterior
                       </span>
-                    </>
-                  )}
-                </div>
-              )}
+                    </>}
+                </div>}
             </div>
 
             {/* Investimento Total */}
             <div className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-6 transition-all duration-300 hover:shadow-lg">
               <p className="mb-2 font-body text-sm text-muted-foreground">Investimento Total</p>
               <p className="font-heading text-3xl font-bold text-foreground">
-                R$ {conversionFunnelData.investimentoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {conversionFunnelData.investimentoTotal.toLocaleString('pt-BR', {
+                minimumFractionDigits: 2
+              })}
               </p>
-              {previousPeriodData.investimentoTotal > 0 && (
-                <div className="mt-2 flex items-center gap-1 text-xs">
-                  {conversionFunnelData.investimentoTotal < previousPeriodData.investimentoTotal ? (
-                    <>
+              {previousPeriodData.investimentoTotal > 0 && <div className="mt-2 flex items-center gap-1 text-xs">
+                  {conversionFunnelData.investimentoTotal < previousPeriodData.investimentoTotal ? <>
                       <TrendingDown className="h-3 w-3 text-success" />
                       <span className="text-success">
                         {((1 - conversionFunnelData.investimentoTotal / previousPeriodData.investimentoTotal) * 100).toFixed(1)}% vs período anterior
                       </span>
-                    </>
-                  ) : (
-                    <>
+                    </> : <>
                       <TrendingUp className="h-3 w-3 text-success" />
                       <span className="text-success">
                         {((conversionFunnelData.investimentoTotal / previousPeriodData.investimentoTotal - 1) * 100).toFixed(1)}% vs período anterior
                       </span>
-                    </>
-                  )}
-                </div>
-              )}
+                    </>}
+                </div>}
             </div>
 
             {/* Faturamento Total */}
             <div className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-6 transition-all duration-300 hover:shadow-lg">
               <p className="mb-2 font-body text-sm text-muted-foreground">Faturamento Total</p>
               <p className="font-heading text-3xl font-bold text-success">
-                R$ {conversionFunnelData.faturamentoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {conversionFunnelData.faturamentoTotal.toLocaleString('pt-BR', {
+                minimumFractionDigits: 2
+              })}
               </p>
-              {previousPeriodData.faturamentoTotal > 0 && (
-                <div className="mt-2 flex items-center gap-1 text-xs">
-                  {conversionFunnelData.faturamentoTotal > previousPeriodData.faturamentoTotal ? (
-                    <>
+              {previousPeriodData.faturamentoTotal > 0 && <div className="mt-2 flex items-center gap-1 text-xs">
+                  {conversionFunnelData.faturamentoTotal > previousPeriodData.faturamentoTotal ? <>
                       <TrendingUp className="h-3 w-3 text-success" />
                       <span className="text-success">
                         {((conversionFunnelData.faturamentoTotal / previousPeriodData.faturamentoTotal - 1) * 100).toFixed(1)}% vs período anterior
                       </span>
-                    </>
-                  ) : (
-                    <>
+                    </> : <>
                       <TrendingDown className="h-3 w-3 text-destructive" />
                       <span className="text-destructive">
                         {((1 - conversionFunnelData.faturamentoTotal / previousPeriodData.faturamentoTotal) * 100).toFixed(1)}% vs período anterior
                       </span>
-                    </>
-                  )}
-                </div>
-              )}
+                    </>}
+                </div>}
             </div>
           </div>
         </section>
       </main>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
