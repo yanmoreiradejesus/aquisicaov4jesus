@@ -244,7 +244,7 @@ const Metas = () => {
       
       <main className="container mx-auto max-w-7xl space-y-8 px-4 lg:px-8 py-8">
         <div>
-          <h1 className="mb-2 font-heading text-3xl lg:text-4xl font-bold text-foreground">META MENSAL    </h1>
+          
           
         </div>
 
