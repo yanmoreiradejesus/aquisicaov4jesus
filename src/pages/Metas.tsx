@@ -148,8 +148,24 @@ const Metas = () => {
 
   // Buscar dados reais da planilha
   const {
-    data: sheetsData
+    data: sheetsData,
+    isLoading: dataLoading
   } = useGoogleSheetsData();
+
+  const [showSkeleton, setShowSkeleton] = useState(true);
+
+  useEffect(() => {
+    if (dataLoading) {
+      setShowSkeleton(true);
+    } else {
+      const timer = setTimeout(() => {
+        setShowSkeleton(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [dataLoading]);
+
+  const isLoading = dataLoading || showSkeleton;
 
   // Calcular dados reais do período selecionado
   const realFunnelData = useMemo(() => {
@@ -246,6 +262,18 @@ const Metas = () => {
     label: "Dezembro"
   }];
   const years = ["2024", "2025", "2026"];
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background animate-fade-in">
+        <V4Header />
+        <div className="mx-auto max-w-7xl p-4 lg:p-8 space-y-8">
+          <FunnelSkeleton />
+        </div>
+      </div>
+    );
+  }
+
   return <div className="min-h-screen bg-background">
       <V4Header />
       
