@@ -128,7 +128,9 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
     })));
   }
   
-  const ass = leads.filter((l) => {
+  // ASS should be counted from ALL leads, not just filtered ones
+  // because a lead might have entered in one period but signed in another
+  const ass = allLeads.filter((l) => {
     const dataAssinatura = l["DATA DA ASSINATURA"];
     if (!dataAssinatura || dataAssinatura.trim() === "") return false;
     

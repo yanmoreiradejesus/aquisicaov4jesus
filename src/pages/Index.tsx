@@ -160,6 +160,7 @@ const Index = () => {
           <ConversionFunnel 
             data={conversionFunnelData} 
             leads={filteredLeads}
+            allLeads={sheetsData?.leads || []}
             filters={filters}
           />
         </section>
