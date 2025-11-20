@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import V4Header from "@/components/V4Header";
 import { Input } from "@/components/ui/input";
@@ -8,8 +8,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { TrendingUp, TrendingDown, Settings } from "lucide-react";
+import { useGoogleSheetsData } from "@/hooks/useGoogleSheetsData";
+import { filterLeads, calculateFunnelData } from "@/utils/dataProcessor";
+import FunnelComparison from "@/components/FunnelComparison";
 
 const Metas = () => {
   const currentMonth = new Date().getMonth() + 1;
@@ -112,8 +114,34 @@ const Metas = () => {
     );
   };
 
-  const actualRevenue = 85000;
-  const actualContracts = 12;
+  // Buscar dados reais da planilha
+  const { data: sheetsData } = useGoogleSheetsData();
+
+  // Calcular dados reais do período selecionado
+  const realFunnelData = useMemo(() => {
+    if (!sheetsData?.leads) return { mql: 0, cr: 0, ra: 0, rr: 0, ass: 0, faturamentoTotal: 0 };
+    
+    const startDate = new Date(parseInt(selectedYear), parseInt(selectedMonth) - 1, 1).toISOString().split('T')[0];
+    const endDate = new Date(parseInt(selectedYear), parseInt(selectedMonth), 0).toISOString().split('T')[0];
+    
+    const filters = {
+      startDate,
+      endDate,
+      canal: "all",
+      tier: "all",
+      urgency: "all",
+      cargo: "all",
+      periodo: "all",
+      emailType: "all",
+      hasDescription: "all"
+    };
+    
+    const filteredLeads = filterLeads(sheetsData.leads, filters);
+    return calculateFunnelData(filteredLeads, filters, sheetsData.leads);
+  }, [sheetsData, selectedMonth, selectedYear]);
+
+  const actualRevenue = realFunnelData.faturamentoTotal;
+  const actualContracts = realFunnelData.ass;
 
   const daysInMonth = new Date(parseInt(selectedYear), parseInt(selectedMonth), 0).getDate();
   const idealDailyRevenue = goalData ? parseFloat(goalData.revenue_goal.toString()) / daysInMonth : 0;
@@ -122,18 +150,25 @@ const Metas = () => {
   const revenueProgress = goalData ? (actualRevenue / parseFloat(goalData.revenue_goal.toString())) * 100 : 0;
   const revenueStatus = actualRevenue >= idealAccumulatedRevenue;
 
+  // Calcular funil ideal baseado nas taxas de conversão e meta de receita
   const mqlToCrealRate = goalData?.mql_to_cr_rate || 80;
   const crToRaRealRate = goalData?.cr_to_ra_rate || 67;
   const raToRrRealRate = goalData?.ra_to_rr_rate || 81;
   const rrToAssRealRate = goalData?.rr_to_ass_rate || 38;
 
-  const funnelIdeal = [
-    { stage: "MQL", ideal: 150, real: 145 },
-    { stage: "C.R", ideal: Math.round(150 * (mqlToCrealRate / 100)), real: 115 },
-    { stage: "R.A", ideal: Math.round(150 * (mqlToCrealRate / 100) * (crToRaRealRate / 100)), real: 78 },
-    { stage: "R.R", ideal: Math.round(150 * (mqlToCrealRate / 100) * (crToRaRealRate / 100) * (raToRrRealRate / 100)), real: 62 },
-    { stage: "ASS", ideal: Math.round(150 * (mqlToCrealRate / 100) * (crToRaRealRate / 100) * (raToRrRealRate / 100) * (rrToAssRealRate / 100)), real: 22 },
-  ];
+  // Calcular MQL ideal baseado na meta de contratos e taxas de conversão
+  const idealContracts = goalData?.contracts_goal || 0;
+  const idealMql = idealContracts > 0 
+    ? Math.round(idealContracts / ((mqlToCrealRate / 100) * (crToRaRealRate / 100) * (raToRrRealRate / 100) * (rrToAssRealRate / 100)))
+    : 0;
+
+  const idealFunnelData = {
+    mql: idealMql,
+    cr: Math.round(idealMql * (mqlToCrealRate / 100)),
+    ra: Math.round(idealMql * (mqlToCrealRate / 100) * (crToRaRealRate / 100)),
+    rr: Math.round(idealMql * (mqlToCrealRate / 100) * (crToRaRealRate / 100) * (raToRrRealRate / 100)),
+    ass: Math.round(idealMql * (mqlToCrealRate / 100) * (crToRaRealRate / 100) * (raToRrRealRate / 100) * (rrToAssRealRate / 100)),
+  };
 
   const monthsSelect = [
     { value: "1", label: "Janeiro" }, { value: "2", label: "Fevereiro" }, { value: "3", label: "Março" },
@@ -340,19 +375,7 @@ const Metas = () => {
 
             <section className="space-y-6">
               <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">FUNIL IDEAL VS FUNIL REAL</h2>
-              <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6">
-                <ResponsiveContainer width="100%" height={400}>
-                  <BarChart data={funnelIdeal}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                    <XAxis dataKey="stage" stroke="hsl(var(--muted-foreground))" />
-                    <YAxis stroke="hsl(var(--muted-foreground))" />
-                    <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "0.75rem" }} />
-                    <Legend />
-                    <Bar dataKey="ideal" fill="hsl(var(--primary))" name="Funil Ideal" />
-                    <Bar dataKey="real" fill="hsl(var(--success))" name="Funil Real" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <FunnelComparison idealData={idealFunnelData} realData={realFunnelData} />
             </section>
           </>
         )}
