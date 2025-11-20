@@ -102,7 +102,7 @@ const FunnelComparison = ({ idealData, realData, targetRates }: FunnelComparison
                   <div className="text-right min-w-[100px]">
                     <p className="font-body text-xs text-muted-foreground">Gap Conv.</p>
                     <p className={`font-heading text-xl font-bold ${convGap >= 0 ? 'text-success' : 'text-destructive'}`}>
-                      {convGap >= 0 ? '+' : ''}{convGap.toFixed(1)}pp
+                      {convGap >= 0 ? '+' : ''}{convGap.toFixed(1)}%
                     </p>
                     <p className="font-body text-xs text-muted-foreground">
                       Meta: {stage.targetConv}%
