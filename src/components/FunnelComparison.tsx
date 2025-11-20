@@ -86,7 +86,7 @@ const FunnelComparison = ({ idealData, realData, targetRates }: FunnelComparison
           <div
             key={index}
             className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-5 transition-all duration-300 hover:shadow-lg hover:border-primary/30 opacity-0 animate-fade-in"
-            style={{ animationDelay: `${index * 150}ms`, animationFillMode: 'backwards' }}
+            style={{ animationDelay: `${index * 150}ms` }}
           >
             <div className="mb-3 flex items-center justify-between">
               <h3 className="font-body text-base font-semibold text-foreground">{stage.title}</h3>
