@@ -142,10 +142,10 @@ const Index = () => {
   return <div className="min-h-screen bg-background">
       <V4Header />
       
-      <main className="container mx-auto max-w-7xl space-y-8 px-4 lg:px-8 py-8">
+      <main className="container mx-auto max-w-7xl space-y-6 lg:space-y-8 px-3 sm:px-4 lg:px-8 py-4 lg:py-8">
         <div>
           
-          <p className="font-body text-sm text-muted-foreground">
+          <p className="font-body text-xs sm:text-sm text-muted-foreground">
             Visão geral e funil de conversão • {filteredLeads.length} leads
             {sheetsData?.lastUpdated && <span className="ml-2 text-xs">
                 • Última atualização: {new Date(sheetsData.lastUpdated).toLocaleTimeString('pt-BR')}
@@ -192,11 +192,11 @@ const Index = () => {
 
             {/* CAC */}
             <div 
-              className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-6 transition-all duration-300 hover:shadow-lg animate-fade-in"
+              className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-4 lg:p-6 transition-all duration-300 hover:shadow-lg animate-fade-in"
               style={{ animationDelay: '1050ms', animationFillMode: 'backwards' }}
             >
-              <p className="mb-2 font-body text-sm text-muted-foreground">CAC</p>
-              <p className="font-heading text-3xl font-bold text-foreground">
+              <p className="mb-2 font-body text-xs lg:text-sm text-muted-foreground">CAC</p>
+              <p className="font-heading text-2xl lg:text-3xl font-bold text-foreground">
                 R$ {conversionFunnelData.ass > 0 ? (conversionFunnelData.investimentoTotal / conversionFunnelData.ass).toFixed(2) : "0.00"}
               </p>
               {previousPeriodData.ass > 0 && conversionFunnelData.ass > 0 && <div className="mt-2 flex items-center gap-1 text-xs">
