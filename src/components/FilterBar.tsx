@@ -243,13 +243,13 @@ const FilterBar = ({
                 )}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {filters.startDate ? format(new Date(filters.startDate), "dd/MM/yyyy", { locale: pt }) : "Selecione"}
+                {filters.startDate ? format(new Date(filters.startDate + "T00:00:00"), "dd/MM/yyyy", { locale: pt }) : "Selecione"}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="single"
-                selected={filters.startDate ? new Date(filters.startDate) : undefined}
+                selected={filters.startDate ? new Date(filters.startDate + "T00:00:00") : undefined}
                 onSelect={(date) => date && onFilterChange("startDate", format(date, "yyyy-MM-dd"))}
                 initialFocus
                 className="pointer-events-auto"
@@ -272,13 +272,13 @@ const FilterBar = ({
                 )}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {filters.endDate ? format(new Date(filters.endDate), "dd/MM/yyyy", { locale: pt }) : "Selecione"}
+                {filters.endDate ? format(new Date(filters.endDate + "T00:00:00"), "dd/MM/yyyy", { locale: pt }) : "Selecione"}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="single"
-                selected={filters.endDate ? new Date(filters.endDate) : undefined}
+                selected={filters.endDate ? new Date(filters.endDate + "T00:00:00") : undefined}
                 onSelect={(date) => date && onFilterChange("endDate", format(date, "yyyy-MM-dd"))}
                 initialFocus
                 className="pointer-events-auto"
