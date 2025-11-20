@@ -5,9 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MultiSelect, MultiSelectOption } from "@/components/ui/multi-select";
 import { FilterSaveDialog } from "@/components/FilterSaveDialog";
-import { Calendar, X, Info, Check } from "lucide-react";
+import { Calendar as CalendarIcon, X, Info, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ValueWithCount } from "@/utils/dataProcessor";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { pt } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 interface FilterBarProps {
   filters: {
     startDate: string;
@@ -228,14 +233,58 @@ const FilterBar = ({
           <FilterLabel tooltip={filterTooltips.startDate}>
             Data Início
           </FilterLabel>
-          <Input type="date" value={filters.startDate} onChange={e => onFilterChange("startDate", e.target.value)} className="h-9 border-border/50 bg-background text-sm transition-all duration-300 focus:border-primary" />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "h-9 w-full justify-start text-left font-normal border-border/50 bg-background text-sm transition-all duration-300 hover:border-primary",
+                  !filters.startDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {filters.startDate ? format(new Date(filters.startDate), "dd/MM/yyyy", { locale: pt }) : "Selecione"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={filters.startDate ? new Date(filters.startDate) : undefined}
+                onSelect={(date) => date && onFilterChange("startDate", format(date, "yyyy-MM-dd"))}
+                initialFocus
+                className="pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
         </div>
         
         <div>
           <FilterLabel tooltip={filterTooltips.endDate}>
             Data Fim
           </FilterLabel>
-          <Input type="date" value={filters.endDate} onChange={e => onFilterChange("endDate", e.target.value)} className="h-9 border-border/50 bg-background text-sm transition-all duration-300 focus:border-primary" />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "h-9 w-full justify-start text-left font-normal border-border/50 bg-background text-sm transition-all duration-300 hover:border-primary",
+                  !filters.endDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {filters.endDate ? format(new Date(filters.endDate), "dd/MM/yyyy", { locale: pt }) : "Selecione"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="single"
+                selected={filters.endDate ? new Date(filters.endDate) : undefined}
+                onSelect={(date) => date && onFilterChange("endDate", format(date, "yyyy-MM-dd"))}
+                initialFocus
+                className="pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
         </div>
         
         <div>
