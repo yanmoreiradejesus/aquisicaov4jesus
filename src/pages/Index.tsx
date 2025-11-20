@@ -267,6 +267,15 @@ const Index = () => {
             </div>
           </div>
         </section>
+
+        {/* Footer - Last Updated */}
+        {sheetsData?.lastUpdated && (
+          <footer className="pt-8 pb-4 text-center border-t border-border/30">
+            <p className="font-body text-xs text-muted-foreground">
+              Última atualização: {new Date(sheetsData.lastUpdated).toLocaleTimeString('pt-BR')}
+            </p>
+          </footer>
+        )}
       </main>
     </div>;
 };
