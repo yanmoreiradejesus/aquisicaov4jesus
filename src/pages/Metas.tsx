@@ -67,6 +67,8 @@ const Metas = () => {
       const initialGoals = months.map(m => ({
         month: m.value,
         revenue_goal: goalsMap.get(m.value)?.revenue_goal || 0,
+        cpmql_target: goalsMap.get(m.value)?.cpmql_target || 0,
+        investment_target: goalsMap.get(m.value)?.investment_target || 0,
         mql_to_cr_rate: goalsMap.get(m.value)?.mql_to_cr_rate || 80,
         cr_to_ra_rate: goalsMap.get(m.value)?.cr_to_ra_rate || 67,
         ra_to_rr_rate: goalsMap.get(m.value)?.ra_to_rr_rate || 81,
@@ -82,6 +84,8 @@ const Metas = () => {
         month: goal.month,
         year: parseInt(selectedYear),
         revenue_goal: parseFloat(goal.revenue_goal.toString()) || 0,
+        cpmql_target: parseFloat(goal.cpmql_target.toString()) || 0,
+        investment_target: parseFloat(goal.investment_target.toString()) || 0,
         contracts_goal: 0,
         mrr_goal: 0,
         mql_to_cr_rate: parseFloat(goal.mql_to_cr_rate.toString()) || 80,
@@ -150,16 +154,17 @@ const Metas = () => {
   const revenueProgress = goalData ? (actualRevenue / parseFloat(goalData.revenue_goal.toString())) * 100 : 0;
   const revenueStatus = actualRevenue >= idealAccumulatedRevenue;
 
-  // Calcular funil ideal baseado nas taxas de conversão e meta de receita
+  // Calcular funil ideal baseado nas taxas de conversão, CPMQL e investimento
   const mqlToCrealRate = goalData?.mql_to_cr_rate || 80;
   const crToRaRealRate = goalData?.cr_to_ra_rate || 67;
   const raToRrRealRate = goalData?.ra_to_rr_rate || 81;
   const rrToAssRealRate = goalData?.rr_to_ass_rate || 38;
 
-  // Calcular MQL ideal baseado na meta de contratos e taxas de conversão
-  const idealContracts = goalData?.contracts_goal || 0;
-  const idealMql = idealContracts > 0 
-    ? Math.round(idealContracts / ((mqlToCrealRate / 100) * (crToRaRealRate / 100) * (raToRrRealRate / 100) * (rrToAssRealRate / 100)))
+  // Calcular MQL ideal baseado no investimento dividido pelo CPMQL alvo
+  const cpmqlTarget = goalData?.cpmql_target || 0;
+  const investmentTarget = goalData?.investment_target || 0;
+  const idealMql = cpmqlTarget > 0 
+    ? Math.round(investmentTarget / cpmqlTarget)
     : 0;
 
   const idealFunnelData = {
@@ -222,6 +227,8 @@ const Metas = () => {
                       <TableRow className="bg-muted/10 hover:bg-muted/10">
                         <TableHead className="font-body text-foreground">Mês</TableHead>
                         <TableHead className="font-body text-foreground">Meta de Receita (R$)</TableHead>
+                        <TableHead className="font-body text-foreground">CPMQL Alvo (R$)</TableHead>
+                        <TableHead className="font-body text-foreground">Investimento (R$)</TableHead>
                         <TableHead className="font-body text-foreground">MQL → CR (%)</TableHead>
                         <TableHead className="font-body text-foreground">CR → RA (%)</TableHead>
                         <TableHead className="font-body text-foreground">RA → RR (%)</TableHead>
@@ -239,6 +246,22 @@ const Metas = () => {
                               type="number"
                               value={goal.revenue_goal}
                               onChange={(e) => updateGoalField(goal.month, 'revenue_goal', e.target.value)}
+                              className="h-9 border-border/50 bg-background"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              value={goal.cpmql_target}
+                              onChange={(e) => updateGoalField(goal.month, 'cpmql_target', e.target.value)}
+                              className="h-9 border-border/50 bg-background"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              value={goal.investment_target}
+                              onChange={(e) => updateGoalField(goal.month, 'investment_target', e.target.value)}
                               className="h-9 border-border/50 bg-background"
                             />
                           </TableCell>

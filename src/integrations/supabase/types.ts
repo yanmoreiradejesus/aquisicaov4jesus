@@ -17,9 +17,11 @@ export type Database = {
       monthly_goals: {
         Row: {
           contracts_goal: number
+          cpmql_target: number | null
           cr_to_ra_rate: number | null
           created_at: string
           id: string
+          investment_target: number | null
           month: number
           mql_to_cr_rate: number | null
           mrr_goal: number
@@ -31,9 +33,11 @@ export type Database = {
         }
         Insert: {
           contracts_goal?: number
+          cpmql_target?: number | null
           cr_to_ra_rate?: number | null
           created_at?: string
           id?: string
+          investment_target?: number | null
           month: number
           mql_to_cr_rate?: number | null
           mrr_goal?: number
@@ -45,9 +49,11 @@ export type Database = {
         }
         Update: {
           contracts_goal?: number
+          cpmql_target?: number | null
           cr_to_ra_rate?: number | null
           created_at?: string
           id?: string
+          investment_target?: number | null
           month?: number
           mql_to_cr_rate?: number | null
           mrr_goal?: number
