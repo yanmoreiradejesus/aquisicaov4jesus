@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect } from "react";
 import V4Header from "@/components/V4Header";
 import FilterBar from "@/components/FilterBar";
 import ConversionFunnel from "@/components/ConversionFunnel";
+import FunnelSkeleton from "@/components/FunnelSkeleton";
+import KPICardSkeleton from "@/components/KPICardSkeleton";
 import { useGoogleSheetsData } from "@/hooks/useGoogleSheetsData";
 import { filterLeads, calculateFunnelData, getUniqueValues } from "@/utils/dataProcessor";
 import { Loader2, TrendingUp, TrendingDown } from "lucide-react";
@@ -101,12 +103,33 @@ const Index = () => {
     };
   }, [sheetsData]);
   if (isLoading) {
-    return <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="text-muted-foreground">Carregando dados do Google Sheets...</p>
+    return (
+      <div className="min-h-screen bg-background animate-fade-in">
+        <V4Header />
+        <div className="mx-auto max-w-7xl p-4 lg:p-8 space-y-8">
+          {/* Filter Bar Skeleton */}
+          <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="space-y-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Funnel Skeleton */}
+          <FunnelSkeleton />
+
+          {/* KPI Cards Skeleton */}
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
+              <KPICardSkeleton key={i} />
+            ))}
+          </div>
         </div>
-      </div>;
+      </div>
+    );
   }
   if (error) {
     return <div className="min-h-screen bg-background flex items-center justify-center">
