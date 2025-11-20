@@ -64,11 +64,23 @@ const ConversionFunnel = ({ data, leads, allLeads, filters }: ConversionFunnelPr
         });
         break;
       case "rr":
-        result = leads.filter(l => {
-          const rrValue = l["R.R"];
-          const isPos = isPositive(rrValue);
-          if (isPos) console.log(`RR Lead: ${l.LEAD}, R.R value: "${rrValue}"`);
-          return isPos;
+        // Apply all non-date filters first, then filter by DATA REUNIÃO
+        const filteredByOtherFiltersRR = filterLeadsWithoutDateFilter(allLeads, filters);
+        
+        result = filteredByOtherFiltersRR.filter(l => {
+          if (!isPositive(l["R.R"])) return false;
+          
+          const meetingDate = l["DATA REUNIÃO"];
+          if (!meetingDate) return false;
+          
+          const mtgDate = new Date(meetingDate.split('/').reverse().join('-'));
+          const isInRange = mtgDate >= startDate && mtgDate <= endDate;
+          
+          if (isInRange) {
+            console.log(`RR Lead: ${l.LEAD}, R.R value: "${l["R.R"]}", Meeting Date: "${meetingDate}"`);
+          }
+          
+          return isInRange;
         });
         break;
       case "ass":
