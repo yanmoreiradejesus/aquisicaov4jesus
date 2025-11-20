@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { MultiSelect, MultiSelectOption } from "@/components/ui/multi-select";
-import { Calendar as CalendarIcon, Check } from "lucide-react";
+import { Calendar as CalendarIcon, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ValueWithCount } from "@/utils/dataProcessor";
 import { Calendar } from "@/components/ui/calendar";
@@ -37,6 +37,7 @@ const FilterBar = ({
   uniqueValues
 }: FilterBarProps) => {
   const [searchTerms, setSearchTerms] = useState<Record<string, string>>({});
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const getCurrentMonthRange = () => {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -154,40 +155,41 @@ const FilterBar = ({
     }));
   };
   return <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-4 lg:p-6 transition-all duration-300 hover:shadow-lg">
-      <div className="mb-4 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <h3 className="font-body text-base lg:text-lg font-semibold text-foreground">Filtros</h3>
-          {hasActiveFilters && <Badge variant="secondary" className="h-5 px-2 text-xs">
-              {activeCount}
-            </Badge>}
-        </div>
-        <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full lg:w-auto">
+      <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Quick Date Presets */}
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={() => setMonthPreset(0)} className="h-7 text-xs flex-1 sm:flex-none">
-              Mês Atual
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setMonthPreset(1)} className="h-7 text-xs flex-1 sm:flex-none">
-              Mês Passado
-            </Button>
-          </div>
-          
-          {/* Extended Presets */}
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={() => setDatePreset('thisYear')} className="h-7 text-xs flex-1 sm:flex-none">
-              Ano Atual
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setDatePreset('lastYear')} className="h-7 text-xs flex-1 sm:flex-none">
-              Ano Passado
-            </Button>
-            <Button size="sm" variant="outline" onClick={setTotalPeriod} className="h-7 text-xs flex-1 sm:flex-none">
-              Período Total
-            </Button>
-          </div>
+          <Button size="sm" variant="outline" onClick={() => setMonthPreset(0)} className="h-8 text-xs">
+            Mês Atual
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setMonthPreset(1)} className="h-8 text-xs">
+            Mês Passado
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setDatePreset('thisYear')} className="h-8 text-xs">
+            Ano Atual
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setDatePreset('lastYear')} className="h-8 text-xs">
+            Ano Passado
+          </Button>
+          <Button size="sm" variant="outline" onClick={setTotalPeriod} className="h-8 text-xs">
+            Período Total
+          </Button>
         </div>
+
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+          className="h-8 text-xs gap-2"
+        >
+          Filtros Avançados
+          {showAdvancedFilters ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+          {hasActiveFilters && <Badge variant="secondary" className="h-4 px-1.5 text-[10px] ml-1">
+            {activeCount}
+          </Badge>}
+        </Button>
       </div>
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4 md:grid-cols-4 lg:grid-cols-9">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4 md:grid-cols-3">
         <div className="sm:col-span-1">
           <label className="mb-1 block text-xs font-medium text-muted-foreground">
             Data Início
@@ -245,11 +247,14 @@ const FilterBar = ({
             </PopoverContent>
           </Popover>
         </div>
-        
-        <div className="sm:col-span-2 lg:col-span-1">
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">
-            Canal {filters.canal.length > 0 && <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{filters.canal.length}</Badge>}
-          </label>
+      </div>
+
+      {showAdvancedFilters && (
+        <div className="mt-4 pt-4 border-t border-border/30 grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4 md:grid-cols-3 animate-in fade-in duration-300">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              Canal {filters.canal.length > 0 && <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{filters.canal.length}</Badge>}
+            </label>
           <MultiSelect options={convertToMultiSelectOptions(uniqueValues.canais)} selected={filters.canal} onChange={values => onFilterChange("canal", values)} placeholder="Todos" />
         </div>
         
@@ -312,7 +317,8 @@ const FilterBar = ({
             </SelectContent>
           </Select>
         </div>
-      </div>
+        </div>
+      )}
     </div>;
 };
 export default FilterBar;
