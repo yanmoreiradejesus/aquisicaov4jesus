@@ -90,11 +90,20 @@ const ConversionFunnel = ({ data, leads, allLeads, filters }: ConversionFunnelPr
         });
         break;
       case "ass":
-        result = leads.filter(l => {
-          const assValue = l.ASS;
-          const isPos = isPositive(assValue);
-          if (isPos) console.log(`ASS Lead: ${l.LEAD}, ASS value: "${assValue}"`);
-          return isPos;
+        result = allLeads.filter(l => {
+          if (!isPositive(l.ASS)) return false;
+          
+          const signatureDate = l["DATA DA ASSINATURA"];
+          if (!signatureDate) return false;
+          
+          const sigDate = new Date(signatureDate.split('/').reverse().join('-'));
+          const isInRange = sigDate >= startDate && sigDate <= endDate;
+          
+          if (isInRange) {
+            console.log(`ASS Lead: ${l.LEAD}, ASS value: "${l.ASS}", Signature Date: "${signatureDate}"`);
+          }
+          
+          return isInRange;
         });
         break;
       default:
