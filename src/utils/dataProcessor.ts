@@ -107,19 +107,18 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
   const rr = leads.filter((l) => isPositive(l["R.R"])).length;
   
   // Count ASS based on "DATA DA ASSINATURA" being within the filtered period
-  // IMPORTANT: Search in ALL leads, not just filtered ones
   console.log("Filter dates for signature:", filters.startDate, "to", filters.endDate);
   
   const startDate = new Date(filters.startDate);
   const endDate = new Date(filters.endDate);
   
   // First, let's see all leads with DATA DA ASSINATURA filled
-  const leadsWithSignature = allLeads.filter((l) => {
+  const leadsWithSignature = leads.filter((l) => {
     const dataAssinatura = l["DATA DA ASSINATURA"];
     return dataAssinatura && dataAssinatura.trim() !== "";
   });
   
-  console.log("Total leads with DATA DA ASSINATURA filled (from all leads):", leadsWithSignature.length);
+  console.log("Total leads with DATA DA ASSINATURA filled (from filtered leads):", leadsWithSignature.length);
   if (leadsWithSignature.length > 0) {
     console.log("First 5 leads with signature dates:", leadsWithSignature.slice(0, 5).map(l => ({
       lead: l.LEAD,
@@ -129,7 +128,7 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
     })));
   }
   
-  const ass = allLeads.filter((l) => {
+  const ass = leads.filter((l) => {
     const dataAssinatura = l["DATA DA ASSINATURA"];
     if (!dataAssinatura || dataAssinatura.trim() === "") return false;
     
@@ -180,9 +179,8 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
   const cprr = rr > 0 ? totalCPL / rr : 0;
 
   // Calculate ticket médio - only for leads with "DATA DA ASSINATURA" within the filtered period
-  // IMPORTANT: Search in ALL leads, not just filtered ones
   // Use E.F (MRR) column instead of FEE
-  const totalFee = allLeads
+  const totalFee = leads
     .filter((l) => {
       const dataAssinatura = l["DATA DA ASSINATURA"];
       if (!dataAssinatura || dataAssinatura.trim() === "") return false;
