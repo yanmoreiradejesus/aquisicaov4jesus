@@ -16,24 +16,24 @@ const V4Header = () => {
             <nav className="flex gap-4 lg:gap-6">
               <Link
                 to="/"
-                className={`font-body text-xs lg:text-sm font-medium tracking-wider transition-all duration-300 hover:text-white ${
-                  isActive("/") ? "text-white" : "text-white/70"
+                className={`font-body text-xs lg:text-sm font-medium tracking-wider transition-all duration-300 text-white ${
+                  isActive("/") ? "opacity-100" : "opacity-70 hover:opacity-100"
                 }`}
               >
                 DASHBOARD
               </Link>
               <Link
                 to="/insights"
-                className={`font-body text-xs lg:text-sm font-medium tracking-wider transition-all duration-300 hover:text-white ${
-                  isActive("/insights") ? "text-white" : "text-white/70"
+                className={`font-body text-xs lg:text-sm font-medium tracking-wider transition-all duration-300 text-white ${
+                  isActive("/insights") ? "opacity-100" : "opacity-70 hover:opacity-100"
                 }`}
               >
                 INSIGHTS
               </Link>
               <Link
                 to="/metas"
-                className={`font-body text-xs lg:text-sm font-medium tracking-wider transition-all duration-300 hover:text-white ${
-                  isActive("/metas") ? "text-white" : "text-white/70"
+                className={`font-body text-xs lg:text-sm font-medium tracking-wider transition-all duration-300 text-white ${
+                  isActive("/metas") ? "opacity-100" : "opacity-70 hover:opacity-100"
                 }`}
               >
                 METAS
