@@ -121,7 +121,7 @@ const Index = () => {
       
       <main className="container mx-auto max-w-7xl space-y-8 px-4 lg:px-8 py-8">
         <div>
-          <h1 className="mb-2 font-heading text-3xl lg:text-4xl font-bold text-foreground">DASHBOARD</h1>
+          
           <p className="font-body text-sm text-muted-foreground">
             Visão geral e funil de conversão • {filteredLeads.length} leads
             {sheetsData?.lastUpdated && <span className="ml-2 text-xs">
@@ -133,12 +133,12 @@ const Index = () => {
         <FilterBar filters={filters} onFilterChange={handleFilterChange} uniqueValues={uniqueValues} />
 
         <section className="space-y-6">
-          <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">FUNIL DE CONVERSÃO</h2>
+          <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">FUNIL DE VENDAS    </h2>
           <ConversionFunnel data={conversionFunnelData} />
         </section>
 
         <section className="space-y-6">
-          <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">KPIs PRINCIPAIS</h2>
+          <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">KPIS PRINCIPAIS</h2>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             {/* CPMQL */}
             <div className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-6 transition-all duration-300 hover:shadow-lg">
