@@ -1,3 +1,22 @@
+import { useState } from "react";
+import LeadsDialog from "./LeadsDialog";
+
+interface Lead {
+  LEAD: string;
+  DATA: string;
+  "C.R"?: string;
+  "R.A"?: string;
+  "R.R"?: string;
+  ASS?: string;
+  CANAL?: string;
+  TIER?: string;
+  URGÊNCIA?: string;
+  CARGO?: string;
+  "E-MAIL"?: string;
+  CPL?: string;
+  "DATA DA ASSINATURA"?: string;
+}
+
 interface FunnelStage {
   title: string;
   total: number;
@@ -5,7 +24,9 @@ interface FunnelStage {
   costLabel: string;
   costValue: number;
   barColor: string;
+  stageKey: string;
 }
+
 interface ConversionFunnelProps {
   data: {
     mql: number;
@@ -19,17 +40,63 @@ interface ConversionFunnelProps {
     cprr: number;
     ticketMedio: number;
   };
+  leads: Lead[];
+  filters: {
+    startDate: string;
+    endDate: string;
+  };
 }
-const ConversionFunnel = ({ data }: ConversionFunnelProps) => {
+const ConversionFunnel = ({ data, leads, filters }: ConversionFunnelProps) => {
+  const [selectedStage, setSelectedStage] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const isPositive = (value: any): boolean => {
+    if (typeof value === 'string') {
+      const normalized = value.trim().toUpperCase();
+      return normalized === 'SIM' || normalized === 'YES' || normalized === 'S' || normalized === 'Y';
+    }
+    return Boolean(value);
+  };
+
+  const getLeadsForStage = (stageKey: string): Lead[] => {
+    const startDate = new Date(filters.startDate);
+    const endDate = new Date(filters.endDate);
+
+    switch (stageKey) {
+      case "mql":
+        return leads;
+      case "cr":
+        return leads.filter(l => isPositive(l["C.R"]));
+      case "ra":
+        return leads.filter(l => isPositive(l["R.A"]));
+      case "rr":
+        return leads.filter(l => isPositive(l["R.R"]));
+      case "ass":
+        return leads.filter(l => {
+          const dataAssinatura = l["DATA DA ASSINATURA"];
+          if (!dataAssinatura || dataAssinatura.trim() === "") return false;
+          const signatureDate = new Date(dataAssinatura);
+          return signatureDate >= startDate && signatureDate <= endDate;
+        });
+      default:
+        return [];
+    }
+  };
+
+  const handleStageClick = (stageKey: string) => {
+    setSelectedStage(stageKey);
+    setDialogOpen(true);
+  };
+
   const stages: FunnelStage[] = [
     {
       title: "Leads Comprados (MQL)",
       total: data.mql,
       conversionRate: 0,
-      // Não mostrar conversão para MQL
       costLabel: "CPMQL",
       costValue: data.cplMedio,
       barColor: "bg-[hsl(217,91%,60%)]",
+      stageKey: "mql",
     },
     {
       title: "Contato Realizado (C.R)",
@@ -38,6 +105,7 @@ const ConversionFunnel = ({ data }: ConversionFunnelProps) => {
       costLabel: "Custo p/ C.R",
       costValue: data.custoCR,
       barColor: "bg-[hsl(271,76%,53%)]",
+      stageKey: "cr",
     },
     {
       title: "Reunião Agendada (R.A)",
@@ -46,6 +114,7 @@ const ConversionFunnel = ({ data }: ConversionFunnelProps) => {
       costLabel: "CPA",
       costValue: data.cpa,
       barColor: "bg-[hsl(24,95%,53%)]",
+      stageKey: "ra",
     },
     {
       title: "Reunião Realizada (R.R)",
@@ -54,6 +123,7 @@ const ConversionFunnel = ({ data }: ConversionFunnelProps) => {
       costLabel: "CPRR",
       costValue: data.cprr,
       barColor: "bg-[hsl(38,92%,50%)]",
+      stageKey: "rr",
     },
     {
       title: "Contrato Assinado (ASS)",
@@ -62,6 +132,7 @@ const ConversionFunnel = ({ data }: ConversionFunnelProps) => {
       costLabel: "Ticket Médio",
       costValue: data.ticketMedio,
       barColor: "bg-[hsl(142,76%,36%)]",
+      stageKey: "ass",
     },
   ];
   const intermediateRates = [
@@ -101,7 +172,8 @@ const ConversionFunnel = ({ data }: ConversionFunnelProps) => {
           return (
             <div
               key={index}
-              className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-5 transition-all duration-300 hover:shadow-lg hover:border-primary/30 animate-fade-in"
+              onClick={() => handleStageClick(stage.stageKey)}
+              className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-5 transition-all duration-300 hover:shadow-lg hover:border-primary/30 animate-fade-in cursor-pointer hover:scale-[1.02]"
               style={{ animationDelay: `${index * 150}ms`, animationFillMode: 'backwards' }}
             >
               <div className="mb-3 flex items-center justify-between">
@@ -156,6 +228,13 @@ const ConversionFunnel = ({ data }: ConversionFunnelProps) => {
           </div>
         ))}
       </div>
+
+      <LeadsDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        leads={selectedStage ? getLeadsForStage(selectedStage) : []}
+        stageTitle={selectedStage ? stages.find(s => s.stageKey === selectedStage)?.title || "" : ""}
+      />
     </div>
   );
 };
