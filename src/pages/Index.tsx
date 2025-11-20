@@ -157,7 +157,11 @@ const Index = () => {
 
         <section className="space-y-6">
           <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">FUNIL DE VENDAS    </h2>
-          <ConversionFunnel data={conversionFunnelData} />
+          <ConversionFunnel 
+            data={conversionFunnelData} 
+            leads={filteredLeads}
+            filters={filters}
+          />
         </section>
 
         <section className="space-y-6">
