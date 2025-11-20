@@ -126,8 +126,18 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
   const ra = leads.filter((l) => isPositive(l["R.A"])).length;
   const rr = leads.filter((l) => isPositive(l["R.R"])).length;
   
-  // Count ASS from filtered leads only (respecting all filters including date)
-  const ass = leads.filter((l) => isPositive(l.ASS)).length;
+  // Count ASS based on DATA DA ASSINATURA within the date filter range
+  const startDate = new Date(filters.startDate);
+  const endDate = new Date(filters.endDate);
+  const ass = allLeads.filter((l) => {
+    if (!isPositive(l.ASS)) return false;
+    
+    const signatureDate = l["DATA DA ASSINATURA"];
+    if (!signatureDate) return false;
+    
+    const sigDate = new Date(signatureDate.split('/').reverse().join('-'));
+    return sigDate >= startDate && sigDate <= endDate;
+  }).length;
 
   console.log("Funnel counts:", { mql, cr, ra, rr, ass });
 
@@ -160,9 +170,17 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
   const cpa = ra > 0 ? totalCPL / ra : 0;
   const cprr = rr > 0 ? totalCPL / rr : 0;
 
-  // Calculate total fee from filtered leads with ASS = true
-  const totalFee = leads
-    .filter((l) => isPositive(l.ASS))
+  // Calculate total fee from all leads with ASS = true and signature date in range
+  const totalFee = allLeads
+    .filter((l) => {
+      if (!isPositive(l.ASS)) return false;
+      
+      const signatureDate = l["DATA DA ASSINATURA"];
+      if (!signatureDate) return false;
+      
+      const sigDate = new Date(signatureDate.split('/').reverse().join('-'));
+      return sigDate >= startDate && sigDate <= endDate;
+    })
     .reduce((sum, lead, index) => {
       // Try E.F first, fallback to FEE if E.F is not available
       const efValue = lead["E.F"] || lead.FEE;
