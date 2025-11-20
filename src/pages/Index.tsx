@@ -143,16 +143,6 @@ const Index = () => {
       <V4Header />
       
       <main className="container mx-auto max-w-7xl space-y-6 lg:space-y-8 px-3 sm:px-4 lg:px-8 py-4 lg:py-8">
-        <div>
-          
-          <p className="font-body text-xs sm:text-sm text-muted-foreground">
-            Visão geral e funil de conversão • {filteredLeads.length} leads
-            {sheetsData?.lastUpdated && <span className="ml-2 text-xs">
-                • Última atualização: {new Date(sheetsData.lastUpdated).toLocaleTimeString('pt-BR')}
-              </span>}
-          </p>
-        </div>
-
         <FilterBar filters={filters} onFilterChange={handleFilterChange} uniqueValues={uniqueValues} />
 
         <section className="space-y-6">

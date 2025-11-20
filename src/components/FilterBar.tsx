@@ -156,7 +156,7 @@ const FilterBar = ({
   };
   return <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-4 lg:p-6 transition-all duration-300 hover:shadow-lg">
       <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           {/* Quick Date Presets */}
           <Button size="sm" variant="outline" onClick={() => setMonthPreset(0)} className="h-8 text-xs">
             Mês Atual
@@ -179,7 +179,7 @@ const FilterBar = ({
           size="sm"
           variant="outline"
           onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-          className="h-8 text-xs gap-2"
+          className="h-8 text-xs gap-2 hidden sm:flex"
         >
           Filtros Avançados
           {showAdvancedFilters ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -189,7 +189,7 @@ const FilterBar = ({
         </Button>
       </div>
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4 md:grid-cols-3 mb-4">
         <div className="sm:col-span-1">
           <label className="mb-1 block text-xs font-medium text-muted-foreground">
             Data Início
@@ -247,6 +247,22 @@ const FilterBar = ({
             </PopoverContent>
           </Popover>
         </div>
+      </div>
+
+      {/* Mobile Advanced Filters Button - Centered below dates */}
+      <div className="sm:hidden flex justify-center mb-4">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+          className="h-8 text-xs gap-2"
+        >
+          Filtros Avançados
+          {showAdvancedFilters ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+          {hasActiveFilters && <Badge variant="secondary" className="h-4 px-1.5 text-[10px] ml-1">
+            {activeCount}
+          </Badge>}
+        </Button>
       </div>
 
       {showAdvancedFilters && (
