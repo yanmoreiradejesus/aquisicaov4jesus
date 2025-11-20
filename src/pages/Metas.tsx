@@ -189,14 +189,141 @@ const Metas = () => {
       <V4Header />
       
       <main className="container mx-auto max-w-7xl space-y-8 px-4 lg:px-8 py-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="mb-2 font-heading text-3xl lg:text-4xl font-bold text-foreground">METAS & ACOMPANHAMENTO</h1>
-            <p className="font-body text-sm text-muted-foreground">Acompanhe o progresso das suas metas mensais</p>
+        <div>
+          <h1 className="mb-2 font-heading text-3xl lg:text-4xl font-bold text-foreground">METAS & ACOMPANHAMENTO</h1>
+          <p className="font-body text-sm text-muted-foreground">Acompanhe o progresso das suas metas mensais</p>
+        </div>
+
+        <section className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6 lg:p-8">
+          <div className="mb-6 flex items-center gap-4">
+            <label className="font-body text-sm font-medium text-muted-foreground">Visualizar:</label>
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="w-40 border-border/50 bg-background">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border z-50">
+                {monthsSelect.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger className="w-32 border-border/50 bg-background">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-card border-border z-50">
+                {years.map((y) => (
+                  <SelectItem key={y} value={y}>{y}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+        </section>
+
+        {goalData && (
+          <>
+            <section className="space-y-6">
+              <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">META VS REALIZADO</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6">
+                  <p className="mb-2 font-body text-sm text-muted-foreground">Meta de Receita</p>
+                  <p className="font-heading text-3xl font-bold text-foreground">R$ {parseFloat(goalData.revenue_goal.toString()).toLocaleString('pt-BR')}</p>
+                  <div className="mt-4">
+                    <div className="flex justify-between mb-2">
+                      <span className="font-body text-xs text-muted-foreground">Realizado</span>
+                      <span className="font-body text-xs font-semibold text-foreground">R$ {actualRevenue.toLocaleString('pt-BR')}</span>
+                    </div>
+                    <div className="h-3 overflow-hidden rounded-full bg-muted/30">
+                      <div 
+                        className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-500"
+                        style={{ width: `${Math.min(revenueProgress, 100)}%` }}
+                      />
+                    </div>
+                    <p className="mt-2 font-body text-xs text-right">
+                      <span className={revenueStatus ? 'text-success' : 'text-warning'}>
+                        {revenueProgress.toFixed(1)}% da meta
+                      </span>
+                    </p>
+                    <p className="mt-2 font-body text-sm flex items-center gap-2">
+                      {revenueStatus ? (
+                        <>
+                          <TrendingUp className="h-4 w-4 text-success" />
+                          <span className="text-success font-semibold">À frente do ideal do dia</span>
+                        </>
+                      ) : (
+                        <>
+                          <TrendingDown className="h-4 w-4 text-destructive" />
+                          <span className="text-destructive font-semibold">Atrasado em relação ao ideal</span>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6">
+                  <p className="mb-2 font-body text-sm text-muted-foreground">Meta de Investimento</p>
+                  <p className="font-heading text-3xl font-bold text-foreground">R$ {parseFloat(goalData.investment_target.toString()).toLocaleString('pt-BR')}</p>
+                  <div className="mt-4">
+                    <div className="flex justify-between mb-2">
+                      <span className="font-body text-xs text-muted-foreground">Realizado</span>
+                      <span className="font-body text-xs font-semibold text-foreground">R$ {('investimentoTotal' in realFunnelData ? realFunnelData.investimentoTotal : 0).toLocaleString('pt-BR')}</span>
+                    </div>
+                    <div className="h-3 overflow-hidden rounded-full bg-muted/30">
+                      <div 
+                        className="h-full bg-gradient-to-r from-warning to-warning/80 transition-all duration-500"
+                        style={{ width: `${Math.min((('investimentoTotal' in realFunnelData ? realFunnelData.investimentoTotal : 0) / parseFloat(goalData.investment_target.toString())) * 100, 100)}%` }}
+                      />
+                    </div>
+                    <p className="mt-2 font-body text-xs text-right">
+                      <span className="text-muted-foreground">
+                        {((('investimentoTotal' in realFunnelData ? realFunnelData.investimentoTotal : 0) / parseFloat(goalData.investment_target.toString())) * 100).toFixed(1)}% da meta
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-6">
+              <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">IDEAL DO DIA</h2>
+              <div className="grid grid-cols-1 gap-6">
+                <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6">
+                  <p className="mb-2 font-body text-sm text-muted-foreground">Pace Ideal (dia {currentDay})</p>
+                  <p className="font-heading text-2xl font-bold text-warning">R$ {idealAccumulatedRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  <p className="mt-2 font-body text-sm">
+                    <span className="text-muted-foreground">Realizado: </span>
+                    <span className="font-semibold text-foreground">R$ {actualRevenue.toLocaleString('pt-BR')}</span>
+                  </p>
+                  <p className="mt-1 font-body text-sm">
+                    <span className="text-muted-foreground">Gap: </span>
+                    <span className={`font-semibold ${actualRevenue >= idealAccumulatedRevenue ? 'text-success' : 'text-destructive'}`}>
+                      R$ {Math.abs(actualRevenue - idealAccumulatedRevenue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </span>
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-6">
+              <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">FUNIL IDEAL VS REALIZADO</h2>
+              <FunnelComparison 
+                idealData={idealFunnelData} 
+                realData={realFunnelData}
+                targetRates={{
+                  mql_to_cr_rate: mqlToCrealRate,
+                  cr_to_ra_rate: crToRaRealRate,
+                  ra_to_rr_rate: raToRrRealRate,
+                  rr_to_ass_rate: rrToAssRealRate
+                }}
+              />
+            </section>
+          </>
+        )}
+
+        <div className="flex justify-center pt-8 pb-4">
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+              <Button className="bg-[hsl(0,84.2%,60.2%)] text-white hover:bg-[hsl(0,84.2%,50%)]">
                 <Settings className="mr-2 h-4 w-4" />
                 DEFINIR METAS
               </Button>
@@ -319,132 +446,6 @@ const Metas = () => {
             </DialogContent>
           </Dialog>
         </div>
-
-        <section className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6 lg:p-8">
-          <div className="mb-6 flex items-center gap-4">
-            <label className="font-body text-sm font-medium text-muted-foreground">Visualizar:</label>
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-40 border-border/50 bg-background">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border z-50">
-                {monthsSelect.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
-              <SelectTrigger className="w-32 border-border/50 bg-background">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-card border-border z-50">
-                {years.map((y) => (
-                  <SelectItem key={y} value={y}>{y}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </section>
-
-        {goalData && (
-          <>
-            <section className="space-y-6">
-              <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">META VS REALIZADO</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6">
-                  <p className="mb-2 font-body text-sm text-muted-foreground">Meta de Receita</p>
-                  <p className="font-heading text-3xl font-bold text-foreground">R$ {parseFloat(goalData.revenue_goal.toString()).toLocaleString('pt-BR')}</p>
-                  <div className="mt-4">
-                    <div className="flex justify-between mb-2">
-                      <span className="font-body text-xs text-muted-foreground">Realizado</span>
-                      <span className="font-body text-xs font-semibold text-foreground">R$ {actualRevenue.toLocaleString('pt-BR')}</span>
-                    </div>
-                    <div className="h-3 overflow-hidden rounded-full bg-muted/30">
-                      <div 
-                        className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-500"
-                        style={{ width: `${Math.min(revenueProgress, 100)}%` }}
-                      />
-                    </div>
-                    <p className="mt-2 font-body text-xs text-right">
-                      <span className={revenueStatus ? 'text-success' : 'text-warning'}>
-                        {revenueProgress.toFixed(1)}% da meta
-                      </span>
-                    </p>
-                    <p className="mt-2 font-body text-sm flex items-center gap-2">
-                      {revenueStatus ? (
-                        <>
-                          <TrendingUp className="h-4 w-4 text-success" />
-                          <span className="text-success font-semibold">À frente do ideal do dia</span>
-                        </>
-                      ) : (
-                        <>
-                          <TrendingDown className="h-4 w-4 text-destructive" />
-                          <span className="text-destructive font-semibold">Atrasado em relação ao ideal</span>
-                        </>
-                      )}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6">
-                  <p className="mb-2 font-body text-sm text-muted-foreground">Meta de Investimento</p>
-                  <p className="font-heading text-3xl font-bold text-foreground">R$ {parseFloat(goalData.investment_target.toString()).toLocaleString('pt-BR')}</p>
-                  <div className="mt-4">
-                    <div className="flex justify-between mb-2">
-                      <span className="font-body text-xs text-muted-foreground">Realizado</span>
-                      <span className="font-body text-xs font-semibold text-foreground">R$ {('investimentoTotal' in realFunnelData ? realFunnelData.investimentoTotal : 0).toLocaleString('pt-BR')}</span>
-                    </div>
-                    <div className="h-3 overflow-hidden rounded-full bg-muted/30">
-                      <div 
-                        className="h-full bg-gradient-to-r from-warning to-warning/80 transition-all duration-500"
-                        style={{ width: `${Math.min((('investimentoTotal' in realFunnelData ? realFunnelData.investimentoTotal : 0) / parseFloat(goalData.investment_target.toString())) * 100, 100)}%` }}
-                      />
-                    </div>
-                    <p className="mt-2 font-body text-xs text-right">
-                      <span className="text-muted-foreground">
-                        {((('investimentoTotal' in realFunnelData ? realFunnelData.investimentoTotal : 0) / parseFloat(goalData.investment_target.toString())) * 100).toFixed(1)}% da meta
-                      </span>
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section className="space-y-6">
-              <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">IDEAL DO DIA</h2>
-              <div className="grid grid-cols-1 gap-6">
-                <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6">
-                  <p className="mb-2 font-body text-sm text-muted-foreground">Ideal Acumulado (dia {currentDay})</p>
-                  <p className="font-heading text-2xl font-bold text-warning">R$ {idealAccumulatedRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                  <p className="mt-2 font-body text-sm">
-                    <span className="text-muted-foreground">Realizado: </span>
-                    <span className="font-semibold text-foreground">R$ {actualRevenue.toLocaleString('pt-BR')}</span>
-                  </p>
-                  <p className="mt-1 font-body text-sm">
-                    <span className="text-muted-foreground">Gap: </span>
-                    <span className={`font-semibold ${actualRevenue >= idealAccumulatedRevenue ? 'text-success' : 'text-destructive'}`}>
-                      R$ {Math.abs(actualRevenue - idealAccumulatedRevenue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </span>
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            <section className="space-y-6">
-              <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">FUNIL IDEAL VS REALIZADO</h2>
-              <FunnelComparison 
-                idealData={idealFunnelData} 
-                realData={realFunnelData}
-                targetRates={{
-                  mql_to_cr_rate: mqlToCrealRate,
-                  cr_to_ra_rate: crToRaRealRate,
-                  ra_to_rr_rate: raToRrRealRate,
-                  rr_to_ass_rate: rrToAssRealRate
-                }}
-              />
-            </section>
-          </>
-        )}
       </main>
     </div>
   );
