@@ -80,7 +80,7 @@ export const filterLeads = (leads: Lead[], filters: FilterOptions): Lead[] => {
 };
 
 // Helper to check if a value represents "yes/true/completed"
-const isPositive = (value: string | undefined): boolean => {
+export const isPositive = (value: string | undefined): boolean => {
   if (!value) return false;
   const val = value.toString().trim().toUpperCase();
   // Check for common positive values
