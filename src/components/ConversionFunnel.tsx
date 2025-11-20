@@ -1,5 +1,6 @@
 import { useState } from "react";
 import LeadsDialog from "./LeadsDialog";
+import { isPositive } from "@/utils/dataProcessor";
 
 interface Lead {
   LEAD: string;
@@ -50,37 +51,62 @@ const ConversionFunnel = ({ data, leads, filters }: ConversionFunnelProps) => {
   const [selectedStage, setSelectedStage] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const isPositive = (value: any): boolean => {
-    if (typeof value === 'string') {
-      const normalized = value.trim().toUpperCase();
-      return normalized === 'SIM' || normalized === 'YES' || normalized === 'S' || normalized === 'Y';
-    }
-    return Boolean(value);
-  };
-
   const getLeadsForStage = (stageKey: string): Lead[] => {
     const startDate = new Date(filters.startDate);
     const endDate = new Date(filters.endDate);
 
+    console.log(`Getting leads for stage: ${stageKey}`);
+    console.log(`Total leads available: ${leads.length}`);
+
+    let result: Lead[] = [];
+
     switch (stageKey) {
       case "mql":
-        return leads;
+        result = leads;
+        break;
       case "cr":
-        return leads.filter(l => isPositive(l["C.R"]));
+        result = leads.filter(l => {
+          const crValue = l["C.R"];
+          const isPos = isPositive(crValue);
+          if (isPos) console.log(`CR Lead: ${l.LEAD}, C.R value: "${crValue}"`);
+          return isPos;
+        });
+        break;
       case "ra":
-        return leads.filter(l => isPositive(l["R.A"]));
+        result = leads.filter(l => {
+          const raValue = l["R.A"];
+          const isPos = isPositive(raValue);
+          if (isPos) console.log(`RA Lead: ${l.LEAD}, R.A value: "${raValue}"`);
+          return isPos;
+        });
+        break;
       case "rr":
-        return leads.filter(l => isPositive(l["R.R"]));
+        result = leads.filter(l => {
+          const rrValue = l["R.R"];
+          const isPos = isPositive(rrValue);
+          if (isPos) console.log(`RR Lead: ${l.LEAD}, R.R value: "${rrValue}"`);
+          return isPos;
+        });
+        break;
       case "ass":
-        return leads.filter(l => {
+        result = leads.filter(l => {
           const dataAssinatura = l["DATA DA ASSINATURA"];
           if (!dataAssinatura || dataAssinatura.trim() === "") return false;
           const signatureDate = new Date(dataAssinatura);
-          return signatureDate >= startDate && signatureDate <= endDate;
+          const inRange = signatureDate >= startDate && signatureDate <= endDate;
+          if (inRange) console.log(`ASS Lead: ${l.LEAD}, Date: ${dataAssinatura}`);
+          return inRange;
         });
+        break;
       default:
-        return [];
+        result = [];
     }
+
+    console.log(`Stage ${stageKey}: Found ${result.length} leads`);
+    if (result.length > 0) {
+      console.log(`First lead:`, result[0]);
+    }
+    return result;
   };
 
   const handleStageClick = (stageKey: string) => {
