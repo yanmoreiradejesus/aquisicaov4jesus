@@ -8,59 +8,84 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { TrendingUp, TrendingDown, Settings } from "lucide-react";
+import { TrendingUp, Settings } from "lucide-react";
 import { useGoogleSheetsData } from "@/hooks/useGoogleSheetsData";
 import { filterLeads, calculateFunnelData } from "@/utils/dataProcessor";
 import FunnelComparison from "@/components/FunnelComparison";
-
 const Metas = () => {
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
   const currentDay = new Date().getDate();
-  
   const [selectedMonth, setSelectedMonth] = useState(currentMonth.toString());
   const [selectedYear, setSelectedYear] = useState(currentYear.toString());
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editableGoals, setEditableGoals] = useState<any[]>([]);
-
   const queryClient = useQueryClient();
-
-  const months = [
-    { value: 1, label: "Janeiro" }, { value: 2, label: "Fevereiro" }, { value: 3, label: "Março" },
-    { value: 4, label: "Abril" }, { value: 5, label: "Maio" }, { value: 6, label: "Junho" },
-    { value: 7, label: "Julho" }, { value: 8, label: "Agosto" }, { value: 9, label: "Setembro" },
-    { value: 10, label: "Outubro" }, { value: 11, label: "Novembro" }, { value: 12, label: "Dezembro" },
-  ];
-
-  const { data: goalData } = useQuery({
+  const months = [{
+    value: 1,
+    label: "Janeiro"
+  }, {
+    value: 2,
+    label: "Fevereiro"
+  }, {
+    value: 3,
+    label: "Março"
+  }, {
+    value: 4,
+    label: "Abril"
+  }, {
+    value: 5,
+    label: "Maio"
+  }, {
+    value: 6,
+    label: "Junho"
+  }, {
+    value: 7,
+    label: "Julho"
+  }, {
+    value: 8,
+    label: "Agosto"
+  }, {
+    value: 9,
+    label: "Setembro"
+  }, {
+    value: 10,
+    label: "Outubro"
+  }, {
+    value: 11,
+    label: "Novembro"
+  }, {
+    value: 12,
+    label: "Dezembro"
+  }];
+  const {
+    data: goalData
+  } = useQuery({
     queryKey: ["goals", selectedMonth, selectedYear],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("monthly_goals")
-        .select("*")
-        .eq("month", parseInt(selectedMonth))
-        .eq("year", parseInt(selectedYear))
-        .maybeSingle();
-      
+      const {
+        data,
+        error
+      } = await supabase.from("monthly_goals").select("*").eq("month", parseInt(selectedMonth)).eq("year", parseInt(selectedYear)).maybeSingle();
       if (error) throw error;
       return data;
-    },
+    }
   });
-
-  const { data: allGoalsData } = useQuery({
+  const {
+    data: allGoalsData
+  } = useQuery({
     queryKey: ["all_goals", selectedYear],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("monthly_goals")
-        .select("*")
-        .eq("year", parseInt(selectedYear))
-        .order("month", { ascending: true });
-      
+      const {
+        data,
+        error
+      } = await supabase.from("monthly_goals").select("*").eq("year", parseInt(selectedYear)).order("month", {
+        ascending: true
+      });
       if (error) throw error;
       return data || [];
-    },
+    }
   });
-
   useEffect(() => {
     if (allGoalsData) {
       const goalsMap = new Map(allGoalsData.map(g => [g.month, g]));
@@ -72,12 +97,11 @@ const Metas = () => {
         mql_to_cr_rate: goalsMap.get(m.value)?.mql_to_cr_rate || 80,
         cr_to_ra_rate: goalsMap.get(m.value)?.cr_to_ra_rate || 67,
         ra_to_rr_rate: goalsMap.get(m.value)?.ra_to_rr_rate || 81,
-        rr_to_ass_rate: goalsMap.get(m.value)?.rr_to_ass_rate || 38,
+        rr_to_ass_rate: goalsMap.get(m.value)?.rr_to_ass_rate || 38
       }));
       setEditableGoals(initialGoals);
     }
   }, [allGoalsData]);
-
   const saveAllGoalsMutation = useMutation({
     mutationFn: async () => {
       const goalsToUpsert = editableGoals.map(goal => ({
@@ -91,43 +115,53 @@ const Metas = () => {
         mql_to_cr_rate: parseFloat(goal.mql_to_cr_rate.toString()) || 80,
         cr_to_ra_rate: parseFloat(goal.cr_to_ra_rate.toString()) || 67,
         ra_to_rr_rate: parseFloat(goal.ra_to_rr_rate.toString()) || 81,
-        rr_to_ass_rate: parseFloat(goal.rr_to_ass_rate.toString()) || 38,
+        rr_to_ass_rate: parseFloat(goal.rr_to_ass_rate.toString()) || 38
       }));
-
-      const { error } = await supabase
-        .from("monthly_goals")
-        .upsert(goalsToUpsert, {
-          onConflict: "month,year"
-        });
+      const {
+        error
+      } = await supabase.from("monthly_goals").upsert(goalsToUpsert, {
+        onConflict: "month,year"
+      });
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["goals"] });
-      queryClient.invalidateQueries({ queryKey: ["all_goals"] });
+      queryClient.invalidateQueries({
+        queryKey: ["goals"]
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["all_goals"]
+      });
       toast.success("Metas salvas com sucesso!");
       setIsDialogOpen(false);
     },
     onError: () => {
       toast.error("Erro ao salvar metas");
-    },
+    }
   });
-
   const updateGoalField = (monthValue: number, field: string, value: string) => {
-    setEditableGoals(prev => 
-      prev.map(g => g.month === monthValue ? { ...g, [field]: value } : g)
-    );
+    setEditableGoals(prev => prev.map(g => g.month === monthValue ? {
+      ...g,
+      [field]: value
+    } : g));
   };
 
   // Buscar dados reais da planilha
-  const { data: sheetsData } = useGoogleSheetsData();
+  const {
+    data: sheetsData
+  } = useGoogleSheetsData();
 
   // Calcular dados reais do período selecionado
   const realFunnelData = useMemo(() => {
-    if (!sheetsData?.leads) return { mql: 0, cr: 0, ra: 0, rr: 0, ass: 0, faturamentoTotal: 0 };
-    
+    if (!sheetsData?.leads) return {
+      mql: 0,
+      cr: 0,
+      ra: 0,
+      rr: 0,
+      ass: 0,
+      faturamentoTotal: 0
+    };
     const startDate = new Date(parseInt(selectedYear), parseInt(selectedMonth) - 1, 1).toISOString().split('T')[0];
     const endDate = new Date(parseInt(selectedYear), parseInt(selectedMonth), 0).toISOString().split('T')[0];
-    
     const filters = {
       startDate,
       endDate,
@@ -139,19 +173,15 @@ const Metas = () => {
       emailType: "all",
       hasDescription: "all"
     };
-    
     const filteredLeads = filterLeads(sheetsData.leads, filters);
     return calculateFunnelData(filteredLeads, filters, sheetsData.leads);
   }, [sheetsData, selectedMonth, selectedYear]);
-
   const actualRevenue = realFunnelData.faturamentoTotal;
   const actualContracts = realFunnelData.ass;
-
   const daysInMonth = new Date(parseInt(selectedYear), parseInt(selectedMonth), 0).getDate();
   const idealDailyRevenue = goalData ? parseFloat(goalData.revenue_goal.toString()) / daysInMonth : 0;
   const idealAccumulatedRevenue = idealDailyRevenue * currentDay;
-
-  const revenueProgress = goalData ? (actualRevenue / parseFloat(goalData.revenue_goal.toString())) * 100 : 0;
+  const revenueProgress = goalData ? actualRevenue / parseFloat(goalData.revenue_goal.toString()) * 100 : 0;
   const revenueStatus = actualRevenue >= idealAccumulatedRevenue;
 
   // Calcular funil ideal baseado nas taxas de conversão, CPMQL e investimento
@@ -163,35 +193,59 @@ const Metas = () => {
   // Calcular MQL ideal baseado no investimento dividido pelo CPMQL alvo
   const cpmqlTarget = goalData?.cpmql_target || 0;
   const investmentTarget = goalData?.investment_target || 0;
-  const idealMql = cpmqlTarget > 0 
-    ? Math.round(investmentTarget / cpmqlTarget)
-    : 0;
-
+  const idealMql = cpmqlTarget > 0 ? Math.round(investmentTarget / cpmqlTarget) : 0;
   const idealFunnelData = {
     mql: idealMql,
     cr: Math.round(idealMql * (mqlToCrealRate / 100)),
     ra: Math.round(idealMql * (mqlToCrealRate / 100) * (crToRaRealRate / 100)),
     rr: Math.round(idealMql * (mqlToCrealRate / 100) * (crToRaRealRate / 100) * (raToRrRealRate / 100)),
-    ass: Math.round(idealMql * (mqlToCrealRate / 100) * (crToRaRealRate / 100) * (raToRrRealRate / 100) * (rrToAssRealRate / 100)),
+    ass: Math.round(idealMql * (mqlToCrealRate / 100) * (crToRaRealRate / 100) * (raToRrRealRate / 100) * (rrToAssRealRate / 100))
   };
-
-  const monthsSelect = [
-    { value: "1", label: "Janeiro" }, { value: "2", label: "Fevereiro" }, { value: "3", label: "Março" },
-    { value: "4", label: "Abril" }, { value: "5", label: "Maio" }, { value: "6", label: "Junho" },
-    { value: "7", label: "Julho" }, { value: "8", label: "Agosto" }, { value: "9", label: "Setembro" },
-    { value: "10", label: "Outubro" }, { value: "11", label: "Novembro" }, { value: "12", label: "Dezembro" },
-  ];
-
+  const monthsSelect = [{
+    value: "1",
+    label: "Janeiro"
+  }, {
+    value: "2",
+    label: "Fevereiro"
+  }, {
+    value: "3",
+    label: "Março"
+  }, {
+    value: "4",
+    label: "Abril"
+  }, {
+    value: "5",
+    label: "Maio"
+  }, {
+    value: "6",
+    label: "Junho"
+  }, {
+    value: "7",
+    label: "Julho"
+  }, {
+    value: "8",
+    label: "Agosto"
+  }, {
+    value: "9",
+    label: "Setembro"
+  }, {
+    value: "10",
+    label: "Outubro"
+  }, {
+    value: "11",
+    label: "Novembro"
+  }, {
+    value: "12",
+    label: "Dezembro"
+  }];
   const years = ["2024", "2025", "2026"];
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       <V4Header />
       
       <main className="container mx-auto max-w-7xl space-y-8 px-4 lg:px-8 py-8">
         <div>
-          <h1 className="mb-2 font-heading text-3xl lg:text-4xl font-bold text-foreground">METAS & ACOMPANHAMENTO</h1>
-          <p className="font-body text-sm text-muted-foreground">Acompanhe o progresso das suas metas mensais</p>
+          <h1 className="mb-2 font-heading text-3xl lg:text-4xl font-bold text-foreground">META MENSAL    </h1>
+          
         </div>
 
         <section className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6 lg:p-8">
@@ -202,9 +256,7 @@ const Metas = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-card border-border z-50">
-                {monthsSelect.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                ))}
+                {monthsSelect.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={selectedYear} onValueChange={setSelectedYear}>
@@ -212,21 +264,18 @@ const Metas = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-card border-border z-50">
-                {years.map((y) => (
-                  <SelectItem key={y} value={y}>{y}</SelectItem>
-                ))}
+                {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
         </section>
 
-        {goalData && (
-          <>
+        {goalData && <>
             <section className="space-y-6">
               <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">META VS REALIZADO</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6">
-                  <p className="mb-2 font-body text-sm text-muted-foreground">Meta de Receita</p>
+                  <p className="mb-2 font-body text-sm text-muted-foreground">Meta de Receita Adicionada  </p>
                   <p className="font-heading text-3xl font-bold text-foreground">R$ {parseFloat(goalData.revenue_goal.toString()).toLocaleString('pt-BR')}</p>
                   <div className="mt-4">
                     <div className="flex justify-between mb-2">
@@ -234,10 +283,9 @@ const Metas = () => {
                       <span className="font-body text-xs font-semibold text-foreground">R$ {actualRevenue.toLocaleString('pt-BR')}</span>
                     </div>
                     <div className="h-3 overflow-hidden rounded-full bg-muted/30">
-                      <div 
-                        className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-500"
-                        style={{ width: `${Math.min(revenueProgress, 100)}%` }}
-                      />
+                      <div className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-500" style={{
+                    width: `${Math.min(revenueProgress, 100)}%`
+                  }} />
                     </div>
                     <p className="mt-2 font-body text-xs text-right">
                       <span className={revenueStatus ? 'text-success' : 'text-warning'}>
@@ -245,23 +293,19 @@ const Metas = () => {
                       </span>
                     </p>
                     <p className="mt-2 font-body text-sm flex items-center gap-2">
-                      {revenueStatus ? (
-                        <>
+                      {revenueStatus ? <>
                           <TrendingUp className="h-4 w-4 text-success" />
                           <span className="text-success font-semibold">À frente do ideal do dia</span>
-                        </>
-                      ) : (
-                        <>
-                          <TrendingDown className="h-4 w-4 text-destructive" />
-                          <span className="text-destructive font-semibold">Atrasado em relação ao ideal</span>
-                        </>
-                      )}
+                        </> : <>
+                          
+                          
+                        </>}
                     </p>
                   </div>
                 </div>
 
                 <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6">
-                  <p className="mb-2 font-body text-sm text-muted-foreground">Meta de Investimento</p>
+                  <p className="mb-2 font-body text-sm text-muted-foreground">Meta de Investimento em Broker  </p>
                   <p className="font-heading text-3xl font-bold text-foreground">R$ {parseFloat(goalData.investment_target.toString()).toLocaleString('pt-BR')}</p>
                   <div className="mt-4">
                     <div className="flex justify-between mb-2">
@@ -269,14 +313,13 @@ const Metas = () => {
                       <span className="font-body text-xs font-semibold text-foreground">R$ {('investimentoTotal' in realFunnelData ? realFunnelData.investimentoTotal : 0).toLocaleString('pt-BR')}</span>
                     </div>
                     <div className="h-3 overflow-hidden rounded-full bg-muted/30">
-                      <div 
-                        className="h-full bg-gradient-to-r from-warning to-warning/80 transition-all duration-500"
-                        style={{ width: `${Math.min((('investimentoTotal' in realFunnelData ? realFunnelData.investimentoTotal : 0) / parseFloat(goalData.investment_target.toString())) * 100, 100)}%` }}
-                      />
+                      <div className="h-full bg-gradient-to-r from-warning to-warning/80 transition-all duration-500" style={{
+                    width: `${Math.min(('investimentoTotal' in realFunnelData ? realFunnelData.investimentoTotal : 0) / parseFloat(goalData.investment_target.toString()) * 100, 100)}%`
+                  }} />
                     </div>
                     <p className="mt-2 font-body text-xs text-right">
                       <span className="text-muted-foreground">
-                        {((('investimentoTotal' in realFunnelData ? realFunnelData.investimentoTotal : 0) / parseFloat(goalData.investment_target.toString())) * 100).toFixed(1)}% da meta
+                        {(('investimentoTotal' in realFunnelData ? realFunnelData.investimentoTotal : 0) / parseFloat(goalData.investment_target.toString()) * 100).toFixed(1)}% da meta
                       </span>
                     </p>
                   </div>
@@ -285,11 +328,13 @@ const Metas = () => {
             </section>
 
             <section className="space-y-6">
-              <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">IDEAL DO DIA</h2>
+              <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">PACE IDEAL   </h2>
               <div className="grid grid-cols-1 gap-6">
                 <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6">
                   <p className="mb-2 font-body text-sm text-muted-foreground">Pace Ideal (dia {currentDay})</p>
-                  <p className="font-heading text-2xl font-bold text-warning">R$ {idealAccumulatedRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  <p className="font-heading text-2xl font-bold text-warning">R$ {idealAccumulatedRevenue.toLocaleString('pt-BR', {
+                  minimumFractionDigits: 2
+                })}</p>
                   <p className="mt-2 font-body text-sm">
                     <span className="text-muted-foreground">Realizado: </span>
                     <span className="font-semibold text-foreground">R$ {actualRevenue.toLocaleString('pt-BR')}</span>
@@ -297,7 +342,9 @@ const Metas = () => {
                   <p className="mt-1 font-body text-sm">
                     <span className="text-muted-foreground">Gap: </span>
                     <span className={`font-semibold ${actualRevenue >= idealAccumulatedRevenue ? 'text-success' : 'text-destructive'}`}>
-                      R$ {Math.abs(actualRevenue - idealAccumulatedRevenue).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {Math.abs(actualRevenue - idealAccumulatedRevenue).toLocaleString('pt-BR', {
+                    minimumFractionDigits: 2
+                  })}
                     </span>
                   </p>
                 </div>
@@ -305,20 +352,15 @@ const Metas = () => {
             </section>
 
             <section className="space-y-6">
-              <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">FUNIL IDEAL VS REALIZADO</h2>
-              <FunnelComparison 
-                idealData={idealFunnelData} 
-                realData={realFunnelData}
-                targetRates={{
-                  mql_to_cr_rate: mqlToCrealRate,
-                  cr_to_ra_rate: crToRaRealRate,
-                  ra_to_rr_rate: raToRrRealRate,
-                  rr_to_ass_rate: rrToAssRealRate
-                }}
-              />
+              <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">FUNIL            </h2>
+              <FunnelComparison idealData={idealFunnelData} realData={realFunnelData} targetRates={{
+            mql_to_cr_rate: mqlToCrealRate,
+            cr_to_ra_rate: crToRaRealRate,
+            ra_to_rr_rate: raToRrRealRate,
+            rr_to_ass_rate: rrToAssRealRate
+          }} />
             </section>
-          </>
-        )}
+          </>}
 
         <div className="flex justify-center pt-8 pb-4">
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -341,9 +383,7 @@ const Metas = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border z-50">
-                      {years.map((y) => (
-                        <SelectItem key={y} value={y}>{y}</SelectItem>
-                      ))}
+                      {years.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -363,69 +403,32 @@ const Metas = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {editableGoals.map((goal, index) => (
-                        <TableRow key={goal.month} className="hover:bg-muted/5">
+                      {editableGoals.map((goal, index) => <TableRow key={goal.month} className="hover:bg-muted/5">
                           <TableCell className="font-body text-foreground font-medium">
                             {months.find(m => m.value === goal.month)?.label}
                           </TableCell>
                           <TableCell>
-                            <Input
-                              type="number"
-                              value={goal.revenue_goal}
-                              onChange={(e) => updateGoalField(goal.month, 'revenue_goal', e.target.value)}
-                              className="h-9 border-border/50 bg-background"
-                            />
+                            <Input type="number" value={goal.revenue_goal} onChange={e => updateGoalField(goal.month, 'revenue_goal', e.target.value)} className="h-9 border-border/50 bg-background" />
                           </TableCell>
                           <TableCell>
-                            <Input
-                              type="number"
-                              value={goal.cpmql_target}
-                              onChange={(e) => updateGoalField(goal.month, 'cpmql_target', e.target.value)}
-                              className="h-9 border-border/50 bg-background"
-                            />
+                            <Input type="number" value={goal.cpmql_target} onChange={e => updateGoalField(goal.month, 'cpmql_target', e.target.value)} className="h-9 border-border/50 bg-background" />
                           </TableCell>
                           <TableCell>
-                            <Input
-                              type="number"
-                              value={goal.investment_target}
-                              onChange={(e) => updateGoalField(goal.month, 'investment_target', e.target.value)}
-                              className="h-9 border-border/50 bg-background"
-                            />
+                            <Input type="number" value={goal.investment_target} onChange={e => updateGoalField(goal.month, 'investment_target', e.target.value)} className="h-9 border-border/50 bg-background" />
                           </TableCell>
                           <TableCell>
-                            <Input
-                              type="number"
-                              value={goal.mql_to_cr_rate}
-                              onChange={(e) => updateGoalField(goal.month, 'mql_to_cr_rate', e.target.value)}
-                              className="h-9 border-border/50 bg-background"
-                            />
+                            <Input type="number" value={goal.mql_to_cr_rate} onChange={e => updateGoalField(goal.month, 'mql_to_cr_rate', e.target.value)} className="h-9 border-border/50 bg-background" />
                           </TableCell>
                           <TableCell>
-                            <Input
-                              type="number"
-                              value={goal.cr_to_ra_rate}
-                              onChange={(e) => updateGoalField(goal.month, 'cr_to_ra_rate', e.target.value)}
-                              className="h-9 border-border/50 bg-background"
-                            />
+                            <Input type="number" value={goal.cr_to_ra_rate} onChange={e => updateGoalField(goal.month, 'cr_to_ra_rate', e.target.value)} className="h-9 border-border/50 bg-background" />
                           </TableCell>
                           <TableCell>
-                            <Input
-                              type="number"
-                              value={goal.ra_to_rr_rate}
-                              onChange={(e) => updateGoalField(goal.month, 'ra_to_rr_rate', e.target.value)}
-                              className="h-9 border-border/50 bg-background"
-                            />
+                            <Input type="number" value={goal.ra_to_rr_rate} onChange={e => updateGoalField(goal.month, 'ra_to_rr_rate', e.target.value)} className="h-9 border-border/50 bg-background" />
                           </TableCell>
                           <TableCell>
-                            <Input
-                              type="number"
-                              value={goal.rr_to_ass_rate}
-                              onChange={(e) => updateGoalField(goal.month, 'rr_to_ass_rate', e.target.value)}
-                              className="h-9 border-border/50 bg-background"
-                            />
+                            <Input type="number" value={goal.rr_to_ass_rate} onChange={e => updateGoalField(goal.month, 'rr_to_ass_rate', e.target.value)} className="h-9 border-border/50 bg-background" />
                           </TableCell>
-                        </TableRow>
-                      ))}
+                        </TableRow>)}
                     </TableBody>
                   </Table>
                 </div>
@@ -434,11 +437,7 @@ const Metas = () => {
                   <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Cancelar
                   </Button>
-                  <Button 
-                    onClick={() => saveAllGoalsMutation.mutate()} 
-                    className="bg-primary text-primary-foreground hover:bg-primary/90"
-                    disabled={saveAllGoalsMutation.isPending}
-                  >
+                  <Button onClick={() => saveAllGoalsMutation.mutate()} className="bg-primary text-primary-foreground hover:bg-primary/90" disabled={saveAllGoalsMutation.isPending}>
                     {saveAllGoalsMutation.isPending ? "SALVANDO..." : "SALVAR METAS"}
                   </Button>
                 </div>
@@ -447,8 +446,6 @@ const Metas = () => {
           </Dialog>
         </div>
       </main>
-    </div>
-  );
+    </div>;
 };
-
 export default Metas;
