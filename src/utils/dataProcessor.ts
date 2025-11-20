@@ -3,11 +3,11 @@ import { Lead } from "@/hooks/useGoogleSheetsData";
 export interface FilterOptions {
   startDate: string;
   endDate: string;
-  canal: string;
-  tier: string;
-  urgency: string;
-  cargo: string;
-  periodo: string;
+  canal: string | string[];
+  tier: string | string[];
+  urgency: string | string[];
+  cargo: string | string[];
+  periodo: string | string[];
   emailType: string;
   hasDescription: string;
 }
@@ -25,28 +25,48 @@ export const filterLeads = (leads: Lead[], filters: FilterOptions): Lead[] => {
       }
     }
 
-    // Canal filter
-    if (filters.canal !== "all" && lead.CANAL !== filters.canal) {
+    // Canal filter - support arrays
+    if (Array.isArray(filters.canal)) {
+      if (filters.canal.length > 0 && !filters.canal.includes(lead.CANAL || "")) {
+        return false;
+      }
+    } else if (filters.canal !== "all" && lead.CANAL !== filters.canal) {
       return false;
     }
 
-    // Tier filter
-    if (filters.tier !== "all" && lead.TIER !== filters.tier) {
+    // Tier filter - support arrays
+    if (Array.isArray(filters.tier)) {
+      if (filters.tier.length > 0 && !filters.tier.includes(lead.TIER || "")) {
+        return false;
+      }
+    } else if (filters.tier !== "all" && lead.TIER !== filters.tier) {
       return false;
     }
 
-    // Urgency filter
-    if (filters.urgency !== "all" && lead.URGÊNCIA?.toLowerCase() !== filters.urgency.toLowerCase()) {
+    // Urgency filter - support arrays
+    if (Array.isArray(filters.urgency)) {
+      if (filters.urgency.length > 0 && !filters.urgency.some(u => u.toLowerCase() === lead.URGÊNCIA?.toLowerCase())) {
+        return false;
+      }
+    } else if (filters.urgency !== "all" && lead.URGÊNCIA?.toLowerCase() !== filters.urgency.toLowerCase()) {
       return false;
     }
 
-    // Cargo filter
-    if (filters.cargo !== "all" && lead.CARGO?.toLowerCase() !== filters.cargo.toLowerCase()) {
+    // Cargo filter - support arrays
+    if (Array.isArray(filters.cargo)) {
+      if (filters.cargo.length > 0 && !filters.cargo.some(c => c.toLowerCase() === lead.CARGO?.toLowerCase())) {
+        return false;
+      }
+    } else if (filters.cargo !== "all" && lead.CARGO?.toLowerCase() !== filters.cargo.toLowerCase()) {
       return false;
     }
 
-    // Período filter
-    if (filters.periodo !== "all" && lead["PERÍODO DE COMPRA"]?.toLowerCase() !== filters.periodo.toLowerCase()) {
+    // Período filter - support arrays
+    if (Array.isArray(filters.periodo)) {
+      if (filters.periodo.length > 0 && !filters.periodo.some(p => p.toLowerCase() === lead["PERÍODO DE COMPRA"]?.toLowerCase())) {
+        return false;
+      }
+    } else if (filters.periodo !== "all" && lead["PERÍODO DE COMPRA"]?.toLowerCase() !== filters.periodo.toLowerCase()) {
       return false;
     }
 
@@ -251,5 +271,24 @@ export const getUniqueValues = (leads: Lead[], field: keyof Lead): string[] => {
       values.add(value.trim());
     }
   });
-  return Array.from(values).sort();
+  return Array.from(values).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+};
+
+export interface ValueWithCount {
+  value: string;
+  count: number;
+}
+
+export const getUniqueValuesWithCount = (leads: Lead[], field: keyof Lead): ValueWithCount[] => {
+  const counts = leads.reduce((acc, lead) => {
+    const value = lead[field]?.toString() || "";
+    if (value && value.trim()) {
+      acc[value.trim()] = (acc[value.trim()] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+  
+  return Object.entries(counts)
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) => a.value.localeCompare(b.value, 'pt-BR'));
 };
