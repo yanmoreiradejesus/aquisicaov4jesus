@@ -86,7 +86,7 @@ const ConversionFunnel = ({ data }: ConversionFunnelProps) => {
   return (
     <div className="relative grid grid-cols-[1fr_4fr_1fr] gap-6">
       {/* Left Side - MQL to VENDA */}
-      <div className="flex items-center justify-center">
+      <div className="flex items-center justify-center animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>
         <div className="text-center">
           <p className="mb-2 font-body text-xs text-muted-foreground">MQL → VENDA</p>
           <p className="font-heading text-5xl font-bold text-success">{mqlToVenda.toFixed(1)}%</p>
@@ -101,7 +101,8 @@ const ConversionFunnel = ({ data }: ConversionFunnelProps) => {
           return (
             <div
               key={index}
-              className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-5 transition-all duration-300 hover:shadow-lg hover:border-primary/30"
+              className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-5 transition-all duration-300 hover:shadow-lg hover:border-primary/30 animate-fade-in"
+              style={{ animationDelay: `${index * 150}ms`, animationFillMode: 'backwards' }}
             >
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="font-body text-base font-semibold text-foreground">{stage.title}</h3>
@@ -145,7 +146,11 @@ const ConversionFunnel = ({ data }: ConversionFunnelProps) => {
       {/* Right Side - Intermediate Rates */}
       <div className="flex flex-col justify-around">
         {intermediateRates.map((rate, index) => (
-          <div key={index} className="text-center">
+          <div 
+            key={index} 
+            className="text-center animate-fade-in"
+            style={{ animationDelay: `${(index + 1) * 150 + 100}ms`, animationFillMode: 'backwards' }}
+          >
             <p className="mb-1 font-body text-xs text-muted-foreground">{rate.label}</p>
             <p className="font-heading text-2xl font-bold text-foreground">{rate.rate.toFixed(1)}%</p>
           </div>
