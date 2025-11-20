@@ -126,48 +126,8 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
   const ra = leads.filter((l) => isPositive(l["R.A"])).length;
   const rr = leads.filter((l) => isPositive(l["R.R"])).length;
   
-  // Count ASS based on "DATA DA ASSINATURA" being within the filtered period
-  console.log("Filter dates for signature:", filters.startDate, "to", filters.endDate);
-  
-  const startDate = new Date(filters.startDate);
-  const endDate = new Date(filters.endDate);
-  
-  // First, let's see all leads with DATA DA ASSINATURA filled
-  const leadsWithSignature = leads.filter((l) => {
-    const dataAssinatura = l["DATA DA ASSINATURA"];
-    return dataAssinatura && dataAssinatura.trim() !== "";
-  });
-  
-  console.log("Total leads with DATA DA ASSINATURA filled (from filtered leads):", leadsWithSignature.length);
-  if (leadsWithSignature.length > 0) {
-    console.log("First 5 leads with signature dates:", leadsWithSignature.slice(0, 5).map(l => ({
-      lead: l.LEAD,
-      dataLead: l.DATA,
-      dataAssinatura: l["DATA DA ASSINATURA"],
-      ef: l["E.F"]
-    })));
-  }
-  
-  // ASS should be counted from ALL leads, not just filtered ones
-  // because a lead might have entered in one period but signed in another
-  const ass = allLeads.filter((l) => {
-    const dataAssinatura = l["DATA DA ASSINATURA"];
-    if (!dataAssinatura || dataAssinatura.trim() === "") return false;
-    
-    // Parse date in DD/MM/YYYY format
-    const dateParts = dataAssinatura.split('/');
-    if (dateParts.length !== 3) return false;
-    
-    const assinaturaDate = new Date(dateParts[2] + '-' + dateParts[1] + '-' + dateParts[0]);
-    
-    const isInPeriod = assinaturaDate >= startDate && assinaturaDate <= endDate;
-    
-    if (isInPeriod) {
-      console.log("Lead signed in period:", l.LEAD, "Lead Date:", l.DATA, "Signature Date:", dataAssinatura, "E.F:", l["E.F"]);
-    }
-    
-    return isInPeriod;
-  }).length;
+  // Count ASS from filtered leads only (respecting all filters including date)
+  const ass = leads.filter((l) => isPositive(l.ASS)).length;
 
   console.log("Funnel counts:", { mql, cr, ra, rr, ass });
 
@@ -200,24 +160,9 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
   const cpa = ra > 0 ? totalCPL / ra : 0;
   const cprr = rr > 0 ? totalCPL / rr : 0;
 
-  // Calculate ticket médio - only for leads with "DATA DA ASSINATURA" within the filtered period
-  // Use E.F (MRR) column instead of FEE
-  // IMPORTANT: Use allLeads, not filtered leads, because signature date might be different from lead date
-  const totalFee = allLeads
-    .filter((l) => {
-      const dataAssinatura = l["DATA DA ASSINATURA"];
-      if (!dataAssinatura || dataAssinatura.trim() === "") return false;
-      
-      // Parse date in DD/MM/YYYY format
-      const dateParts = dataAssinatura.split('/');
-      if (dateParts.length !== 3) return false;
-      
-      const assinaturaDate = new Date(dateParts[2] + '-' + dateParts[1] + '-' + dateParts[0]);
-      const startDate = new Date(filters.startDate);
-      const endDate = new Date(filters.endDate);
-      
-      return assinaturaDate >= startDate && assinaturaDate <= endDate;
-    })
+  // Calculate total fee from filtered leads with ASS = true
+  const totalFee = leads
+    .filter((l) => isPositive(l.ASS))
     .reduce((sum, lead, index) => {
       // Try E.F first, fallback to FEE if E.F is not available
       const efValue = lead["E.F"] || lead.FEE;
