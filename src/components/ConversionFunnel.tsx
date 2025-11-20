@@ -42,12 +42,13 @@ interface ConversionFunnelProps {
     ticketMedio: number;
   };
   leads: Lead[];
+  allLeads: Lead[]; // All leads regardless of date filter
   filters: {
     startDate: string;
     endDate: string;
   };
 }
-const ConversionFunnel = ({ data, leads, filters }: ConversionFunnelProps) => {
+const ConversionFunnel = ({ data, leads, allLeads, filters }: ConversionFunnelProps) => {
   const [selectedStage, setSelectedStage] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -89,7 +90,9 @@ const ConversionFunnel = ({ data, leads, filters }: ConversionFunnelProps) => {
         });
         break;
       case "ass":
-        result = leads.filter(l => {
+        // For ASS, we need to filter from ALL leads, not just filtered ones
+        // because a lead might have entered in one period but signed in another
+        result = allLeads.filter(l => {
           const dataAssinatura = l["DATA DA ASSINATURA"];
           if (!dataAssinatura || dataAssinatura.trim() === "") return false;
           
