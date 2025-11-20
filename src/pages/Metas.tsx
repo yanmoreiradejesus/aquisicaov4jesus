@@ -350,25 +350,61 @@ const Metas = () => {
           <>
             <section className="space-y-6">
               <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">META VS REALIZADO</h2>
-              <div className="grid grid-cols-1 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6">
                   <p className="mb-2 font-body text-sm text-muted-foreground">Meta de Receita</p>
                   <p className="font-heading text-3xl font-bold text-foreground">R$ {parseFloat(goalData.revenue_goal.toString()).toLocaleString('pt-BR')}</p>
                   <div className="mt-4">
                     <div className="flex justify-between mb-2">
                       <span className="font-body text-xs text-muted-foreground">Realizado</span>
-                      <span className="font-body text-xs font-semibold text-foreground">{revenueProgress.toFixed(1)}%</span>
+                      <span className="font-body text-xs font-semibold text-foreground">R$ {actualRevenue.toLocaleString('pt-BR')}</span>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-muted/30">
-                      <div className="h-full transition-all duration-500 bg-success" style={{ width: `${Math.min(revenueProgress, 100)}%` }} />
+                    <div className="h-3 overflow-hidden rounded-full bg-muted/30">
+                      <div 
+                        className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-500"
+                        style={{ width: `${Math.min(revenueProgress, 100)}%` }}
+                      />
                     </div>
-                    <p className="mt-2 font-body text-sm font-semibold text-success">R$ {actualRevenue.toLocaleString('pt-BR')}</p>
+                    <p className="mt-2 font-body text-xs text-right">
+                      <span className={revenueStatus ? 'text-success' : 'text-warning'}>
+                        {revenueProgress.toFixed(1)}% da meta
+                      </span>
+                    </p>
+                    <p className="mt-2 font-body text-sm flex items-center gap-2">
+                      {revenueStatus ? (
+                        <>
+                          <TrendingUp className="h-4 w-4 text-success" />
+                          <span className="text-success font-semibold">À frente do ideal do dia</span>
+                        </>
+                      ) : (
+                        <>
+                          <TrendingDown className="h-4 w-4 text-destructive" />
+                          <span className="text-destructive font-semibold">Atrasado em relação ao ideal</span>
+                        </>
+                      )}
+                    </p>
                   </div>
-                  <div className="mt-4 flex items-center gap-2">
-                    {revenueStatus ? <TrendingUp className="h-4 w-4 text-success" /> : <TrendingDown className="h-4 w-4 text-destructive" />}
-                    <span className={`font-body text-xs ${revenueStatus ? 'text-success' : 'text-destructive'}`}>
-                      {revenueStatus ? 'À frente do ideal' : 'Abaixo do ideal'}
-                    </span>
+                </div>
+
+                <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6">
+                  <p className="mb-2 font-body text-sm text-muted-foreground">Meta de Investimento</p>
+                  <p className="font-heading text-3xl font-bold text-foreground">R$ {parseFloat(goalData.investment_target.toString()).toLocaleString('pt-BR')}</p>
+                  <div className="mt-4">
+                    <div className="flex justify-between mb-2">
+                      <span className="font-body text-xs text-muted-foreground">Realizado</span>
+                      <span className="font-body text-xs font-semibold text-foreground">R$ {('investimentoTotal' in realFunnelData ? realFunnelData.investimentoTotal : 0).toLocaleString('pt-BR')}</span>
+                    </div>
+                    <div className="h-3 overflow-hidden rounded-full bg-muted/30">
+                      <div 
+                        className="h-full bg-gradient-to-r from-warning to-warning/80 transition-all duration-500"
+                        style={{ width: `${Math.min((('investimentoTotal' in realFunnelData ? realFunnelData.investimentoTotal : 0) / parseFloat(goalData.investment_target.toString())) * 100, 100)}%` }}
+                      />
+                    </div>
+                    <p className="mt-2 font-body text-xs text-right">
+                      <span className="text-muted-foreground">
+                        {((('investimentoTotal' in realFunnelData ? realFunnelData.investimentoTotal : 0) / parseFloat(goalData.investment_target.toString())) * 100).toFixed(1)}% da meta
+                      </span>
+                    </p>
                   </div>
                 </div>
               </div>
@@ -397,8 +433,17 @@ const Metas = () => {
             </section>
 
             <section className="space-y-6">
-              <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">FUNIL IDEAL VS FUNIL REAL</h2>
-              <FunnelComparison idealData={idealFunnelData} realData={realFunnelData} />
+              <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">FUNIL IDEAL VS REALIZADO</h2>
+              <FunnelComparison 
+                idealData={idealFunnelData} 
+                realData={realFunnelData}
+                targetRates={{
+                  mql_to_cr_rate: mqlToCrealRate,
+                  cr_to_ra_rate: crToRaRealRate,
+                  ra_to_rr_rate: raToRrRealRate,
+                  rr_to_ass_rate: rrToAssRealRate
+                }}
+              />
             </section>
           </>
         )}
