@@ -31,9 +31,24 @@ const Index = () => {
   });
   const {
     data: sheetsData,
-    isLoading,
+    isLoading: dataLoading,
     error
   } = useGoogleSheetsData();
+
+  const [showSkeleton, setShowSkeleton] = useState(true);
+
+  useEffect(() => {
+    if (dataLoading) {
+      setShowSkeleton(true);
+    } else {
+      const timer = setTimeout(() => {
+        setShowSkeleton(false);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [dataLoading]);
+
+  const isLoading = dataLoading || showSkeleton;
   const handleFilterChange = (key: string, value: string | string[]) => {
     setFilters(prev => ({
       ...prev,
