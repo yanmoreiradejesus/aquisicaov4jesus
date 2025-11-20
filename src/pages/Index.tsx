@@ -164,7 +164,10 @@ const Index = () => {
           <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">KPIS PRINCIPAIS</h2>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             {/* CPMQL */}
-            <div className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-6 transition-all duration-300 hover:shadow-lg">
+            <div 
+              className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-6 transition-all duration-300 hover:shadow-lg animate-fade-in"
+              style={{ animationDelay: '900ms', animationFillMode: 'backwards' }}
+            >
               <p className="mb-2 font-body text-sm text-muted-foreground">CPMQL  </p>
               <p className="font-heading text-3xl font-bold text-foreground">R$ {conversionFunnelData.cplMedio.toFixed(2)}</p>
               {previousPeriodData.cplMedio > 0 && <div className="mt-2 flex items-center gap-1 text-xs">
@@ -183,7 +186,10 @@ const Index = () => {
             </div>
 
             {/* CAC */}
-            <div className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-6 transition-all duration-300 hover:shadow-lg">
+            <div 
+              className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-6 transition-all duration-300 hover:shadow-lg animate-fade-in"
+              style={{ animationDelay: '1050ms', animationFillMode: 'backwards' }}
+            >
               <p className="mb-2 font-body text-sm text-muted-foreground">CAC</p>
               <p className="font-heading text-3xl font-bold text-foreground">
                 R$ {conversionFunnelData.ass > 0 ? (conversionFunnelData.investimentoTotal / conversionFunnelData.ass).toFixed(2) : "0.00"}
@@ -204,7 +210,10 @@ const Index = () => {
             </div>
 
             {/* Investimento Total */}
-            <div className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-6 transition-all duration-300 hover:shadow-lg">
+            <div 
+              className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-6 transition-all duration-300 hover:shadow-lg animate-fade-in"
+              style={{ animationDelay: '1200ms', animationFillMode: 'backwards' }}
+            >
               <p className="mb-2 font-body text-sm text-muted-foreground">Investimento Total</p>
               <p className="font-heading text-3xl font-bold text-foreground">
                 R$ {conversionFunnelData.investimentoTotal.toLocaleString('pt-BR', {
@@ -227,7 +236,10 @@ const Index = () => {
             </div>
 
             {/* Faturamento Total */}
-            <div className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-6 transition-all duration-300 hover:shadow-lg">
+            <div 
+              className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-6 transition-all duration-300 hover:shadow-lg animate-fade-in"
+              style={{ animationDelay: '1350ms', animationFillMode: 'backwards' }}
+            >
               <p className="mb-2 font-body text-sm text-muted-foreground">Faturamento Total</p>
               <p className="font-heading text-3xl font-bold text-success">
                 R$ {conversionFunnelData.faturamentoTotal.toLocaleString('pt-BR', {
