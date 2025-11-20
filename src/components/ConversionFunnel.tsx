@@ -90,31 +90,11 @@ const ConversionFunnel = ({ data, leads, allLeads, filters }: ConversionFunnelPr
         });
         break;
       case "ass":
-        // For ASS, we need to filter from ALL leads, not just filtered ones
-        // because a lead might have entered in one period but signed in another
-        result = allLeads.filter(l => {
-          const dataAssinatura = l["DATA DA ASSINATURA"];
-          if (!dataAssinatura || dataAssinatura.trim() === "") return false;
-          
-          // Parse date in DD/MM/YYYY format (Brazilian format)
-          const dateParts = dataAssinatura.split('/');
-          if (dateParts.length !== 3) {
-            console.log(`ASS Lead ${l.LEAD}: Invalid date format "${dataAssinatura}"`);
-            return false;
-          }
-          
-          const signatureDate = new Date(dateParts[2] + '-' + dateParts[1] + '-' + dateParts[0]);
-          
-          if (isNaN(signatureDate.getTime())) {
-            console.log(`ASS Lead ${l.LEAD}: Could not parse date "${dataAssinatura}"`);
-            return false;
-          }
-          
-          const inRange = signatureDate >= startDate && signatureDate <= endDate;
-          if (inRange) {
-            console.log(`ASS Lead: ${l.LEAD}, Signature Date: ${dataAssinatura}, Parsed: ${signatureDate.toISOString()}, Filter: ${startDate.toISOString()} to ${endDate.toISOString()}`);
-          }
-          return inRange;
+        result = leads.filter(l => {
+          const assValue = l.ASS;
+          const isPos = isPositive(assValue);
+          if (isPos) console.log(`ASS Lead: ${l.LEAD}, ASS value: "${assValue}"`);
+          return isPos;
         });
         break;
       default:
