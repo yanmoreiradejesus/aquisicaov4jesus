@@ -1,11 +1,8 @@
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MultiSelect, MultiSelectOption } from "@/components/ui/multi-select";
-import { FilterSaveDialog } from "@/components/FilterSaveDialog";
-import { Calendar as CalendarIcon, X, Info, Check } from "lucide-react";
+import { Calendar as CalendarIcon, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ValueWithCount } from "@/utils/dataProcessor";
 import { Calendar } from "@/components/ui/calendar";
@@ -34,17 +31,6 @@ interface FilterBarProps {
     periodos: ValueWithCount[];
   };
 }
-const filterTooltips = {
-  startDate: "Data de início do período a ser analisado",
-  endDate: "Data de fim do período a ser analisado",
-  canal: "Origem do lead (ex: Google Ads, LinkedIn, Indicação)",
-  tier: "Faixa de faturamento da empresa do lead",
-  urgency: "Nível de urgência da necessidade do lead",
-  cargo: "Cargo do decisor ou lead",
-  periodo: "Período esperado para decisão de compra",
-  emailType: "Tipo de e-mail: corporativo (domínio próprio) ou gratuito (Gmail, Hotmail, etc)",
-  hasDescription: "Se o lead possui descrição detalhada preenchida"
-};
 const FilterBar = ({
   filters,
   onFilterChange,
@@ -151,10 +137,12 @@ const FilterBar = ({
     onFilterChange("emailType", "all");
     onFilterChange("hasDescription", "all");
   };
-  const loadSavedFilter = (savedFilters: any) => {
-    Object.entries(savedFilters).forEach(([key, value]) => {
-      onFilterChange(key, value as string | string[]);
-    });
+  const setTotalPeriod = () => {
+    const now = new Date();
+    const oneYearAgo = new Date(now);
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    onFilterChange("startDate", oneYearAgo.toISOString().split('T')[0]);
+    onFilterChange("endDate", now.toISOString().split('T')[0]);
   };
   const activeCount = countActiveFilters();
   const hasActiveFilters = activeCount > 0;
@@ -165,25 +153,6 @@ const FilterBar = ({
       count: v.count
     }));
   };
-  const FilterLabel = ({
-    children,
-    tooltip
-  }: {
-    children: React.ReactNode;
-    tooltip: string;
-  }) => <TooltipProvider>
-      <Tooltip>
-        <label className="mb-1 flex items-center gap-1 text-xs font-medium text-muted-foreground">
-          {children}
-          <TooltipTrigger asChild>
-            <Info className="h-3 w-3 cursor-help" />
-          </TooltipTrigger>
-        </label>
-        <TooltipContent className="max-w-[250px]">
-          <p className="text-xs">{tooltip}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>;
   return <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6 transition-all duration-300 hover:shadow-lg">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -201,38 +170,28 @@ const FilterBar = ({
             <Button size="sm" variant="outline" onClick={() => setMonthPreset(1)} className="h-7 text-xs">
               Mês Passado
             </Button>
-            
-            
           </div>
           
           {/* Extended Presets - Second Row */}
           <div className="flex gap-2">
-            
-            
             <Button size="sm" variant="outline" onClick={() => setDatePreset('thisYear')} className="h-7 text-xs">
               Ano Atual
             </Button>
             <Button size="sm" variant="outline" onClick={() => setDatePreset('lastYear')} className="h-7 text-xs">
               Ano Passado
             </Button>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-2">
-            <FilterSaveDialog currentFilters={filters} onLoadFilter={loadSavedFilter} />
-            {hasActiveFilters && <Button size="sm" variant="destructive" onClick={clearAllFilters} className="h-7 text-xs bg-[#e50914] hover:bg-[#c00812]">
-                <X className="mr-1 h-3 w-3" />
-                Limpar Filtros
-              </Button>}
+            <Button size="sm" variant="outline" onClick={setTotalPeriod} className="h-7 text-xs">
+              Período Total
+            </Button>
           </div>
         </div>
       </div>
       
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-9">
         <div>
-          <FilterLabel tooltip={filterTooltips.startDate}>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">
             Data Início
-          </FilterLabel>
+          </label>
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -259,9 +218,9 @@ const FilterBar = ({
         </div>
         
         <div>
-          <FilterLabel tooltip={filterTooltips.endDate}>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">
             Data Fim
-          </FilterLabel>
+          </label>
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -288,44 +247,44 @@ const FilterBar = ({
         </div>
         
         <div>
-          <FilterLabel tooltip={filterTooltips.canal}>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">
             Canal {filters.canal.length > 0 && <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{filters.canal.length}</Badge>}
-          </FilterLabel>
+          </label>
           <MultiSelect options={convertToMultiSelectOptions(uniqueValues.canais)} selected={filters.canal} onChange={values => onFilterChange("canal", values)} placeholder="Todos" />
         </div>
         
         <div>
-          <FilterLabel tooltip={filterTooltips.tier}>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">
             Tier {filters.tier.length > 0 && <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{filters.tier.length}</Badge>}
-          </FilterLabel>
+          </label>
           <MultiSelect options={convertToMultiSelectOptions(uniqueValues.tiers)} selected={filters.tier} onChange={values => onFilterChange("tier", values)} placeholder="Todos" />
         </div>
         
         <div>
-          <FilterLabel tooltip={filterTooltips.urgency}>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">
             Urgência {filters.urgency.length > 0 && <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{filters.urgency.length}</Badge>}
-          </FilterLabel>
+          </label>
           <MultiSelect options={convertToMultiSelectOptions(uniqueValues.urgencias)} selected={filters.urgency} onChange={values => onFilterChange("urgency", values)} placeholder="Todos" />
         </div>
         
         <div>
-          <FilterLabel tooltip={filterTooltips.cargo}>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">
             Cargo {filters.cargo.length > 0 && <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{filters.cargo.length}</Badge>}
-          </FilterLabel>
+          </label>
           <MultiSelect options={convertToMultiSelectOptions(uniqueValues.cargos)} selected={filters.cargo} onChange={values => onFilterChange("cargo", values)} placeholder="Todos" />
         </div>
         
         <div>
-          <FilterLabel tooltip={filterTooltips.periodo}>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">
             Período {filters.periodo.length > 0 && <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{filters.periodo.length}</Badge>}
-          </FilterLabel>
+          </label>
           <MultiSelect options={convertToMultiSelectOptions(uniqueValues.periodos)} selected={filters.periodo} onChange={values => onFilterChange("periodo", values)} placeholder="Todos" />
         </div>
         
         <div>
-          <FilterLabel tooltip={filterTooltips.emailType}>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">
             E-mail {filters.emailType !== "all" && <Check className="ml-1 h-3 w-3 text-success" />}
-          </FilterLabel>
+          </label>
           <Select value={filters.emailType} onValueChange={v => onFilterChange("emailType", v)}>
             <SelectTrigger className="h-9 border-border/50 bg-background text-sm transition-all duration-300 focus:border-primary">
               <SelectValue placeholder="Todos" />
@@ -339,9 +298,9 @@ const FilterBar = ({
         </div>
         
         <div>
-          <FilterLabel tooltip={filterTooltips.hasDescription}>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">
             Descrição {filters.hasDescription !== "all" && <Check className="ml-1 h-3 w-3 text-success" />}
-          </FilterLabel>
+          </label>
           <Select value={filters.hasDescription} onValueChange={v => onFilterChange("hasDescription", v)}>
             <SelectTrigger className="h-9 border-border/50 bg-background text-sm transition-all duration-300 focus:border-primary">
               <SelectValue placeholder="Todos" />
