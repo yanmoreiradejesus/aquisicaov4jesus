@@ -99,6 +99,83 @@ export const filterLeads = (leads: Lead[], filters: FilterOptions): Lead[] => {
   });
 };
 
+// Helper to filter leads by all non-date filters
+export const filterLeadsWithoutDateFilter = (leads: Lead[], filters: FilterOptions): Lead[] => {
+  return leads.filter((lead) => {
+    // Canal filter - support arrays
+    if (Array.isArray(filters.canal)) {
+      if (filters.canal.length > 0 && !filters.canal.includes(lead.CANAL || "")) {
+        return false;
+      }
+    } else if (filters.canal !== "all" && lead.CANAL !== filters.canal) {
+      return false;
+    }
+
+    // Tier filter - support arrays
+    if (Array.isArray(filters.tier)) {
+      if (filters.tier.length > 0 && !filters.tier.includes(lead.TIER || "")) {
+        return false;
+      }
+    } else if (filters.tier !== "all" && lead.TIER !== filters.tier) {
+      return false;
+    }
+
+    // Urgency filter - support arrays
+    if (Array.isArray(filters.urgency)) {
+      if (filters.urgency.length > 0 && !filters.urgency.some(u => u.toLowerCase() === lead.URGÊNCIA?.toLowerCase())) {
+        return false;
+      }
+    } else if (filters.urgency !== "all" && lead.URGÊNCIA?.toLowerCase() !== filters.urgency.toLowerCase()) {
+      return false;
+    }
+
+    // Cargo filter - support arrays
+    if (Array.isArray(filters.cargo)) {
+      if (filters.cargo.length > 0 && !filters.cargo.some(c => c.toLowerCase() === lead.CARGO?.toLowerCase())) {
+        return false;
+      }
+    } else if (filters.cargo !== "all" && lead.CARGO?.toLowerCase() !== filters.cargo.toLowerCase()) {
+      return false;
+    }
+
+    // Período filter - support arrays
+    if (Array.isArray(filters.periodo)) {
+      if (filters.periodo.length > 0 && !filters.periodo.some(p => p.toLowerCase() === lead["PERÍODO DE COMPRA"]?.toLowerCase())) {
+        return false;
+      }
+    } else if (filters.periodo !== "all" && lead["PERÍODO DE COMPRA"]?.toLowerCase() !== filters.periodo.toLowerCase()) {
+      return false;
+    }
+
+    // Email type filter
+    if (filters.emailType !== "all") {
+      const email = lead["E-MAIL"] || "";
+      const isCompanyEmail = email.includes("@") && !email.match(/@(gmail|hotmail|yahoo|outlook)\./i);
+      
+      if (filters.emailType === "dominio" && !isCompanyEmail) {
+        return false;
+      }
+      if (filters.emailType === "gratuito" && isCompanyEmail) {
+        return false;
+      }
+    }
+
+    // Description filter
+    if (filters.hasDescription !== "all") {
+      const hasDesc = (lead.DESCRIÇÃO || "").trim().length > 0;
+      
+      if (filters.hasDescription === "sim" && !hasDesc) {
+        return false;
+      }
+      if (filters.hasDescription === "nao" && hasDesc) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+};
+
 // Helper to check if a value represents "yes/true/completed"
 export const isPositive = (value: string | undefined): boolean => {
   if (!value) return false;
@@ -126,10 +203,11 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
   const ra = leads.filter((l) => isPositive(l["R.A"])).length;
   const rr = leads.filter((l) => isPositive(l["R.R"])).length;
   
-  // Count ASS based on DATA DA ASSINATURA within the date filter range
+  // Count ASS: apply non-date filters first, then filter by DATA DA ASSINATURA
   const startDate = new Date(filters.startDate);
   const endDate = new Date(filters.endDate);
-  const ass = allLeads.filter((l) => {
+  const filteredForAss = filterLeadsWithoutDateFilter(allLeads, filters);
+  const ass = filteredForAss.filter((l) => {
     if (!isPositive(l.ASS)) return false;
     
     const signatureDate = l["DATA DA ASSINATURA"];
@@ -170,8 +248,8 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
   const cpa = ra > 0 ? totalCPL / ra : 0;
   const cprr = rr > 0 ? totalCPL / rr : 0;
 
-  // Calculate total fee from all leads with ASS = true and signature date in range
-  const totalFee = allLeads
+  // Calculate total fee: apply non-date filters first, then filter by DATA DA ASSINATURA
+  const totalFee = filteredForAss
     .filter((l) => {
       if (!isPositive(l.ASS)) return false;
       

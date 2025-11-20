@@ -1,22 +1,7 @@
 import { useState } from "react";
 import LeadsDialog from "./LeadsDialog";
-import { isPositive } from "@/utils/dataProcessor";
-
-interface Lead {
-  LEAD: string;
-  DATA: string;
-  "C.R"?: string;
-  "R.A"?: string;
-  "R.R"?: string;
-  ASS?: string;
-  CANAL?: string;
-  TIER?: string;
-  URGÊNCIA?: string;
-  CARGO?: string;
-  "E-MAIL"?: string;
-  CPL?: string;
-  "DATA DA ASSINATURA"?: string;
-}
+import { isPositive, filterLeadsWithoutDateFilter, FilterOptions } from "@/utils/dataProcessor";
+import { Lead } from "@/hooks/useGoogleSheetsData";
 
 interface FunnelStage {
   title: string;
@@ -43,10 +28,7 @@ interface ConversionFunnelProps {
   };
   leads: Lead[];
   allLeads: Lead[]; // All leads regardless of date filter
-  filters: {
-    startDate: string;
-    endDate: string;
-  };
+  filters: FilterOptions;
 }
 const ConversionFunnel = ({ data, leads, allLeads, filters }: ConversionFunnelProps) => {
   const [selectedStage, setSelectedStage] = useState<string | null>(null);
@@ -90,7 +72,10 @@ const ConversionFunnel = ({ data, leads, allLeads, filters }: ConversionFunnelPr
         });
         break;
       case "ass":
-        result = allLeads.filter(l => {
+        // Apply all non-date filters first, then filter by DATA DA ASSINATURA
+        const filteredByOtherFilters = filterLeadsWithoutDateFilter(allLeads, filters);
+        
+        result = filteredByOtherFilters.filter(l => {
           if (!isPositive(l.ASS)) return false;
           
           const signatureDate = l["DATA DA ASSINATURA"];
