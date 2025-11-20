@@ -193,7 +193,13 @@ const Metas = () => {
   // Calcular MQL ideal baseado no investimento dividido pelo CPMQL alvo
   const cpmqlTarget = goalData?.cpmql_target || 0;
   const investmentTarget = goalData?.investment_target || 0;
-  const idealMql = cpmqlTarget > 0 ? Math.round(investmentTarget / cpmqlTarget) : 0;
+  const idealMqlTotal = cpmqlTarget > 0 ? Math.round(investmentTarget / cpmqlTarget) : 0;
+  
+  // Ajustar para proporcional ao dia do mês se estiver visualizando o mês atual
+  const isCurrentMonth = parseInt(selectedMonth) === currentMonth && parseInt(selectedYear) === currentYear;
+  const proportionFactor = isCurrentMonth ? (currentDay / daysInMonth) : 1;
+  
+  const idealMql = Math.round(idealMqlTotal * proportionFactor);
   const idealFunnelData = {
     mql: idealMql,
     cr: Math.round(idealMql * (mqlToCrealRate / 100)),
@@ -243,10 +249,6 @@ const Metas = () => {
       <V4Header />
       
       <main className="container mx-auto max-w-7xl space-y-8 px-4 lg:px-8 py-8">
-        <div>
-          
-          
-        </div>
 
         <section className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6 lg:p-8">
           <div className="mb-6 flex items-center gap-4">
