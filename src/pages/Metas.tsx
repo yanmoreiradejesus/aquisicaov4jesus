@@ -12,6 +12,7 @@ import { TrendingUp, Settings } from "lucide-react";
 import { useGoogleSheetsData } from "@/hooks/useGoogleSheetsData";
 import { filterLeads, calculateFunnelData } from "@/utils/dataProcessor";
 import FunnelComparison from "@/components/FunnelComparison";
+import FunnelSkeleton from "@/components/FunnelSkeleton";
 const Metas = () => {
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
