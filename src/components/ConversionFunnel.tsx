@@ -174,76 +174,92 @@ const ConversionFunnel = ({ data, leads, allLeads, filters }: ConversionFunnelPr
   ];
   const mqlToVenda = data.mql > 0 ? (data.ass / data.mql) * 100 : 0;
   return (
-    <div className="relative grid grid-cols-[1fr_4fr_1fr] gap-6">
-      {/* Left Side - MQL to VENDA */}
-      <div className="flex items-center justify-center animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>
-        <div className="text-center">
+    <div className="space-y-6">
+      {/* Mobile: MQL to VENDA at top */}
+      <div className="flex items-center justify-center lg:hidden animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>
+        <div className="text-center rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-4 w-full">
           <p className="mb-2 font-body text-xs text-muted-foreground">MQL → VENDA</p>
-          <p className="font-heading text-5xl font-bold text-success">{mqlToVenda.toFixed(1)}%</p>
+          <p className="font-heading text-4xl font-bold text-success">{mqlToVenda.toFixed(1)}%</p>
         </div>
       </div>
 
-      {/* Center - Funnel Stages */}
-      <div className="space-y-4">
-        {stages.map((stage, index) => {
-          const maxTotal = Math.max(...stages.map((s) => s.total));
-          const barWidth = maxTotal > 0 ? (stage.total / maxTotal) * 100 : 0;
-          return (
-            <div
-              key={index}
-              onClick={() => handleStageClick(stage.stageKey)}
-              className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-5 transition-all duration-300 hover:shadow-lg hover:border-primary/30 animate-fade-in cursor-pointer hover:scale-[1.02]"
-              style={{ animationDelay: `${index * 150}ms`, animationFillMode: 'backwards' }}
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="font-body text-base font-semibold text-foreground">{stage.title}</h3>
-                <span className="font-heading text-3xl font-bold text-foreground">{stage.total}</span>
-              </div>
+      <div className="relative grid grid-cols-1 lg:grid-cols-[1fr_4fr_1fr] gap-6">
+        {/* Desktop Left Side - MQL to VENDA */}
+        <div className="hidden lg:flex items-center justify-center animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>
+          <div className="text-center">
+            <p className="mb-2 font-body text-xs text-muted-foreground">MQL → VENDA</p>
+            <p className="font-heading text-5xl font-bold text-success">{mqlToVenda.toFixed(1)}%</p>
+          </div>
+        </div>
 
-              {/* Progress Bar */}
-              <div className="mb-3 h-2 overflow-hidden rounded-full bg-muted/30">
-                <div
-                  className={`h-full transition-all duration-500 ${stage.barColor}`}
-                  style={{
-                    width: `${barWidth}%`,
-                  }}
-                />
-              </div>
+        {/* Center - Funnel Stages */}
+        <div className="space-y-3 lg:space-y-4">
+          {stages.map((stage, index) => {
+            const maxTotal = Math.max(...stages.map((s) => s.total));
+            const barWidth = maxTotal > 0 ? (stage.total / maxTotal) * 100 : 0;
+            return (
+              <div
+                key={index}
+                onClick={() => handleStageClick(stage.stageKey)}
+                className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-4 lg:p-5 transition-all duration-300 hover:shadow-lg hover:border-primary/30 animate-fade-in cursor-pointer hover:scale-[1.02]"
+                style={{ animationDelay: `${index * 150}ms`, animationFillMode: 'backwards' }}
+              >
+                <div className="mb-2 lg:mb-3 flex items-center justify-between gap-2">
+                  <h3 className="font-body text-sm lg:text-base font-semibold text-foreground">{stage.title}</h3>
+                  <span className="font-heading text-2xl lg:text-3xl font-bold text-foreground">{stage.total}</span>
+                </div>
 
-              {/* Metrics */}
-              <div className="flex items-center justify-between">
-                {stage.conversionRate > 0 && (
-                  <span className="font-body text-xs text-muted-foreground">
-                    Conv: <span className="font-semibold text-foreground">{stage.conversionRate.toFixed(1)}%</span>
+                {/* Progress Bar */}
+                <div className="mb-3 h-2 overflow-hidden rounded-full bg-muted/30">
+                  <div
+                    className={`h-full transition-all duration-500 ${stage.barColor}`}
+                    style={{
+                      width: `${barWidth}%`,
+                    }}
+                  />
+                </div>
+
+                {/* Metrics */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-0">
+                  {stage.conversionRate > 0 && (
+                    <span className="font-body text-xs text-muted-foreground">
+                      Conv: <span className="font-semibold text-foreground">{stage.conversionRate.toFixed(1)}%</span>
+                    </span>
+                  )}
+                  <span
+                    className={`font-body text-xs text-muted-foreground ${stage.conversionRate === 0 ? "sm:ml-auto" : ""}`}
+                  >
+                    {stage.costLabel}:{" "}
+                    <span className="font-semibold text-foreground">
+                      R${" "}
+                      {stage.costValue.toLocaleString("pt-BR", {
+                        minimumFractionDigits: 2,
+                      })}
+                    </span>
                   </span>
-                )}
-                <span
-                  className={`font-body text-xs text-muted-foreground ${stage.conversionRate === 0 ? "ml-auto" : ""}`}
-                >
-                  {stage.costLabel}:{" "}
-                  <span className="font-semibold text-foreground">
-                    R${" "}
-                    {stage.costValue.toLocaleString("pt-BR", {
-                      minimumFractionDigits: 2,
-                    })}
-                  </span>
-                </span>
+                </div>
               </div>
+            );
+          })}
+        </div>
+
+        {/* Right Side - Conversion Rates (Desktop) */}
+        <div className="hidden lg:block space-y-8">
+          {intermediateRates.map((rate, index) => (
+            <div key={index} className="text-center pt-6 animate-fade-in" style={{ animationDelay: `${(index + 5) * 150}ms`, animationFillMode: 'backwards' }}>
+              <p className="mb-1 font-body text-xs text-muted-foreground">{rate.label}</p>
+              <p className="font-heading text-2xl font-bold text-foreground">{rate.rate.toFixed(1)}%</p>
             </div>
-          );
-        })}
+          ))}
+        </div>
       </div>
 
-      {/* Right Side - Intermediate Rates */}
-      <div className="flex flex-col justify-around">
+      {/* Mobile: Conversion Rates Grid */}
+      <div className="lg:hidden grid grid-cols-2 gap-3">
         {intermediateRates.map((rate, index) => (
-          <div 
-            key={index} 
-            className="text-center animate-fade-in"
-            style={{ animationDelay: `${(index + 1) * 150 + 100}ms`, animationFillMode: 'backwards' }}
-          >
+          <div key={index} className="text-center p-3 rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 animate-fade-in" style={{ animationDelay: `${(index + 5) * 150}ms`, animationFillMode: 'backwards' }}>
             <p className="mb-1 font-body text-xs text-muted-foreground">{rate.label}</p>
-            <p className="font-heading text-2xl font-bold text-foreground">{rate.rate.toFixed(1)}%</p>
+            <p className="font-heading text-xl font-bold text-foreground">{rate.rate.toFixed(1)}%</p>
           </div>
         ))}
       </div>

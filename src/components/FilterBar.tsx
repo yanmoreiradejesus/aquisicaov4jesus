@@ -153,42 +153,42 @@ const FilterBar = ({
       count: v.count
     }));
   };
-  return <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6 transition-all duration-300 hover:shadow-lg">
-      <div className="mb-4 flex items-center justify-between">
+  return <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-4 lg:p-6 transition-all duration-300 hover:shadow-lg">
+      <div className="mb-4 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <h3 className="font-body text-lg font-semibold text-foreground">Filtros</h3>
+          <h3 className="font-body text-base lg:text-lg font-semibold text-foreground">Filtros</h3>
           {hasActiveFilters && <Badge variant="secondary" className="h-5 px-2 text-xs">
               {activeCount}
             </Badge>}
         </div>
-        <div className="flex flex-wrap gap-2 justify-end">
-          {/* Quick Date Presets - First Row */}
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => setMonthPreset(0)} className="h-7 text-xs">
+        <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full lg:w-auto">
+          {/* Quick Date Presets */}
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => setMonthPreset(0)} className="h-7 text-xs flex-1 sm:flex-none">
               Mês Atual
             </Button>
-            <Button size="sm" variant="outline" onClick={() => setMonthPreset(1)} className="h-7 text-xs">
+            <Button size="sm" variant="outline" onClick={() => setMonthPreset(1)} className="h-7 text-xs flex-1 sm:flex-none">
               Mês Passado
             </Button>
           </div>
           
-          {/* Extended Presets - Second Row */}
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => setDatePreset('thisYear')} className="h-7 text-xs">
+          {/* Extended Presets */}
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => setDatePreset('thisYear')} className="h-7 text-xs flex-1 sm:flex-none">
               Ano Atual
             </Button>
-            <Button size="sm" variant="outline" onClick={() => setDatePreset('lastYear')} className="h-7 text-xs">
+            <Button size="sm" variant="outline" onClick={() => setDatePreset('lastYear')} className="h-7 text-xs flex-1 sm:flex-none">
               Ano Passado
             </Button>
-            <Button size="sm" variant="outline" onClick={setTotalPeriod} className="h-7 text-xs">
+            <Button size="sm" variant="outline" onClick={setTotalPeriod} className="h-7 text-xs flex-1 sm:flex-none">
               Período Total
             </Button>
           </div>
         </div>
       </div>
       
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-9">
-        <div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4 md:grid-cols-4 lg:grid-cols-9">
+        <div className="sm:col-span-1">
           <label className="mb-1 block text-xs font-medium text-muted-foreground">
             Data Início
           </label>
@@ -246,7 +246,7 @@ const FilterBar = ({
           </Popover>
         </div>
         
-        <div>
+        <div className="sm:col-span-2 lg:col-span-1">
           <label className="mb-1 block text-xs font-medium text-muted-foreground">
             Canal {filters.canal.length > 0 && <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{filters.canal.length}</Badge>}
           </label>
