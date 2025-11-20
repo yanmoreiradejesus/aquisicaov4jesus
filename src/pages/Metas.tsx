@@ -414,10 +414,8 @@ const Metas = () => {
               <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">IDEAL DO DIA</h2>
               <div className="grid grid-cols-1 gap-6">
                 <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6">
-                  <p className="mb-2 font-body text-sm text-muted-foreground">Receita - Ideal Diário</p>
-                  <p className="font-heading text-2xl font-bold text-foreground">R$ {idealDailyRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/dia</p>
-                  <p className="mt-4 font-body text-sm text-muted-foreground">Ideal Acumulado (dia {currentDay})</p>
-                  <p className="font-heading text-xl font-bold text-warning">R$ {idealAccumulatedRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  <p className="mb-2 font-body text-sm text-muted-foreground">Ideal Acumulado (dia {currentDay})</p>
+                  <p className="font-heading text-2xl font-bold text-warning">R$ {idealAccumulatedRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                   <p className="mt-2 font-body text-sm">
                     <span className="text-muted-foreground">Realizado: </span>
                     <span className="font-semibold text-foreground">R$ {actualRevenue.toLocaleString('pt-BR')}</span>
