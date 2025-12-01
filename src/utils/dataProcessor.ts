@@ -201,11 +201,22 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
   const mql = leads.length;
   const cr = leads.filter((l) => isPositive(l["C.R"])).length;
   const ra = leads.filter((l) => isPositive(l["R.A"])).length;
-  const rr = leads.filter((l) => isPositive(l["R.R"])).length;
   
-  // Count ASS: apply non-date filters first, then filter by DATA DA ASSINATURA
+  // Count RR: apply non-date filters first, then filter by DATA REUNIÃO
   const startDate = new Date(filters.startDate);
   const endDate = new Date(filters.endDate);
+  const filteredForRR = filterLeadsWithoutDateFilter(allLeads, filters);
+  const rr = filteredForRR.filter((l) => {
+    if (!isPositive(l["R.R"])) return false;
+    
+    const meetingDate = l["DATA REUNIÃO"];
+    if (!meetingDate) return false;
+    
+    const mtgDate = new Date(meetingDate.split('/').reverse().join('-'));
+    return mtgDate >= startDate && mtgDate <= endDate;
+  }).length;
+  
+  // Count ASS: apply non-date filters first, then filter by DATA DA ASSINATURA
   const filteredForAss = filterLeadsWithoutDateFilter(allLeads, filters);
   const ass = filteredForAss.filter((l) => {
     if (!isPositive(l.ASS)) return false;
