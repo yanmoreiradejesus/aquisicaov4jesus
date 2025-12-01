@@ -64,13 +64,13 @@ const ConversionFunnel = ({ data, leads, allLeads, filters }: ConversionFunnelPr
         });
         break;
       case "rr":
-        // Apply all non-date filters first, then filter by DATA REUNIÃO
+        // Apply all non-date filters first, then filter by DATA REUNIÃO REALIZADA
         const filteredByOtherFiltersRR = filterLeadsWithoutDateFilter(allLeads, filters);
         
         result = filteredByOtherFiltersRR.filter(l => {
           if (!isPositive(l["R.R"])) return false;
           
-          const meetingDate = l["DATA REUNIÃO"];
+          const meetingDate = l["DATA REUNIÃO REALIZADA"];
           if (!meetingDate) return false;
           
           const mtgDate = new Date(meetingDate.split('/').reverse().join('-'));
