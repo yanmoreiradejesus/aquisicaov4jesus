@@ -16,7 +16,7 @@ export interface Lead {
   CARGO: string;
   "E-MAIL": string;
   DESCRIÇÃO: string;
-  "DATA REUNIÃO": string;
+  "DATA REUNIÃO REALIZADA": string;
   "DATA DA ASSINATURA": string;
   FEE: string;
   "E.F": string;
