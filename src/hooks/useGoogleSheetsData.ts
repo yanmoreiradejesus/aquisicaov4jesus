@@ -9,7 +9,7 @@ export interface Lead {
   ASS: string;
   DATA: string;
   "PERÍODO DE COMPRA": string;
-  CPL: string;
+  CPMQL: string;
   CANAL: string;
   TIER: string;
   URGÊNCIA: string;
@@ -20,6 +20,7 @@ export interface Lead {
   "DATA DA ASSINATURA": string;
   FEE: string;
   "E.F": string;
+  BOOKING: string;
   "TIME TO CLOSE": string;
 }
 

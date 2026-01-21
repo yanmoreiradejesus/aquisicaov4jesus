@@ -22,9 +22,10 @@ interface Lead {
   URGÊNCIA?: string;
   CARGO?: string;
   "E-MAIL"?: string;
-  CPL?: string;
+  CPMQL?: string;
   FEE?: string;
   "E.F"?: string;
+  BOOKING?: string;
   "DATA DA ASSINATURA"?: string;
 }
 
@@ -72,7 +73,7 @@ const LeadsDialog = ({ open, onOpenChange, leads, stageTitle }: LeadsDialogProps
                 <TableHead>Urgência</TableHead>
                 <TableHead>Cargo</TableHead>
                 <TableHead>E-mail</TableHead>
-                <TableHead>CPL</TableHead>
+                <TableHead>CPMQL</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -85,7 +86,7 @@ const LeadsDialog = ({ open, onOpenChange, leads, stageTitle }: LeadsDialogProps
                   <TableCell>{lead.URGÊNCIA || "-"}</TableCell>
                   <TableCell>{lead.CARGO || "-"}</TableCell>
                   <TableCell className="max-w-[200px] truncate">{lead["E-MAIL"] || "-"}</TableCell>
-                  <TableCell>{formatCurrency(lead.CPL)}</TableCell>
+                  <TableCell>{formatCurrency(lead.CPMQL)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>

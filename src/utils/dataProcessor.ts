@@ -192,9 +192,10 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
   // Log first lead to see data structure
   if (leads.length > 0) {
     console.log("First lead data:", leads[0]);
-    console.log("CPL value:", leads[0].CPL, "Type:", typeof leads[0].CPL);
+    console.log("CPMQL value:", leads[0].CPMQL, "Type:", typeof leads[0].CPMQL);
     console.log("FEE value:", leads[0].FEE, "Type:", typeof leads[0].FEE);
     console.log("E.F value:", leads[0]["E.F"], "Type:", typeof leads[0]["E.F"]);
+    console.log("BOOKING value:", leads[0].BOOKING, "Type:", typeof leads[0].BOOKING);
     console.log("DATA DA ASSINATURA:", leads[0]["DATA DA ASSINATURA"]);
   }
   
@@ -245,7 +246,7 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
 
   // Calculate costs - check for different possible formats
   const totalCPL = leads.reduce((sum, lead, index) => {
-    const cplValue = lead.CPL;
+    const cplValue = lead.CPMQL;
     
     if (!cplValue || cplValue === "" || cplValue === "-") return sum;
     
@@ -259,7 +260,7 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
     const cpl = parseFloat(cplStr);
     
     if (index < 3) {
-      console.log(`Lead ${index}: Original="${cplValue}" -> Cleaned="${cplStr}" -> Parsed=${cpl}`);
+      console.log(`Lead ${index}: CPMQL Original="${cplValue}" -> Cleaned="${cplStr}" -> Parsed=${cpl}`);
     }
     
     return sum + (isNaN(cpl) ? 0 : cpl);
@@ -297,8 +298,8 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
       return dateToCheck >= startDate && dateToCheck <= endDate;
     })
     .reduce((sum, lead, index) => {
-      // Try E.F first, fallback to FEE if E.F is not available
-      const efValue = lead["E.F"] || lead.FEE;
+      // Try E.F first, fallback to FEE, then BOOKING
+      const efValue = lead["E.F"] || lead.FEE || lead.BOOKING;
       
       if (!efValue || efValue === "" || efValue === "-") return sum;
       
@@ -311,7 +312,7 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
       const ef = parseFloat(efStr);
       
       if (index < 3) {
-        console.log(`Signed lead ${index}: Lead="${lead.LEAD}" Lead Date="${lead.DATA}" Signature Date="${lead["DATA DA ASSINATURA"]}" E.F="${efValue}" -> Parsed=${ef}`);
+        console.log(`Signed lead ${index}: Lead="${lead.LEAD}" E.F="${lead["E.F"]}" FEE="${lead.FEE}" BOOKING="${lead.BOOKING}" -> Using="${efValue}" -> Parsed=${ef}`);
       }
       
       return sum + (isNaN(ef) ? 0 : ef);
