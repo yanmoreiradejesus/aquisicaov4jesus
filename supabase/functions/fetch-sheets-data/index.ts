@@ -6,8 +6,7 @@ const corsHeaders = {
 };
 
 const SPREADSHEET_ID = '1L1W3r135G4lxnqf5aUbDWnz90MEN5yUARB8u1rswyGg';
-// Sheet name with spaces needs to be wrapped in single quotes for the API
-const SHEET_NAME = "'Controle de Leads'";
+const SHEET_NAME = 'Controle de Leads';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
