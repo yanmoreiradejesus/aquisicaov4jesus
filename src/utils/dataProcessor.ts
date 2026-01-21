@@ -217,15 +217,28 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
   }).length;
   
   // Count ASS: apply non-date filters first, then filter by DATA DA ASSINATURA
+  // Consider a contract as signed if ASS=TRUE OR if DATA DA ASSINATURA is filled
   const filteredForAss = filterLeadsWithoutDateFilter(allLeads, filters);
   const ass = filteredForAss.filter((l) => {
-    if (!isPositive(l.ASS)) return false;
-    
+    const isAssigned = isPositive(l.ASS);
     const signatureDate = l["DATA DA ASSINATURA"];
-    if (!signatureDate) return false;
+    const hasSignatureDate = signatureDate && signatureDate.trim() !== "";
     
-    const sigDate = new Date(signatureDate.split('/').reverse().join('-'));
-    return sigDate >= startDate && sigDate <= endDate;
+    // Consider contract if ASS=TRUE OR if has signature date
+    if (!isAssigned && !hasSignatureDate) return false;
+    
+    // Determine which date to use for filtering
+    let dateToCheck: Date;
+    if (hasSignatureDate) {
+      dateToCheck = new Date(signatureDate.split('/').reverse().join('-'));
+    } else {
+      // Fallback: use lead entry date (DATA)
+      const leadDate = l.DATA;
+      if (!leadDate) return false;
+      dateToCheck = new Date(leadDate.split('/').reverse().join('-'));
+    }
+    
+    return dateToCheck >= startDate && dateToCheck <= endDate;
   }).length;
 
   console.log("Funnel counts:", { mql, cr, ra, rr, ass });
@@ -260,15 +273,28 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
   const cprr = rr > 0 ? totalCPL / rr : 0;
 
   // Calculate total fee: apply non-date filters first, then filter by DATA DA ASSINATURA
+  // Use same logic as ASS count: ASS=TRUE OR DATA DA ASSINATURA filled
   const totalFee = filteredForAss
     .filter((l) => {
-      if (!isPositive(l.ASS)) return false;
-      
+      const isAssigned = isPositive(l.ASS);
       const signatureDate = l["DATA DA ASSINATURA"];
-      if (!signatureDate) return false;
+      const hasSignatureDate = signatureDate && signatureDate.trim() !== "";
       
-      const sigDate = new Date(signatureDate.split('/').reverse().join('-'));
-      return sigDate >= startDate && sigDate <= endDate;
+      // Consider contract if ASS=TRUE OR if has signature date
+      if (!isAssigned && !hasSignatureDate) return false;
+      
+      // Determine which date to use for filtering
+      let dateToCheck: Date;
+      if (hasSignatureDate) {
+        dateToCheck = new Date(signatureDate.split('/').reverse().join('-'));
+      } else {
+        // Fallback: use lead entry date (DATA)
+        const leadDate = l.DATA;
+        if (!leadDate) return false;
+        dateToCheck = new Date(leadDate.split('/').reverse().join('-'));
+      }
+      
+      return dateToCheck >= startDate && dateToCheck <= endDate;
     })
     .reduce((sum, lead, index) => {
       // Try E.F first, fallback to FEE if E.F is not available
