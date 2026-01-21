@@ -85,19 +85,32 @@ const ConversionFunnel = ({ data, leads, allLeads, filters }: ConversionFunnelPr
         break;
       case "ass":
         // Apply all non-date filters first, then filter by DATA DA ASSINATURA
+        // Consider a contract as signed if ASS=TRUE OR if DATA DA ASSINATURA is filled
         const filteredByOtherFilters = filterLeadsWithoutDateFilter(allLeads, filters);
         
         result = filteredByOtherFilters.filter(l => {
-          if (!isPositive(l.ASS)) return false;
-          
+          const isAssigned = isPositive(l.ASS);
           const signatureDate = l["DATA DA ASSINATURA"];
-          if (!signatureDate) return false;
+          const hasSignatureDate = signatureDate && signatureDate.trim() !== "";
           
-          const sigDate = new Date(signatureDate.split('/').reverse().join('-'));
-          const isInRange = sigDate >= startDate && sigDate <= endDate;
+          // Consider contract if ASS=TRUE OR if has signature date
+          if (!isAssigned && !hasSignatureDate) return false;
+          
+          // Determine which date to use for filtering
+          let dateToCheck: Date;
+          if (hasSignatureDate) {
+            dateToCheck = new Date(signatureDate.split('/').reverse().join('-'));
+          } else {
+            // Fallback: use lead entry date (DATA)
+            const leadDate = l.DATA;
+            if (!leadDate) return false;
+            dateToCheck = new Date(leadDate.split('/').reverse().join('-'));
+          }
+          
+          const isInRange = dateToCheck >= startDate && dateToCheck <= endDate;
           
           if (isInRange) {
-            console.log(`ASS Lead: ${l.LEAD}, ASS value: "${l.ASS}", Signature Date: "${signatureDate}"`);
+            console.log(`ASS Lead: ${l.LEAD}, ASS value: "${l.ASS}", Signature Date: "${signatureDate}", Using Date: "${hasSignatureDate ? signatureDate : l.DATA}"`);
           }
           
           return isInRange;
