@@ -298,24 +298,37 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
       return dateToCheck >= startDate && dateToCheck <= endDate;
     })
     .reduce((sum, lead, index) => {
-      // Try E.F first, fallback to FEE, then BOOKING
-      const efValue = lead["E.F"] || lead.FEE || lead.BOOKING;
+      // Sum E.F (or FEE as fallback) + BOOKING for total revenue
+      let efValue = 0;
+      let bookingValue = 0;
       
-      if (!efValue || efValue === "" || efValue === "-") return sum;
-      
-      // Remove currency symbols, spaces, and handle Brazilian format
-      const efStr = efValue.toString()
-        .replace(/[R$\s]/g, "") // Remove R, $, spaces
-        .replace(/\./g, "") // Remove thousand separators (dots)
-        .replace(",", "."); // Replace decimal comma with dot
-      
-      const ef = parseFloat(efStr);
-      
-      if (index < 3) {
-        console.log(`Signed lead ${index}: Lead="${lead.LEAD}" E.F="${lead["E.F"]}" FEE="${lead.FEE}" BOOKING="${lead.BOOKING}" -> Using="${efValue}" -> Parsed=${ef}`);
+      // Parse E.F or FEE
+      const efOrFee = lead["E.F"] || lead.FEE;
+      if (efOrFee && efOrFee !== "" && efOrFee !== "-") {
+        const efStr = efOrFee.toString()
+          .replace(/[R$\s]/g, "")
+          .replace(/\./g, "")
+          .replace(",", ".");
+        efValue = parseFloat(efStr) || 0;
       }
       
-      return sum + (isNaN(ef) ? 0 : ef);
+      // Parse BOOKING separately and add it
+      const booking = lead.BOOKING;
+      if (booking && booking !== "" && booking !== "-") {
+        const bookingStr = booking.toString()
+          .replace(/[R$\s]/g, "")
+          .replace(/\./g, "")
+          .replace(",", ".");
+        bookingValue = parseFloat(bookingStr) || 0;
+      }
+      
+      const totalValue = efValue + bookingValue;
+      
+      if (index < 3) {
+        console.log(`Signed lead ${index}: Lead="${lead.LEAD}" E.F="${lead["E.F"]}" BOOKING="${lead.BOOKING}" -> E.F=${efValue} + BOOKING=${bookingValue} = ${totalValue}`);
+      }
+      
+      return sum + totalValue;
     }, 0);
   
   console.log("Total E.F (MRR) sum:", totalFee, "for", ass, "signed contracts");
