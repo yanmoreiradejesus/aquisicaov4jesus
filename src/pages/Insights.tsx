@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { format, subYears } from "date-fns";
+import { format, startOfYear, subYears } from "date-fns";
 import V4Header from "@/components/V4Header";
 import InsightsDateFilter from "@/components/InsightsDateFilter";
 import PerformanceBarChart from "@/components/PerformanceBarChart";
@@ -13,11 +13,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AlertCircle, RefreshCw, AlertTriangle } from "lucide-react";
 
 const Insights = () => {
-  // Initialize with total period (last 12 months) for better initial data coverage
+  // Initialize with total period starting from Jan 1, 2025 to capture all data
   const now = new Date();
-  const [startDate, setStartDate] = useState(
-    format(subYears(now, 1), "yyyy-MM-dd") + "T00:00:00"
-  );
+  const [startDate, setStartDate] = useState("2025-01-01T00:00:00");
   const [endDate, setEndDate] = useState(
     format(now, "yyyy-MM-dd") + "T00:00:00"
   );
@@ -165,6 +163,7 @@ const Insights = () => {
             </div>
           )}
         </div>
+
 
         {/* Date Filter */}
         <InsightsDateFilter

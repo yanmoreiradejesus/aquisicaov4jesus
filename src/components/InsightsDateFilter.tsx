@@ -51,7 +51,8 @@ const InsightsDateFilter = ({ startDate, endDate, onDateChange }: InsightsDateFi
         end = endOfYear(lastYear);
         break;
       case "total":
-        start = subYears(now, 1);
+        // Start from beginning of previous year to capture all historical data
+        start = startOfYear(subYears(now, 1));
         end = now;
         break;
       default:
