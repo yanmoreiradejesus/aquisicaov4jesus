@@ -41,19 +41,31 @@ const parseCurrency = (value: string | undefined): number => {
 };
 
 // Determine email type (corporate vs free)
+// Note: The spreadsheet has E-MAIL field with values like "Gratuito" or "Domínio"
 const getEmailType = (email: string | undefined): string => {
-  if (!email || email.trim() === "") return "Não informado";
+  if (!email || email.trim() === "" || email.trim() === "-") return "Não informado";
   
-  const freeEmailDomains = [
-    "gmail.com", "hotmail.com", "outlook.com", "yahoo.com", 
-    "live.com", "msn.com", "icloud.com", "uol.com.br", 
-    "bol.com.br", "terra.com.br"
-  ];
+  const normalized = email.trim().toLowerCase();
   
-  const domain = email.toLowerCase().split("@")[1];
-  if (!domain) return "Não informado";
+  // Handle pre-categorized values from spreadsheet
+  if (normalized === "gratuito") return "E-mail Gratuito";
+  if (normalized === "domínio" || normalized === "dominio") return "E-mail Corporativo";
   
-  return freeEmailDomains.includes(domain) ? "E-mail Gratuito" : "E-mail Corporativo";
+  // Fallback: check if it looks like an email address
+  if (email.includes("@")) {
+    const freeEmailDomains = [
+      "gmail.com", "hotmail.com", "outlook.com", "yahoo.com", 
+      "live.com", "msn.com", "icloud.com", "uol.com.br", 
+      "bol.com.br", "terra.com.br"
+    ];
+    
+    const domain = email.toLowerCase().split("@")[1];
+    if (!domain) return "Não informado";
+    
+    return freeEmailDomains.includes(domain) ? "E-mail Gratuito" : "E-mail Corporativo";
+  }
+  
+  return email.trim(); // Return the original value if it's something else
 };
 
 // Check if description is filled
@@ -80,11 +92,14 @@ export const calculatePerformanceByField = (
     } else if (field === "hasDescription") {
       value = hasDescription(lead.DESCRIÇÃO);
     } else {
-      value = lead[field] as string;
+      value = (lead[field] as string) || "";
     }
     
-    if (!value || value.trim() === "") {
+    // Normalize empty values
+    if (!value || value.trim() === "" || value.trim() === "-") {
       value = "Não informado";
+    } else {
+      value = value.trim();
     }
     
     if (!groups[value]) {

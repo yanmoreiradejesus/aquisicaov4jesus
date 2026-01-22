@@ -60,8 +60,21 @@ const PerformanceBarChart = ({ title, data, metric }: PerformanceBarChartProps) 
     return "hsl(var(--primary))";
   };
 
-  // Prepare data for chart (limit to top 10)
-  const chartData = data.slice(0, 10).map((item) => ({
+  // Handle empty data case
+  if (!data || data.length === 0) {
+    return (
+      <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6 transition-all duration-300 hover:shadow-lg">
+        <h3 className="mb-2 font-body text-lg font-semibold text-foreground">{title}</h3>
+        <p className="mb-4 text-xs text-muted-foreground">{getMetricLabel()}</p>
+        <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+          Nenhum dado disponível para o período selecionado
+        </div>
+      </div>
+    );
+  }
+
+  // Prepare data for chart (show all if <= 12, otherwise top 10)
+  const chartData = (data.length <= 12 ? data : data.slice(0, 10)).map((item) => ({
     name: item.segment.length > 15 ? item.segment.substring(0, 15) + "..." : item.segment,
     fullName: item.segment,
     value: item[metric],
@@ -69,54 +82,58 @@ const PerformanceBarChart = ({ title, data, metric }: PerformanceBarChartProps) 
     ass: item.ass,
   }));
 
+
   return (
     <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6 transition-all duration-300 hover:shadow-lg">
       <h3 className="mb-2 font-body text-lg font-semibold text-foreground">{title}</h3>
       <p className="mb-4 text-xs text-muted-foreground">{getMetricLabel()}</p>
       
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={chartData} layout="vertical" margin={{ left: 20, right: 20 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-          <XAxis
-            type="number"
-            stroke="hsl(var(--muted-foreground))"
-            style={{ fontSize: "11px", fontFamily: "Montserrat" }}
-            tickFormatter={(value) => formatValue(value)}
-          />
-          <YAxis
-            type="category"
-            dataKey="name"
-            stroke="hsl(var(--muted-foreground))"
-            style={{ fontSize: "11px", fontFamily: "Montserrat" }}
-            width={100}
-          />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: "hsl(var(--card))",
-              border: "1px solid hsl(var(--border))",
-              borderRadius: "0.75rem",
-              fontSize: "12px",
-            }}
-            labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
-            formatter={(value: number, _name: string, props: any) => [
-              <span key="value">
-                {formatValue(value)}
-                <br />
-                <span style={{ fontSize: "10px", opacity: 0.7 }}>
-                  ({props.payload.leads} leads, {props.payload.ass} contratos)
-                </span>
-              </span>,
-              getMetricLabel(),
-            ]}
-            labelFormatter={(label, payload) => payload?.[0]?.payload?.fullName || label}
-          />
-          <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-            {chartData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={getBarColor(entry.value)} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+      <div style={{ width: '100%', height: 300 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} layout="vertical" margin={{ left: 20, right: 20, top: 10, bottom: 10 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
+            <XAxis
+              type="number"
+              stroke="#9CA3AF"
+              tick={{ fill: '#9CA3AF', fontSize: 11 }}
+              tickFormatter={(value) => formatValue(value)}
+            />
+            <YAxis
+              type="category"
+              dataKey="name"
+              stroke="#9CA3AF"
+              tick={{ fill: '#9CA3AF', fontSize: 11 }}
+              width={100}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "#1f2937",
+                border: "1px solid #374151",
+                borderRadius: "0.75rem",
+                fontSize: "12px",
+                color: "#f9fafb"
+              }}
+              labelStyle={{ color: "#f9fafb", fontWeight: 600 }}
+              formatter={(value: number, _name: string, props: any) => [
+                <span key="value" style={{ color: "#f9fafb" }}>
+                  {formatValue(value)}
+                  <br />
+                  <span style={{ fontSize: "10px", opacity: 0.7 }}>
+                    ({props.payload.leads} leads, {props.payload.ass} contratos)
+                  </span>
+                </span>,
+                getMetricLabel(),
+              ]}
+              labelFormatter={(label, payload) => payload?.[0]?.payload?.fullName || label}
+            />
+            <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={getBarColor(entry.value)} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
 
       {/* Summary stats */}
       <div className="mt-4 grid grid-cols-3 gap-4 border-t border-border/30 pt-4">
