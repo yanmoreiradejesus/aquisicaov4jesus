@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { format, startOfMonth, endOfMonth } from "date-fns";
+import { format, subYears } from "date-fns";
 import V4Header from "@/components/V4Header";
 import InsightsDateFilter from "@/components/InsightsDateFilter";
 import PerformanceBarChart from "@/components/PerformanceBarChart";
@@ -10,16 +10,16 @@ import {
   calculateCrossPerformance,
 } from "@/utils/insightsCalculator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw, AlertTriangle } from "lucide-react";
 
 const Insights = () => {
-  // Initialize with current month
+  // Initialize with total period (last 12 months) for better initial data coverage
   const now = new Date();
   const [startDate, setStartDate] = useState(
-    format(startOfMonth(now), "yyyy-MM-dd") + "T00:00:00"
+    format(subYears(now, 1), "yyyy-MM-dd") + "T00:00:00"
   );
   const [endDate, setEndDate] = useState(
-    format(endOfMonth(now), "yyyy-MM-dd") + "T00:00:00"
+    format(now, "yyyy-MM-dd") + "T00:00:00"
   );
 
   const { data: sheetsData, isLoading, error } = useGoogleSheetsData();
@@ -172,6 +172,17 @@ const Insights = () => {
           endDate={endDate}
           onDateChange={handleDateChange}
         />
+
+        {/* Low data warning */}
+        {filteredLeads.length < 10 && filteredLeads.length > 0 && (
+          <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-warning" />
+            <span className="text-sm text-warning">
+              Apenas {filteredLeads.length} leads no período selecionado. 
+              Considere expandir o intervalo de datas para uma análise mais significativa.
+            </span>
+          </div>
+        )}
 
         {/* Performance by Segment Section */}
         <section>
