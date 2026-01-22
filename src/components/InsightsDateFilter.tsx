@@ -16,6 +16,7 @@ interface InsightsDateFilterProps {
 const InsightsDateFilter = ({ startDate, endDate, onDateChange }: InsightsDateFilterProps) => {
   const [startOpen, setStartOpen] = useState(false);
   const [endOpen, setEndOpen] = useState(false);
+  const [activePreset, setActivePreset] = useState<string>("total");
 
   const formatDateForState = (date: Date): string => {
     return format(date, "yyyy-MM-dd") + "T00:00:00";
@@ -57,6 +58,7 @@ const InsightsDateFilter = ({ startDate, endDate, onDateChange }: InsightsDateFi
         return;
     }
 
+    setActivePreset(preset);
     onDateChange(formatDateForState(start), formatDateForState(end));
   };
 
@@ -66,7 +68,7 @@ const InsightsDateFilter = ({ startDate, endDate, onDateChange }: InsightsDateFi
         {/* Preset Buttons */}
         <div className="flex flex-wrap gap-2">
           <Button
-            variant="outline"
+            variant={activePreset === "currentMonth" ? "default" : "outline"}
             size="sm"
             onClick={() => setPreset("currentMonth")}
             className="text-xs"
@@ -74,7 +76,7 @@ const InsightsDateFilter = ({ startDate, endDate, onDateChange }: InsightsDateFi
             Mês Atual
           </Button>
           <Button
-            variant="outline"
+            variant={activePreset === "lastMonth" ? "default" : "outline"}
             size="sm"
             onClick={() => setPreset("lastMonth")}
             className="text-xs"
@@ -82,7 +84,7 @@ const InsightsDateFilter = ({ startDate, endDate, onDateChange }: InsightsDateFi
             Mês Anterior
           </Button>
           <Button
-            variant="outline"
+            variant={activePreset === "currentYear" ? "default" : "outline"}
             size="sm"
             onClick={() => setPreset("currentYear")}
             className="text-xs"
@@ -90,7 +92,7 @@ const InsightsDateFilter = ({ startDate, endDate, onDateChange }: InsightsDateFi
             Ano Atual
           </Button>
           <Button
-            variant="outline"
+            variant={activePreset === "lastYear" ? "default" : "outline"}
             size="sm"
             onClick={() => setPreset("lastYear")}
             className="text-xs"
@@ -98,7 +100,7 @@ const InsightsDateFilter = ({ startDate, endDate, onDateChange }: InsightsDateFi
             Ano Anterior
           </Button>
           <Button
-            variant="outline"
+            variant={activePreset === "total" ? "default" : "outline"}
             size="sm"
             onClick={() => setPreset("total")}
             className="text-xs"
