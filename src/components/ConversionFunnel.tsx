@@ -65,24 +65,18 @@ const ConversionFunnel = ({ data, leads, allLeads, filters, useCreationDate = fa
         });
         break;
       case "rr":
-        // Apply all non-date filters first, then filter by DATA REUNIÃO REALIZADA
-        const filteredByOtherFiltersRR = filterLeadsWithoutDateFilter(allLeads, filters);
-        
-        result = filteredByOtherFiltersRR.filter(l => {
-          if (!isPositive(l["R.R"])) return false;
-          
-          const meetingDate = l["DATA REUNIÃO REALIZADA"];
-          if (!meetingDate) return false;
-          
-          const mtgDate = new Date(meetingDate.split('/').reverse().join('-'));
-          const isInRange = mtgDate >= startDate && mtgDate <= endDate;
-          
-          if (isInRange) {
-            console.log(`RR Lead: ${l.LEAD}, R.R value: "${l["R.R"]}", Meeting Date: "${meetingDate}"`);
-          }
-          
-          return isInRange;
-        });
+        if (useCreationDate) {
+          result = leads.filter(l => isPositive(l["R.R"]));
+        } else {
+          const filteredByOtherFiltersRR = filterLeadsWithoutDateFilter(allLeads, filters);
+          result = filteredByOtherFiltersRR.filter(l => {
+            if (!isPositive(l["R.R"])) return false;
+            const meetingDate = l["DATA REUNIÃO REALIZADA"];
+            if (!meetingDate) return false;
+            const mtgDate = new Date(meetingDate.split('/').reverse().join('-'));
+            return mtgDate >= startDate && mtgDate <= endDate;
+          });
+        }
         break;
       case "ass":
         // Apply all non-date filters first, then filter by DATA DA ASSINATURA
