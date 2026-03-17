@@ -203,19 +203,19 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
   const cr = leads.filter((l) => isPositive(l["C.R"])).length;
   const ra = leads.filter((l) => isPositive(l["R.A"])).length;
   
-  // Count RR: apply non-date filters first, then filter by DATA REUNIÃO REALIZADA
+  // Count RR: apply non-date filters first, then filter by date
   const startDate = new Date(filters.startDate);
   const endDate = new Date(filters.endDate);
   const filteredForRR = filterLeadsWithoutDateFilter(allLeads, filters);
-  const rr = filteredForRR.filter((l) => {
-    if (!isPositive(l["R.R"])) return false;
-    
-    const meetingDate = l["DATA REUNIÃO REALIZADA"];
-    if (!meetingDate) return false;
-    
-    const mtgDate = new Date(meetingDate.split('/').reverse().join('-'));
-    return mtgDate >= startDate && mtgDate <= endDate;
-  }).length;
+  const rr = useCreationDate
+    ? leads.filter((l) => isPositive(l["R.R"])).length
+    : filteredForRR.filter((l) => {
+        if (!isPositive(l["R.R"])) return false;
+        const meetingDate = l["DATA REUNIÃO REALIZADA"];
+        if (!meetingDate) return false;
+        const mtgDate = new Date(meetingDate.split('/').reverse().join('-'));
+        return mtgDate >= startDate && mtgDate <= endDate;
+      }).length;
   
   // Count ASS: apply non-date filters first, then filter by DATA DA ASSINATURA
   // Consider a contract as signed if ASS=TRUE OR if DATA DA ASSINATURA is filled
