@@ -32,6 +32,8 @@ const Index = () => {
     emailType: "all",
     hasDescription: "all"
   });
+  const [useCreationDate, setUseCreationDate] = useState(false);
+
   const {
     data: sheetsData,
     isLoading: dataLoading,
