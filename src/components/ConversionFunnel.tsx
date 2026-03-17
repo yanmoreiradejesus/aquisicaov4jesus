@@ -27,10 +27,11 @@ interface ConversionFunnelProps {
     ticketMedio: number;
   };
   leads: Lead[];
-  allLeads: Lead[]; // All leads regardless of date filter
+  allLeads: Lead[];
   filters: FilterOptions;
+  useCreationDate?: boolean;
 }
-const ConversionFunnel = ({ data, leads, allLeads, filters }: ConversionFunnelProps) => {
+const ConversionFunnel = ({ data, leads, allLeads, filters, useCreationDate = false }: ConversionFunnelProps) => {
   const [selectedStage, setSelectedStage] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -64,57 +65,45 @@ const ConversionFunnel = ({ data, leads, allLeads, filters }: ConversionFunnelPr
         });
         break;
       case "rr":
-        // Apply all non-date filters first, then filter by DATA REUNIÃO REALIZADA
-        const filteredByOtherFiltersRR = filterLeadsWithoutDateFilter(allLeads, filters);
-        
-        result = filteredByOtherFiltersRR.filter(l => {
-          if (!isPositive(l["R.R"])) return false;
-          
-          const meetingDate = l["DATA REUNIÃO REALIZADA"];
-          if (!meetingDate) return false;
-          
-          const mtgDate = new Date(meetingDate.split('/').reverse().join('-'));
-          const isInRange = mtgDate >= startDate && mtgDate <= endDate;
-          
-          if (isInRange) {
-            console.log(`RR Lead: ${l.LEAD}, R.R value: "${l["R.R"]}", Meeting Date: "${meetingDate}"`);
-          }
-          
-          return isInRange;
-        });
+        if (useCreationDate) {
+          result = leads.filter(l => isPositive(l["R.R"]));
+        } else {
+          const filteredByOtherFiltersRR = filterLeadsWithoutDateFilter(allLeads, filters);
+          result = filteredByOtherFiltersRR.filter(l => {
+            if (!isPositive(l["R.R"])) return false;
+            const meetingDate = l["DATA REUNIÃO REALIZADA"];
+            if (!meetingDate) return false;
+            const mtgDate = new Date(meetingDate.split('/').reverse().join('-'));
+            return mtgDate >= startDate && mtgDate <= endDate;
+          });
+        }
         break;
       case "ass":
-        // Apply all non-date filters first, then filter by DATA DA ASSINATURA
-        // Consider a contract as signed if ASS=TRUE OR if DATA DA ASSINATURA is filled
-        const filteredByOtherFilters = filterLeadsWithoutDateFilter(allLeads, filters);
-        
-        result = filteredByOtherFilters.filter(l => {
-          const isAssigned = isPositive(l.ASS);
-          const signatureDate = l["DATA DA ASSINATURA"];
-          const hasSignatureDate = signatureDate && signatureDate.trim() !== "";
-          
-          // Consider contract if ASS=TRUE OR if has signature date
-          if (!isAssigned && !hasSignatureDate) return false;
-          
-          // Determine which date to use for filtering
-          let dateToCheck: Date;
-          if (hasSignatureDate) {
-            dateToCheck = new Date(signatureDate.split('/').reverse().join('-'));
-          } else {
-            // Fallback: use lead entry date (DATA)
-            const leadDate = l.DATA;
-            if (!leadDate) return false;
-            dateToCheck = new Date(leadDate.split('/').reverse().join('-'));
-          }
-          
-          const isInRange = dateToCheck >= startDate && dateToCheck <= endDate;
-          
-          if (isInRange) {
-            console.log(`ASS Lead: ${l.LEAD}, ASS value: "${l.ASS}", Signature Date: "${signatureDate}", Using Date: "${hasSignatureDate ? signatureDate : l.DATA}"`);
-          }
-          
-          return isInRange;
-        });
+        if (useCreationDate) {
+          result = leads.filter(l => {
+            const isAssigned = isPositive(l.ASS);
+            const signatureDate = l["DATA DA ASSINATURA"];
+            const hasSignatureDate = signatureDate && signatureDate.trim() !== "";
+            return isAssigned || hasSignatureDate;
+          });
+        } else {
+          const filteredByOtherFilters = filterLeadsWithoutDateFilter(allLeads, filters);
+          result = filteredByOtherFilters.filter(l => {
+            const isAssigned = isPositive(l.ASS);
+            const signatureDate = l["DATA DA ASSINATURA"];
+            const hasSignatureDate = signatureDate && signatureDate.trim() !== "";
+            if (!isAssigned && !hasSignatureDate) return false;
+            let dateToCheck: Date;
+            if (hasSignatureDate) {
+              dateToCheck = new Date(signatureDate.split('/').reverse().join('-'));
+            } else {
+              const leadDate = l.DATA;
+              if (!leadDate) return false;
+              dateToCheck = new Date(leadDate.split('/').reverse().join('-'));
+            }
+            return dateToCheck >= startDate && dateToCheck <= endDate;
+          });
+        }
         break;
       default:
         result = [];
