@@ -97,8 +97,8 @@ const Index = () => {
     };
   }, [sheetsData, filters]);
   const conversionFunnelData = useMemo(() => {
-    return calculateFunnelData(filteredLeads, filters, sheetsData?.leads || []);
-  }, [filteredLeads, filters, sheetsData]);
+    return calculateFunnelData(filteredLeads, filters, sheetsData?.leads || [], useCreationDate);
+  }, [filteredLeads, filters, sheetsData, useCreationDate]);
   const previousPeriodData = useMemo(() => {
     return calculateFunnelData(previousPeriodLeads, {
       ...filters,
