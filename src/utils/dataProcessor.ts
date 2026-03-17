@@ -273,30 +273,31 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
   const cpa = ra > 0 ? totalCPL / ra : 0;
   const cprr = rr > 0 ? totalCPL / rr : 0;
 
-  // Calculate total fee: apply non-date filters first, then filter by DATA DA ASSINATURA
-  // Use same logic as ASS count: ASS=TRUE OR DATA DA ASSINATURA filled
-  const totalFee = filteredForAss
-    .filter((l) => {
-      const isAssigned = isPositive(l.ASS);
-      const signatureDate = l["DATA DA ASSINATURA"];
-      const hasSignatureDate = signatureDate && signatureDate.trim() !== "";
-      
-      // Consider contract if ASS=TRUE OR if has signature date
-      if (!isAssigned && !hasSignatureDate) return false;
-      
-      // Determine which date to use for filtering
-      let dateToCheck: Date;
-      if (hasSignatureDate) {
-        dateToCheck = new Date(signatureDate.split('/').reverse().join('-'));
-      } else {
-        // Fallback: use lead entry date (DATA)
-        const leadDate = l.DATA;
-        if (!leadDate) return false;
-        dateToCheck = new Date(leadDate.split('/').reverse().join('-'));
-      }
-      
-      return dateToCheck >= startDate && dateToCheck <= endDate;
-    })
+  // Calculate total fee
+  const feeSourceLeads = useCreationDate
+    ? leads.filter((l) => {
+        const isAssigned = isPositive(l.ASS);
+        const signatureDate = l["DATA DA ASSINATURA"];
+        const hasSignatureDate = signatureDate && signatureDate.trim() !== "";
+        return isAssigned || hasSignatureDate;
+      })
+    : filteredForAss.filter((l) => {
+        const isAssigned = isPositive(l.ASS);
+        const signatureDate = l["DATA DA ASSINATURA"];
+        const hasSignatureDate = signatureDate && signatureDate.trim() !== "";
+        if (!isAssigned && !hasSignatureDate) return false;
+        let dateToCheck: Date;
+        if (hasSignatureDate) {
+          dateToCheck = new Date(signatureDate.split('/').reverse().join('-'));
+        } else {
+          const leadDate = l.DATA;
+          if (!leadDate) return false;
+          dateToCheck = new Date(leadDate.split('/').reverse().join('-'));
+        }
+        return dateToCheck >= startDate && dateToCheck <= endDate;
+      });
+
+  const totalFee = feeSourceLeads
     .reduce((sum, lead, index) => {
       // Sum E.F (or FEE as fallback) + BOOKING for total revenue
       let efValue = 0;
