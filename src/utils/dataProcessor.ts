@@ -186,7 +186,7 @@ export const isPositive = (value: string | undefined): boolean => {
          val === "CONCLUÍDO" || val === "CONCLUIDO";
 };
 
-export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLeads: Lead[]) => {
+export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLeads: Lead[], useCreationDate: boolean = false) => {
   console.log("Calculating funnel with", leads.length, "filtered leads and", allLeads.length, "total leads");
   
   // Log first lead to see data structure
