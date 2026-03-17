@@ -166,12 +166,33 @@ const Index = () => {
         <FilterBar filters={filters} onFilterChange={handleFilterChange} uniqueValues={uniqueValues} />
 
         <section className="space-y-6">
-          <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">FUNIL DE VENDAS    </h2>
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">FUNIL DE VENDAS</h2>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={useCreationDate ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setUseCreationDate(!useCreationDate)}
+                  className="gap-2 text-xs"
+                >
+                  {useCreationDate ? <Calendar className="h-3.5 w-3.5" /> : <GitBranch className="h-3.5 w-3.5" />}
+                  {useCreationDate ? "Por Data de Criação" : "Por Etapa"}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{useCreationDate 
+                  ? "Todos os estágios filtrados pela data de entrada do lead" 
+                  : "RR usa Data da Reunião, ASS usa Data da Assinatura"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
           <ConversionFunnel 
             data={conversionFunnelData} 
             leads={filteredLeads}
             allLeads={sheetsData?.leads || []}
             filters={filters}
+            useCreationDate={useCreationDate}
           />
         </section>
 
