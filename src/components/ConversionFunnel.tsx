@@ -27,10 +27,11 @@ interface ConversionFunnelProps {
     ticketMedio: number;
   };
   leads: Lead[];
-  allLeads: Lead[]; // All leads regardless of date filter
+  allLeads: Lead[];
   filters: FilterOptions;
+  useCreationDate?: boolean;
 }
-const ConversionFunnel = ({ data, leads, allLeads, filters }: ConversionFunnelProps) => {
+const ConversionFunnel = ({ data, leads, allLeads, filters, useCreationDate = false }: ConversionFunnelProps) => {
   const [selectedStage, setSelectedStage] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
