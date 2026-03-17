@@ -217,30 +217,30 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
         return mtgDate >= startDate && mtgDate <= endDate;
       }).length;
   
-  // Count ASS: apply non-date filters first, then filter by DATA DA ASSINATURA
-  // Consider a contract as signed if ASS=TRUE OR if DATA DA ASSINATURA is filled
+  // Count ASS: apply non-date filters first, then filter by date
   const filteredForAss = filterLeadsWithoutDateFilter(allLeads, filters);
-  const ass = filteredForAss.filter((l) => {
-    const isAssigned = isPositive(l.ASS);
-    const signatureDate = l["DATA DA ASSINATURA"];
-    const hasSignatureDate = signatureDate && signatureDate.trim() !== "";
-    
-    // Consider contract if ASS=TRUE OR if has signature date
-    if (!isAssigned && !hasSignatureDate) return false;
-    
-    // Determine which date to use for filtering
-    let dateToCheck: Date;
-    if (hasSignatureDate) {
-      dateToCheck = new Date(signatureDate.split('/').reverse().join('-'));
-    } else {
-      // Fallback: use lead entry date (DATA)
-      const leadDate = l.DATA;
-      if (!leadDate) return false;
-      dateToCheck = new Date(leadDate.split('/').reverse().join('-'));
-    }
-    
-    return dateToCheck >= startDate && dateToCheck <= endDate;
-  }).length;
+  const ass = useCreationDate
+    ? leads.filter((l) => {
+        const isAssigned = isPositive(l.ASS);
+        const signatureDate = l["DATA DA ASSINATURA"];
+        const hasSignatureDate = signatureDate && signatureDate.trim() !== "";
+        return isAssigned || hasSignatureDate;
+      }).length
+    : filteredForAss.filter((l) => {
+        const isAssigned = isPositive(l.ASS);
+        const signatureDate = l["DATA DA ASSINATURA"];
+        const hasSignatureDate = signatureDate && signatureDate.trim() !== "";
+        if (!isAssigned && !hasSignatureDate) return false;
+        let dateToCheck: Date;
+        if (hasSignatureDate) {
+          dateToCheck = new Date(signatureDate.split('/').reverse().join('-'));
+        } else {
+          const leadDate = l.DATA;
+          if (!leadDate) return false;
+          dateToCheck = new Date(leadDate.split('/').reverse().join('-'));
+        }
+        return dateToCheck >= startDate && dateToCheck <= endDate;
+      }).length;
 
   console.log("Funnel counts:", { mql, cr, ra, rr, ass });
 
