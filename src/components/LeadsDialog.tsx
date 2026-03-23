@@ -67,7 +67,7 @@ const LeadsDialog = ({ open, onOpenChange, leads, stageTitle }: LeadsDialogProps
           <div className="block md:hidden space-y-3 p-1">
             {leads.map((lead, index) => (
               <div key={index} className="rounded-lg border border-border/50 bg-card p-4 space-y-2">
-                <p className="font-medium text-sm text-foreground">{lead.LEAD || "-"}</p>
+                <p className="font-medium text-sm text-foreground">{(lead as any).LEADS || lead.LEAD || "-"}</p>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   <span>Data: <span className="text-foreground">{formatDate(lead.DATA)}</span></span>
                   <span>Canal: <span className="text-foreground">{lead.CANAL || "-"}</span></span>
