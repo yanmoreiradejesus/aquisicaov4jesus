@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,9 +11,22 @@ import { useToast } from "@/hooks/use-toast";
 import logo from "@/assets/v4-logo.png";
 
 const Login = () => {
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
   const { toast } = useToast();
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
