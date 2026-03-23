@@ -98,7 +98,7 @@ const LeadsDialog = ({ open, onOpenChange, leads, stageTitle }: LeadsDialogProps
               <TableBody>
                 {leads.map((lead, index) => (
                   <TableRow key={index}>
-                    <TableCell className="font-medium min-w-[150px]">{lead.LEAD || "-"}</TableCell>
+                    <TableCell className="font-medium min-w-[150px]">{(lead as any).LEADS || lead.LEAD || "-"}</TableCell></invoke>
                     <TableCell>{formatDate(lead.DATA)}</TableCell>
                     <TableCell>{lead.CANAL || "-"}</TableCell>
                     <TableCell>{lead.TIER || "-"}</TableCell>
