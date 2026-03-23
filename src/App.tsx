@@ -4,9 +4,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { PageTransition } from "@/components/PageTransition";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Insights from "./pages/Insights";
 import Metas from "./pages/Metas";
+import Admin from "./pages/Admin";
+import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
 const AppRoutes = () => {
@@ -14,10 +17,27 @@ const AppRoutes = () => {
   
   return (
     <Routes location={location} key={location.pathname}>
-      <Route path="/" element={<PageTransition><Index /></PageTransition>} />
-      <Route path="/insights" element={<PageTransition><Insights /></PageTransition>} />
-      <Route path="/metas" element={<PageTransition><Metas /></PageTransition>} />
-      {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+      <Route path="/login" element={<PageTransition><Login /></PageTransition>} />
+      <Route path="/" element={
+        <ProtectedRoute requiredPath="/">
+          <PageTransition><Index /></PageTransition>
+        </ProtectedRoute>
+      } />
+      <Route path="/insights" element={
+        <ProtectedRoute requiredPath="/insights">
+          <PageTransition><Insights /></PageTransition>
+        </ProtectedRoute>
+      } />
+      <Route path="/metas" element={
+        <ProtectedRoute requiredPath="/metas">
+          <PageTransition><Metas /></PageTransition>
+        </ProtectedRoute>
+      } />
+      <Route path="/admin" element={
+        <ProtectedRoute requiredPath="/admin">
+          <PageTransition><Admin /></PageTransition>
+        </ProtectedRoute>
+      } />
       <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
     </Routes>
   );

@@ -1,10 +1,19 @@
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import logo from "@/assets/v4-logo.png";
+import { LogOut, Shield } from "lucide-react";
 
 const V4Header = () => {
   const location = useLocation();
+  const { user, isAdmin, hasPageAccess, signOut } = useAuth();
   
   const isActive = (path: string) => location.pathname === path;
+
+  const navItems = [
+    { path: "/", label: "DASHBOARD" },
+    { path: "/insights", label: "INSIGHTS" },
+    { path: "/metas", label: "METAS" },
+  ];
   
   return (
     <header className="border-b border-border/50 bg-[#e50914]">
@@ -14,34 +23,43 @@ const V4Header = () => {
             <img src={logo} alt="V4 Company" className="h-10 w-auto" />
             
             <nav className="flex gap-4 lg:gap-6">
-              <Link
-                to="/"
-                className={`font-body text-xs lg:text-sm font-medium tracking-wider transition-all duration-300 text-white ${
-                  isActive("/") ? "opacity-100" : "opacity-70 hover:opacity-100"
-                }`}
-              >
-                DASHBOARD
-              </Link>
-              <Link
-                to="/insights"
-                className={`font-body text-xs lg:text-sm font-medium tracking-wider transition-all duration-300 text-white ${
-                  isActive("/insights") ? "opacity-100" : "opacity-70 hover:opacity-100"
-                }`}
-              >
-                INSIGHTS
-              </Link>
-              <Link
-                to="/metas"
-                className={`font-body text-xs lg:text-sm font-medium tracking-wider transition-all duration-300 text-white ${
-                  isActive("/metas") ? "opacity-100" : "opacity-70 hover:opacity-100"
-                }`}
-              >
-                METAS
-              </Link>
+              {navItems
+                .filter((item) => hasPageAccess(item.path))
+                .map((item) => (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={`font-body text-xs lg:text-sm font-medium tracking-wider transition-all duration-300 text-white ${
+                      isActive(item.path) ? "opacity-100" : "opacity-70 hover:opacity-100"
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  className={`font-body text-xs lg:text-sm font-medium tracking-wider transition-all duration-300 text-white flex items-center gap-1 ${
+                    isActive("/admin") ? "opacity-100" : "opacity-70 hover:opacity-100"
+                  }`}
+                >
+                  <Shield className="h-3 w-3" />
+                  ADMIN
+                </Link>
+              )}
             </nav>
           </div>
           
-          <div className="h-8 w-8 rounded-lg border border-white/30 bg-white/10" />
+          {user && (
+            <button
+              onClick={signOut}
+              className="flex items-center gap-2 text-white/70 hover:text-white transition-colors text-xs lg:text-sm"
+              title="Sair"
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="hidden lg:inline">Sair</span>
+            </button>
+          )}
         </div>
       </div>
     </header>
