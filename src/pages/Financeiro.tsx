@@ -120,9 +120,26 @@ const Financeiro = () => {
 
   const rawData: FinancialRecord[] = financialResponse?.records ?? MOCK_DATA;
   const filtered = useMemo(() => filterRecords(rawData, filters), [rawData, filters]);
-  // Year-only filter: same filters but ignoring month selection (for time-series charts)
-  const yearOnlyFiltered = useMemo(() => filterRecords(rawData, { ...filters, meses: [] }), [rawData, filters]);
+
+  // Determine reference year: selected year or max year in data
+  const referenceYear = useMemo(() => {
+    if (filters.anos.length > 0) return Math.max(...filters.anos);
+    const allYears = rawData.map((r) => r.ano);
+    return allYears.length > 0 ? Math.max(...allYears) : CURRENT_YEAR;
+  }, [rawData, filters.anos]);
+
+  const prevYear = referenceYear - 1;
+
+  // Year-only filter for time-series: always include previous year for comparison
+  const yearOnlyFiltered = useMemo(() => {
+    const yearsToInclude = filters.anos.length > 0
+      ? [...new Set([...filters.anos, prevYear])]
+      : []; // empty = all years
+    return filterRecords(rawData, { ...filters, meses: [], anos: yearsToInclude });
+  }, [rawData, filters, prevYear]);
+
   const kpis = useMemo(() => calcKPIs(filtered), [filtered]);
+  const cagr = useMemo(() => calcCAGR(rawData, referenceYear), [rawData, referenceYear]);
   const monthlyData = useMemo(() => calcMonthlyData(yearOnlyFiltered), [yearOnlyFiltered]);
   const inadByMonth = useMemo(() => calcInadByMonth(yearOnlyFiltered), [yearOnlyFiltered]);
   const formatoMix = useMemo(() => calcFormatoMix(filtered), [filtered]);
