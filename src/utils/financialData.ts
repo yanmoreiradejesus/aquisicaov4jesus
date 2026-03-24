@@ -145,7 +145,7 @@ export function calcKPIs(data: FinancialRecord[]) {
 
   const clientesUnicos = new Set(data.map((r) => r.cliente)).size;
 
-  return { bruto, liquido, royalties, margem, inadRate, inadCount, dso, ticketMedio, cagr, clientesUnicos, total };
+  return { bruto, liquido, royalties, margem, inadRate, inadCount, inadValor, dso, ticketMedio, cagr, clientesUnicos, total };
 }
 
 export interface MonthlyData {

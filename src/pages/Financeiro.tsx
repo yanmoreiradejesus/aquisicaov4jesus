@@ -246,7 +246,7 @@ const Financeiro = () => {
               <KPICard title="Receita Líquida" value={formatCurrency(kpis.liquido)} subtitle={`Margem: ${formatPercent(kpis.margem)}`} icon={TrendingUp} color="success" />
               <KPICard title="Royalties" value={formatCurrency(kpis.royalties)} icon={Percent} />
               <KPICard title="Ticket Médio" value={formatCurrency(kpis.ticketMedio)} subtitle={`${kpis.total} contratos`} icon={BarChart3} />
-              <KPICard title="Inadimplência" value={formatPercent(kpis.inadRate)} subtitle={`${kpis.inadCount} contratos`} icon={AlertTriangle} color="destructive" />
+              <KPICard title="Inadimplência" value={formatPercent(kpis.inadRate)} subtitle={formatCurrency(kpis.inadValor)} icon={AlertTriangle} color="destructive" />
               <KPICard
                 title="DSO"
                 value={`${kpis.dso.toFixed(1).replace(".", ",")} dias`}
