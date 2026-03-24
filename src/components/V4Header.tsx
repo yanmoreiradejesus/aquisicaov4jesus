@@ -13,6 +13,7 @@ const V4Header = () => {
     { path: "/", label: "DASHBOARD" },
     { path: "/insights", label: "INSIGHTS" },
     { path: "/metas", label: "METAS" },
+    { path: "/financeiro", label: "FINANCEIRO" },
   ];
   
   return (

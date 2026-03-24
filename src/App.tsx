@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Insights from "./pages/Insights";
 import Metas from "./pages/Metas";
 import Admin from "./pages/Admin";
+import Financeiro from "./pages/Financeiro";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -31,6 +32,11 @@ const AppRoutes = () => {
       <Route path="/metas" element={
         <ProtectedRoute requiredPath="/metas">
           <PageTransition><Metas /></PageTransition>
+        </ProtectedRoute>
+      } />
+      <Route path="/financeiro" element={
+        <ProtectedRoute requiredPath="/financeiro">
+          <PageTransition><Financeiro /></PageTransition>
         </ProtectedRoute>
       } />
       <Route path="/admin" element={
