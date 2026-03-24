@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import V4Header from "@/components/V4Header";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer,
@@ -118,6 +119,7 @@ const Financeiro = () => {
   const [metricMode, setMetricMode] = useState<MetricMode>("bruto");
   const [inadSearch, setInadSearch] = useState("");
   const [inadPage, setInadPage] = useState(0);
+  const [selectedCliente, setSelectedCliente] = useState<string | null>(null);
 
   const rawData: FinancialRecord[] = financialResponse?.records ?? MOCK_DATA;
   const filtered = useMemo(() => filterRecords(rawData, filters), [rawData, filters]);
@@ -183,6 +185,17 @@ const Financeiro = () => {
   const inadPageSize = 10;
   const inadTotalPages = Math.ceil(inadimplentes.length / inadPageSize);
   const inadPaged = inadimplentes.slice(inadPage * inadPageSize, (inadPage + 1) * inadPageSize);
+
+  const clienteHistory = useMemo(() => {
+    if (!selectedCliente) return [];
+    return rawData
+      .filter((r) => r.cliente === selectedCliente)
+      .sort((a, b) => {
+        const da = new Date(a.vencimento).getTime();
+        const db = new Date(b.vencimento).getTime();
+        return db - da;
+      });
+  }, [rawData, selectedCliente]);
 
   const dsoColor = kpis.dso < 7 ? "text-green-400" : kpis.dso < 14 ? "text-yellow-400" : "text-red-400";
 
@@ -474,8 +487,8 @@ const Financeiro = () => {
                     </thead>
                     <tbody>
                       {inadPaged.map((r, i) => (
-                        <tr key={i} className="border-b border-border/30 hover:bg-muted/20 transition-colors">
-                          <td className="py-2 text-foreground font-medium">{r.cliente}</td>
+                        <tr key={i} className="border-b border-border/30 hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => setSelectedCliente(r.cliente)}>
+                          <td className="py-2 text-primary font-medium underline underline-offset-2">{r.cliente}</td>
                           <td className="py-2 text-right text-foreground">{formatCurrencyFull(r.valor)}</td>
                           <td className="py-2 text-center text-muted-foreground">{formatDate(r.vencimento)}</td>
                           <td className="py-2 text-center">
@@ -564,6 +577,47 @@ const Financeiro = () => {
             </div>
           </>
         )}
+
+        {/* Dialog: Histórico do Cliente */}
+        <Dialog open={!!selectedCliente} onOpenChange={(open) => !open && setSelectedCliente(null)}>
+          <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-sm font-bold uppercase tracking-wider">
+                Histórico — {selectedCliente}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border/50">
+                    <th className="text-left py-2 text-muted-foreground font-medium">Vencimento</th>
+                    <th className="text-right py-2 text-muted-foreground font-medium">Valor</th>
+                    <th className="text-center py-2 text-muted-foreground font-medium">Data Pag.</th>
+                    <th className="text-center py-2 text-muted-foreground font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clienteHistory.map((r, i) => (
+                    <tr key={i} className="border-b border-border/30 hover:bg-muted/20 transition-colors">
+                      <td className="py-2 text-foreground">{formatDate(r.vencimento)}</td>
+                      <td className="py-2 text-right text-foreground">{formatCurrencyFull(r.valor)}</td>
+                      <td className="py-2 text-center text-muted-foreground">{r.dataPag ? formatDate(r.dataPag) : "—"}</td>
+                      <td className="py-2 text-center">
+                        <Badge variant="outline" className={`text-[10px] ${
+                          r.status === "Pago" ? "border-green-500 text-green-500" :
+                          r.status === "Em Atraso" ? "border-red-500 text-red-500" :
+                          "border-blue-500 text-blue-500"
+                        }`}>
+                          {r.status}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

@@ -196,7 +196,7 @@ export function calcInadByMonth(data: FinancialRecord[]) {
     if (!map.has(sortKey)) map.set(sortKey, { total: 0, inad: 0 });
     const entry = map.get(sortKey)!;
     entry.total++;
-    if (r.status !== "Pago") entry.inad++;
+    if (r.status === "Em Atraso") entry.inad++;
   });
 
   return [...map.entries()]
