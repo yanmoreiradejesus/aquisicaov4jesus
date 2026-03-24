@@ -111,7 +111,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 const Financeiro = () => {
   const { data: financialResponse, isLoading: isLoadingData } = useFinancialData();
   const [filters, setFilters] = useState<FinancialFilters>({
-    anos: [], meses: [], status: [], formatos: [], meiosPag: [],
+    anos: [CURRENT_YEAR], meses: [CURRENT_MONTH], status: [], formatos: [], meiosPag: [],
   });
   const [viewMode, setViewMode] = useState<ViewMode>("mensal");
   const [metricMode, setMetricMode] = useState<MetricMode>("bruto");
