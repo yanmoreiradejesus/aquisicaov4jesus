@@ -330,6 +330,27 @@ const Financeiro = () => {
               </div>
             </div>
 
+            {/* RECEITA POR FORMATO (Stacked Bar) */}
+            <div className="rounded-lg border border-border/50 bg-card p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Receita por Formato</h3>
+              </div>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyByFormato}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(240 3.7% 15.9%)" />
+                    <XAxis dataKey="label" tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
+                    <YAxis tickFormatter={(v) => formatCurrency(v)} tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
+                    <RTooltip content={<CustomTooltip />} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    {VALID_FORMATOS_LIST.map((fmt) => (
+                      <Bar key={fmt} dataKey={fmt} stackId="formato" fill={FORMATO_COLOR_MAP[fmt]} name={fmt} />
+                    ))}
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
             {/* SECTION 3: Acumulado + Inadimplência */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="rounded-lg border border-border/50 bg-card p-5 space-y-3">
