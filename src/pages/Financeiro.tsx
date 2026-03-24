@@ -593,6 +593,7 @@ const Financeiro = () => {
                     <th className="text-left py-2 text-muted-foreground font-medium">Vencimento</th>
                     <th className="text-right py-2 text-muted-foreground font-medium">Valor</th>
                     <th className="text-center py-2 text-muted-foreground font-medium">Data Pag.</th>
+                    <th className="text-left py-2 text-muted-foreground font-medium">Formato</th>
                     <th className="text-center py-2 text-muted-foreground font-medium">Status</th>
                   </tr>
                 </thead>
@@ -602,6 +603,7 @@ const Financeiro = () => {
                       <td className="py-2 text-foreground">{formatDate(r.vencimento)}</td>
                       <td className="py-2 text-right text-foreground">{formatCurrencyFull(r.valor)}</td>
                       <td className="py-2 text-center text-muted-foreground">{r.dataPag ? formatDate(r.dataPag) : "—"}</td>
+                      <td className="py-2 text-left text-muted-foreground">{r.formato || "—"}</td>
                       <td className="py-2 text-center">
                         <Badge variant="outline" className={`text-[10px] ${
                           r.status === "Pago" ? "border-green-500 text-green-500" :
