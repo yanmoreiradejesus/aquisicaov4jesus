@@ -119,6 +119,7 @@ const Financeiro = () => {
   const [metricMode, setMetricMode] = useState<MetricMode>("bruto");
   const [inadSearch, setInadSearch] = useState("");
   const [inadPage, setInadPage] = useState(0);
+  const [selectedCliente, setSelectedCliente] = useState<string | null>(null);
 
   const rawData: FinancialRecord[] = financialResponse?.records ?? MOCK_DATA;
   const filtered = useMemo(() => filterRecords(rawData, filters), [rawData, filters]);
