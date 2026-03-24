@@ -1,40 +1,40 @@
 
 
-# Plano: Ajustar Filtros e Corrigir Mix por Formato
+# Plano: Gráfico de Evolução de Receita por Formato (Stacked Bar)
 
-## Problema 1 — Filtros ocupam muito espaço
-Os filtros financeiros usam botões inline (MultiSelect customizado) que ocupam muito espaço vertical. No dashboard de aquisição, os filtros são compactos com dropdowns e ficam em uma única linha.
+## O que será feito
 
-## Problema 2 — Mix por Formato com dados incorretos
-A função `calcFormatoMix` agrupa pelo campo `formato` da planilha sem filtrar valores válidos. Se a planilha tiver linhas com valores como "ATRASOS", "COMISSÃO" ou campos vazios na coluna FORMATO, eles aparecem no gráfico. Segundo o usuário, "atrasos" e "comissões" não são formatos válidos.
-
----
+Adicionar um novo gráfico de barras empilhadas (stacked bar chart) que mostra a evolução mensal da receita, com cada segmento da barra colorido por formato (FEE, ESCOPO FECHADO, IMPLEMENTAÇÃO/ONE TIME, ESTRUTURAÇÃO, PARCELAMENTO, TCV). Visual similar ao gráfico de "Evolução de Receita" já existente, mas com a decomposição por tipo de contrato.
 
 ## Implementação
 
-### 1. Refatorar filtros para layout compacto
-- Substituir o `MultiSelect` inline por dropdowns (Select ou Popover) semelhantes ao FilterBar do dashboard
-- Layout: uma linha com todos os filtros lado a lado (Ano, Mês, Status, Formato, Meio de Pag.)
-- Mês atual selecionado por padrão + ano atual
-- Botão "Limpar" alinhado à direita
+### 1. Nova função `calcMonthlyByFormato` em `src/utils/financialData.ts`
+- Agrupa os registros por mês/ano (mesmo padrão do `calcMonthlyData`)
+- Para cada mês, calcula o valor bruto por formato válido (FEE, ESTRUTURAÇÃO, IMPLEMENTAÇÃO/ONE TIME, ESCOPO FECHADO, PARCELAMENTO, TCV)
+- Retorna array com `{ label, ano, mesIdx, FEE: number, ESTRUTURAÇÃO: number, ... }`
 
-### 2. Filtro padrão: mês e ano atuais
-- Inicializar `filters.meses` com o mês atual em português (ex: "março")
-- Inicializar `filters.anos` com o ano atual (2026)
-- Ao carregar a página, os dados já vêm filtrados para o período corrente
+### 2. Novo gráfico em `src/pages/Financeiro.tsx`
+- Usar `BarChart` do Recharts com `<Bar stackId="formato">` para cada formato
+- Cada formato recebe uma cor fixa do `CHART_COLORS`
+- Posicionar abaixo ou próximo ao gráfico de evolução de receita existente
+- Usa `yearOnlyFiltered` como fonte (ignora filtro de mês, mostra ano inteiro)
+- Tooltip mostra valor de cada formato no mês
+- Legenda com os formatos e suas cores
 
-### 3. Corrigir Mix por Formato
-- Definir lista de formatos válidos: `FEE`, `ESTRUTURAÇÃO`, `IMPLEMENTAÇÃO/ONE TIME`, `ESCOPO FECHADO`, `PARCELAMENTO`, `TCV`
-- Excluir `COMISSÃO` e qualquer outro valor que não seja formato de contrato
-- Na função `calcFormatoMix`, filtrar registros para incluir apenas formatos válidos
-- Registros com formato vazio ou inválido são ignorados no gráfico
-
----
+### 3. Cores por formato
+| Formato | Cor |
+|---------|-----|
+| FEE | #4A90E2 |
+| ESTRUTURAÇÃO | #22C55E |
+| IMPLEMENTAÇÃO/ONE TIME | #F59E0B |
+| ESCOPO FECHADO | #EF4444 |
+| PARCELAMENTO | #8B5CF6 |
+| TCV | #EC4899 |
 
 ## Arquivos a editar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/pages/Financeiro.tsx` | Refatorar filtros para dropdowns compactos; definir filtro padrão mês/ano atual |
-| `src/utils/financialData.ts` | Filtrar formatos válidos em `calcFormatoMix` |
+| `src/utils/financialData.ts` | Criar `calcMonthlyByFormato` |
+| `src/pages/Financeiro.tsx` | Adicionar gráfico stacked bar com dados por formato |
 
