@@ -229,7 +229,6 @@ export function calcFormatoMix(data: FinancialRecord[]) {
     }
   });
   const total = [...map.values()].reduce((s, v) => s + v, 0);
-  const total = data.reduce((s, r) => s + r.valor, 0);
   return [...map.entries()]
     .sort((a, b) => b[1] - a[1])
     .map(([formato, valor]) => ({
