@@ -577,6 +577,47 @@ const Financeiro = () => {
             </div>
           </>
         )}
+
+        {/* Dialog: Histórico do Cliente */}
+        <Dialog open={!!selectedCliente} onOpenChange={(open) => !open && setSelectedCliente(null)}>
+          <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-sm font-bold uppercase tracking-wider">
+                Histórico — {selectedCliente}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-border/50">
+                    <th className="text-left py-2 text-muted-foreground font-medium">Vencimento</th>
+                    <th className="text-right py-2 text-muted-foreground font-medium">Valor</th>
+                    <th className="text-center py-2 text-muted-foreground font-medium">Data Pag.</th>
+                    <th className="text-center py-2 text-muted-foreground font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clienteHistory.map((r, i) => (
+                    <tr key={i} className="border-b border-border/30 hover:bg-muted/20 transition-colors">
+                      <td className="py-2 text-foreground">{formatDate(r.vencimento)}</td>
+                      <td className="py-2 text-right text-foreground">{formatCurrencyFull(r.valor)}</td>
+                      <td className="py-2 text-center text-muted-foreground">{r.dataPag ? formatDate(r.dataPag) : "—"}</td>
+                      <td className="py-2 text-center">
+                        <Badge variant="outline" className={`text-[10px] ${
+                          r.status === "Pago" ? "border-green-500 text-green-500" :
+                          r.status === "Em Atraso" ? "border-red-500 text-red-500" :
+                          "border-blue-500 text-blue-500"
+                        }`}>
+                          {r.status}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
