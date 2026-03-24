@@ -254,10 +254,10 @@ const Financeiro = () => {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
-                    <KPICard title="CAGR" value={formatPercent(kpis.cagr)} subtitle="Crescimento anualizado" icon={TrendingUp} />
+                    <KPICard title="CAGR" value={formatPercent(cagr)} subtitle={`${referenceYear} vs ${prevYear}`} icon={TrendingUp} />
                   </div>
                 </TooltipTrigger>
-                <TooltipContent><p className="text-xs">Taxa de crescimento anual composta baseada no primeiro e último ano dos dados filtrados.</p></TooltipContent>
+                <TooltipContent><p className="text-xs">Variação de faturamento: {referenceYear} comparado a {prevYear}.</p></TooltipContent>
               </Tooltip>
               <KPICard title="Clientes Únicos" value={String(kpis.clientesUnicos)} icon={Users} />
             </div>
