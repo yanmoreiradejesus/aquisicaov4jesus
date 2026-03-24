@@ -138,15 +138,8 @@ export function calcKPIs(data: FinancialRecord[]) {
 
   const ticketMedio = total > 0 ? bruto / total : 0;
 
-  // CAGR
-  const years = [...new Set(data.map((r) => r.ano))].sort();
+  // CAGR - placeholder, use calcCAGR for year-over-year
   let cagr = 0;
-  if (years.length >= 2) {
-    const first = data.filter((r) => r.ano === years[0]).reduce((s, r) => s + r.valor, 0);
-    const last = data.filter((r) => r.ano === years[years.length - 1]).reduce((s, r) => s + r.valor, 0);
-    const n = years[years.length - 1] - years[0];
-    if (first > 0 && n > 0) cagr = (Math.pow(last / first, 1 / n) - 1) * 100;
-  }
 
   const clientesUnicos = new Set(data.map((r) => r.cliente)).size;
 
@@ -291,4 +284,14 @@ export function calcDSOByMonth(data: FinancialRecord[]) {
 export function calcTicketByMonth(data: FinancialRecord[]) {
   const monthly = calcMonthlyData(data);
   return monthly.map((m) => ({ label: m.label, ticket: m.ticketMedio }));
+}
+
+export function calcCAGR(allData: FinancialRecord[], selectedYear: number): number {
+  const prevYear = selectedYear - 1;
+  const currentTotal = allData.filter((r) => r.ano === selectedYear).reduce((s, r) => s + r.valor, 0);
+  const prevTotal = allData.filter((r) => r.ano === prevYear).reduce((s, r) => s + r.valor, 0);
+  if (prevTotal > 0) {
+    return ((currentTotal / prevTotal) - 1) * 100;
+  }
+  return 0;
 }

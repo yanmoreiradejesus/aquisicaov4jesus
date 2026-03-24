@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   MOCK_DATA, filterRecords, calcKPIs, calcMonthlyData,
   calcInadByMonth, calcFormatoMix, calcTop10Clientes, calcMeioPagDist,
-  calcDSOByMonth, calcTicketByMonth, formatCurrency, formatCurrencyFull,
+  calcDSOByMonth, calcTicketByMonth, calcCAGR, formatCurrency, formatCurrencyFull,
   formatPercent, formatDate, MONTH_LABELS,
   type FinancialFilters, type FinancialRecord,
 } from "@/utils/financialData";
@@ -120,9 +120,26 @@ const Financeiro = () => {
 
   const rawData: FinancialRecord[] = financialResponse?.records ?? MOCK_DATA;
   const filtered = useMemo(() => filterRecords(rawData, filters), [rawData, filters]);
-  // Year-only filter: same filters but ignoring month selection (for time-series charts)
-  const yearOnlyFiltered = useMemo(() => filterRecords(rawData, { ...filters, meses: [] }), [rawData, filters]);
+
+  // Determine reference year: selected year or max year in data
+  const referenceYear = useMemo(() => {
+    if (filters.anos.length > 0) return Math.max(...filters.anos);
+    const allYears = rawData.map((r) => r.ano);
+    return allYears.length > 0 ? Math.max(...allYears) : CURRENT_YEAR;
+  }, [rawData, filters.anos]);
+
+  const prevYear = referenceYear - 1;
+
+  // Year-only filter for time-series: always include previous year for comparison
+  const yearOnlyFiltered = useMemo(() => {
+    const yearsToInclude = filters.anos.length > 0
+      ? [...new Set([...filters.anos, prevYear])]
+      : []; // empty = all years
+    return filterRecords(rawData, { ...filters, meses: [], anos: yearsToInclude });
+  }, [rawData, filters, prevYear]);
+
   const kpis = useMemo(() => calcKPIs(filtered), [filtered]);
+  const cagr = useMemo(() => calcCAGR(rawData, referenceYear), [rawData, referenceYear]);
   const monthlyData = useMemo(() => calcMonthlyData(yearOnlyFiltered), [yearOnlyFiltered]);
   const inadByMonth = useMemo(() => calcInadByMonth(yearOnlyFiltered), [yearOnlyFiltered]);
   const formatoMix = useMemo(() => calcFormatoMix(filtered), [filtered]);
@@ -237,10 +254,10 @@ const Financeiro = () => {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
-                    <KPICard title="CAGR" value={formatPercent(kpis.cagr)} subtitle="Crescimento anualizado" icon={TrendingUp} />
+                    <KPICard title="CAGR" value={formatPercent(cagr)} subtitle={`${referenceYear} vs ${prevYear}`} icon={TrendingUp} />
                   </div>
                 </TooltipTrigger>
-                <TooltipContent><p className="text-xs">Taxa de crescimento anual composta baseada no primeiro e último ano dos dados filtrados.</p></TooltipContent>
+                <TooltipContent><p className="text-xs">Variação de faturamento: {referenceYear} comparado a {prevYear}.</p></TooltipContent>
               </Tooltip>
               <KPICard title="Clientes Únicos" value={String(kpis.clientesUnicos)} icon={Users} />
             </div>
