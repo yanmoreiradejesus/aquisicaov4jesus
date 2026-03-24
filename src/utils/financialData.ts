@@ -89,6 +89,9 @@ export function formatPercent(value: number): string {
 }
 
 export function formatDate(dateStr: string): string {
+  if (!dateStr) return "-";
+  // Handle both DD/MM/YYYY and YYYY-MM-DD formats
+  if (dateStr.includes("/")) return dateStr;
   const [y, m, d] = dateStr.split("-");
   return `${d}/${m}/${y}`;
 }
