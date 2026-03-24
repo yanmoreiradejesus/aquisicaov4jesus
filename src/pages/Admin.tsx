@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { UserCheck, UserX, Shield } from "lucide-react";
+import { UserCheck, UserX, Shield, UserPlus, Send } from "lucide-react";
 
 interface UserWithAccess {
   id: string;
@@ -30,7 +32,43 @@ const Admin = () => {
   const { isAdmin } = useAuth();
   const [users, setUsers] = useState<UserWithAccess[]>([]);
   const [loading, setLoading] = useState(true);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
+  const [invitePages, setInvitePages] = useState<string[]>([]);
+  const [inviting, setInviting] = useState(false);
   const { toast } = useToast();
+
+  const handleInvite = async () => {
+    if (!inviteEmail.trim()) {
+      toast({ title: "Erro", description: "Informe o email", variant: "destructive" });
+      return;
+    }
+    setInviting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data, error } = await supabase.functions.invoke("invite-user", {
+        body: { email: inviteEmail.trim(), full_name: inviteName.trim(), pages: invitePages },
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "Convite enviado!", description: `Email enviado para ${inviteEmail}` });
+      setInviteEmail("");
+      setInviteName("");
+      setInvitePages([]);
+      fetchUsers();
+    } catch (err: any) {
+      toast({ title: "Erro ao convidar", description: err.message, variant: "destructive" });
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const toggleInvitePage = (path: string) => {
+    setInvitePages((prev) =>
+      prev.includes(path) ? prev.filter((p) => p !== path) : [...prev, path]
+    );
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -111,6 +149,61 @@ const Admin = () => {
         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
           <Shield className="h-6 w-6" /> Painel Administrativo
         </h1>
+
+        {/* Invite User */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-primary" />
+              Convidar Novo Usuário
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="invite-email">Email *</Label>
+                <Input
+                  id="invite-email"
+                  type="email"
+                  placeholder="email@exemplo.com"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="invite-name">Nome</Label>
+                <Input
+                  id="invite-name"
+                  placeholder="Nome completo"
+                  value={inviteName}
+                  onChange={(e) => setInviteName(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="mt-4 space-y-2">
+              <Label>Telas com acesso</Label>
+              <div className="flex flex-wrap gap-4">
+                {AVAILABLE_PAGES.map((page) => (
+                  <label key={page.path} className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                    <Checkbox
+                      checked={invitePages.includes(page.path)}
+                      onCheckedChange={() => toggleInvitePage(page.path)}
+                    />
+                    {page.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <Button
+              className="mt-4"
+              onClick={handleInvite}
+              disabled={inviting || !inviteEmail.trim()}
+            >
+              <Send className="h-4 w-4 mr-2" />
+              {inviting ? "Enviando..." : "Enviar Convite"}
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* Pending Users */}
         <Card>
