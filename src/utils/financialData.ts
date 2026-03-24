@@ -285,3 +285,13 @@ export function calcTicketByMonth(data: FinancialRecord[]) {
   const monthly = calcMonthlyData(data);
   return monthly.map((m) => ({ label: m.label, ticket: m.ticketMedio }));
 }
+
+export function calcCAGR(allData: FinancialRecord[], selectedYear: number): number {
+  const prevYear = selectedYear - 1;
+  const currentTotal = allData.filter((r) => r.ano === selectedYear).reduce((s, r) => s + r.valor, 0);
+  const prevTotal = allData.filter((r) => r.ano === prevYear).reduce((s, r) => s + r.valor, 0);
+  if (prevTotal > 0) {
+    return ((currentTotal / prevTotal) - 1) * 100;
+  }
+  return 0;
+}
