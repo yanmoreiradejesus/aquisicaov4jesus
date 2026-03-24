@@ -1,66 +1,40 @@
 
 
-# Plano: Conectar Planilha Financeira ao Google Sheets
+# Plano: Ajustar Filtros e Corrigir Mix por Formato
 
-## Visão Geral
+## Problema 1 — Filtros ocupam muito espaço
+Os filtros financeiros usam botões inline (MultiSelect customizado) que ocupam muito espaço vertical. No dashboard de aquisição, os filtros são compactos com dropdowns e ficam em uma única linha.
 
-Criar uma edge function dedicada para buscar dados da aba "Contas a Receber" de uma nova planilha Google Sheets, e conectar a página Financeiro a esses dados reais (substituindo o mock).
-
-## Pré-requisito
-
-- O usuário precisa fornecer o **ID da nova planilha** (o trecho entre `/d/` e `/edit` no link do Google Sheets)
-- A planilha precisa estar compartilhada como **"Qualquer pessoa com o link pode ver"**
-
-## Implementação
-
-### 1. Nova Edge Function: `fetch-financial-data`
-
-- Busca dados da aba "Contas a Receber" via Google Sheets API (usando a mesma `GOOGLE_SHEETS_API_KEY` já configurada)
-- Mapeia as colunas da planilha para o schema `FinancialRecord`:
-  - VENCIMENTO → vencimento
-  - MÊS → mes (lowercase)
-  - ANO → ano (number)
-  - CLIENTE → cliente
-  - VALOR → valor (parse number)
-  - ROYALTIES → royalties (parse number)
-  - LIQUÍDO → liquido (parse number)
-  - MEIO DE PAG. → meioPag
-  - DATA PAG. → dataPag (null se vazio)
-  - DIAS EM ATRAS. → diasAtraso (number)
-  - STATUS → status
-  - FORMATO → formato
-- Ignora colunas ORIGEM e FOLLOW 01-05
-
-### 2. Hook: `useFinancialData`
-
-- Similar ao `useGoogleSheetsData` existente
-- Chama `supabase.functions.invoke("fetch-financial-data")`
-- Refetch a cada 60s
-- Retorna `FinancialRecord[]`
-
-### 3. Atualizar `Financeiro.tsx`
-
-- Importar e usar o hook `useFinancialData` em vez do `MOCK_DATA`
-- Adicionar loading skeleton enquanto dados carregam
-- Manter fallback para mock se `USE_MOCK = true` (para dev)
-
-### 4. Atualizar `financialData.ts`
-
-- Setar `USE_MOCK = false` após conexão
-- Manter mock como fallback
-
-### 5. Admin: Acesso à rota
-
-- Adicionar `/financeiro` na lista de páginas do painel admin (trigger `handle_new_user`)
+## Problema 2 — Mix por Formato com dados incorretos
+A função `calcFormatoMix` agrupa pelo campo `formato` da planilha sem filtrar valores válidos. Se a planilha tiver linhas com valores como "ATRASOS", "COMISSÃO" ou campos vazios na coluna FORMATO, eles aparecem no gráfico. Segundo o usuário, "atrasos" e "comissões" não são formatos válidos.
 
 ---
 
-## Detalhes Técnicos
+## Implementação
 
-| Arquivo | Ação |
-|---------|------|
-| `supabase/functions/fetch-financial-data/index.ts` | Criar edge function |
-| `src/hooks/useFinancialData.ts` | Criar hook de dados |
-| `src/pages/Financeiro.tsx` | Consumir dados reais |
-| `src/utils/financialData.ts` | USE_MOCK = false |
+### 1. Refatorar filtros para layout compacto
+- Substituir o `MultiSelect` inline por dropdowns (Select ou Popover) semelhantes ao FilterBar do dashboard
+- Layout: uma linha com todos os filtros lado a lado (Ano, Mês, Status, Formato, Meio de Pag.)
+- Mês atual selecionado por padrão + ano atual
+- Botão "Limpar" alinhado à direita
+
+### 2. Filtro padrão: mês e ano atuais
+- Inicializar `filters.meses` com o mês atual em português (ex: "março")
+- Inicializar `filters.anos` com o ano atual (2026)
+- Ao carregar a página, os dados já vêm filtrados para o período corrente
+
+### 3. Corrigir Mix por Formato
+- Definir lista de formatos válidos: `FEE`, `ESTRUTURAÇÃO`, `IMPLEMENTAÇÃO/ONE TIME`, `ESCOPO FECHADO`, `PARCELAMENTO`, `TCV`
+- Excluir `COMISSÃO` e qualquer outro valor que não seja formato de contrato
+- Na função `calcFormatoMix`, filtrar registros para incluir apenas formatos válidos
+- Registros com formato vazio ou inválido são ignorados no gráfico
+
+---
+
+## Arquivos a editar
+
+| Arquivo | Mudança |
+|---------|---------|
+| `src/pages/Financeiro.tsx` | Refatorar filtros para dropdowns compactos; definir filtro padrão mês/ano atual |
+| `src/utils/financialData.ts` | Filtrar formatos válidos em `calcFormatoMix` |
 
