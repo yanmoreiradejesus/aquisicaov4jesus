@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Insights from "./pages/Insights";
 import Metas from "./pages/Metas";
 import Admin from "./pages/Admin";
+import Financeiro from "./pages/Financeiro";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
