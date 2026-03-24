@@ -20,7 +20,7 @@ const V4Header = () => {
       <div className="container mx-auto px-4 lg:px-8 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-8">
-            <img src={logo} alt="V4 Company" className="h-10 w-auto" />
+            <img src={logo} alt="V4 Company" className="h-7 w-auto" />
             
             <nav className="flex gap-4 lg:gap-6">
               {navItems
