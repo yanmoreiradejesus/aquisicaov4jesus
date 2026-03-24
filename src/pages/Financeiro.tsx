@@ -488,7 +488,7 @@ const Financeiro = () => {
                     <tbody>
                       {inadPaged.map((r, i) => (
                         <tr key={i} className="border-b border-border/30 hover:bg-muted/20 transition-colors cursor-pointer" onClick={() => setSelectedCliente(r.cliente)}>
-                          <td className="py-2 text-primary font-medium underline underline-offset-2">{r.cliente}</td>
+                          <td className="py-2 text-foreground font-medium">{r.cliente}</td>
                           <td className="py-2 text-right text-foreground">{formatCurrencyFull(r.valor)}</td>
                           <td className="py-2 text-center text-muted-foreground">{formatDate(r.vencimento)}</td>
                           <td className="py-2 text-center">
