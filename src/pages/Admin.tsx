@@ -150,6 +150,61 @@ const Admin = () => {
           <Shield className="h-6 w-6" /> Painel Administrativo
         </h1>
 
+        {/* Invite User */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-primary" />
+              Convidar Novo Usuário
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="invite-email">Email *</Label>
+                <Input
+                  id="invite-email"
+                  type="email"
+                  placeholder="email@exemplo.com"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="invite-name">Nome</Label>
+                <Input
+                  id="invite-name"
+                  placeholder="Nome completo"
+                  value={inviteName}
+                  onChange={(e) => setInviteName(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="mt-4 space-y-2">
+              <Label>Telas com acesso</Label>
+              <div className="flex flex-wrap gap-4">
+                {AVAILABLE_PAGES.map((page) => (
+                  <label key={page.path} className="flex items-center gap-2 text-sm text-foreground cursor-pointer">
+                    <Checkbox
+                      checked={invitePages.includes(page.path)}
+                      onCheckedChange={() => toggleInvitePage(page.path)}
+                    />
+                    {page.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <Button
+              className="mt-4"
+              onClick={handleInvite}
+              disabled={inviting || !inviteEmail.trim()}
+            >
+              <Send className="h-4 w-4 mr-2" />
+              {inviting ? "Enviando..." : "Enviar Convite"}
+            </Button>
+          </CardContent>
+        </Card>
+
         {/* Pending Users */}
         <Card>
           <CardHeader>
