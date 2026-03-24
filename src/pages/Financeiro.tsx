@@ -148,6 +148,7 @@ const Financeiro = () => {
   const meioPagDist = useMemo(() => calcMeioPagDist(filtered), [filtered]);
   const dsoByMonth = useMemo(() => calcDSOByMonth(yearOnlyFiltered), [yearOnlyFiltered]);
   const ticketByMonth = useMemo(() => calcTicketByMonth(yearOnlyFiltered), [yearOnlyFiltered]);
+  const monthlyByFormato = useMemo(() => calcMonthlyByFormato(yearOnlyFiltered), [yearOnlyFiltered]);
 
   const acumulado = useMemo(() => {
     let acc = 0;
