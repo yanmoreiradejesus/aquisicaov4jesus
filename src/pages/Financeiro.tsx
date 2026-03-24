@@ -120,14 +120,16 @@ const Financeiro = () => {
 
   const rawData: FinancialRecord[] = financialResponse?.records ?? MOCK_DATA;
   const filtered = useMemo(() => filterRecords(rawData, filters), [rawData, filters]);
+  // Year-only filter: same filters but ignoring month selection (for time-series charts)
+  const yearOnlyFiltered = useMemo(() => filterRecords(rawData, { ...filters, meses: [] }), [rawData, filters]);
   const kpis = useMemo(() => calcKPIs(filtered), [filtered]);
-  const monthlyData = useMemo(() => calcMonthlyData(filtered), [filtered]);
-  const inadByMonth = useMemo(() => calcInadByMonth(filtered), [filtered]);
+  const monthlyData = useMemo(() => calcMonthlyData(yearOnlyFiltered), [yearOnlyFiltered]);
+  const inadByMonth = useMemo(() => calcInadByMonth(yearOnlyFiltered), [yearOnlyFiltered]);
   const formatoMix = useMemo(() => calcFormatoMix(filtered), [filtered]);
   const top10 = useMemo(() => calcTop10Clientes(filtered), [filtered]);
   const meioPagDist = useMemo(() => calcMeioPagDist(filtered), [filtered]);
-  const dsoByMonth = useMemo(() => calcDSOByMonth(filtered), [filtered]);
-  const ticketByMonth = useMemo(() => calcTicketByMonth(filtered), [filtered]);
+  const dsoByMonth = useMemo(() => calcDSOByMonth(yearOnlyFiltered), [yearOnlyFiltered]);
+  const ticketByMonth = useMemo(() => calcTicketByMonth(yearOnlyFiltered), [yearOnlyFiltered]);
 
   const acumulado = useMemo(() => {
     let acc = 0;
