@@ -4,8 +4,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   MOCK_DATA, filterRecords, calcKPIs, calcMonthlyData,
   calcInadByMonth, calcFormatoMix, calcTop10Clientes, calcMeioPagDist,
-  calcDSOByMonth, calcTicketByMonth, calcCAGR, formatCurrency, formatCurrencyFull,
-  formatPercent, formatDate, MONTH_LABELS,
+  calcDSOByMonth, calcTicketByMonth, calcCAGR, calcMonthlyByFormato,
+  formatCurrency, formatCurrencyFull, formatPercent, formatDate, MONTH_LABELS,
+  FORMATO_COLOR_MAP, VALID_FORMATOS_LIST,
   type FinancialFilters, type FinancialRecord,
 } from "@/utils/financialData";
 import { useFinancialData } from "@/hooks/useFinancialData";
@@ -147,6 +148,7 @@ const Financeiro = () => {
   const meioPagDist = useMemo(() => calcMeioPagDist(filtered), [filtered]);
   const dsoByMonth = useMemo(() => calcDSOByMonth(yearOnlyFiltered), [yearOnlyFiltered]);
   const ticketByMonth = useMemo(() => calcTicketByMonth(yearOnlyFiltered), [yearOnlyFiltered]);
+  const monthlyByFormato = useMemo(() => calcMonthlyByFormato(yearOnlyFiltered), [yearOnlyFiltered]);
 
   const acumulado = useMemo(() => {
     let acc = 0;
@@ -324,6 +326,27 @@ const Financeiro = () => {
                       ))}
                     </BarChart>
                   )}
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* RECEITA POR FORMATO (Stacked Bar) */}
+            <div className="rounded-lg border border-border/50 bg-card p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Receita por Formato</h3>
+              </div>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyByFormato}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(240 3.7% 15.9%)" />
+                    <XAxis dataKey="label" tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
+                    <YAxis tickFormatter={(v) => formatCurrency(v)} tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
+                    <RTooltip content={<CustomTooltip />} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    {VALID_FORMATOS_LIST.map((fmt) => (
+                      <Bar key={fmt} dataKey={fmt} stackId="formato" fill={FORMATO_COLOR_MAP[fmt]} name={fmt} />
+                    ))}
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
