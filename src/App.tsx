@@ -34,6 +34,11 @@ const AppRoutes = () => {
           <PageTransition><Metas /></PageTransition>
         </ProtectedRoute>
       } />
+      <Route path="/financeiro" element={
+        <ProtectedRoute requiredPath="/financeiro">
+          <PageTransition><Financeiro /></PageTransition>
+        </ProtectedRoute>
+      } />
       <Route path="/admin" element={
         <ProtectedRoute requiredPath="/admin">
           <PageTransition><Admin /></PageTransition>
