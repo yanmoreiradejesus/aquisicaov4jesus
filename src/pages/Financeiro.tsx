@@ -158,6 +158,23 @@ const Financeiro = () => {
 
   const years = [...new Set(monthlyData.map((m) => m.ano))].sort();
 
+  if (isLoadingData) {
+    return (
+      <div className="min-h-screen bg-background">
+        <V4Header />
+        <div className="container mx-auto px-4 lg:px-8 py-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="h-28 rounded-lg" />
+            ))}
+          </div>
+          <Skeleton className="h-80 rounded-lg" />
+          <Skeleton className="h-80 rounded-lg" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <V4Header />
