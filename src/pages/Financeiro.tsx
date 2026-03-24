@@ -11,12 +11,13 @@ import {
 import { useFinancialData } from "@/hooks/useFinancialData";
 import {
   DollarSign, TrendingUp, TrendingDown, Percent, Clock, Users, AlertTriangle,
-  BarChart3, X,
+  BarChart3, X, ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer,
@@ -28,15 +29,18 @@ const CHART_COLORS = ["#4A90E2", "#22C55E", "#F59E0B", "#EF4444", "#8B5CF6", "#E
 const ALL_ANOS = [2024, 2025, 2026];
 const ALL_MESES = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
 const ALL_STATUS = ["Pago", "Em Atraso", "Em Dia"];
-const ALL_FORMATOS = ["FEE","ESTRUTURAÇÃO","IMPLEMENTAÇÃO/ONE TIME","ESCOPO FECHADO","PARCELAMENTO","TCV","COMISSÃO"];
+const ALL_FORMATOS = ["FEE","ESTRUTURAÇÃO","IMPLEMENTAÇÃO/ONE TIME","ESCOPO FECHADO","PARCELAMENTO","TCV"];
 const ALL_MEIOS = ["Boleto", "Cartão", "Pix", "Crédito"];
+
+const CURRENT_MONTH = ALL_MESES[new Date().getMonth()];
+const CURRENT_YEAR = new Date().getFullYear();
 
 type ViewMode = "mensal" | "acumulado" | "comparativo";
 type MetricMode = "bruto" | "liquido" | "royalties";
 
-const MultiSelect = ({ label, options, selected, onChange, renderLabel }: {
+const FilterDropdown = ({ label, options, selected, onChange, renderLabel }: {
   label: string;
-  options: string[] | number[];
+  options: (string | number)[];
   selected: (string | number)[];
   onChange: (v: (string | number)[]) => void;
   renderLabel?: (v: string | number) => string;
@@ -44,25 +48,33 @@ const MultiSelect = ({ label, options, selected, onChange, renderLabel }: {
   const toggle = (val: string | number) => {
     onChange(selected.includes(val) ? selected.filter((s) => s !== val) : [...selected, val]);
   };
+  const count = selected.length;
   return (
-    <div className="space-y-1.5">
-      <span className="text-xs text-muted-foreground font-medium">{label}</span>
-      <div className="flex flex-wrap gap-1.5">
-        {options.map((opt) => (
-          <button
-            key={String(opt)}
-            onClick={() => toggle(opt)}
-            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-              selected.includes(opt)
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted/50 text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            {renderLabel ? renderLabel(opt) : String(opt)}
-          </button>
-        ))}
-      </div>
-    </div>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 min-w-[100px] justify-between">
+          <span className="truncate">{count > 0 ? `${label} (${count})` : label}</span>
+          <ChevronDown className="h-3 w-3 opacity-50 shrink-0" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-48 p-2" align="start">
+        <div className="space-y-0.5 max-h-60 overflow-auto">
+          {options.map((opt) => (
+            <button
+              key={String(opt)}
+              onClick={() => toggle(opt)}
+              className={`w-full text-left px-2 py-1.5 rounded text-xs transition-colors ${
+                selected.includes(opt)
+                  ? "bg-primary text-primary-foreground"
+                  : "text-foreground hover:bg-muted"
+              }`}
+            >
+              {renderLabel ? renderLabel(opt) : String(opt)}
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 };
 
@@ -99,7 +111,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 const Financeiro = () => {
   const { data: financialResponse, isLoading: isLoadingData } = useFinancialData();
   const [filters, setFilters] = useState<FinancialFilters>({
-    anos: [], meses: [], status: [], formatos: [], meiosPag: [],
+    anos: [CURRENT_YEAR], meses: [CURRENT_MONTH], status: [], formatos: [], meiosPag: [],
   });
   const [viewMode, setViewMode] = useState<ViewMode>("mensal");
   const [metricMode, setMetricMode] = useState<MetricMode>("bruto");
@@ -179,28 +191,24 @@ const Financeiro = () => {
     <div className="min-h-screen bg-background">
       <V4Header />
       <div className="container mx-auto px-4 lg:px-8 py-6 space-y-6">
-        {/* FILTERS */}
-        <div className="rounded-lg border border-border/50 bg-card p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">Filtros</h2>
-            {hasFilters && (
-              <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs text-muted-foreground gap-1">
-                <X className="h-3 w-3" /> Limpar filtros
-              </Button>
-            )}
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <MultiSelect label="Ano" options={ALL_ANOS} selected={filters.anos} onChange={(v) => setFilters((f) => ({ ...f, anos: v as number[] }))} />
-            <MultiSelect
+        <div className="rounded-lg border border-border/50 bg-card px-4 py-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterDropdown label="Ano" options={ALL_ANOS} selected={filters.anos} onChange={(v) => setFilters((f) => ({ ...f, anos: v as number[] }))} />
+            <FilterDropdown
               label="Mês"
               options={ALL_MESES}
               selected={filters.meses}
               onChange={(v) => setFilters((f) => ({ ...f, meses: v as string[] }))}
               renderLabel={(v) => String(v).charAt(0).toUpperCase() + String(v).slice(1)}
             />
-            <MultiSelect label="Status" options={ALL_STATUS} selected={filters.status} onChange={(v) => setFilters((f) => ({ ...f, status: v as string[] }))} />
-            <MultiSelect label="Formato" options={ALL_FORMATOS} selected={filters.formatos} onChange={(v) => setFilters((f) => ({ ...f, formatos: v as string[] }))} />
-            <MultiSelect label="Meio de Pag." options={ALL_MEIOS} selected={filters.meiosPag} onChange={(v) => setFilters((f) => ({ ...f, meiosPag: v as string[] }))} />
+            <FilterDropdown label="Status" options={ALL_STATUS} selected={filters.status} onChange={(v) => setFilters((f) => ({ ...f, status: v as string[] }))} />
+            <FilterDropdown label="Formato" options={ALL_FORMATOS} selected={filters.formatos} onChange={(v) => setFilters((f) => ({ ...f, formatos: v as string[] }))} />
+            <FilterDropdown label="Meio Pag." options={ALL_MEIOS} selected={filters.meiosPag} onChange={(v) => setFilters((f) => ({ ...f, meiosPag: v as string[] }))} />
+            {hasFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs text-muted-foreground gap-1 h-8 ml-auto">
+                <X className="h-3 w-3" /> Limpar
+              </Button>
+            )}
           </div>
         </div>
 

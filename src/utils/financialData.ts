@@ -217,12 +217,18 @@ export function calcInadByMonth(data: FinancialRecord[]) {
     });
 }
 
+const VALID_FORMATOS = new Set([
+  "FEE", "ESTRUTURAÇÃO", "IMPLEMENTAÇÃO/ONE TIME", "ESCOPO FECHADO", "PARCELAMENTO", "TCV",
+]);
+
 export function calcFormatoMix(data: FinancialRecord[]) {
   const map = new Map<string, number>();
   data.forEach((r) => {
-    map.set(r.formato, (map.get(r.formato) || 0) + r.valor);
+    if (r.formato && VALID_FORMATOS.has(r.formato.toUpperCase())) {
+      map.set(r.formato, (map.get(r.formato) || 0) + r.valor);
+    }
   });
-  const total = data.reduce((s, r) => s + r.valor, 0);
+  const total = [...map.values()].reduce((s, v) => s + v, 0);
   return [...map.entries()]
     .sort((a, b) => b[1] - a[1])
     .map(([formato, valor]) => ({
