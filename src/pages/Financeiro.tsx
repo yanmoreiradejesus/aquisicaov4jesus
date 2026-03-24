@@ -139,7 +139,7 @@ const Financeiro = () => {
   }, [rawData, filters, prevYear]);
 
   const kpis = useMemo(() => calcKPIs(filtered), [filtered]);
-  const cagr = useMemo(() => calcCAGR(rawData, referenceYear), [rawData, referenceYear]);
+  const cagr = useMemo(() => calcCAGR(rawData, referenceYear, filters.meses), [rawData, referenceYear, filters.meses]);
   const monthlyData = useMemo(() => calcMonthlyData(yearOnlyFiltered), [yearOnlyFiltered]);
   const inadByMonth = useMemo(() => calcInadByMonth(yearOnlyFiltered), [yearOnlyFiltered]);
   const formatoMix = useMemo(() => calcFormatoMix(filtered), [filtered]);

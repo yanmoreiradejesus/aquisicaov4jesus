@@ -286,10 +286,27 @@ export function calcTicketByMonth(data: FinancialRecord[]) {
   return monthly.map((m) => ({ label: m.label, ticket: m.ticketMedio }));
 }
 
-export function calcCAGR(allData: FinancialRecord[], selectedYear: number): number {
+export function calcCAGR(allData: FinancialRecord[], selectedYear: number, selectedMonths: string[]): number {
   const prevYear = selectedYear - 1;
-  const currentTotal = allData.filter((r) => r.ano === selectedYear).reduce((s, r) => s + r.valor, 0);
-  const prevTotal = allData.filter((r) => r.ano === prevYear).reduce((s, r) => s + r.valor, 0);
+
+  // Determine the max month index to compare up to
+  let maxMonthIdx: number;
+  if (selectedMonths.length > 0) {
+    maxMonthIdx = Math.max(...selectedMonths.map((m) => MONTH_ORDER[m] ?? 0));
+  } else {
+    // No month filter: use current month of current year, or all 12 if looking at past years
+    const now = new Date();
+    if (selectedYear === now.getFullYear()) {
+      maxMonthIdx = now.getMonth(); // 0-based, matches MONTH_ORDER
+    } else {
+      maxMonthIdx = 11;
+    }
+  }
+
+  const inRange = (r: FinancialRecord) => (MONTH_ORDER[r.mes] ?? 99) <= maxMonthIdx;
+
+  const currentTotal = allData.filter((r) => r.ano === selectedYear && inRange(r)).reduce((s, r) => s + r.valor, 0);
+  const prevTotal = allData.filter((r) => r.ano === prevYear && inRange(r)).reduce((s, r) => s + r.valor, 0);
   if (prevTotal > 0) {
     return ((currentTotal / prevTotal) - 1) * 100;
   }
