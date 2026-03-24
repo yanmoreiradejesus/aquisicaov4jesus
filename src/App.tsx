@@ -10,6 +10,7 @@ import Insights from "./pages/Insights";
 import Metas from "./pages/Metas";
 import Admin from "./pages/Admin";
 import Financeiro from "./pages/Financeiro";
+import DashboardComercial from "./pages/DashboardComercial";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 

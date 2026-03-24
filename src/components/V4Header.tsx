@@ -14,6 +14,7 @@ const V4Header = () => {
   const isActive = (path: string) => location.pathname === path;
 
   const aquisicaoItems = [
+    { path: "/dashboard-comercial", label: "DASHBOARD" },
     { path: "/", label: "FUNIL" },
     { path: "/insights", label: "INSIGHTS" },
     { path: "/metas", label: "METAS" },
