@@ -20,6 +20,11 @@ const AppRoutes = () => {
   return (
     <Routes location={location} key={location.pathname}>
       <Route path="/login" element={<PageTransition><Login /></PageTransition>} />
+      <Route path="/dashboard-comercial" element={
+        <ProtectedRoute requiredPath="/dashboard-comercial">
+          <PageTransition><DashboardComercial /></PageTransition>
+        </ProtectedRoute>
+      } />
       <Route path="/" element={
         <ProtectedRoute requiredPath="/">
           <PageTransition><Index /></PageTransition>
