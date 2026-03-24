@@ -388,27 +388,8 @@ const Financeiro = () => {
               </div>
             </div>
 
-            {/* SECTION 4: DSO + Ticket + Formato */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="rounded-lg border border-border/50 bg-card p-5 space-y-3">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">DSO por Mês</h3>
-                <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dsoByMonth}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(240 3.7% 15.9%)" />
-                      <XAxis dataKey="label" tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 9 }} />
-                      <YAxis tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 10 }} />
-                      <RTooltip formatter={(v: number) => `${v.toFixed(1)} dias`} contentStyle={{ background: "hsl(240 10% 3.9%)", border: "1px solid hsl(240 3.7% 15.9%)" }} />
-                      <ReferenceLine y={7} stroke="#F59E0B" strokeDasharray="3 3" label={{ value: "Meta 7d", fill: "#F59E0B", fontSize: 9 }} />
-                      <Bar dataKey="dso" name="DSO" radius={[4, 4, 0, 0]}>
-                        {dsoByMonth.map((e, i) => (
-                          <Cell key={i} fill={e.dso < 7 ? "#22C55E" : e.dso < 14 ? "#F59E0B" : "#EF4444"} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
+            {/* SECTION 4: Ticket + Formato */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="rounded-lg border border-border/50 bg-card p-5 space-y-3">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Ticket Médio por Mês</h3>
                 <div className="h-56">
@@ -432,12 +413,24 @@ const Financeiro = () => {
                 <div className="h-56 flex items-center">
                   <ResponsiveContainer width="60%" height="100%">
                     <PieChart>
-                      <Pie data={formatoMix} dataKey="valor" nameKey="formato" cx="50%" cy="50%" innerRadius={40} outerRadius={70}>
+                      <Pie data={formatoMix} dataKey="valor" nameKey="formato" cx="50%" cy="50%" innerRadius={40} outerRadius={70} label={({ formato, pct }) => `${formatPercent(pct)}`}>
                         {formatoMix.map((_, i) => (
                           <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                         ))}
                       </Pie>
-                      <RTooltip formatter={(v: number) => formatCurrencyFull(v)} contentStyle={{ background: "hsl(240 10% 3.9%)", border: "1px solid hsl(240 3.7% 15.9%)" }} />
+                      <RTooltip
+                        content={({ active, payload }: any) => {
+                          if (!active || !payload?.length) return null;
+                          const d = payload[0].payload;
+                          return (
+                            <div className="rounded-lg border border-border bg-card p-3 shadow-lg text-xs space-y-1">
+                              <p className="font-medium text-foreground">{d.formato}</p>
+                              <p className="text-muted-foreground">{formatCurrencyFull(d.valor)}</p>
+                              <p className="text-muted-foreground">{formatPercent(d.pct)} do total</p>
+                            </div>
+                          );
+                        }}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="w-[40%] space-y-1 overflow-auto max-h-56">
