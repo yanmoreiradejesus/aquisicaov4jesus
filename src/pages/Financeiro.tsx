@@ -97,6 +97,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 const Financeiro = () => {
+  const { data: financialResponse, isLoading: isLoadingData } = useFinancialData();
   const [filters, setFilters] = useState<FinancialFilters>({
     anos: [], meses: [], status: [], formatos: [], meiosPag: [],
   });
@@ -105,7 +106,7 @@ const Financeiro = () => {
   const [inadSearch, setInadSearch] = useState("");
   const [inadPage, setInadPage] = useState(0);
 
-  const rawData: FinancialRecord[] = MOCK_DATA;
+  const rawData: FinancialRecord[] = financialResponse?.records ?? MOCK_DATA;
   const filtered = useMemo(() => filterRecords(rawData, filters), [rawData, filters]);
   const kpis = useMemo(() => calcKPIs(filtered), [filtered]);
   const monthlyData = useMemo(() => calcMonthlyData(filtered), [filtered]);
