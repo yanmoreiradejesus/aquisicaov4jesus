@@ -121,7 +121,9 @@ export function calcKPIs(data: FinancialRecord[]) {
   const liquido = data.reduce((s, r) => s + r.liquido, 0);
   const royalties = data.reduce((s, r) => s + r.royalties, 0);
   const margem = bruto > 0 ? (liquido / bruto) * 100 : 0;
-  const inadCount = data.filter((r) => r.status !== "Pago").length;
+  const inadItems = data.filter((r) => r.status === "Em Atraso");
+  const inadCount = inadItems.length;
+  const inadValor = inadItems.reduce((s, r) => s + r.valor, 0);
   const inadRate = total > 0 ? (inadCount / total) * 100 : 0;
 
   // DSO
@@ -143,7 +145,7 @@ export function calcKPIs(data: FinancialRecord[]) {
 
   const clientesUnicos = new Set(data.map((r) => r.cliente)).size;
 
-  return { bruto, liquido, royalties, margem, inadRate, inadCount, dso, ticketMedio, cagr, clientesUnicos, total };
+  return { bruto, liquido, royalties, margem, inadRate, inadCount, inadValor, dso, ticketMedio, cagr, clientesUnicos, total };
 }
 
 export interface MonthlyData {
