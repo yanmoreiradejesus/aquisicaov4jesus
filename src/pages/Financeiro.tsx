@@ -172,7 +172,7 @@ const Financeiro = () => {
 
   const inadimplentes = useMemo(() => {
     return filtered
-      .filter((r) => r.status !== "Pago")
+      .filter((r) => r.status === "Em Atraso")
       .filter((r) => inadSearch === "" || r.cliente.toLowerCase().includes(inadSearch.toLowerCase()))
       .sort((a, b) => b.valor - a.valor);
   }, [filtered, inadSearch]);
