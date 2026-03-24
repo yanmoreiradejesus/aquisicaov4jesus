@@ -11,12 +11,13 @@ import {
 import { useFinancialData } from "@/hooks/useFinancialData";
 import {
   DollarSign, TrendingUp, TrendingDown, Percent, Clock, Users, AlertTriangle,
-  BarChart3, X,
+  BarChart3, X, ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip as RTooltip, ResponsiveContainer,
