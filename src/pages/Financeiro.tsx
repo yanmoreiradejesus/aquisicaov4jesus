@@ -4,8 +4,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   MOCK_DATA, filterRecords, calcKPIs, calcMonthlyData,
   calcInadByMonth, calcFormatoMix, calcTop10Clientes, calcMeioPagDist,
-  calcDSOByMonth, calcTicketByMonth, calcCAGR, formatCurrency, formatCurrencyFull,
-  formatPercent, formatDate, MONTH_LABELS,
+  calcDSOByMonth, calcTicketByMonth, calcCAGR, calcMonthlyByFormato,
+  formatCurrency, formatCurrencyFull, formatPercent, formatDate, MONTH_LABELS,
+  FORMATO_COLOR_MAP, VALID_FORMATOS_LIST,
   type FinancialFilters, type FinancialRecord,
 } from "@/utils/financialData";
 import { useFinancialData } from "@/hooks/useFinancialData";

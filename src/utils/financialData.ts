@@ -286,6 +286,39 @@ export function calcTicketByMonth(data: FinancialRecord[]) {
   return monthly.map((m) => ({ label: m.label, ticket: m.ticketMedio }));
 }
 
+const FORMATO_COLORS: Record<string, string> = {
+  "FEE": "#4A90E2",
+  "ESTRUTURAÇÃO": "#22C55E",
+  "IMPLEMENTAÇÃO/ONE TIME": "#F59E0B",
+  "ESCOPO FECHADO": "#EF4444",
+  "PARCELAMENTO": "#8B5CF6",
+  "TCV": "#EC4899",
+};
+
+export const FORMATO_COLOR_MAP = FORMATO_COLORS;
+export const VALID_FORMATOS_LIST = [...VALID_FORMATOS];
+
+export function calcMonthlyByFormato(data: FinancialRecord[]) {
+  const map = new Map<string, Record<string, number>>();
+  data.forEach((r) => {
+    if (!r.formato || !VALID_FORMATOS.has(r.formato.toUpperCase())) return;
+    const key = `${r.ano}-${String(MONTH_ORDER[r.mes]).padStart(2, "0")}`;
+    if (!map.has(key)) map.set(key, {});
+    const entry = map.get(key)!;
+    entry[r.formato] = (entry[r.formato] || 0) + r.valor;
+  });
+
+  return [...map.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([sortKey, values]) => {
+      const [y, m] = sortKey.split("-");
+      return {
+        label: `${MONTH_LABELS[parseInt(m)]}/${y}`,
+        ...values,
+      };
+    });
+}
+
 export function calcCAGR(allData: FinancialRecord[], selectedYear: number, selectedMonths: string[]): number {
   const prevYear = selectedYear - 1;
 
