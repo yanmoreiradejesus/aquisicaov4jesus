@@ -2,12 +2,13 @@ import { useState, useMemo } from "react";
 import V4Header from "@/components/V4Header";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  MOCK_DATA, USE_MOCK, filterRecords, calcKPIs, calcMonthlyData,
+  MOCK_DATA, filterRecords, calcKPIs, calcMonthlyData,
   calcInadByMonth, calcFormatoMix, calcTop10Clientes, calcMeioPagDist,
   calcDSOByMonth, calcTicketByMonth, formatCurrency, formatCurrencyFull,
   formatPercent, formatDate, MONTH_LABELS,
   type FinancialFilters, type FinancialRecord,
 } from "@/utils/financialData";
+import { useFinancialData } from "@/hooks/useFinancialData";
 import {
   DollarSign, TrendingUp, TrendingDown, Percent, Clock, Users, AlertTriangle,
   BarChart3, X,
