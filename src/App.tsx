@@ -10,6 +10,7 @@ import Insights from "./pages/Insights";
 import Metas from "./pages/Metas";
 import Admin from "./pages/Admin";
 import Financeiro from "./pages/Financeiro";
+import DashboardComercial from "./pages/DashboardComercial";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -19,6 +20,11 @@ const AppRoutes = () => {
   return (
     <Routes location={location} key={location.pathname}>
       <Route path="/login" element={<PageTransition><Login /></PageTransition>} />
+      <Route path="/dashboard-comercial" element={
+        <ProtectedRoute requiredPath="/dashboard-comercial">
+          <PageTransition><DashboardComercial /></PageTransition>
+        </ProtectedRoute>
+      } />
       <Route path="/" element={
         <ProtectedRoute requiredPath="/">
           <PageTransition><Index /></PageTransition>
