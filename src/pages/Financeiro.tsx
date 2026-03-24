@@ -186,6 +186,17 @@ const Financeiro = () => {
   const inadTotalPages = Math.ceil(inadimplentes.length / inadPageSize);
   const inadPaged = inadimplentes.slice(inadPage * inadPageSize, (inadPage + 1) * inadPageSize);
 
+  const clienteHistory = useMemo(() => {
+    if (!selectedCliente) return [];
+    return rawData
+      .filter((r) => r.cliente === selectedCliente)
+      .sort((a, b) => {
+        const da = new Date(a.vencimento).getTime();
+        const db = new Date(b.vencimento).getTime();
+        return db - da;
+      });
+  }, [rawData, selectedCliente]);
+
   const dsoColor = kpis.dso < 7 ? "text-green-400" : kpis.dso < 14 ? "text-yellow-400" : "text-red-400";
 
   const metricKey = metricMode === "bruto" ? "bruto" : metricMode === "liquido" ? "liquido" : "royalties";
