@@ -29,15 +29,18 @@ const CHART_COLORS = ["#4A90E2", "#22C55E", "#F59E0B", "#EF4444", "#8B5CF6", "#E
 const ALL_ANOS = [2024, 2025, 2026];
 const ALL_MESES = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
 const ALL_STATUS = ["Pago", "Em Atraso", "Em Dia"];
-const ALL_FORMATOS = ["FEE","ESTRUTURAÇÃO","IMPLEMENTAÇÃO/ONE TIME","ESCOPO FECHADO","PARCELAMENTO","TCV","COMISSÃO"];
+const ALL_FORMATOS = ["FEE","ESTRUTURAÇÃO","IMPLEMENTAÇÃO/ONE TIME","ESCOPO FECHADO","PARCELAMENTO","TCV"];
 const ALL_MEIOS = ["Boleto", "Cartão", "Pix", "Crédito"];
+
+const CURRENT_MONTH = ALL_MESES[new Date().getMonth()];
+const CURRENT_YEAR = new Date().getFullYear();
 
 type ViewMode = "mensal" | "acumulado" | "comparativo";
 type MetricMode = "bruto" | "liquido" | "royalties";
 
-const MultiSelect = ({ label, options, selected, onChange, renderLabel }: {
+const FilterDropdown = ({ label, options, selected, onChange, renderLabel }: {
   label: string;
-  options: string[] | number[];
+  options: (string | number)[];
   selected: (string | number)[];
   onChange: (v: (string | number)[]) => void;
   renderLabel?: (v: string | number) => string;
@@ -45,25 +48,33 @@ const MultiSelect = ({ label, options, selected, onChange, renderLabel }: {
   const toggle = (val: string | number) => {
     onChange(selected.includes(val) ? selected.filter((s) => s !== val) : [...selected, val]);
   };
+  const count = selected.length;
   return (
-    <div className="space-y-1.5">
-      <span className="text-xs text-muted-foreground font-medium">{label}</span>
-      <div className="flex flex-wrap gap-1.5">
-        {options.map((opt) => (
-          <button
-            key={String(opt)}
-            onClick={() => toggle(opt)}
-            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
-              selected.includes(opt)
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted/50 text-muted-foreground hover:bg-muted"
-            }`}
-          >
-            {renderLabel ? renderLabel(opt) : String(opt)}
-          </button>
-        ))}
-      </div>
-    </div>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 min-w-[100px] justify-between">
+          <span className="truncate">{count > 0 ? `${label} (${count})` : label}</span>
+          <ChevronDown className="h-3 w-3 opacity-50 shrink-0" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-48 p-2" align="start">
+        <div className="space-y-0.5 max-h-60 overflow-auto">
+          {options.map((opt) => (
+            <button
+              key={String(opt)}
+              onClick={() => toggle(opt)}
+              className={`w-full text-left px-2 py-1.5 rounded text-xs transition-colors ${
+                selected.includes(opt)
+                  ? "bg-primary text-primary-foreground"
+                  : "text-foreground hover:bg-muted"
+              }`}
+            >
+              {renderLabel ? renderLabel(opt) : String(opt)}
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 };
 
