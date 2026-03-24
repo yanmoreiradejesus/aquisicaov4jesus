@@ -191,28 +191,24 @@ const Financeiro = () => {
     <div className="min-h-screen bg-background">
       <V4Header />
       <div className="container mx-auto px-4 lg:px-8 py-6 space-y-6">
-        {/* FILTERS */}
-        <div className="rounded-lg border border-border/50 bg-card p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">Filtros</h2>
-            {hasFilters && (
-              <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs text-muted-foreground gap-1">
-                <X className="h-3 w-3" /> Limpar filtros
-              </Button>
-            )}
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <MultiSelect label="Ano" options={ALL_ANOS} selected={filters.anos} onChange={(v) => setFilters((f) => ({ ...f, anos: v as number[] }))} />
-            <MultiSelect
+        <div className="rounded-lg border border-border/50 bg-card px-4 py-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <FilterDropdown label="Ano" options={ALL_ANOS} selected={filters.anos} onChange={(v) => setFilters((f) => ({ ...f, anos: v as number[] }))} />
+            <FilterDropdown
               label="Mês"
               options={ALL_MESES}
               selected={filters.meses}
               onChange={(v) => setFilters((f) => ({ ...f, meses: v as string[] }))}
               renderLabel={(v) => String(v).charAt(0).toUpperCase() + String(v).slice(1)}
             />
-            <MultiSelect label="Status" options={ALL_STATUS} selected={filters.status} onChange={(v) => setFilters((f) => ({ ...f, status: v as string[] }))} />
-            <MultiSelect label="Formato" options={ALL_FORMATOS} selected={filters.formatos} onChange={(v) => setFilters((f) => ({ ...f, formatos: v as string[] }))} />
-            <MultiSelect label="Meio de Pag." options={ALL_MEIOS} selected={filters.meiosPag} onChange={(v) => setFilters((f) => ({ ...f, meiosPag: v as string[] }))} />
+            <FilterDropdown label="Status" options={ALL_STATUS} selected={filters.status} onChange={(v) => setFilters((f) => ({ ...f, status: v as string[] }))} />
+            <FilterDropdown label="Formato" options={ALL_FORMATOS} selected={filters.formatos} onChange={(v) => setFilters((f) => ({ ...f, formatos: v as string[] }))} />
+            <FilterDropdown label="Meio Pag." options={ALL_MEIOS} selected={filters.meiosPag} onChange={(v) => setFilters((f) => ({ ...f, meiosPag: v as string[] }))} />
+            {hasFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs text-muted-foreground gap-1 h-8 ml-auto">
+                <X className="h-3 w-3" /> Limpar
+              </Button>
+            )}
           </div>
         </div>
 
