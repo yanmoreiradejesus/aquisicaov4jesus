@@ -32,7 +32,43 @@ const Admin = () => {
   const { isAdmin } = useAuth();
   const [users, setUsers] = useState<UserWithAccess[]>([]);
   const [loading, setLoading] = useState(true);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
+  const [invitePages, setInvitePages] = useState<string[]>([]);
+  const [inviting, setInviting] = useState(false);
   const { toast } = useToast();
+
+  const handleInvite = async () => {
+    if (!inviteEmail.trim()) {
+      toast({ title: "Erro", description: "Informe o email", variant: "destructive" });
+      return;
+    }
+    setInviting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data, error } = await supabase.functions.invoke("invite-user", {
+        body: { email: inviteEmail.trim(), full_name: inviteName.trim(), pages: invitePages },
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "Convite enviado!", description: `Email enviado para ${inviteEmail}` });
+      setInviteEmail("");
+      setInviteName("");
+      setInvitePages([]);
+      fetchUsers();
+    } catch (err: any) {
+      toast({ title: "Erro ao convidar", description: err.message, variant: "destructive" });
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const toggleInvitePage = (path: string) => {
+    setInvitePages((prev) =>
+      prev.includes(path) ? prev.filter((p) => p !== path) : [...prev, path]
+    );
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
