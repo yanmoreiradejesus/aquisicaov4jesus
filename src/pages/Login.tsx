@@ -101,7 +101,6 @@ const Login = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <img src={logo} alt="V4 Company" className="h-12 mx-auto mb-4" />
-          <CardTitle className="text-foreground">Aquisição V4</CardTitle>
           <CardDescription>Entre ou crie sua conta</CardDescription>
         </CardHeader>
         <CardContent>
