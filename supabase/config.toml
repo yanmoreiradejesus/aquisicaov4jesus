@@ -2,3 +2,6 @@ project_id = "edctpsdcrivpxynfxpef"
 
 [functions.fetch-sheets-data]
 verify_jwt = false
+
+[functions.fetch-financial-data]
+verify_jwt = false

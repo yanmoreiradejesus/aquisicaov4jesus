@@ -2,12 +2,13 @@ import { useState, useMemo } from "react";
 import V4Header from "@/components/V4Header";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  MOCK_DATA, USE_MOCK, filterRecords, calcKPIs, calcMonthlyData,
+  MOCK_DATA, filterRecords, calcKPIs, calcMonthlyData,
   calcInadByMonth, calcFormatoMix, calcTop10Clientes, calcMeioPagDist,
   calcDSOByMonth, calcTicketByMonth, formatCurrency, formatCurrencyFull,
   formatPercent, formatDate, MONTH_LABELS,
   type FinancialFilters, type FinancialRecord,
 } from "@/utils/financialData";
+import { useFinancialData } from "@/hooks/useFinancialData";
 import {
   DollarSign, TrendingUp, TrendingDown, Percent, Clock, Users, AlertTriangle,
   BarChart3, X,
@@ -96,6 +97,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 const Financeiro = () => {
+  const { data: financialResponse, isLoading: isLoadingData } = useFinancialData();
   const [filters, setFilters] = useState<FinancialFilters>({
     anos: [], meses: [], status: [], formatos: [], meiosPag: [],
   });
@@ -104,7 +106,7 @@ const Financeiro = () => {
   const [inadSearch, setInadSearch] = useState("");
   const [inadPage, setInadPage] = useState(0);
 
-  const rawData: FinancialRecord[] = MOCK_DATA;
+  const rawData: FinancialRecord[] = financialResponse?.records ?? MOCK_DATA;
   const filtered = useMemo(() => filterRecords(rawData, filters), [rawData, filters]);
   const kpis = useMemo(() => calcKPIs(filtered), [filtered]);
   const monthlyData = useMemo(() => calcMonthlyData(filtered), [filtered]);
@@ -155,6 +157,23 @@ const Financeiro = () => {
   const metricLabel = metricMode === "bruto" ? "Faturamento Bruto" : metricMode === "liquido" ? "Receita Líquida" : "Royalties";
 
   const years = [...new Set(monthlyData.map((m) => m.ano))].sort();
+
+  if (isLoadingData) {
+    return (
+      <div className="min-h-screen bg-background">
+        <V4Header />
+        <div className="container mx-auto px-4 lg:px-8 py-6 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="h-28 rounded-lg" />
+            ))}
+          </div>
+          <Skeleton className="h-80 rounded-lg" />
+          <Skeleton className="h-80 rounded-lg" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

@@ -23,6 +23,7 @@ const AVAILABLE_PAGES = [
   { path: "/", label: "Dashboard" },
   { path: "/insights", label: "Insights" },
   { path: "/metas", label: "Metas" },
+  { path: "/financeiro", label: "Financeiro" },
 ];
 
 const Admin = () => {
