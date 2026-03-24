@@ -1,111 +1,66 @@
 
 
-# Plano: Sistema de Login com Controle de Acesso por Telas
+# Plano: Conectar Planilha Financeira ao Google Sheets
 
 ## Visão Geral
 
-Criar um sistema de autenticação com auto-cadastro + aprovação do admin. O admin define manualmente quais telas cada usuário aprovado pode acessar.
+Criar uma edge function dedicada para buscar dados da aba "Contas a Receber" de uma nova planilha Google Sheets, e conectar a página Financeiro a esses dados reais (substituindo o mock).
+
+## Pré-requisito
+
+- O usuário precisa fornecer o **ID da nova planilha** (o trecho entre `/d/` e `/edit` no link do Google Sheets)
+- A planilha precisa estar compartilhada como **"Qualquer pessoa com o link pode ver"**
+
+## Implementação
+
+### 1. Nova Edge Function: `fetch-financial-data`
+
+- Busca dados da aba "Contas a Receber" via Google Sheets API (usando a mesma `GOOGLE_SHEETS_API_KEY` já configurada)
+- Mapeia as colunas da planilha para o schema `FinancialRecord`:
+  - VENCIMENTO → vencimento
+  - MÊS → mes (lowercase)
+  - ANO → ano (number)
+  - CLIENTE → cliente
+  - VALOR → valor (parse number)
+  - ROYALTIES → royalties (parse number)
+  - LIQUÍDO → liquido (parse number)
+  - MEIO DE PAG. → meioPag
+  - DATA PAG. → dataPag (null se vazio)
+  - DIAS EM ATRAS. → diasAtraso (number)
+  - STATUS → status
+  - FORMATO → formato
+- Ignora colunas ORIGEM e FOLLOW 01-05
+
+### 2. Hook: `useFinancialData`
+
+- Similar ao `useGoogleSheetsData` existente
+- Chama `supabase.functions.invoke("fetch-financial-data")`
+- Refetch a cada 60s
+- Retorna `FinancialRecord[]`
+
+### 3. Atualizar `Financeiro.tsx`
+
+- Importar e usar o hook `useFinancialData` em vez do `MOCK_DATA`
+- Adicionar loading skeleton enquanto dados carregam
+- Manter fallback para mock se `USE_MOCK = true` (para dev)
+
+### 4. Atualizar `financialData.ts`
+
+- Setar `USE_MOCK = false` após conexão
+- Manter mock como fallback
+
+### 5. Admin: Acesso à rota
+
+- Adicionar `/financeiro` na lista de páginas do painel admin (trigger `handle_new_user`)
 
 ---
 
-## Estrutura do Banco de Dados
-
-### Tabela `profiles`
-| Coluna | Tipo | Descrição |
-|--------|------|-----------|
-| id | uuid (FK auth.users) | ID do usuário |
-| email | text | Email do usuário |
-| full_name | text | Nome completo |
-| approved | boolean (default false) | Se foi aprovado pelo admin |
-| created_at | timestamp | Data de criação |
-
-### Tabela `user_roles`
-| Coluna | Tipo | Descrição |
-|--------|------|-----------|
-| id | uuid | PK |
-| user_id | uuid (FK auth.users) | ID do usuário |
-| role | app_role (enum) | admin ou user |
-
-### Tabela `user_page_access`
-| Coluna | Tipo | Descrição |
-|--------|------|-----------|
-| id | uuid | PK |
-| user_id | uuid (FK auth.users) | ID do usuário |
-| page_path | text | Caminho da tela (/, /insights, /metas, /financeiro) |
-
-### Enum `app_role`
-Valores: `admin`, `user`
-
-### Função `has_role` (security definer)
-Para evitar recursão infinita nas policies RLS.
-
----
-
-## Fluxo do Sistema
-
-```text
-Usuário novo → Cadastro (email/senha) → Aguarda aprovação
-                                              ↓
-Admin acessa /admin → Vê lista de pendentes → Aprova + seleciona telas
-                                              ↓
-Usuário faz login → Vê apenas telas liberadas no menu
-```
-
----
-
-## Páginas e Componentes
-
-### 1. `/login` - Página de Login/Cadastro
-- Formulário de email + senha
-- Abas para Login e Cadastro
-- Mensagem "Aguarde aprovação" após cadastro
-
-### 2. `/admin` - Painel Administrativo (só admin)
-- Lista de usuários pendentes com botão aprovar
-- Lista de usuários aprovados
-- Para cada usuário: checkboxes das telas disponíveis (Dashboard, Insights, Metas)
-- Capacidade de revogar acesso
-
-### 3. Componente `ProtectedRoute`
-- Verifica se está logado
-- Verifica se está aprovado
-- Verifica se tem acesso àquela tela específica
-- Redireciona para `/login` ou mostra "Acesso negado"
-
-### 4. Header atualizado
-- Mostra apenas links das telas que o usuário tem acesso
-- Botão de logout
-- Link para /admin se for admin
-
----
-
-## Políticas RLS
-
-- **profiles**: usuário lê o próprio perfil; admin lê todos e atualiza (approved)
-- **user_roles**: admin gerencia; usuário lê o próprio
-- **user_page_access**: admin gerencia; usuário lê o próprio
-
----
-
-## Trigger automático
-- Ao criar conta no auth, trigger cria automaticamente o registro em `profiles`
-
----
-
-## Setup inicial
-- O primeiro usuário cadastrado será definido como admin automaticamente (via trigger que checa se é o primeiro registro)
-
----
-
-## Arquivos a criar/editar
+## Detalhes Técnicos
 
 | Arquivo | Ação |
 |---------|------|
-| Migration SQL | Criar tabelas, enum, função has_role, trigger, policies |
-| `src/pages/Login.tsx` | Página de login/cadastro |
-| `src/pages/Admin.tsx` | Painel de gestão de usuários |
-| `src/components/ProtectedRoute.tsx` | Wrapper de proteção de rotas |
-| `src/hooks/useAuth.ts` | Hook de autenticação e permissões |
-| `src/components/V4Header.tsx` | Adicionar menu dinâmico + logout |
-| `src/App.tsx` | Adicionar rotas protegidas |
+| `supabase/functions/fetch-financial-data/index.ts` | Criar edge function |
+| `src/hooks/useFinancialData.ts` | Criar hook de dados |
+| `src/pages/Financeiro.tsx` | Consumir dados reais |
+| `src/utils/financialData.ts` | USE_MOCK = false |
 
