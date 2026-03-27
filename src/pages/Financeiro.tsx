@@ -210,10 +210,9 @@ const Financeiro = () => {
 
   const dsoColor = kpis.dso < 7 ? "text-green-400" : kpis.dso < 14 ? "text-yellow-400" : "text-red-400";
 
-  const metricKey = metricMode === "bruto" ? "bruto" : metricMode === "liquido" ? "liquido" : "royalties";
-  const metricLabel = metricMode === "bruto" ? "Faturamento Bruto" : metricMode === "liquido" ? "Receita Líquida" : "Royalties";
+  const metricLabel = metricMode === "Geral" ? "Faturamento Bruto" : `Faturamento — ${metricMode}`;
 
-  const years = [...new Set(monthlyData.map((m) => m.ano))].sort();
+  const years = [...new Set(monthlyDataForChart.map((m) => m.ano))].sort();
 
   if (isLoadingData) {
     return (
