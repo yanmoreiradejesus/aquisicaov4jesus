@@ -88,9 +88,18 @@ export function formatPercent(value: number): string {
   return `${value.toFixed(1).replace(".", ",")}%`;
 }
 
+export function parseDateBR(d: string): Date | null {
+  if (!d) return null;
+  if (d.includes("/")) {
+    const [dd, mm, yyyy] = d.split("/");
+    return new Date(+yyyy, +mm - 1, +dd);
+  }
+  const parsed = new Date(d);
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
+
 export function formatDate(dateStr: string): string {
   if (!dateStr) return "-";
-  // Handle both DD/MM/YYYY and YYYY-MM-DD formats
   if (dateStr.includes("/")) return dateStr;
   const [y, m, d] = dateStr.split("-");
   return `${d}/${m}/${y}`;
