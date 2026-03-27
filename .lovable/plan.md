@@ -1,22 +1,29 @@
 
 
-# Plano: Corrigir Cálculo de Inadimplência
+# Plano: Corrigir DSO zerado
 
-## Mudanças
+## Causa raiz
+As datas da planilha vem como `DD/MM/YYYY` (ex: "09/01/2025"). O `new Date()` do JS nao entende esse formato — retorna `Invalid Date` ou interpreta errado (MM/DD/YYYY). O diff vira `NaN` e e filtrado, resultando em DSO = 0.
 
-### 1. `src/utils/financialData.ts` — `calcKPIs`
-- Filtrar apenas `status === "Em Atraso"` (excluir "Em Dia")
-- Calcular `inadValor` (soma dos valores brutos dos contratos em atraso) em vez de contar contratos
-- Retornar `inadValor` no objeto de retorno
+## Correcao
 
-### 2. `src/pages/Financeiro.tsx`
-- **KPI card**: trocar subtitle de `X contratos` para valor em R$ (`inadValor`)
-- **Tabela Inadimplência Ativa**: filtrar apenas `status === "Em Atraso"` (remover "Em Dia")
+### `src/utils/financialData.ts`
 
-## Arquivos
+1. Criar funcao helper `parseDateBR(str)` que converte `DD/MM/YYYY` e `YYYY-MM-DD` para `Date` valido.
+2. Usar essa funcao em `calcKPIs` (linhas 133-134) e `calcDSOByMonth` (linha 267+) no lugar de `new Date()` direto.
 
-| Arquivo | Mudança |
+```typescript
+function parseDateBR(d: string): Date | null {
+  if (!d) return null;
+  if (d.includes("/")) {
+    const [dd, mm, yyyy] = d.split("/");
+    return new Date(+yyyy, +mm - 1, +dd);
+  }
+  return new Date(d);
+}
+```
+
+| Arquivo | Mudanca |
 |---------|---------|
-| `src/utils/financialData.ts` | `inadCount` e `inadRate` baseados apenas em "Em Atraso"; adicionar `inadValor` |
-| `src/pages/Financeiro.tsx` | KPI subtitle com R$; tabela filtra só "Em Atraso" |
+| `src/utils/financialData.ts` | Adicionar `parseDateBR` e usa-la em `calcKPIs` (DSO) e `calcDSOByMonth` |
 
