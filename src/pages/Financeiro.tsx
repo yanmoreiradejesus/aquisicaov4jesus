@@ -431,10 +431,19 @@ const Financeiro = () => {
               </div>
             </div>
 
-            {/* SECTION 4: Ticket + Formato */}
+            {/* SECTION 4: Ticket + Mix por Categoria */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="rounded-lg border border-border/50 bg-card p-5 space-y-3">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Ticket Médio por Mês</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Ticket Médio por Mês</h3>
+                  <div className="flex rounded-md border border-border/50 overflow-hidden">
+                    {(["Geral", "Saber", "Ter", "Executar"] as TicketCategoryMode[]).map((m) => (
+                      <button key={m} onClick={() => setTicketCategory(m)} className={`px-2 py-1 text-[10px] font-medium transition-all ${ticketCategory === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/50"}`}>
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={ticketByMonth}>
@@ -446,19 +455,19 @@ const Financeiro = () => {
                         const avg = ticketByMonth.length > 0 ? ticketByMonth.reduce((s, t) => s + t.ticket, 0) / ticketByMonth.length : 0;
                         return <ReferenceLine y={avg} stroke="#4A90E2" strokeDasharray="3 3" label={{ value: "Média", fill: "#4A90E2", fontSize: 9 }} />;
                       })()}
-                      <Line type="monotone" dataKey="ticket" stroke="#4A90E2" strokeWidth={2} dot={{ fill: "#4A90E2", r: 3 }} name="Ticket Médio" />
+                      <Line type="monotone" dataKey="ticket" stroke={ticketCategory === "Geral" ? "#4A90E2" : CATEGORY_COLOR_MAP[ticketCategory as ProductCategory]} strokeWidth={2} dot={{ fill: ticketCategory === "Geral" ? "#4A90E2" : CATEGORY_COLOR_MAP[ticketCategory as ProductCategory], r: 3 }} name="Ticket Médio" />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </div>
               <div className="rounded-lg border border-border/50 bg-card p-5 space-y-3">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Mix por Formato</h3>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Mix por Categoria</h3>
                 <div className="h-56 flex items-center">
                   <ResponsiveContainer width="60%" height="100%">
                     <PieChart>
-                      <Pie data={formatoMix} dataKey="valor" nameKey="formato" cx="50%" cy="50%" innerRadius={40} outerRadius={70} label={({ formato, pct }) => `${formatPercent(pct)}`}>
-                        {formatoMix.map((_, i) => (
-                          <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      <Pie data={categoriaMix} dataKey="valor" nameKey="categoria" cx="50%" cy="50%" innerRadius={40} outerRadius={70} label={({ pct }) => `${formatPercent(pct)}`}>
+                        {categoriaMix.map((c) => (
+                          <Cell key={c.categoria} fill={CATEGORY_COLOR_MAP[c.categoria]} />
                         ))}
                       </Pie>
                       <RTooltip
@@ -467,7 +476,7 @@ const Financeiro = () => {
                           const d = payload[0].payload;
                           return (
                             <div className="rounded-lg border border-border bg-card p-3 shadow-lg text-xs space-y-1">
-                              <p className="font-medium text-foreground">{d.formato}</p>
+                              <p className="font-medium text-foreground">{d.categoria}</p>
                               <p className="text-muted-foreground">{formatCurrencyFull(d.valor)}</p>
                               <p className="text-muted-foreground">{formatPercent(d.pct)} do total</p>
                             </div>
@@ -476,12 +485,12 @@ const Financeiro = () => {
                       />
                     </PieChart>
                   </ResponsiveContainer>
-                  <div className="w-[40%] space-y-1 overflow-auto max-h-56">
-                    {formatoMix.map((f, i) => (
-                      <div key={f.formato} className="flex items-center gap-1.5 text-[10px]">
-                        <div className="h-2.5 w-2.5 rounded-sm flex-shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
-                        <span className="text-muted-foreground truncate">{f.formato}</span>
-                        <span className="text-foreground font-medium ml-auto">{formatPercent(f.pct)}</span>
+                  <div className="w-[40%] space-y-2 overflow-auto max-h-56">
+                    {categoriaMix.map((c) => (
+                      <div key={c.categoria} className="flex items-center gap-1.5 text-xs">
+                        <div className="h-3 w-3 rounded-sm flex-shrink-0" style={{ background: CATEGORY_COLOR_MAP[c.categoria] }} />
+                        <span className="text-muted-foreground">{c.categoria}</span>
+                        <span className="text-foreground font-medium ml-auto">{formatPercent(c.pct)}</span>
                       </div>
                     ))}
                   </div>
