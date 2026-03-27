@@ -88,9 +88,18 @@ export function formatPercent(value: number): string {
   return `${value.toFixed(1).replace(".", ",")}%`;
 }
 
+export function parseDateBR(d: string): Date | null {
+  if (!d) return null;
+  if (d.includes("/")) {
+    const [dd, mm, yyyy] = d.split("/");
+    return new Date(+yyyy, +mm - 1, +dd);
+  }
+  const parsed = new Date(d);
+  return isNaN(parsed.getTime()) ? null : parsed;
+}
+
 export function formatDate(dateStr: string): string {
   if (!dateStr) return "-";
-  // Handle both DD/MM/YYYY and YYYY-MM-DD formats
   if (dateStr.includes("/")) return dateStr;
   const [y, m, d] = dateStr.split("-");
   return `${d}/${m}/${y}`;
@@ -130,8 +139,9 @@ export function calcKPIs(data: FinancialRecord[]) {
   const pagos = data.filter((r) => r.status === "Pago" && r.dataPag);
   const dsoValues = pagos
     .map((r) => {
-      const venc = new Date(r.vencimento);
-      const pag = new Date(r.dataPag!);
+      const venc = parseDateBR(r.vencimento);
+      const pag = parseDateBR(r.dataPag!);
+      if (!venc || !pag) return null;
       const diff = Math.round((pag.getTime() - venc.getTime()) / 86400000);
       return diff >= 0 && diff < 120 ? diff : null;
     })
@@ -265,7 +275,10 @@ export function calcMeioPagDist(data: FinancialRecord[]) {
 export function calcDSOByMonth(data: FinancialRecord[]) {
   const map = new Map<string, number[]>();
   data.filter((r) => r.status === "Pago" && r.dataPag).forEach((r) => {
-    const diff = Math.round((new Date(r.dataPag!).getTime() - new Date(r.vencimento).getTime()) / 86400000);
+    const pag = parseDateBR(r.dataPag!);
+    const venc = parseDateBR(r.vencimento);
+    if (!pag || !venc) return;
+    const diff = Math.round((pag.getTime() - venc.getTime()) / 86400000);
     if (diff >= 0 && diff < 120) {
       const key = `${r.ano}-${String(MONTH_ORDER[r.mes]).padStart(2, "0")}`;
       if (!map.has(key)) map.set(key, []);
