@@ -161,25 +161,27 @@ const Financeiro = () => {
   const monthlyByFormato = useMemo(() => calcMonthlyByFormato(yearOnlyFiltered), [yearOnlyFiltered]);
   const monthlyByCategoria = useMemo(() => calcMonthlyByCategoria(yearOnlyFiltered), [yearOnlyFiltered]);
 
+  // Monthly data filtered by category for evolution chart
+  const categoryFilteredYearOnly = useMemo(() => filterByCategory(yearOnlyFiltered, metricMode), [yearOnlyFiltered, metricMode]);
+  const monthlyDataForChart = useMemo(() => calcMonthlyData(categoryFilteredYearOnly), [categoryFilteredYearOnly]);
+
   const acumulado = useMemo(() => {
     let acc = 0;
-    return monthlyData.map((m) => ({ ...m, acumulado: (acc += m.bruto) }));
-  }, [monthlyData]);
+    return monthlyDataForChart.map((m) => ({ ...m, acumulado: (acc += m.bruto) }));
+  }, [monthlyDataForChart]);
 
   const comparativo = useMemo(() => {
     const monthMap = new Map<number, Record<string, number>>();
-    monthlyData.forEach((m) => {
+    monthlyDataForChart.forEach((m) => {
       if (!monthMap.has(m.mesIdx)) monthMap.set(m.mesIdx, {});
       const entry = monthMap.get(m.mesIdx)!;
       entry[`bruto_${m.ano}`] = m.bruto;
-      entry[`liquido_${m.ano}`] = m.liquido;
-      entry[`royalties_${m.ano}`] = m.royalties;
     });
-    const years = [...new Set(monthlyData.map((m) => m.ano))].sort();
+    const years = [...new Set(monthlyDataForChart.map((m) => m.ano))].sort();
     return [...monthMap.entries()]
       .sort(([a], [b]) => a - b)
       .map(([mesIdx, data]) => ({ label: MONTH_LABELS[mesIdx], ...data, _years: years }));
-  }, [monthlyData]);
+  }, [monthlyDataForChart]);
 
   const inadimplentes = useMemo(() => {
     return filtered
