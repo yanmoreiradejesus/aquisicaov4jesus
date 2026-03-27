@@ -353,23 +353,43 @@ const Financeiro = () => {
               </div>
             </div>
 
-            {/* RECEITA POR FORMATO (Stacked Bar) */}
+            {/* RECEITA POR FORMATO / CATEGORIA (Stacked Bar) */}
             <div className="rounded-lg border border-border/50 bg-card p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Receita por Formato</h3>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Receita por {receitaFormatoMode === "formato" ? "Formato" : "Categoria"}</h3>
+                <div className="flex rounded-md border border-border/50 overflow-hidden">
+                  {(["formato", "categoria"] as ReceitaFormatoMode[]).map((m) => (
+                    <button key={m} onClick={() => setReceitaFormatoMode(m)} className={`px-3 py-1.5 text-xs font-medium transition-all ${receitaFormatoMode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/50"}`}>
+                      {m === "formato" ? "Formato" : "Categoria"}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlyByFormato}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(240 3.7% 15.9%)" />
-                    <XAxis dataKey="label" tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
-                    <YAxis tickFormatter={(v) => formatCurrency(v)} tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
-                    <RTooltip content={<CustomTooltip />} />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                    {VALID_FORMATOS_LIST.map((fmt) => (
-                      <Bar key={fmt} dataKey={fmt} stackId="formato" fill={FORMATO_COLOR_MAP[fmt]} name={fmt} />
-                    ))}
-                  </BarChart>
+                  {receitaFormatoMode === "formato" ? (
+                    <BarChart data={monthlyByFormato}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(240 3.7% 15.9%)" />
+                      <XAxis dataKey="label" tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
+                      <YAxis tickFormatter={(v) => formatCurrency(v)} tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
+                      <RTooltip content={<CustomTooltip />} />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                      {VALID_FORMATOS_LIST.map((fmt) => (
+                        <Bar key={fmt} dataKey={fmt} stackId="formato" fill={FORMATO_COLOR_MAP[fmt]} name={fmt} />
+                      ))}
+                    </BarChart>
+                  ) : (
+                    <BarChart data={monthlyByCategoria}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(240 3.7% 15.9%)" />
+                      <XAxis dataKey="label" tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
+                      <YAxis tickFormatter={(v) => formatCurrency(v)} tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
+                      <RTooltip content={<CustomTooltip />} />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                      {(["Saber", "Ter", "Executar"] as ProductCategory[]).map((cat) => (
+                        <Bar key={cat} dataKey={cat} stackId="cat" fill={CATEGORY_COLOR_MAP[cat]} name={cat} />
+                      ))}
+                    </BarChart>
+                  )}
                 </ResponsiveContainer>
               </div>
             </div>
