@@ -120,7 +120,10 @@ const Financeiro = () => {
     anos: [CURRENT_YEAR], meses: [CURRENT_MONTH], status: [], formatos: [], meiosPag: [],
   });
   const [viewMode, setViewMode] = useState<ViewMode>("mensal");
-  const [metricMode, setMetricMode] = useState<MetricMode>("bruto");
+  const [metricMode, setMetricMode] = useState<MetricMode>("Geral");
+  const [receitaFormatoMode, setReceitaFormatoMode] = useState<ReceitaFormatoMode>("formato");
+  const [ticketCategory, setTicketCategory] = useState<TicketCategoryMode>("Geral");
+  const [top10Category, setTop10Category] = useState<Top10CategoryMode>("Geral");
   const [inadSearch, setInadSearch] = useState("");
   const [inadPage, setInadPage] = useState(0);
   const [selectedCliente, setSelectedCliente] = useState<string | null>(null);
