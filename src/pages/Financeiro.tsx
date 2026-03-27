@@ -7,7 +7,8 @@ import {
   calcDSOByMonth, calcTicketByMonth, calcCAGR, calcMonthlyByFormato,
   formatCurrency, formatCurrencyFull, formatPercent, formatDate, MONTH_LABELS,
   FORMATO_COLOR_MAP, VALID_FORMATOS_LIST,
-  type FinancialFilters, type FinancialRecord,
+  calcCategoriaMix, calcMonthlyByCategoria, CATEGORY_COLOR_MAP, filterByCategory,
+  type FinancialFilters, type FinancialRecord, type ProductCategory,
 } from "@/utils/financialData";
 import { useFinancialData } from "@/hooks/useFinancialData";
 import {
