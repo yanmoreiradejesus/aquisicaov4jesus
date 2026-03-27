@@ -379,7 +379,7 @@ const Financeiro = () => {
                       <YAxis tickFormatter={(v) => formatCurrency(v)} tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
                       <RTooltip content={<CustomTooltip />} />
                       <Legend wrapperStyle={{ fontSize: 11 }} />
-                      {(["Saber", "Ter", "Executar"] as ProductCategory[]).map((cat) => (
+                      {(["Executar", "Saber", "Ter"] as ProductCategory[]).map((cat) => (
                         <Bar key={cat} dataKey={cat} stackId="cat" fill={CATEGORY_COLOR_MAP[cat]} name={cat} />
                       ))}
                     </BarChart>
