@@ -153,11 +153,13 @@ const Financeiro = () => {
   const monthlyData = useMemo(() => calcMonthlyData(yearOnlyFiltered), [yearOnlyFiltered]);
   const inadByMonth = useMemo(() => calcInadByMonth(yearOnlyFiltered), [yearOnlyFiltered]);
   const formatoMix = useMemo(() => calcFormatoMix(filtered), [filtered]);
-  const top10 = useMemo(() => calcTop10Clientes(filtered), [filtered]);
+  const categoriaMix = useMemo(() => calcCategoriaMix(filtered), [filtered]);
+  const top10 = useMemo(() => calcTop10Clientes(filterByCategory(filtered, top10Category)), [filtered, top10Category]);
   const meioPagDist = useMemo(() => calcMeioPagDist(filtered), [filtered]);
   const dsoByMonth = useMemo(() => calcDSOByMonth(yearOnlyFiltered), [yearOnlyFiltered]);
-  const ticketByMonth = useMemo(() => calcTicketByMonth(yearOnlyFiltered), [yearOnlyFiltered]);
+  const ticketByMonth = useMemo(() => calcTicketByMonth(filterByCategory(yearOnlyFiltered, ticketCategory)), [yearOnlyFiltered, ticketCategory]);
   const monthlyByFormato = useMemo(() => calcMonthlyByFormato(yearOnlyFiltered), [yearOnlyFiltered]);
+  const monthlyByCategoria = useMemo(() => calcMonthlyByCategoria(yearOnlyFiltered), [yearOnlyFiltered]);
 
   const acumulado = useMemo(() => {
     let acc = 0;
