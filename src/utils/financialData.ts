@@ -313,6 +313,62 @@ const FORMATO_COLORS: Record<string, string> = {
 export const FORMATO_COLOR_MAP = FORMATO_COLORS;
 export const VALID_FORMATOS_LIST = [...VALID_FORMATOS];
 
+// --- Product Categories ---
+export type ProductCategory = "Saber" | "Ter" | "Executar";
+
+export const CATEGORY_COLOR_MAP: Record<ProductCategory, string> = {
+  "Saber": "#22C55E",
+  "Ter": "#F59E0B",
+  "Executar": "#4A90E2",
+};
+
+export function getCategory(formato: string): ProductCategory | null {
+  const f = formato?.toUpperCase();
+  if (f === "ESTRUTURAÇÃO") return "Saber";
+  if (f === "IMPLEMENTAÇÃO/ONE TIME") return "Ter";
+  if (["FEE", "TCV", "COMISSÃO", "PARCELAMENTO"].includes(f)) return "Executar";
+  return null;
+}
+
+export function filterByCategory(data: FinancialRecord[], category: ProductCategory | "Geral"): FinancialRecord[] {
+  if (category === "Geral") return data;
+  return data.filter((r) => getCategory(r.formato) === category);
+}
+
+export function calcCategoriaMix(data: FinancialRecord[]) {
+  const map = new Map<ProductCategory, number>();
+  data.forEach((r) => {
+    const cat = getCategory(r.formato);
+    if (cat) map.set(cat, (map.get(cat) || 0) + r.valor);
+  });
+  const total = [...map.values()].reduce((s, v) => s + v, 0);
+  return (["Saber", "Ter", "Executar"] as ProductCategory[])
+    .filter((c) => map.has(c))
+    .map((categoria) => ({
+      categoria,
+      valor: map.get(categoria)!,
+      pct: total > 0 ? (map.get(categoria)! / total) * 100 : 0,
+    }));
+}
+
+export function calcMonthlyByCategoria(data: FinancialRecord[]) {
+  const map = new Map<string, Record<string, number>>();
+  data.forEach((r) => {
+    const cat = getCategory(r.formato);
+    if (!cat) return;
+    const key = `${r.ano}-${String(MONTH_ORDER[r.mes]).padStart(2, "0")}`;
+    if (!map.has(key)) map.set(key, {});
+    const entry = map.get(key)!;
+    entry[cat] = (entry[cat] || 0) + r.valor;
+  });
+  return [...map.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([sortKey, values]) => {
+      const [y, m] = sortKey.split("-");
+      return { label: `${MONTH_LABELS[parseInt(m)]}/${y}`, ...values };
+    });
+}
+
 export function calcMonthlyByFormato(data: FinancialRecord[]) {
   const map = new Map<string, Record<string, number>>();
   data.forEach((r) => {

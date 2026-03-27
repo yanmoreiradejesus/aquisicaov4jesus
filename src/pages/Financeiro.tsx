@@ -7,7 +7,8 @@ import {
   calcDSOByMonth, calcTicketByMonth, calcCAGR, calcMonthlyByFormato,
   formatCurrency, formatCurrencyFull, formatPercent, formatDate, MONTH_LABELS,
   FORMATO_COLOR_MAP, VALID_FORMATOS_LIST,
-  type FinancialFilters, type FinancialRecord,
+  calcCategoriaMix, calcMonthlyByCategoria, CATEGORY_COLOR_MAP, filterByCategory,
+  type FinancialFilters, type FinancialRecord, type ProductCategory,
 } from "@/utils/financialData";
 import { useFinancialData } from "@/hooks/useFinancialData";
 import {
@@ -38,7 +39,10 @@ const CURRENT_MONTH = ALL_MESES[new Date().getMonth()];
 const CURRENT_YEAR = new Date().getFullYear();
 
 type ViewMode = "mensal" | "acumulado" | "comparativo";
-type MetricMode = "bruto" | "liquido" | "royalties";
+type MetricMode = "Geral" | "Saber" | "Ter" | "Executar";
+type ReceitaFormatoMode = "formato" | "categoria";
+type TicketCategoryMode = "Geral" | "Saber" | "Ter" | "Executar";
+type Top10CategoryMode = "Geral" | "Saber" | "Ter" | "Executar";
 
 const FilterDropdown = ({ label, options, selected, onChange, renderLabel }: {
   label: string;
@@ -116,7 +120,10 @@ const Financeiro = () => {
     anos: [CURRENT_YEAR], meses: [CURRENT_MONTH], status: [], formatos: [], meiosPag: [],
   });
   const [viewMode, setViewMode] = useState<ViewMode>("mensal");
-  const [metricMode, setMetricMode] = useState<MetricMode>("bruto");
+  const [metricMode, setMetricMode] = useState<MetricMode>("Geral");
+  const [receitaFormatoMode, setReceitaFormatoMode] = useState<ReceitaFormatoMode>("formato");
+  const [ticketCategory, setTicketCategory] = useState<TicketCategoryMode>("Geral");
+  const [top10Category, setTop10Category] = useState<Top10CategoryMode>("Geral");
   const [inadSearch, setInadSearch] = useState("");
   const [inadPage, setInadPage] = useState(0);
   const [selectedCliente, setSelectedCliente] = useState<string | null>(null);
@@ -146,31 +153,35 @@ const Financeiro = () => {
   const monthlyData = useMemo(() => calcMonthlyData(yearOnlyFiltered), [yearOnlyFiltered]);
   const inadByMonth = useMemo(() => calcInadByMonth(yearOnlyFiltered), [yearOnlyFiltered]);
   const formatoMix = useMemo(() => calcFormatoMix(filtered), [filtered]);
-  const top10 = useMemo(() => calcTop10Clientes(filtered), [filtered]);
+  const categoriaMix = useMemo(() => calcCategoriaMix(filtered), [filtered]);
+  const top10 = useMemo(() => calcTop10Clientes(filterByCategory(filtered, top10Category)), [filtered, top10Category]);
   const meioPagDist = useMemo(() => calcMeioPagDist(filtered), [filtered]);
   const dsoByMonth = useMemo(() => calcDSOByMonth(yearOnlyFiltered), [yearOnlyFiltered]);
-  const ticketByMonth = useMemo(() => calcTicketByMonth(yearOnlyFiltered), [yearOnlyFiltered]);
+  const ticketByMonth = useMemo(() => calcTicketByMonth(filterByCategory(yearOnlyFiltered, ticketCategory)), [yearOnlyFiltered, ticketCategory]);
   const monthlyByFormato = useMemo(() => calcMonthlyByFormato(yearOnlyFiltered), [yearOnlyFiltered]);
+  const monthlyByCategoria = useMemo(() => calcMonthlyByCategoria(yearOnlyFiltered), [yearOnlyFiltered]);
+
+  // Monthly data filtered by category for evolution chart
+  const categoryFilteredYearOnly = useMemo(() => filterByCategory(yearOnlyFiltered, metricMode), [yearOnlyFiltered, metricMode]);
+  const monthlyDataForChart = useMemo(() => calcMonthlyData(categoryFilteredYearOnly), [categoryFilteredYearOnly]);
 
   const acumulado = useMemo(() => {
     let acc = 0;
-    return monthlyData.map((m) => ({ ...m, acumulado: (acc += m.bruto) }));
-  }, [monthlyData]);
+    return monthlyDataForChart.map((m) => ({ ...m, acumulado: (acc += m.bruto) }));
+  }, [monthlyDataForChart]);
 
   const comparativo = useMemo(() => {
     const monthMap = new Map<number, Record<string, number>>();
-    monthlyData.forEach((m) => {
+    monthlyDataForChart.forEach((m) => {
       if (!monthMap.has(m.mesIdx)) monthMap.set(m.mesIdx, {});
       const entry = monthMap.get(m.mesIdx)!;
       entry[`bruto_${m.ano}`] = m.bruto;
-      entry[`liquido_${m.ano}`] = m.liquido;
-      entry[`royalties_${m.ano}`] = m.royalties;
     });
-    const years = [...new Set(monthlyData.map((m) => m.ano))].sort();
+    const years = [...new Set(monthlyDataForChart.map((m) => m.ano))].sort();
     return [...monthMap.entries()]
       .sort(([a], [b]) => a - b)
       .map(([mesIdx, data]) => ({ label: MONTH_LABELS[mesIdx], ...data, _years: years }));
-  }, [monthlyData]);
+  }, [monthlyDataForChart]);
 
   const inadimplentes = useMemo(() => {
     return filtered
@@ -199,10 +210,9 @@ const Financeiro = () => {
 
   const dsoColor = kpis.dso < 7 ? "text-green-400" : kpis.dso < 14 ? "text-yellow-400" : "text-red-400";
 
-  const metricKey = metricMode === "bruto" ? "bruto" : metricMode === "liquido" ? "liquido" : "royalties";
-  const metricLabel = metricMode === "bruto" ? "Faturamento Bruto" : metricMode === "liquido" ? "Receita Líquida" : "Royalties";
+  const metricLabel = metricMode === "Geral" ? "Faturamento Bruto" : `Faturamento — ${metricMode}`;
 
-  const years = [...new Set(monthlyData.map((m) => m.ano))].sort();
+  const years = [...new Set(monthlyDataForChart.map((m) => m.ano))].sort();
 
   if (isLoadingData) {
     return (
@@ -296,7 +306,7 @@ const Financeiro = () => {
                     ))}
                   </div>
                   <div className="flex rounded-md border border-border/50 overflow-hidden">
-                    {(["bruto", "liquido", "royalties"] as MetricMode[]).map((m) => (
+                    {(["Geral", "Saber", "Ter", "Executar"] as MetricMode[]).map((m) => (
                       <button
                         key={m}
                         onClick={() => setMetricMode(m)}
@@ -304,7 +314,7 @@ const Financeiro = () => {
                           metricMode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/50"
                         }`}
                       >
-                        {m === "bruto" ? "Bruto" : m === "liquido" ? "Líquido" : "Royalties"}
+                        {m}
                       </button>
                     ))}
                   </div>
@@ -313,12 +323,12 @@ const Financeiro = () => {
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   {viewMode === "mensal" ? (
-                    <BarChart data={monthlyData}>
+                    <BarChart data={monthlyDataForChart}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(240 3.7% 15.9%)" />
                       <XAxis dataKey="label" tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
                       <YAxis tickFormatter={(v) => formatCurrency(v)} tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
                       <RTooltip content={<CustomTooltip />} />
-                      <Bar dataKey={metricKey} fill="#4A90E2" radius={[4, 4, 0, 0]} name={metricLabel} />
+                      <Bar dataKey="bruto" fill={metricMode === "Geral" ? "#4A90E2" : CATEGORY_COLOR_MAP[metricMode as ProductCategory]} radius={[4, 4, 0, 0]} name={metricLabel} />
                     </BarChart>
                   ) : viewMode === "acumulado" ? (
                     <AreaChart data={acumulado}>
@@ -326,7 +336,7 @@ const Financeiro = () => {
                       <XAxis dataKey="label" tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
                       <YAxis tickFormatter={(v) => formatCurrency(v)} tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
                       <RTooltip content={<CustomTooltip />} />
-                      <Area type="monotone" dataKey="acumulado" fill="#4A90E2" fillOpacity={0.2} stroke="#4A90E2" name="Acumulado" />
+                      <Area type="monotone" dataKey="acumulado" fill={metricMode === "Geral" ? "#4A90E2" : CATEGORY_COLOR_MAP[metricMode as ProductCategory]} fillOpacity={0.2} stroke={metricMode === "Geral" ? "#4A90E2" : CATEGORY_COLOR_MAP[metricMode as ProductCategory]} name="Acumulado" />
                     </AreaChart>
                   ) : (
                     <BarChart data={comparativo}>
@@ -335,7 +345,7 @@ const Financeiro = () => {
                       <YAxis tickFormatter={(v) => formatCurrency(v)} tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
                       <RTooltip content={<CustomTooltip />} />
                       {years.map((y, i) => (
-                        <Bar key={y} dataKey={`${metricKey}_${y}`} fill={CHART_COLORS[i % CHART_COLORS.length]} radius={[4, 4, 0, 0]} name={String(y)} />
+                        <Bar key={y} dataKey={`bruto_${y}`} fill={CHART_COLORS[i % CHART_COLORS.length]} radius={[4, 4, 0, 0]} name={String(y)} />
                       ))}
                     </BarChart>
                   )}
@@ -343,23 +353,43 @@ const Financeiro = () => {
               </div>
             </div>
 
-            {/* RECEITA POR FORMATO (Stacked Bar) */}
+            {/* RECEITA POR FORMATO / CATEGORIA (Stacked Bar) */}
             <div className="rounded-lg border border-border/50 bg-card p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Receita por Formato</h3>
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Receita por {receitaFormatoMode === "formato" ? "Formato" : "Categoria"}</h3>
+                <div className="flex rounded-md border border-border/50 overflow-hidden">
+                  {(["formato", "categoria"] as ReceitaFormatoMode[]).map((m) => (
+                    <button key={m} onClick={() => setReceitaFormatoMode(m)} className={`px-3 py-1.5 text-xs font-medium transition-all ${receitaFormatoMode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/50"}`}>
+                      {m === "formato" ? "Formato" : "Categoria"}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlyByFormato}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(240 3.7% 15.9%)" />
-                    <XAxis dataKey="label" tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
-                    <YAxis tickFormatter={(v) => formatCurrency(v)} tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
-                    <RTooltip content={<CustomTooltip />} />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                    {VALID_FORMATOS_LIST.map((fmt) => (
-                      <Bar key={fmt} dataKey={fmt} stackId="formato" fill={FORMATO_COLOR_MAP[fmt]} name={fmt} />
-                    ))}
-                  </BarChart>
+                  {receitaFormatoMode === "formato" ? (
+                    <BarChart data={monthlyByFormato}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(240 3.7% 15.9%)" />
+                      <XAxis dataKey="label" tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
+                      <YAxis tickFormatter={(v) => formatCurrency(v)} tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
+                      <RTooltip content={<CustomTooltip />} />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                      {VALID_FORMATOS_LIST.map((fmt) => (
+                        <Bar key={fmt} dataKey={fmt} stackId="formato" fill={FORMATO_COLOR_MAP[fmt]} name={fmt} />
+                      ))}
+                    </BarChart>
+                  ) : (
+                    <BarChart data={monthlyByCategoria}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(240 3.7% 15.9%)" />
+                      <XAxis dataKey="label" tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
+                      <YAxis tickFormatter={(v) => formatCurrency(v)} tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
+                      <RTooltip content={<CustomTooltip />} />
+                      <Legend wrapperStyle={{ fontSize: 11 }} />
+                      {(["Saber", "Ter", "Executar"] as ProductCategory[]).map((cat) => (
+                        <Bar key={cat} dataKey={cat} stackId="cat" fill={CATEGORY_COLOR_MAP[cat]} name={cat} />
+                      ))}
+                    </BarChart>
+                  )}
                 </ResponsiveContainer>
               </div>
             </div>
@@ -401,10 +431,19 @@ const Financeiro = () => {
               </div>
             </div>
 
-            {/* SECTION 4: Ticket + Formato */}
+            {/* SECTION 4: Ticket + Mix por Categoria */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="rounded-lg border border-border/50 bg-card p-5 space-y-3">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Ticket Médio por Mês</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Ticket Médio por Mês</h3>
+                  <div className="flex rounded-md border border-border/50 overflow-hidden">
+                    {(["Geral", "Saber", "Ter", "Executar"] as TicketCategoryMode[]).map((m) => (
+                      <button key={m} onClick={() => setTicketCategory(m)} className={`px-2 py-1 text-[10px] font-medium transition-all ${ticketCategory === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/50"}`}>
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={ticketByMonth}>
@@ -416,19 +455,19 @@ const Financeiro = () => {
                         const avg = ticketByMonth.length > 0 ? ticketByMonth.reduce((s, t) => s + t.ticket, 0) / ticketByMonth.length : 0;
                         return <ReferenceLine y={avg} stroke="#4A90E2" strokeDasharray="3 3" label={{ value: "Média", fill: "#4A90E2", fontSize: 9 }} />;
                       })()}
-                      <Line type="monotone" dataKey="ticket" stroke="#4A90E2" strokeWidth={2} dot={{ fill: "#4A90E2", r: 3 }} name="Ticket Médio" />
+                      <Line type="monotone" dataKey="ticket" stroke={ticketCategory === "Geral" ? "#4A90E2" : CATEGORY_COLOR_MAP[ticketCategory as ProductCategory]} strokeWidth={2} dot={{ fill: ticketCategory === "Geral" ? "#4A90E2" : CATEGORY_COLOR_MAP[ticketCategory as ProductCategory], r: 3 }} name="Ticket Médio" />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </div>
               <div className="rounded-lg border border-border/50 bg-card p-5 space-y-3">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Mix por Formato</h3>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Mix por Categoria</h3>
                 <div className="h-56 flex items-center">
                   <ResponsiveContainer width="60%" height="100%">
                     <PieChart>
-                      <Pie data={formatoMix} dataKey="valor" nameKey="formato" cx="50%" cy="50%" innerRadius={40} outerRadius={70} label={({ formato, pct }) => `${formatPercent(pct)}`}>
-                        {formatoMix.map((_, i) => (
-                          <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      <Pie data={categoriaMix} dataKey="valor" nameKey="categoria" cx="50%" cy="50%" innerRadius={40} outerRadius={70} label={({ pct }) => `${formatPercent(pct)}`}>
+                        {categoriaMix.map((c) => (
+                          <Cell key={c.categoria} fill={CATEGORY_COLOR_MAP[c.categoria]} />
                         ))}
                       </Pie>
                       <RTooltip
@@ -437,7 +476,7 @@ const Financeiro = () => {
                           const d = payload[0].payload;
                           return (
                             <div className="rounded-lg border border-border bg-card p-3 shadow-lg text-xs space-y-1">
-                              <p className="font-medium text-foreground">{d.formato}</p>
+                              <p className="font-medium text-foreground">{d.categoria}</p>
                               <p className="text-muted-foreground">{formatCurrencyFull(d.valor)}</p>
                               <p className="text-muted-foreground">{formatPercent(d.pct)} do total</p>
                             </div>
@@ -446,12 +485,12 @@ const Financeiro = () => {
                       />
                     </PieChart>
                   </ResponsiveContainer>
-                  <div className="w-[40%] space-y-1 overflow-auto max-h-56">
-                    {formatoMix.map((f, i) => (
-                      <div key={f.formato} className="flex items-center gap-1.5 text-[10px]">
-                        <div className="h-2.5 w-2.5 rounded-sm flex-shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
-                        <span className="text-muted-foreground truncate">{f.formato}</span>
-                        <span className="text-foreground font-medium ml-auto">{formatPercent(f.pct)}</span>
+                  <div className="w-[40%] space-y-2 overflow-auto max-h-56">
+                    {categoriaMix.map((c) => (
+                      <div key={c.categoria} className="flex items-center gap-1.5 text-xs">
+                        <div className="h-3 w-3 rounded-sm flex-shrink-0" style={{ background: CATEGORY_COLOR_MAP[c.categoria] }} />
+                        <span className="text-muted-foreground">{c.categoria}</span>
+                        <span className="text-foreground font-medium ml-auto">{formatPercent(c.pct)}</span>
                       </div>
                     ))}
                   </div>
@@ -529,7 +568,16 @@ const Financeiro = () => {
 
             {/* SECTION 6: Top 10 Clientes */}
             <div className="rounded-lg border border-border/50 bg-card p-5 space-y-3">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Top 10 Clientes</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Top 10 Clientes</h3>
+                <div className="flex rounded-md border border-border/50 overflow-hidden">
+                  {(["Geral", "Saber", "Ter", "Executar"] as Top10CategoryMode[]).map((m) => (
+                    <button key={m} onClick={() => setTop10Category(m)} className={`px-2 py-1 text-[10px] font-medium transition-all ${top10Category === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/50"}`}>
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="space-y-2">
                 {top10.map((c, i) => (
                   <div key={c.cliente} className="flex items-center gap-3">
