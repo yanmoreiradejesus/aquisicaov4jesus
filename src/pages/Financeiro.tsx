@@ -306,7 +306,7 @@ const Financeiro = () => {
                     ))}
                   </div>
                   <div className="flex rounded-md border border-border/50 overflow-hidden">
-                    {(["bruto", "liquido", "royalties"] as MetricMode[]).map((m) => (
+                    {(["Geral", "Saber", "Ter", "Executar"] as MetricMode[]).map((m) => (
                       <button
                         key={m}
                         onClick={() => setMetricMode(m)}
@@ -314,7 +314,7 @@ const Financeiro = () => {
                           metricMode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/50"
                         }`}
                       >
-                        {m === "bruto" ? "Bruto" : m === "liquido" ? "Líquido" : "Royalties"}
+                        {m}
                       </button>
                     ))}
                   </div>
@@ -323,12 +323,12 @@ const Financeiro = () => {
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   {viewMode === "mensal" ? (
-                    <BarChart data={monthlyData}>
+                    <BarChart data={monthlyDataForChart}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(240 3.7% 15.9%)" />
                       <XAxis dataKey="label" tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
                       <YAxis tickFormatter={(v) => formatCurrency(v)} tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
                       <RTooltip content={<CustomTooltip />} />
-                      <Bar dataKey={metricKey} fill="#4A90E2" radius={[4, 4, 0, 0]} name={metricLabel} />
+                      <Bar dataKey="bruto" fill={metricMode === "Geral" ? "#4A90E2" : CATEGORY_COLOR_MAP[metricMode as ProductCategory]} radius={[4, 4, 0, 0]} name={metricLabel} />
                     </BarChart>
                   ) : viewMode === "acumulado" ? (
                     <AreaChart data={acumulado}>
@@ -336,7 +336,7 @@ const Financeiro = () => {
                       <XAxis dataKey="label" tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
                       <YAxis tickFormatter={(v) => formatCurrency(v)} tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
                       <RTooltip content={<CustomTooltip />} />
-                      <Area type="monotone" dataKey="acumulado" fill="#4A90E2" fillOpacity={0.2} stroke="#4A90E2" name="Acumulado" />
+                      <Area type="monotone" dataKey="acumulado" fill={metricMode === "Geral" ? "#4A90E2" : CATEGORY_COLOR_MAP[metricMode as ProductCategory]} fillOpacity={0.2} stroke={metricMode === "Geral" ? "#4A90E2" : CATEGORY_COLOR_MAP[metricMode as ProductCategory]} name="Acumulado" />
                     </AreaChart>
                   ) : (
                     <BarChart data={comparativo}>
@@ -345,7 +345,7 @@ const Financeiro = () => {
                       <YAxis tickFormatter={(v) => formatCurrency(v)} tick={{ fill: "hsl(240 5% 64.9%)", fontSize: 11 }} />
                       <RTooltip content={<CustomTooltip />} />
                       {years.map((y, i) => (
-                        <Bar key={y} dataKey={`${metricKey}_${y}`} fill={CHART_COLORS[i % CHART_COLORS.length]} radius={[4, 4, 0, 0]} name={String(y)} />
+                        <Bar key={y} dataKey={`bruto_${y}`} fill={CHART_COLORS[i % CHART_COLORS.length]} radius={[4, 4, 0, 0]} name={String(y)} />
                       ))}
                     </BarChart>
                   )}
