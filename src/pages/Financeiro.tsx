@@ -568,7 +568,16 @@ const Financeiro = () => {
 
             {/* SECTION 6: Top 10 Clientes */}
             <div className="rounded-lg border border-border/50 bg-card p-5 space-y-3">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Top 10 Clientes</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">Top 10 Clientes</h3>
+                <div className="flex rounded-md border border-border/50 overflow-hidden">
+                  {(["Geral", "Saber", "Ter", "Executar"] as Top10CategoryMode[]).map((m) => (
+                    <button key={m} onClick={() => setTop10Category(m)} className={`px-2 py-1 text-[10px] font-medium transition-all ${top10Category === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted/50"}`}>
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div className="space-y-2">
                 {top10.map((c, i) => (
                   <div key={c.cliente} className="flex items-center gap-3">
