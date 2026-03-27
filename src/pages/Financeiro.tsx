@@ -270,12 +270,6 @@ const Financeiro = () => {
               <KPICard title="Royalties" value={formatCurrency(kpis.royalties)} icon={Percent} />
               <KPICard title="Ticket Médio" value={formatCurrency(kpis.ticketMedio)} subtitle={`${kpis.total} contratos`} icon={BarChart3} />
               <KPICard title="Inadimplência" value={formatPercent(kpis.inadRate)} subtitle={formatCurrency(kpis.inadValor)} icon={AlertTriangle} color="destructive" />
-              <KPICard
-                title="DSO"
-                value={`${kpis.dso.toFixed(1).replace(".", ",")} dias`}
-                subtitle={kpis.dso < 7 ? "Excelente" : kpis.dso < 14 ? "Atenção" : "Crítico"}
-                icon={Clock}
-              />
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div>
