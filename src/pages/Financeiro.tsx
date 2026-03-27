@@ -39,7 +39,10 @@ const CURRENT_MONTH = ALL_MESES[new Date().getMonth()];
 const CURRENT_YEAR = new Date().getFullYear();
 
 type ViewMode = "mensal" | "acumulado" | "comparativo";
-type MetricMode = "bruto" | "liquido" | "royalties";
+type MetricMode = "Geral" | "Saber" | "Ter" | "Executar";
+type ReceitaFormatoMode = "formato" | "categoria";
+type TicketCategoryMode = "Geral" | "Saber" | "Ter" | "Executar";
+type Top10CategoryMode = "Geral" | "Saber" | "Ter" | "Executar";
 
 const FilterDropdown = ({ label, options, selected, onChange, renderLabel }: {
   label: string;
