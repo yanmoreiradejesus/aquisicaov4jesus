@@ -25,6 +25,7 @@ interface ConversionFunnelProps {
     cpa: number;
     cprr: number;
     ticketMedio: number;
+    faturamentoTotal: number;
   };
   leads: Lead[];
   allLeads: Lead[];
