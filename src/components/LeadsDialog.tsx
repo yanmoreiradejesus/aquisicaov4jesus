@@ -34,6 +34,7 @@ interface LeadsDialogProps {
   onOpenChange: (open: boolean) => void;
   leads: Lead[];
   stageTitle: string;
+  showRevenue?: boolean;
 }
 
 const LeadsDialog = ({ open, onOpenChange, leads, stageTitle }: LeadsDialogProps) => {
