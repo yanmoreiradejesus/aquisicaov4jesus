@@ -84,6 +84,7 @@ const LeadsDialog = ({ open, onOpenChange, leads, stageTitle, showRevenue = fals
                     <>
                       <span>FEE: <span className="text-foreground">{formatCurrency(lead.FEE)}</span></span>
                       <span>E.F: <span className="text-foreground">{formatCurrency(lead["E.F"])}</span></span>
+                      <span>BOOKING: <span className="text-foreground">{formatCurrency(lead.BOOKING)}</span></span>
                     </>
                   )}
                 </div>
