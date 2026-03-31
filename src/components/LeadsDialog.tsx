@@ -37,10 +37,14 @@ interface LeadsDialogProps {
   showRevenue?: boolean;
 }
 
-const LeadsDialog = ({ open, onOpenChange, leads, stageTitle }: LeadsDialogProps) => {
+const LeadsDialog = ({ open, onOpenChange, leads, stageTitle, showRevenue = false }: LeadsDialogProps) => {
   const formatCurrency = (value: string | undefined) => {
-    if (!value) return "-";
-    const num = parseFloat(value);
+    if (!value || value === "-" || value.trim() === "") return "-";
+    const cleaned = value.toString()
+      .replace(/[R$\s]/g, "")
+      .replace(/\./g, "")
+      .replace(",", ".");
+    const num = parseFloat(cleaned);
     if (isNaN(num)) return "-";
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -76,6 +80,12 @@ const LeadsDialog = ({ open, onOpenChange, leads, stageTitle }: LeadsDialogProps
                   <span>Urgência: <span className="text-foreground">{lead.URGÊNCIA || "-"}</span></span>
                   <span>Cargo: <span className="text-foreground">{lead.CARGO || "-"}</span></span>
                   <span>CPMQL: <span className="text-foreground">{formatCurrency(lead.CPMQL)}</span></span>
+                  {showRevenue && (
+                    <>
+                      <span>FEE: <span className="text-foreground">{formatCurrency(lead.FEE)}</span></span>
+                      <span>E.F: <span className="text-foreground">{formatCurrency(lead["E.F"])}</span></span>
+                    </>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground truncate">E-mail: <span className="text-foreground">{lead["E-MAIL"] || "-"}</span></p>
               </div>
@@ -94,6 +104,13 @@ const LeadsDialog = ({ open, onOpenChange, leads, stageTitle }: LeadsDialogProps
                   <TableHead>Cargo</TableHead>
                   <TableHead>E-mail</TableHead>
                   <TableHead>CPMQL</TableHead>
+                  {showRevenue && (
+                    <>
+                      <TableHead>FEE</TableHead>
+                      <TableHead>E.F</TableHead>
+                      <TableHead>BOOKING</TableHead>
+                    </>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -107,6 +124,13 @@ const LeadsDialog = ({ open, onOpenChange, leads, stageTitle }: LeadsDialogProps
                     <TableCell>{lead.CARGO || "-"}</TableCell>
                     <TableCell className="max-w-[200px] truncate">{lead["E-MAIL"] || "-"}</TableCell>
                     <TableCell>{formatCurrency(lead.CPMQL)}</TableCell>
+                    {showRevenue && (
+                      <>
+                        <TableCell>{formatCurrency(lead.FEE)}</TableCell>
+                        <TableCell>{formatCurrency(lead["E.F"])}</TableCell>
+                        <TableCell>{formatCurrency(lead.BOOKING)}</TableCell>
+                      </>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
