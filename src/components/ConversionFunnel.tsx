@@ -295,6 +295,7 @@ const ConversionFunnel = ({ data, leads, allLeads, filters, useCreationDate = fa
         onOpenChange={setDialogOpen}
         leads={selectedStage ? getLeadsForStage(selectedStage) : []}
         stageTitle={selectedStage ? stages.find(s => s.stageKey === selectedStage)?.title || "" : ""}
+        showRevenue={selectedStage === "ass"}
       />
     </div>
   );
