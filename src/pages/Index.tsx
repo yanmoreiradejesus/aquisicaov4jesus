@@ -6,7 +6,7 @@ import FunnelSkeleton from "@/components/FunnelSkeleton";
 import KPICardSkeleton from "@/components/KPICardSkeleton";
 import { useGoogleSheetsData } from "@/hooks/useGoogleSheetsData";
 import { filterLeads, calculateFunnelData, getUniqueValuesWithCount } from "@/utils/dataProcessor";
-import { Loader2, TrendingUp, TrendingDown, Calendar, GitBranch } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Calendar, GitBranch, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
