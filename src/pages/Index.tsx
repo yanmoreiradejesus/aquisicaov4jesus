@@ -198,7 +198,7 @@ const Index = () => {
 
         <section className="space-y-6">
           <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">KPIS PRINCIPAIS</h2>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-5">
             {/* CPMQL */}
             <div 
               className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-6 transition-all duration-300 hover:shadow-lg animate-fade-in"
