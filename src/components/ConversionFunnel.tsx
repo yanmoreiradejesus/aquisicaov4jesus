@@ -25,6 +25,7 @@ interface ConversionFunnelProps {
     cpa: number;
     cprr: number;
     ticketMedio: number;
+    faturamentoTotal: number;
   };
   leads: Lead[];
   allLeads: Lead[];
@@ -240,17 +241,28 @@ const ConversionFunnel = ({ data, leads, allLeads, filters, useCreationDate = fa
                       Conv: <span className="font-semibold text-foreground">{stage.conversionRate.toFixed(1)}%</span>
                     </span>
                   )}
-                  <span
-                    className={`font-body text-xs text-muted-foreground ${stage.conversionRate === 0 ? "sm:ml-auto" : ""}`}
-                  >
-                    {stage.costLabel}:{" "}
-                    <span className="font-semibold text-foreground">
-                      R${" "}
-                      {stage.costValue.toLocaleString("pt-BR", {
-                        minimumFractionDigits: 2,
-                      })}
+                  <div className={`flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 ${stage.conversionRate === 0 ? "sm:ml-auto" : ""}`}>
+                    <span className="font-body text-xs text-muted-foreground">
+                      {stage.costLabel}:{" "}
+                      <span className="font-semibold text-foreground">
+                        R${" "}
+                        {stage.costValue.toLocaleString("pt-BR", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </span>
                     </span>
-                  </span>
+                    {stage.stageKey === "ass" && (
+                      <span className="font-body text-xs text-muted-foreground">
+                        Faturamento:{" "}
+                        <span className="font-semibold text-success">
+                          R${" "}
+                          {data.faturamentoTotal.toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                          })}
+                        </span>
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             );

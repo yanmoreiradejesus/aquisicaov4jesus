@@ -335,9 +335,27 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
   console.log("Total E.F (MRR) sum:", totalFee, "for", ass, "signed contracts");
   const ticketMedio = ass > 0 ? totalFee / ass : 0;
 
+  // Calculate Time to Close (days between DATA and DATA DA ASSINATURA)
+  const timeToCloseDays: number[] = [];
+  feeSourceLeads.forEach((lead) => {
+    const entryDateStr = lead.DATA;
+    const signDateStr = lead["DATA DA ASSINATURA"];
+    if (entryDateStr && signDateStr && signDateStr.trim() !== "") {
+      const entryDate = new Date(entryDateStr.split('/').reverse().join('-'));
+      const signDate = new Date(signDateStr.split('/').reverse().join('-'));
+      if (!isNaN(entryDate.getTime()) && !isNaN(signDate.getTime())) {
+        const diffDays = Math.ceil((signDate.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays >= 0) timeToCloseDays.push(diffDays);
+      }
+    }
+  });
+  const timeToClose = timeToCloseDays.length > 0
+    ? timeToCloseDays.reduce((a, b) => a + b, 0) / timeToCloseDays.length
+    : 0;
+
   console.log("Calculated values:", { 
     totalCPL, cplMedio, custoCR, cpa, cprr, 
-    totalFee, ticketMedio 
+    totalFee, ticketMedio, timeToClose 
   });
 
   return {
@@ -353,6 +371,7 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
     ticketMedio,
     investimentoTotal: totalCPL,
     faturamentoTotal: totalFee,
+    timeToClose,
   };
 };
 

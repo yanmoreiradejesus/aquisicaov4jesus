@@ -6,7 +6,7 @@ import FunnelSkeleton from "@/components/FunnelSkeleton";
 import KPICardSkeleton from "@/components/KPICardSkeleton";
 import { useGoogleSheetsData } from "@/hooks/useGoogleSheetsData";
 import { filterLeads, calculateFunnelData, getUniqueValuesWithCount } from "@/utils/dataProcessor";
-import { Loader2, TrendingUp, TrendingDown, Calendar, GitBranch } from "lucide-react";
+import { Loader2, TrendingUp, TrendingDown, Calendar, GitBranch, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -198,7 +198,7 @@ const Index = () => {
 
         <section className="space-y-6">
           <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">KPIS PRINCIPAIS</h2>
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-5">
             {/* CPMQL */}
             <div 
               className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-6 transition-all duration-300 hover:shadow-lg animate-fade-in"
@@ -292,6 +292,33 @@ const Index = () => {
                       <TrendingDown className="h-3 w-3 text-destructive" />
                       <span className="text-destructive">
                         {((1 - conversionFunnelData.faturamentoTotal / previousPeriodData.faturamentoTotal) * 100).toFixed(1)}% vs período anterior
+                      </span>
+                    </>}
+                </div>}
+            </div>
+
+            {/* Time to Close */}
+            <div 
+              className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-4 lg:p-6 transition-all duration-300 hover:shadow-lg animate-fade-in"
+              style={{ animationDelay: '1500ms', animationFillMode: 'backwards' }}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <p className="font-body text-xs lg:text-sm text-muted-foreground">Time to Close</p>
+              </div>
+              <p className="font-heading text-2xl lg:text-3xl font-bold text-foreground">
+                {conversionFunnelData.timeToClose > 0 ? `${Math.round(conversionFunnelData.timeToClose)} dias` : "—"}
+              </p>
+              {previousPeriodData.timeToClose > 0 && conversionFunnelData.timeToClose > 0 && <div className="mt-2 flex items-center gap-1 text-xs">
+                  {conversionFunnelData.timeToClose < previousPeriodData.timeToClose ? <>
+                      <TrendingDown className="h-3 w-3 text-success" />
+                      <span className="text-success">
+                        {((1 - conversionFunnelData.timeToClose / previousPeriodData.timeToClose) * 100).toFixed(1)}% vs período anterior
+                      </span>
+                    </> : <>
+                      <TrendingUp className="h-3 w-3 text-destructive" />
+                      <span className="text-destructive">
+                        {((conversionFunnelData.timeToClose / previousPeriodData.timeToClose - 1) * 100).toFixed(1)}% vs período anterior
                       </span>
                     </>}
                 </div>}
