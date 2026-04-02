@@ -9,13 +9,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Settings, Plus, X, Copy } from "lucide-react";
+import { Settings, Plus, X, Copy, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useGoogleSheetsData } from "@/hooks/useGoogleSheetsData";
 import { isPositive } from "@/utils/dataProcessor";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import FunnelSkeleton from "@/components/FunnelSkeleton";
+import LeadsDialog from "@/components/LeadsDialog";
 
 // ── helpers ──
 
