@@ -196,9 +196,16 @@ const MixCompra = () => {
   const investimento = useMemo(() => filteredLeads.reduce((s, l) => s + parseCurrency(l.CPMQL), 0), [filteredLeads]);
   const cpmqlMedio = funnel.mql > 0 ? investimento / funnel.mql : 0;
 
+  // Meta (E.F) calculation - revenue from signed contracts
+  const metaRevenue = useMemo(() => {
+    const assLeads = activeLeads.filter((l) => isPositive(l.ASS) || (l["DATA DA ASSINATURA"] && l["DATA DA ASSINATURA"].trim() !== ""));
+    return assLeads.reduce((s, l) => s + parseCurrency(l["E.F"]) + parseCurrency(l.BOOKING), 0);
+  }, [activeLeads]);
+
   const leadsTarget = goals?.leads_target ?? 0;
   const cpmqlTarget = goals?.cpmql_target ?? 0;
   const investTarget = goals?.investment_target ?? 0;
+  const metaTarget = goals?.ef_target ?? 0;
   const q1Pct = goals?.pace_q1_pct ?? 0.7;
   const q1DiaLimite = goals?.pace_q1_dia_limite ?? 15;
 
@@ -207,6 +214,8 @@ const MixCompra = () => {
 
   const paceStatus = funnel.mql >= expectedLeads ? "green" : funnel.mql >= expectedLeads * 0.85 ? "yellow" : "red";
   const paceLabel = paceStatus === "green" ? "Adiantado" : paceStatus === "yellow" ? "No ritmo" : "Atrasado";
+  const metaPct = Number(metaTarget) > 0 ? (metaRevenue / Number(metaTarget)) * 100 : 0;
+  const metaStatus = metaPct >= 100 ? "green" : metaPct >= 70 ? "yellow" : "red";
 
   // ── Funnel meta ──
   const funnelMeta = useMemo(() => {
