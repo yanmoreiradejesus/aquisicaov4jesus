@@ -468,33 +468,28 @@ const MixCompra = () => {
             </div>
 
             {/* ── Visual Funnel ── */}
-            <Card className="p-4 lg:p-6 border-border/50 bg-card space-y-1">
+            <Card className="p-4 lg:p-6 border-border/50 bg-card">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Funil</h3>
-              <div className="flex flex-col items-center gap-1">
-                {funnelVisualStages.map((stage, i) => {
-                  const nextWidth = i < funnelVisualStages.length - 1 ? funnelVisualStages[i + 1].widthPct : stage.widthPct * 0.7;
+              <div className="flex flex-col items-center gap-1.5">
+                {funnelVisualStages.map((stage) => {
                   const color = getEtapaColor(stage.real, stage.expected);
                   return (
-                    <div key={stage.key} className="w-full flex flex-col items-center">
-                      <div
-                        className="relative flex items-center justify-between px-4 lg:px-6"
-                        style={{
-                          width: `${stage.widthPct}%`,
-                          height: '48px',
-                          backgroundColor: color,
-                          clipPath: getTrapezoidClipPath(100, (nextWidth / stage.widthPct) * 100),
-                        }}
-                      >
-                        <span className="text-white text-xs lg:text-sm font-semibold z-10">
-                          {stage.real} / {stage.expected}
-                        </span>
-                        <span className="text-white text-sm lg:text-base font-bold z-10">
-                          {stage.label}
-                        </span>
-                        <span className="text-white text-xs lg:text-sm font-semibold z-10">
-                          {stage.rate !== null ? `${stage.rate.toFixed(0)}% / ${stage.metaRate?.toFixed(0)}%` : '—'}
-                        </span>
-                      </div>
+                    <div
+                      key={stage.key}
+                      style={{ width: `${stage.widthPct}%`, backgroundColor: color }}
+                      className="h-11 rounded-md flex items-center justify-between px-4 text-white text-sm"
+                    >
+                      <span className="min-w-[70px] text-left text-xs font-semibold">
+                        {stage.real} / {stage.expected}
+                      </span>
+                      <span className="font-bold text-sm">
+                        {stage.label}
+                      </span>
+                      <span className="min-w-[90px] text-right text-xs font-semibold">
+                        {stage.rate !== null
+                          ? `${stage.rate.toFixed(0)}% / ${stage.metaRate?.toFixed(0)}%`
+                          : '—'}
+                      </span>
                     </div>
                   );
                 })}
