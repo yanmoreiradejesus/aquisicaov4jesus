@@ -11,7 +11,6 @@ import Metas from "./pages/Metas";
 import Admin from "./pages/Admin";
 import Financeiro from "./pages/Financeiro";
 import DashboardComercial from "./pages/DashboardComercial";
-import MixCompra from "./pages/MixCompra";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -24,11 +23,6 @@ const AppRoutes = () => {
       <Route path="/dashboard-comercial" element={
         <ProtectedRoute requiredPath="/dashboard-comercial">
           <PageTransition><DashboardComercial /></PageTransition>
-        </ProtectedRoute>
-      } />
-      <Route path="/mix-compra" element={
-        <ProtectedRoute requiredPath="/mix-compra">
-          <PageTransition><MixCompra /></PageTransition>
         </ProtectedRoute>
       } />
       <Route path="/" element={
