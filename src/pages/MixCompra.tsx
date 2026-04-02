@@ -179,19 +179,40 @@ const MixCompra = () => {
   // Active leads based on view toggle
   const activeLeads = funnelView === "byDate" ? filteredLeads : stageFilteredLeads.mql;
 
-  // ── Funnel counts (uses activeLeads) ──
+  // ── Funnel counts ──
   const funnel = useMemo(() => {
-    const mql = activeLeads.length;
-    const cr = activeLeads.filter((l) => isPositive(l["C.R"])).length;
-    const ra = activeLeads.filter((l) => isPositive(l["R.A"])).length;
-    const rr = activeLeads.filter((l) => isPositive(l["R.R"])).length;
-    const ass = activeLeads.filter((l) => isPositive(l.ASS) || (l["DATA DA ASSINATURA"] && l["DATA DA ASSINATURA"].trim() !== "")).length;
-    return { mql, cr, ra, rr, ass };
-  }, [activeLeads]);
+    if (funnelView === "byStage") {
+      return {
+        mql: stageFilteredLeads.mql.length,
+        cr: stageFilteredLeads.cr.length,
+        ra: stageFilteredLeads.ra.length,
+        rr: stageFilteredLeads.rr.length,
+        ass: stageFilteredLeads.ass.length,
+      };
+    }
+    const leads = filteredLeads;
+    return {
+      mql: leads.length,
+      cr: leads.filter((l) => isPositive(l["C.R"])).length,
+      ra: leads.filter((l) => isPositive(l["R.A"])).length,
+      rr: leads.filter((l) => isPositive(l["R.R"])).length,
+      ass: leads.filter((l) => isPositive(l.ASS) || (l["DATA DA ASSINATURA"] && l["DATA DA ASSINATURA"].trim() !== "")).length,
+    };
+  }, [funnelView, stageFilteredLeads, filteredLeads]);
 
   // ── Leads by stage (for dialog) ──
   const getLeadsByStage = (stageKey: string) => {
-    const leads = activeLeads;
+    if (funnelView === "byStage") {
+      switch (stageKey) {
+        case "mql": return stageFilteredLeads.mql;
+        case "cr": return stageFilteredLeads.cr;
+        case "ra": return stageFilteredLeads.ra;
+        case "rr": return stageFilteredLeads.rr;
+        case "ass": return stageFilteredLeads.ass;
+        default: return [];
+      }
+    }
+    const leads = filteredLeads;
     switch (stageKey) {
       case "mql": return leads;
       case "cr": return leads.filter((l) => isPositive(l["C.R"]));
