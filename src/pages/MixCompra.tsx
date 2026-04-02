@@ -37,10 +37,17 @@ const parseCurrency = (v: string | undefined): number => {
 const fmtCurrency = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-const getStatus = (realPct: number, metaPct: number): "green" | "yellow" | "red" => {
+const getFunnelStatus = (realPct: number, metaPct: number): "green" | "yellow" | "red" => {
   const diff = realPct - metaPct;
   if (diff >= -1) return "green";
   if (diff >= -4) return "yellow";
+  return "red";
+};
+
+const getMixStatus = (realPct: number, metaPct: number): "green" | "yellow" | "red" => {
+  const absDiff = Math.abs(realPct - metaPct);
+  if (absDiff <= 5) return "green";
+  if (absDiff <= 10) return "yellow";
   return "red";
 };
 
@@ -180,7 +187,7 @@ const MixCompra = () => {
       const realPct = total > 0 ? (real.count / total) * 100 : 0;
       const cpmqlReal = real.count > 0 ? real.cpmqlSum / real.count : 0;
       const label = metaEntry ? metaEntry[0] : k;
-      return { label, realLeads: real.count, realPct, metaLeads, metaPct, desvio: realPct - metaPct, cpmqlReal, metaCpmql, status: getStatus(realPct, metaPct), cpmqlStatus: getCpmqlStatus(cpmqlReal, metaCpmql) };
+      return { label, realLeads: real.count, realPct, metaLeads, metaPct, desvio: realPct - metaPct, cpmqlReal, metaCpmql, status: getMixStatus(realPct, metaPct), cpmqlStatus: getCpmqlStatus(cpmqlReal, metaCpmql) };
     }).sort((a, b) => b.metaPct - a.metaPct);
   }, [filteredLeads, goals, funnel.mql]);
 
@@ -201,7 +208,7 @@ const MixCompra = () => {
       const real = realCounts[k] || 0;
       const realPct = total > 0 ? (real / total) * 100 : 0;
       const label = metaEntry ? metaEntry[0] : k;
-      return { label, realLeads: real, realPct, metaLeads, metaPct, desvio: realPct - metaPct, status: getStatus(realPct, metaPct) };
+      return { label, realLeads: real, realPct, metaLeads, metaPct, desvio: realPct - metaPct, status: getMixStatus(realPct, metaPct) };
     }).sort((a, b) => b.metaPct - a.metaPct);
   }, [filteredLeads, goals, funnel.mql]);
 
@@ -222,7 +229,7 @@ const MixCompra = () => {
       const real = realCounts[k] || 0;
       const realPct = total > 0 ? (real / total) * 100 : 0;
       const label = metaEntry ? metaEntry[0] : k;
-      return { label, realLeads: real, realPct, metaLeads, metaPct, desvio: realPct - metaPct, status: getStatus(realPct, metaPct) };
+      return { label, realLeads: real, realPct, metaLeads, metaPct, desvio: realPct - metaPct, status: getMixStatus(realPct, metaPct) };
     }).sort((a, b) => b.metaPct - a.metaPct);
   }, [filteredLeads, goals, funnel.mql]);
 
@@ -466,7 +473,7 @@ const MixCompra = () => {
               <div className="flex items-center flex-wrap gap-1 text-sm">
                 <span className="font-medium text-muted-foreground">Real:</span>
                 {funnelStages.map((s, i) => {
-                  const st = s.rate !== null && s.metaRate !== null ? getStatus(s.rate, s.metaRate) : "green";
+                  const st = s.rate !== null && s.metaRate !== null ? getFunnelStatus(s.rate, s.metaRate) : "green";
                   return (
                     <span key={s.key} className="flex items-center gap-1">
                       {i > 0 && <span className="text-muted-foreground mx-1">→</span>}
