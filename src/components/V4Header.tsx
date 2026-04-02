@@ -16,7 +16,7 @@ const V4Header = () => {
   const aquisicaoItems = [
     { path: "/dashboard-comercial", label: "DASHBOARD" },
     { path: "/", label: "FUNIL" },
-    { path: "/mix-compra", label: "MIX DE COMPRA" },
+    { path: "/mix-compra", label: "META" },
     { path: "/insights", label: "INSIGHTS" },
     
   ];
