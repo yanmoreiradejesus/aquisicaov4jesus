@@ -407,6 +407,109 @@ const MixCompra = () => {
     return `polygon(${topInset}% 0%, ${100 - topInset}% 0%, ${100 - bottomInset}% 100%, ${bottomInset}% 100%)`;
   };
 
+  return (
+    <div className="min-h-screen bg-background">
+      <V4Header />
+      <main className="container mx-auto max-w-7xl space-y-6 px-4 lg:px-8 py-8">
+
+        {/* ── Header row ── */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <span className="font-body text-sm font-medium text-muted-foreground">Visualizar:</span>
+            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+              <SelectTrigger className="w-36 border-border/50 bg-background"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-card border-border z-50">
+                {months.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger className="w-28 border-border/50 bg-background"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-card border-border z-50">
+                {years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          {isAdmin && (
+            <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)} className="gap-2">
+              <Settings className="h-4 w-4" /> Configurar
+            </Button>
+          )}
+        </div>
+
+        {!goals ? (
+          <Card className="flex flex-col items-center justify-center p-12 gap-4 border-border/50 bg-card">
+            <p className="text-muted-foreground text-sm">Metas não configuradas para este mês</p>
+            {isAdmin && (
+              <Button onClick={() => setDialogOpen(true)} className="gap-2">
+                <Settings className="h-4 w-4" /> Configurar
+              </Button>
+            )}
+          </Card>
+        ) : (
+          <>
+            {/* ── KPIs ── */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="p-4 border-border/50 bg-card space-y-2">
+                <p className="text-xs text-muted-foreground font-medium">Leads Comprados</p>
+                <p className="text-2xl font-bold">{funnel.mql} <span className="text-sm text-muted-foreground font-normal">/ {leadsTarget}</span></p>
+                <Progress value={leadsTarget > 0 ? Math.min((funnel.mql / leadsTarget) * 100, 100) : 0} className="h-2" />
+                <p className="text-xs text-muted-foreground">{leadsTarget > 0 ? ((funnel.mql / leadsTarget) * 100).toFixed(0) : 0}%</p>
+              </Card>
+              <Card className="p-4 border-border/50 bg-card space-y-2">
+                <p className="text-xs text-muted-foreground font-medium">CPMQL Médio</p>
+                <p className="text-2xl font-bold" style={{ color: statusColor[getCpmqlStatus(cpmqlMedio, Number(cpmqlTarget))] }}>
+                  {fmtCurrency(cpmqlMedio)}
+                </p>
+                <p className="text-xs text-muted-foreground">Target: {fmtCurrency(Number(cpmqlTarget))}</p>
+              </Card>
+              <Card className="p-4 border-border/50 bg-card space-y-2">
+                <p className="text-xs text-muted-foreground font-medium">Investimento</p>
+                <p className="text-2xl font-bold">{fmtCurrency(investimento)}</p>
+                <Progress value={Number(investTarget) > 0 ? Math.min((investimento / Number(investTarget)) * 100, 100) : 0} className="h-2" />
+                <p className="text-xs text-muted-foreground">{Number(investTarget) > 0 ? ((investimento / Number(investTarget)) * 100).toFixed(0) : 0}% de {fmtCurrency(Number(investTarget))}</p>
+              </Card>
+              <Card className="p-4 border-border/50 bg-card space-y-2">
+                <p className="text-xs text-muted-foreground font-medium">Pace</p>
+                <p className="text-2xl font-bold">{funnel.mql} <span className="text-sm text-muted-foreground font-normal">/ {expectedLeads} esp.</span></p>
+                <p className="text-sm font-semibold" style={{ color: statusColor[paceStatus] }}>{paceLabel}</p>
+                <p className="text-xs text-muted-foreground">dia {currentDay}/30</p>
+              </Card>
+            </div>
+
+            {/* ── Visual Funnel ── */}
+            <Card className="p-4 lg:p-6 border-border/50 bg-card space-y-1">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Funil</h3>
+              <div className="flex flex-col items-center gap-1">
+                {funnelVisualStages.map((stage, i) => {
+                  const nextWidth = i < funnelVisualStages.length - 1 ? funnelVisualStages[i + 1].widthPct : stage.widthPct * 0.7;
+                  const color = getEtapaColor(stage.real, stage.expected);
+                  return (
+                    <div key={stage.key} className="w-full flex flex-col items-center">
+                      <div
+                        className="relative flex items-center justify-between px-4 lg:px-6"
+                        style={{
+                          width: `${stage.widthPct}%`,
+                          height: '48px',
+                          backgroundColor: color,
+                          clipPath: getTrapezoidClipPath(100, (nextWidth / stage.widthPct) * 100),
+                        }}
+                      >
+                        <span className="text-white text-xs lg:text-sm font-semibold z-10">
+                          {stage.real} / {stage.expected}
+                        </span>
+                        <span className="text-white text-sm lg:text-base font-bold z-10">
+                          {stage.label}
+                        </span>
+                        <span className="text-white text-xs lg:text-sm font-semibold z-10">
+                          {stage.rate !== null ? `${stage.rate.toFixed(0)}% / ${stage.metaRate?.toFixed(0)}%` : '—'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+
             {/* ── Mix Tables ── */}
             <Tabs defaultValue="tier">
               <TabsList className="bg-muted/20">
