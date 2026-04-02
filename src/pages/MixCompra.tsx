@@ -568,20 +568,20 @@ const MixCompra = () => {
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Funil</h3>
                 <div className="flex items-center gap-1 bg-muted/20 rounded-md p-0.5">
                   <Button
-                    variant={funnelView === "month" ? "secondary" : "ghost"}
+                    variant={funnelView === "byStage" ? "secondary" : "ghost"}
                     size="sm"
                     className="h-7 text-xs px-3"
-                    onClick={() => setFunnelView("month")}
+                    onClick={() => setFunnelView("byStage")}
                   >
-                    Mês
+                    Por Etapa
                   </Button>
                   <Button
-                    variant={funnelView === "all" ? "secondary" : "ghost"}
+                    variant={funnelView === "byDate" ? "secondary" : "ghost"}
                     size="sm"
                     className="h-7 text-xs px-3"
-                    onClick={() => setFunnelView("all")}
+                    onClick={() => setFunnelView("byDate")}
                   >
-                    Geral
+                    Por Data
                   </Button>
                 </div>
               </div>
