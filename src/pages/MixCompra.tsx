@@ -229,7 +229,7 @@ const MixCompra = () => {
       const real = realCounts[k] || 0;
       const realPct = total > 0 ? (real / total) * 100 : 0;
       const label = metaEntry ? metaEntry[0] : k;
-      return { label, realLeads: real, realPct, metaLeads, metaPct, desvio: realPct - metaPct, status: getStatus(realPct, metaPct) };
+      return { label, realLeads: real, realPct, metaLeads, metaPct, desvio: realPct - metaPct, status: getMixStatus(realPct, metaPct) };
     }).sort((a, b) => b.metaPct - a.metaPct);
   }, [filteredLeads, goals, funnel.mql]);
 
