@@ -473,7 +473,7 @@ const MixCompra = () => {
               <div className="flex items-center flex-wrap gap-1 text-sm">
                 <span className="font-medium text-muted-foreground">Real:</span>
                 {funnelStages.map((s, i) => {
-                  const st = s.rate !== null && s.metaRate !== null ? getStatus(s.rate, s.metaRate) : "green";
+                  const st = s.rate !== null && s.metaRate !== null ? getFunnelStatus(s.rate, s.metaRate) : "green";
                   return (
                     <span key={s.key} className="flex items-center gap-1">
                       {i > 0 && <span className="text-muted-foreground mx-1">→</span>}
