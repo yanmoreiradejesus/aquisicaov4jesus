@@ -488,7 +488,7 @@ const MixCompra = () => {
         ) : (
           <>
             {/* ── KPIs ── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               <Card className="p-4 border-border/50 bg-card space-y-2">
                 <p className="text-xs text-muted-foreground font-medium">Leads Comprados</p>
                 <p className="text-2xl font-bold">{funnel.mql} <span className="text-sm text-muted-foreground font-normal">/ {leadsTarget}</span></p>
@@ -507,6 +507,14 @@ const MixCompra = () => {
                 <p className="text-2xl font-bold">{fmtCurrency(investimento)}</p>
                 <Progress value={Number(investTarget) > 0 ? Math.min((investimento / Number(investTarget)) * 100, 100) : 0} className="h-2" />
                 <p className="text-xs text-muted-foreground">{Number(investTarget) > 0 ? ((investimento / Number(investTarget)) * 100).toFixed(0) : 0}% de {fmtCurrency(Number(investTarget))}</p>
+              </Card>
+              <Card className="p-4 border-border/50 bg-card space-y-2">
+                <p className="text-xs text-muted-foreground font-medium">Meta</p>
+                <p className="text-2xl font-bold" style={{ color: statusColor[metaStatus] }}>
+                  {fmtCurrency(metaRevenue)}
+                </p>
+                <Progress value={Math.min(metaPct, 100)} className="h-2" />
+                <p className="text-xs text-muted-foreground">{metaPct.toFixed(0)}% de {fmtCurrency(Number(metaTarget))}</p>
               </Card>
               <Card className="p-4 border-border/50 bg-card space-y-2">
                 <p className="text-xs text-muted-foreground font-medium">Pace</p>
