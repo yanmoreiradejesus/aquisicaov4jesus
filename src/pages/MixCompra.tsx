@@ -118,7 +118,7 @@ const MixCompra = () => {
   const [leadsDialogOpen, setLeadsDialogOpen] = useState(false);
   const [leadsDialogStage, setLeadsDialogStage] = useState("");
   const [leadsDialogLeads, setLeadsDialogLeads] = useState<any[]>([]);
-  const [funnelView, setFunnelView] = useState<"month" | "all">("month");
+  const [funnelView, setFunnelView] = useState<"byStage" | "byDate">("byStage");
 
   const months = [
     { value: "1", label: "Janeiro" }, { value: "2", label: "Fevereiro" }, { value: "3", label: "Março" },
