@@ -398,6 +398,8 @@ const MixCompra = () => {
     { key: "ass", label: "ASS", real: funnel.ass, expected: funnelExpected.expectedASS, rate: funnel.rr > 0 ? (funnel.ass / funnel.rr) * 100 : 0, metaRate: Number(goals?.ass_rate ?? 0) * 100, widthPct: 30 },
   ];
 
+  const sumPct = (rows: { pct: string }[]) => rows.reduce((s, r) => s + (parseFloat(r.pct) || 0), 0);
+
   return (
     <div className="min-h-screen bg-background">
       <V4Header />
