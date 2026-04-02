@@ -156,11 +156,28 @@ const MixCompra = () => {
     });
   }, [sheetsData, selectedMonth, selectedYear]);
 
-  // All leads (for "geral" view)
-  const allLeads = useMemo(() => sheetsData?.leads || [], [sheetsData]);
+  // "Por Etapa" leads: MQL/CR/RA by DATA, RR by DATA REUNIÃO REALIZADA, ASS by DATA DA ASSINATURA
+  const stageFilteredLeads = useMemo(() => {
+    if (!sheetsData?.leads) return { mql: [] as any[], cr: [] as any[], ra: [] as any[], rr: [] as any[], ass: [] as any[] };
+    const m = parseInt(selectedMonth);
+    const y = parseInt(selectedYear);
+    const all = sheetsData.leads;
+
+    const inMonth = (dateStr: string) => {
+      const d = parseDateBR(dateStr);
+      return d && d.getMonth() + 1 === m && d.getFullYear() === y;
+    };
+
+    const mql = all.filter((l) => inMonth(l.DATA));
+    const cr = all.filter((l) => isPositive(l["C.R"]) && inMonth(l.DATA));
+    const ra = all.filter((l) => isPositive(l["R.A"]) && inMonth(l.DATA));
+    const rr = all.filter((l) => isPositive(l["R.R"]) && inMonth(l["DATA REUNIÃO REALIZADA"] || l.DATA));
+    const ass = all.filter((l) => (isPositive(l.ASS) || (l["DATA DA ASSINATURA"] && l["DATA DA ASSINATURA"].trim() !== "")) && inMonth(l["DATA DA ASSINATURA"] || l.DATA));
+    return { mql, cr, ra, rr, ass };
+  }, [sheetsData, selectedMonth, selectedYear]);
 
   // Active leads based on view toggle
-  const activeLeads = funnelView === "month" ? filteredLeads : allLeads;
+  const activeLeads = funnelView === "byDate" ? filteredLeads : stageFilteredLeads.mql;
 
   // ── Funnel counts (uses activeLeads) ──
   const funnel = useMemo(() => {
