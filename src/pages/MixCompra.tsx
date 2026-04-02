@@ -9,13 +9,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Settings, Plus, X, Copy } from "lucide-react";
+import { Settings, Plus, X, Copy, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useGoogleSheetsData } from "@/hooks/useGoogleSheetsData";
 import { isPositive } from "@/utils/dataProcessor";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import FunnelSkeleton from "@/components/FunnelSkeleton";
+import LeadsDialog from "@/components/LeadsDialog";
 
 // ── helpers ──
 
@@ -114,6 +115,10 @@ const MixCompra = () => {
   const [selectedMonth, setSelectedMonth] = useState((now.getMonth() + 1).toString());
   const [selectedYear, setSelectedYear] = useState(now.getFullYear().toString());
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [leadsDialogOpen, setLeadsDialogOpen] = useState(false);
+  const [leadsDialogStage, setLeadsDialogStage] = useState("");
+  const [leadsDialogLeads, setLeadsDialogLeads] = useState<any[]>([]);
+  const [funnelView, setFunnelView] = useState<"month" | "all">("month");
 
   const months = [
     { value: "1", label: "Janeiro" }, { value: "2", label: "Fevereiro" }, { value: "3", label: "Março" },
@@ -151,23 +156,56 @@ const MixCompra = () => {
     });
   }, [sheetsData, selectedMonth, selectedYear]);
 
-  // ── Funnel counts ──
+  // All leads (for "geral" view)
+  const allLeads = useMemo(() => sheetsData?.leads || [], [sheetsData]);
+
+  // Active leads based on view toggle
+  const activeLeads = funnelView === "month" ? filteredLeads : allLeads;
+
+  // ── Funnel counts (uses activeLeads) ──
   const funnel = useMemo(() => {
-    const mql = filteredLeads.length;
-    const cr = filteredLeads.filter((l) => isPositive(l["C.R"])).length;
-    const ra = filteredLeads.filter((l) => isPositive(l["R.A"])).length;
-    const rr = filteredLeads.filter((l) => isPositive(l["R.R"])).length;
-    const ass = filteredLeads.filter((l) => isPositive(l.ASS) || (l["DATA DA ASSINATURA"] && l["DATA DA ASSINATURA"].trim() !== "")).length;
+    const mql = activeLeads.length;
+    const cr = activeLeads.filter((l) => isPositive(l["C.R"])).length;
+    const ra = activeLeads.filter((l) => isPositive(l["R.A"])).length;
+    const rr = activeLeads.filter((l) => isPositive(l["R.R"])).length;
+    const ass = activeLeads.filter((l) => isPositive(l.ASS) || (l["DATA DA ASSINATURA"] && l["DATA DA ASSINATURA"].trim() !== "")).length;
     return { mql, cr, ra, rr, ass };
-  }, [filteredLeads]);
+  }, [activeLeads]);
+
+  // ── Leads by stage (for dialog) ──
+  const getLeadsByStage = (stageKey: string) => {
+    const leads = activeLeads;
+    switch (stageKey) {
+      case "mql": return leads;
+      case "cr": return leads.filter((l) => isPositive(l["C.R"]));
+      case "ra": return leads.filter((l) => isPositive(l["R.A"]));
+      case "rr": return leads.filter((l) => isPositive(l["R.R"]));
+      case "ass": return leads.filter((l) => isPositive(l.ASS) || (l["DATA DA ASSINATURA"] && l["DATA DA ASSINATURA"].trim() !== ""));
+      default: return [];
+    }
+  };
+
+  const handleFunnelStageClick = (stageKey: string, stageLabel: string) => {
+    const leads = getLeadsByStage(stageKey);
+    setLeadsDialogLeads(leads);
+    setLeadsDialogStage(stageLabel);
+    setLeadsDialogOpen(true);
+  };
 
   // ── KPI calcs ──
   const investimento = useMemo(() => filteredLeads.reduce((s, l) => s + parseCurrency(l.CPMQL), 0), [filteredLeads]);
   const cpmqlMedio = funnel.mql > 0 ? investimento / funnel.mql : 0;
 
+  // Meta (E.F) calculation - revenue from signed contracts
+  const metaRevenue = useMemo(() => {
+    const assLeads = activeLeads.filter((l) => isPositive(l.ASS) || (l["DATA DA ASSINATURA"] && l["DATA DA ASSINATURA"].trim() !== ""));
+    return assLeads.reduce((s, l) => s + parseCurrency(l["E.F"]) + parseCurrency(l.BOOKING), 0);
+  }, [activeLeads]);
+
   const leadsTarget = goals?.leads_target ?? 0;
   const cpmqlTarget = goals?.cpmql_target ?? 0;
   const investTarget = goals?.investment_target ?? 0;
+  const metaTarget = goals?.ef_target ?? 0;
   const q1Pct = goals?.pace_q1_pct ?? 0.7;
   const q1DiaLimite = goals?.pace_q1_dia_limite ?? 15;
 
@@ -176,6 +214,8 @@ const MixCompra = () => {
 
   const paceStatus = funnel.mql >= expectedLeads ? "green" : funnel.mql >= expectedLeads * 0.85 ? "yellow" : "red";
   const paceLabel = paceStatus === "green" ? "Adiantado" : paceStatus === "yellow" ? "No ritmo" : "Atrasado";
+  const metaPct = Number(metaTarget) > 0 ? (metaRevenue / Number(metaTarget)) * 100 : 0;
+  const metaStatus = metaPct >= 100 ? "green" : metaPct >= 70 ? "yellow" : "red";
 
   // ── Funnel meta ──
   const funnelMeta = useMemo(() => {
@@ -448,7 +488,7 @@ const MixCompra = () => {
         ) : (
           <>
             {/* ── KPIs ── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               <Card className="p-4 border-border/50 bg-card space-y-2">
                 <p className="text-xs text-muted-foreground font-medium">Leads Comprados</p>
                 <p className="text-2xl font-bold">{funnel.mql} <span className="text-sm text-muted-foreground font-normal">/ {leadsTarget}</span></p>
@@ -469,6 +509,14 @@ const MixCompra = () => {
                 <p className="text-xs text-muted-foreground">{Number(investTarget) > 0 ? ((investimento / Number(investTarget)) * 100).toFixed(0) : 0}% de {fmtCurrency(Number(investTarget))}</p>
               </Card>
               <Card className="p-4 border-border/50 bg-card space-y-2">
+                <p className="text-xs text-muted-foreground font-medium">Meta</p>
+                <p className="text-2xl font-bold" style={{ color: statusColor[metaStatus] }}>
+                  {fmtCurrency(metaRevenue)}
+                </p>
+                <Progress value={Math.min(metaPct, 100)} className="h-2" />
+                <p className="text-xs text-muted-foreground">{metaPct.toFixed(0)}% de {fmtCurrency(Number(metaTarget))}</p>
+              </Card>
+              <Card className="p-4 border-border/50 bg-card space-y-2">
                 <p className="text-xs text-muted-foreground font-medium">Pace</p>
                 <p className="text-2xl font-bold">{funnel.mql} <span className="text-sm text-muted-foreground font-normal">/ {expectedLeads} esp.</span></p>
                 <p className="text-sm font-semibold" style={{ color: statusColor[paceStatus] }}>{paceLabel}</p>
@@ -478,7 +526,27 @@ const MixCompra = () => {
 
             {/* ── Visual Funnel (SVG) ── */}
             <Card className="p-4 lg:p-6 border-border/50 bg-card">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Funil</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Funil</h3>
+                <div className="flex items-center gap-1 bg-muted/20 rounded-md p-0.5">
+                  <Button
+                    variant={funnelView === "month" ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-7 text-xs px-3"
+                    onClick={() => setFunnelView("month")}
+                  >
+                    Mês
+                  </Button>
+                  <Button
+                    variant={funnelView === "all" ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-7 text-xs px-3"
+                    onClick={() => setFunnelView("all")}
+                  >
+                    Geral
+                  </Button>
+                </div>
+              </div>
               {(() => {
                 const FUNNEL_WIDTH = 700;
                 const FUNNEL_CENTER = FUNNEL_WIDTH / 2;
@@ -486,11 +554,11 @@ const MixCompra = () => {
                 const GAP = 6;
 
                 const svgStages = [
-                  { label: 'MQL', real: funnel.mql, expected: funnelExpected.expectedLeads, realRate: null as number | null, metaRate: null as number | null, topWidth: 680, bottomWidth: 580 },
-                  { label: 'C.R', real: funnel.cr, expected: funnelExpected.expectedCR, realRate: funnel.mql > 0 ? Math.round((funnel.cr / funnel.mql) * 100) : 0, metaRate: Math.round(Number(goals?.cr_rate ?? 0) * 100), topWidth: 570, bottomWidth: 470 },
-                  { label: 'R.A', real: funnel.ra, expected: funnelExpected.expectedRA, realRate: funnel.cr > 0 ? Math.round((funnel.ra / funnel.cr) * 100) : 0, metaRate: Math.round(Number(goals?.ra_rate ?? 0) * 100), topWidth: 460, bottomWidth: 370 },
-                  { label: 'R.R', real: funnel.rr, expected: funnelExpected.expectedRR, realRate: funnel.ra > 0 ? Math.round((funnel.rr / funnel.ra) * 100) : 0, metaRate: Math.round(Number(goals?.rr_rate ?? 0) * 100), topWidth: 360, bottomWidth: 280 },
-                  { label: 'ASS', real: funnel.ass, expected: funnelExpected.expectedASS, realRate: funnel.rr > 0 ? Math.round((funnel.ass / funnel.rr) * 100) : 0, metaRate: Math.round(Number(goals?.ass_rate ?? 0) * 100), topWidth: 270, bottomWidth: 200 },
+                  { key: 'mql', label: 'MQL', real: funnel.mql, expected: funnelExpected.expectedLeads, realRate: null as number | null, metaRate: null as number | null, topWidth: 680, bottomWidth: 580 },
+                  { key: 'cr', label: 'C.R', real: funnel.cr, expected: funnelExpected.expectedCR, realRate: funnel.mql > 0 ? Math.round((funnel.cr / funnel.mql) * 100) : 0, metaRate: Math.round(Number(goals?.cr_rate ?? 0) * 100), topWidth: 570, bottomWidth: 470 },
+                  { key: 'ra', label: 'R.A', real: funnel.ra, expected: funnelExpected.expectedRA, realRate: funnel.cr > 0 ? Math.round((funnel.ra / funnel.cr) * 100) : 0, metaRate: Math.round(Number(goals?.ra_rate ?? 0) * 100), topWidth: 460, bottomWidth: 370 },
+                  { key: 'rr', label: 'R.R', real: funnel.rr, expected: funnelExpected.expectedRR, realRate: funnel.ra > 0 ? Math.round((funnel.rr / funnel.ra) * 100) : 0, metaRate: Math.round(Number(goals?.rr_rate ?? 0) * 100), topWidth: 360, bottomWidth: 280 },
+                  { key: 'ass', label: 'ASS', real: funnel.ass, expected: funnelExpected.expectedASS, realRate: funnel.rr > 0 ? Math.round((funnel.ass / funnel.rr) * 100) : 0, metaRate: Math.round(Number(goals?.ass_rate ?? 0) * 100), topWidth: 270, bottomWidth: 200 },
                 ];
 
                 const totalHeight = svgStages.length * STAGE_HEIGHT + (svgStages.length - 1) * GAP;
@@ -537,7 +605,7 @@ const MixCompra = () => {
                       ].join(' ');
 
                       return (
-                        <g key={stage.label}>
+                        <g key={stage.label} className="cursor-pointer" onClick={() => handleFunnelStageClick(stage.key, stage.label)}>
                           <polygon points={leftPoints} fill={leftColor} opacity="0.9" />
                           <polygon points={rightPoints} fill={rightColor} opacity="0.9" />
                           <line
@@ -728,7 +796,7 @@ const MixCompra = () => {
                     { key: "investment_target", label: "Investimento (R$)" },
                     { key: "leads_target", label: "Leads Target" },
                     { key: "cpmql_target", label: "CPMQL Target (R$)" },
-                    { key: "ef_target", label: "E.F Target (R$)" },
+                    { key: "ef_target", label: "Meta (R$)" },
                     { key: "ef_avg", label: "E.F Médio por Fechamento (R$)" },
                     { key: "cr_rate", label: "CR (%)" },
                     { key: "ra_rate", label: "RA (%)" },
@@ -860,6 +928,15 @@ const MixCompra = () => {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* ── Leads Dialog ── */}
+        <LeadsDialog
+          open={leadsDialogOpen}
+          onOpenChange={setLeadsDialogOpen}
+          leads={leadsDialogLeads}
+          stageTitle={leadsDialogStage}
+          showRevenue={leadsDialogStage === "ASS"}
+        />
       </main>
     </div>
   );
