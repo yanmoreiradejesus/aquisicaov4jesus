@@ -118,7 +118,7 @@ const MixCompra = () => {
   const [leadsDialogOpen, setLeadsDialogOpen] = useState(false);
   const [leadsDialogStage, setLeadsDialogStage] = useState("");
   const [leadsDialogLeads, setLeadsDialogLeads] = useState<any[]>([]);
-  const [funnelView, setFunnelView] = useState<"month" | "all">("month");
+  const [funnelView, setFunnelView] = useState<"byStage" | "byDate">("byStage");
 
   const months = [
     { value: "1", label: "Janeiro" }, { value: "2", label: "Fevereiro" }, { value: "3", label: "Março" },
@@ -156,25 +156,63 @@ const MixCompra = () => {
     });
   }, [sheetsData, selectedMonth, selectedYear]);
 
-  // All leads (for "geral" view)
-  const allLeads = useMemo(() => sheetsData?.leads || [], [sheetsData]);
+  // "Por Etapa" leads: MQL/CR/RA by DATA, RR by DATA REUNIÃO REALIZADA, ASS by DATA DA ASSINATURA
+  const stageFilteredLeads = useMemo(() => {
+    if (!sheetsData?.leads) return { mql: [] as any[], cr: [] as any[], ra: [] as any[], rr: [] as any[], ass: [] as any[] };
+    const m = parseInt(selectedMonth);
+    const y = parseInt(selectedYear);
+    const all = sheetsData.leads;
+
+    const inMonth = (dateStr: string) => {
+      const d = parseDateBR(dateStr);
+      return d && d.getMonth() + 1 === m && d.getFullYear() === y;
+    };
+
+    const mql = all.filter((l) => inMonth(l.DATA));
+    const cr = all.filter((l) => isPositive(l["C.R"]) && inMonth(l.DATA));
+    const ra = all.filter((l) => isPositive(l["R.A"]) && inMonth(l.DATA));
+    const rr = all.filter((l) => isPositive(l["R.R"]) && inMonth(l["DATA REUNIÃO REALIZADA"] || l.DATA));
+    const ass = all.filter((l) => (isPositive(l.ASS) || (l["DATA DA ASSINATURA"] && l["DATA DA ASSINATURA"].trim() !== "")) && inMonth(l["DATA DA ASSINATURA"] || l.DATA));
+    return { mql, cr, ra, rr, ass };
+  }, [sheetsData, selectedMonth, selectedYear]);
 
   // Active leads based on view toggle
-  const activeLeads = funnelView === "month" ? filteredLeads : allLeads;
+  const activeLeads = funnelView === "byDate" ? filteredLeads : stageFilteredLeads.mql;
 
-  // ── Funnel counts (uses activeLeads) ──
+  // ── Funnel counts ──
   const funnel = useMemo(() => {
-    const mql = activeLeads.length;
-    const cr = activeLeads.filter((l) => isPositive(l["C.R"])).length;
-    const ra = activeLeads.filter((l) => isPositive(l["R.A"])).length;
-    const rr = activeLeads.filter((l) => isPositive(l["R.R"])).length;
-    const ass = activeLeads.filter((l) => isPositive(l.ASS) || (l["DATA DA ASSINATURA"] && l["DATA DA ASSINATURA"].trim() !== "")).length;
-    return { mql, cr, ra, rr, ass };
-  }, [activeLeads]);
+    if (funnelView === "byStage") {
+      return {
+        mql: stageFilteredLeads.mql.length,
+        cr: stageFilteredLeads.cr.length,
+        ra: stageFilteredLeads.ra.length,
+        rr: stageFilteredLeads.rr.length,
+        ass: stageFilteredLeads.ass.length,
+      };
+    }
+    const leads = filteredLeads;
+    return {
+      mql: leads.length,
+      cr: leads.filter((l) => isPositive(l["C.R"])).length,
+      ra: leads.filter((l) => isPositive(l["R.A"])).length,
+      rr: leads.filter((l) => isPositive(l["R.R"])).length,
+      ass: leads.filter((l) => isPositive(l.ASS) || (l["DATA DA ASSINATURA"] && l["DATA DA ASSINATURA"].trim() !== "")).length,
+    };
+  }, [funnelView, stageFilteredLeads, filteredLeads]);
 
   // ── Leads by stage (for dialog) ──
   const getLeadsByStage = (stageKey: string) => {
-    const leads = activeLeads;
+    if (funnelView === "byStage") {
+      switch (stageKey) {
+        case "mql": return stageFilteredLeads.mql;
+        case "cr": return stageFilteredLeads.cr;
+        case "ra": return stageFilteredLeads.ra;
+        case "rr": return stageFilteredLeads.rr;
+        case "ass": return stageFilteredLeads.ass;
+        default: return [];
+      }
+    }
+    const leads = filteredLeads;
     switch (stageKey) {
       case "mql": return leads;
       case "cr": return leads.filter((l) => isPositive(l["C.R"]));
@@ -198,9 +236,9 @@ const MixCompra = () => {
 
   // Meta (E.F) calculation - revenue from signed contracts
   const metaRevenue = useMemo(() => {
-    const assLeads = activeLeads.filter((l) => isPositive(l.ASS) || (l["DATA DA ASSINATURA"] && l["DATA DA ASSINATURA"].trim() !== ""));
+    const assLeads = funnelView === "byStage" ? stageFilteredLeads.ass : filteredLeads.filter((l) => isPositive(l.ASS) || (l["DATA DA ASSINATURA"] && l["DATA DA ASSINATURA"].trim() !== ""));
     return assLeads.reduce((s, l) => s + parseCurrency(l["E.F"]) + parseCurrency(l.BOOKING), 0);
-  }, [activeLeads]);
+  }, [funnelView, stageFilteredLeads, filteredLeads]);
 
   const leadsTarget = goals?.leads_target ?? 0;
   const cpmqlTarget = goals?.cpmql_target ?? 0;
@@ -530,20 +568,20 @@ const MixCompra = () => {
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Funil</h3>
                 <div className="flex items-center gap-1 bg-muted/20 rounded-md p-0.5">
                   <Button
-                    variant={funnelView === "month" ? "secondary" : "ghost"}
+                    variant={funnelView === "byStage" ? "secondary" : "ghost"}
                     size="sm"
                     className="h-7 text-xs px-3"
-                    onClick={() => setFunnelView("month")}
+                    onClick={() => setFunnelView("byStage")}
                   >
-                    Mês
+                    Por Etapa
                   </Button>
                   <Button
-                    variant={funnelView === "all" ? "secondary" : "ghost"}
+                    variant={funnelView === "byDate" ? "secondary" : "ghost"}
                     size="sm"
                     className="h-7 text-xs px-3"
-                    onClick={() => setFunnelView("all")}
+                    onClick={() => setFunnelView("byDate")}
                   >
-                    Geral
+                    Por Data
                   </Button>
                 </div>
               </div>
