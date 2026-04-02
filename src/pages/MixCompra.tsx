@@ -928,6 +928,15 @@ const MixCompra = () => {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* ── Leads Dialog ── */}
+        <LeadsDialog
+          open={leadsDialogOpen}
+          onOpenChange={setLeadsDialogOpen}
+          leads={leadsDialogLeads}
+          stageTitle={leadsDialogStage}
+          showRevenue={leadsDialogStage === "ASS"}
+        />
       </main>
     </div>
   );
