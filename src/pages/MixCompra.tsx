@@ -526,7 +526,27 @@ const MixCompra = () => {
 
             {/* ── Visual Funnel (SVG) ── */}
             <Card className="p-4 lg:p-6 border-border/50 bg-card">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Funil</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Funil</h3>
+                <div className="flex items-center gap-1 bg-muted/20 rounded-md p-0.5">
+                  <Button
+                    variant={funnelView === "month" ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-7 text-xs px-3"
+                    onClick={() => setFunnelView("month")}
+                  >
+                    Mês
+                  </Button>
+                  <Button
+                    variant={funnelView === "all" ? "secondary" : "ghost"}
+                    size="sm"
+                    className="h-7 text-xs px-3"
+                    onClick={() => setFunnelView("all")}
+                  >
+                    Geral
+                  </Button>
+                </div>
+              </div>
               {(() => {
                 const FUNNEL_WIDTH = 700;
                 const FUNNEL_CENTER = FUNNEL_WIDTH / 2;
