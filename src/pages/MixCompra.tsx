@@ -388,132 +388,24 @@ const MixCompra = () => {
     return `${sign}${d.toFixed(1)}pp`;
   };
 
-  const funnelStages = [
-    { key: "mql", label: "MQL", rate: null, metaRate: null },
-    { key: "cr", label: "C.R", rate: funnel.mql > 0 ? (funnel.cr / funnel.mql) * 100 : 0, metaRate: Number(goals?.cr_rate ?? 0) * 100 },
-    { key: "ra", label: "R.A", rate: funnel.cr > 0 ? (funnel.ra / funnel.cr) * 100 : 0, metaRate: Number(goals?.ra_rate ?? 0) * 100 },
-    { key: "rr", label: "R.R", rate: funnel.ra > 0 ? (funnel.rr / funnel.ra) * 100 : 0, metaRate: Number(goals?.rr_rate ?? 0) * 100 },
-    { key: "ass", label: "ASS", rate: funnel.rr > 0 ? (funnel.ass / funnel.rr) * 100 : 0, metaRate: Number(goals?.ass_rate ?? 0) * 100 },
+  const funnelExpected = calcFunnelExpected(currentDay, goals, isCurrentMonth);
+
+  const funnelVisualStages = [
+    { key: "mql", label: "MQL", real: funnel.mql, expected: funnelExpected.expectedLeads, rate: null as number | null, metaRate: null as number | null, widthPct: 100 },
+    { key: "cr", label: "C.R", real: funnel.cr, expected: funnelExpected.expectedCR, rate: funnel.mql > 0 ? (funnel.cr / funnel.mql) * 100 : 0, metaRate: Number(goals?.cr_rate ?? 0) * 100, widthPct: 80 },
+    { key: "ra", label: "R.A", real: funnel.ra, expected: funnelExpected.expectedRA, rate: funnel.cr > 0 ? (funnel.ra / funnel.cr) * 100 : 0, metaRate: Number(goals?.ra_rate ?? 0) * 100, widthPct: 62 },
+    { key: "rr", label: "R.R", real: funnel.rr, expected: funnelExpected.expectedRR, rate: funnel.ra > 0 ? (funnel.rr / funnel.ra) * 100 : 0, metaRate: Number(goals?.rr_rate ?? 0) * 100, widthPct: 46 },
+    { key: "ass", label: "ASS", real: funnel.ass, expected: funnelExpected.expectedASS, rate: funnel.rr > 0 ? (funnel.ass / funnel.rr) * 100 : 0, metaRate: Number(goals?.ass_rate ?? 0) * 100, widthPct: 28 },
   ];
 
   const sumPct = (rows: { pct: string }[]) => rows.reduce((s, r) => s + (parseFloat(r.pct) || 0), 0);
 
-  return (
-    <div className="min-h-screen bg-background">
-      <V4Header />
-      <main className="container mx-auto max-w-7xl space-y-6 px-4 lg:px-8 py-8">
-
-        {/* ── Header row ── */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <span className="font-body text-sm font-medium text-muted-foreground">Visualizar:</span>
-            <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-              <SelectTrigger className="w-36 border-border/50 bg-background"><SelectValue /></SelectTrigger>
-              <SelectContent className="bg-card border-border z-50">
-                {months.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Select value={selectedYear} onValueChange={setSelectedYear}>
-              <SelectTrigger className="w-28 border-border/50 bg-background"><SelectValue /></SelectTrigger>
-              <SelectContent className="bg-card border-border z-50">
-                {years.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          {isAdmin && (
-            <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)} className="gap-2">
-              <Settings className="h-4 w-4" /> Configurar
-            </Button>
-          )}
-        </div>
-
-        {!goals ? (
-          <Card className="flex flex-col items-center justify-center p-12 gap-4 border-border/50 bg-card">
-            <p className="text-muted-foreground text-sm">Metas não configuradas para este mês</p>
-            {isAdmin && (
-              <Button onClick={() => setDialogOpen(true)} className="gap-2">
-                <Settings className="h-4 w-4" /> Configurar
-              </Button>
-            )}
-          </Card>
-        ) : (
-          <>
-            {/* ── KPIs ── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Leads */}
-              <Card className="p-4 border-border/50 bg-card space-y-2">
-                <p className="text-xs text-muted-foreground font-medium">Leads Comprados</p>
-                <p className="text-2xl font-bold">{funnel.mql} <span className="text-sm text-muted-foreground font-normal">/ {leadsTarget}</span></p>
-                <Progress value={leadsTarget > 0 ? Math.min((funnel.mql / leadsTarget) * 100, 100) : 0} className="h-2" />
-                <p className="text-xs text-muted-foreground">{leadsTarget > 0 ? ((funnel.mql / leadsTarget) * 100).toFixed(0) : 0}%</p>
-              </Card>
-
-              {/* CPMQL */}
-              <Card className="p-4 border-border/50 bg-card space-y-2">
-                <p className="text-xs text-muted-foreground font-medium">CPMQL Médio</p>
-                <p className="text-2xl font-bold" style={{ color: statusColor[getCpmqlStatus(cpmqlMedio, Number(cpmqlTarget))] }}>
-                  {fmtCurrency(cpmqlMedio)}
-                </p>
-                <p className="text-xs text-muted-foreground">Target: {fmtCurrency(Number(cpmqlTarget))}</p>
-              </Card>
-
-              {/* Investimento */}
-              <Card className="p-4 border-border/50 bg-card space-y-2">
-                <p className="text-xs text-muted-foreground font-medium">Investimento</p>
-                <p className="text-2xl font-bold">{fmtCurrency(investimento)}</p>
-                <Progress value={Number(investTarget) > 0 ? Math.min((investimento / Number(investTarget)) * 100, 100) : 0} className="h-2" />
-                <p className="text-xs text-muted-foreground">{Number(investTarget) > 0 ? ((investimento / Number(investTarget)) * 100).toFixed(0) : 0}% de {fmtCurrency(Number(investTarget))}</p>
-              </Card>
-
-              {/* Pace */}
-              <Card className="p-4 border-border/50 bg-card space-y-2">
-                <p className="text-xs text-muted-foreground font-medium">Pace</p>
-                <p className="text-2xl font-bold">{funnel.mql} <span className="text-sm text-muted-foreground font-normal">/ {expectedLeads} esp.</span></p>
-                <p className="text-sm font-semibold" style={{ color: statusColor[paceStatus] }}>{paceLabel}</p>
-                <p className="text-xs text-muted-foreground">dia {currentDay}/30</p>
-              </Card>
-            </div>
-
-            {/* ── Funnel ── */}
-            <Card className="p-4 lg:p-6 border-border/50 bg-card space-y-4">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Funil</h3>
-              {/* Meta line */}
-              <div className="flex items-center flex-wrap gap-1 text-sm">
-                <span className="font-medium text-muted-foreground">Meta:</span>
-                {funnelStages.map((s, i) => (
-                  <span key={s.key} className="flex items-center gap-1">
-                    {i > 0 && <span className="text-muted-foreground mx-1">→</span>}
-                    <span className="px-2 py-0.5 rounded bg-muted/30 text-foreground text-xs font-medium">
-                      {funnelMeta[s.key as keyof typeof funnelMeta]} {s.label}
-                      {s.metaRate !== null && ` (${s.metaRate.toFixed(0)}%)`}
-                    </span>
-                  </span>
-                ))}
-              </div>
-              {/* Real line */}
-              <div className="flex items-center flex-wrap gap-1 text-sm">
-                <span className="font-medium text-muted-foreground">Real:</span>
-                {funnelStages.map((s, i) => {
-                  const st = s.rate !== null && s.metaRate !== null ? getFunnelStatus(s.rate, s.metaRate) : "green";
-                  return (
-                    <span key={s.key} className="flex items-center gap-1">
-                      {i > 0 && <span className="text-muted-foreground mx-1">→</span>}
-                      <span
-                        className="px-2 py-0.5 rounded text-xs font-medium"
-                        style={{
-                          backgroundColor: s.rate !== null ? `${statusColor[st]}20` : undefined,
-                          color: s.rate !== null ? statusColor[st] : undefined,
-                          border: s.rate !== null ? `1px solid ${statusColor[st]}40` : undefined,
-                        }}
-                      >
-                        {funnel[s.key as keyof typeof funnel]} {s.label}
-                        {s.rate !== null && ` (${s.rate.toFixed(0)}%)`}
-                      </span>
-                    </span>
-                  );
-                })}
-              </div>
-            </Card>
+  // Trapezoid clip-path: top is wider, bottom is narrower (next stage width)
+  const getTrapezoidClipPath = (topPct: number, bottomPct: number) => {
+    const topInset = (100 - topPct) / 2;
+    const bottomInset = (100 - bottomPct) / 2;
+    return `polygon(${topInset}% 0%, ${100 - topInset}% 0%, ${100 - bottomInset}% 100%, ${bottomInset}% 100%)`;
+  };
 
             {/* ── Mix Tables ── */}
             <Tabs defaultValue="tier">
