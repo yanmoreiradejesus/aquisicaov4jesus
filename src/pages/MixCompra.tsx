@@ -469,33 +469,73 @@ const MixCompra = () => {
               </Card>
             </div>
 
-            {/* ── Visual Funnel ── */}
+            {/* ── Visual Funnel (SVG) ── */}
             <Card className="p-4 lg:p-6 border-border/50 bg-card">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Funil</h3>
-              <div className="flex flex-col items-center gap-1.5">
-                {funnelVisualStages.map((stage) => {
-                  const color = getEtapaColor(stage.real, stage.expected);
-                  return (
-                    <div
-                      key={stage.key}
-                      style={{ width: `${stage.widthPct}%`, backgroundColor: color }}
-                      className="h-11 rounded-md flex items-center justify-between px-4 text-white text-sm"
-                    >
-                      <span className="min-w-[70px] text-left text-xs font-semibold">
-                        {stage.real} / {stage.expected}
-                      </span>
-                      <span className="font-bold text-sm">
-                        {stage.label}
-                      </span>
-                      <span className="min-w-[90px] text-right text-xs font-semibold">
-                        {stage.rate !== null
-                          ? `${stage.rate.toFixed(0)}% / ${stage.metaRate?.toFixed(0)}%`
-                          : '—'}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+              {(() => {
+                const FUNNEL_WIDTH = 700;
+                const FUNNEL_CENTER = FUNNEL_WIDTH / 2;
+                const STAGE_HEIGHT = 50;
+                const GAP = 6;
+
+                const svgStages = [
+                  { label: 'MQL', real: funnel.mql, expected: funnelExpected.expectedLeads, realRate: null as number | null, metaRate: null as number | null, topWidth: 680, bottomWidth: 580 },
+                  { label: 'C.R', real: funnel.cr, expected: funnelExpected.expectedCR, realRate: funnel.mql > 0 ? Math.round((funnel.cr / funnel.mql) * 100) : 0, metaRate: Math.round(Number(goals?.cr_rate ?? 0) * 100), topWidth: 570, bottomWidth: 470 },
+                  { label: 'R.A', real: funnel.ra, expected: funnelExpected.expectedRA, realRate: funnel.cr > 0 ? Math.round((funnel.ra / funnel.cr) * 100) : 0, metaRate: Math.round(Number(goals?.ra_rate ?? 0) * 100), topWidth: 460, bottomWidth: 370 },
+                  { label: 'R.R', real: funnel.rr, expected: funnelExpected.expectedRR, realRate: funnel.ra > 0 ? Math.round((funnel.rr / funnel.ra) * 100) : 0, metaRate: Math.round(Number(goals?.rr_rate ?? 0) * 100), topWidth: 360, bottomWidth: 280 },
+                  { label: 'ASS', real: funnel.ass, expected: funnelExpected.expectedASS, realRate: funnel.rr > 0 ? Math.round((funnel.ass / funnel.rr) * 100) : 0, metaRate: Math.round(Number(goals?.ass_rate ?? 0) * 100), topWidth: 270, bottomWidth: 200 },
+                ];
+
+                const totalHeight = svgStages.length * STAGE_HEIGHT + (svgStages.length - 1) * GAP;
+
+                return (
+                  <svg viewBox={`0 0 ${FUNNEL_WIDTH} ${totalHeight}`} className="w-full max-w-3xl mx-auto">
+                    {svgStages.map((stage, i) => {
+                      const y = i * (STAGE_HEIGHT + GAP);
+                      const halfTop = stage.topWidth / 2;
+                      const halfBottom = stage.bottomWidth / 2;
+                      const color = getEtapaColor(stage.real, stage.expected);
+
+                      const points = [
+                        `${FUNNEL_CENTER - halfTop},${y}`,
+                        `${FUNNEL_CENTER + halfTop},${y}`,
+                        `${FUNNEL_CENTER + halfBottom},${y + STAGE_HEIGHT}`,
+                        `${FUNNEL_CENTER - halfBottom},${y + STAGE_HEIGHT}`,
+                      ].join(' ');
+
+                      return (
+                        <g key={stage.label}>
+                          <polygon points={points} fill={color} opacity="0.9" />
+                          <line
+                            x1={FUNNEL_CENTER} y1={y + 4}
+                            x2={FUNNEL_CENTER} y2={y + STAGE_HEIGHT - 4}
+                            stroke="rgba(255,255,255,0.3)" strokeWidth="1"
+                          />
+                          <text
+                            x={FUNNEL_CENTER - 20} y={y + STAGE_HEIGHT / 2 + 5}
+                            textAnchor="end" fill="white" fontSize="13" fontWeight="500"
+                          >
+                            {stage.real} / {stage.expected}
+                          </text>
+                          <text
+                            x={FUNNEL_CENTER} y={y + 14}
+                            textAnchor="middle" fill="rgba(255,255,255,0.7)" fontSize="10" fontWeight="600"
+                            letterSpacing="1"
+                          >
+                            {stage.label}
+                          </text>
+                          <text
+                            x={FUNNEL_CENTER + 20} y={y + STAGE_HEIGHT / 2 + 5}
+                            textAnchor="start" fill="white" fontSize="13" fontWeight="500"
+                          >
+                            {stage.realRate !== null ? `${stage.realRate}% / ${stage.metaRate}%` : '—'}
+                          </text>
+                        </g>
+                      );
+                    })}
+                  </svg>
+                );
+              })()}
             </Card>
 
             {/* ── Mix Tables ── */}
