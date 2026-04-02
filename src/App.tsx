@@ -11,6 +11,7 @@ import Metas from "./pages/Metas";
 import Admin from "./pages/Admin";
 import Financeiro from "./pages/Financeiro";
 import DashboardComercial from "./pages/DashboardComercial";
+import MixCompra from "./pages/MixCompra";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -43,6 +44,11 @@ const AppRoutes = () => {
       <Route path="/financeiro" element={
         <ProtectedRoute requiredPath="/financeiro">
           <PageTransition><Financeiro /></PageTransition>
+        </ProtectedRoute>
+      } />
+      <Route path="/mix-compra" element={
+        <ProtectedRoute requiredPath="/mix-compra">
+          <PageTransition><MixCompra /></PageTransition>
         </ProtectedRoute>
       } />
       <Route path="/admin" element={
