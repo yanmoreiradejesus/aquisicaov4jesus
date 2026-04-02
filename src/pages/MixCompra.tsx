@@ -393,19 +393,12 @@ const MixCompra = () => {
   const funnelVisualStages = [
     { key: "mql", label: "MQL", real: funnel.mql, expected: funnelExpected.expectedLeads, rate: null as number | null, metaRate: null as number | null, widthPct: 100 },
     { key: "cr", label: "C.R", real: funnel.cr, expected: funnelExpected.expectedCR, rate: funnel.mql > 0 ? (funnel.cr / funnel.mql) * 100 : 0, metaRate: Number(goals?.cr_rate ?? 0) * 100, widthPct: 80 },
-    { key: "ra", label: "R.A", real: funnel.ra, expected: funnelExpected.expectedRA, rate: funnel.cr > 0 ? (funnel.ra / funnel.cr) * 100 : 0, metaRate: Number(goals?.ra_rate ?? 0) * 100, widthPct: 62 },
-    { key: "rr", label: "R.R", real: funnel.rr, expected: funnelExpected.expectedRR, rate: funnel.ra > 0 ? (funnel.rr / funnel.ra) * 100 : 0, metaRate: Number(goals?.rr_rate ?? 0) * 100, widthPct: 46 },
-    { key: "ass", label: "ASS", real: funnel.ass, expected: funnelExpected.expectedASS, rate: funnel.rr > 0 ? (funnel.ass / funnel.rr) * 100 : 0, metaRate: Number(goals?.ass_rate ?? 0) * 100, widthPct: 28 },
+    { key: "ra", label: "R.A", real: funnel.ra, expected: funnelExpected.expectedRA, rate: funnel.cr > 0 ? (funnel.ra / funnel.cr) * 100 : 0, metaRate: Number(goals?.ra_rate ?? 0) * 100, widthPct: 60 },
+    { key: "rr", label: "R.R", real: funnel.rr, expected: funnelExpected.expectedRR, rate: funnel.ra > 0 ? (funnel.rr / funnel.ra) * 100 : 0, metaRate: Number(goals?.rr_rate ?? 0) * 100, widthPct: 45 },
+    { key: "ass", label: "ASS", real: funnel.ass, expected: funnelExpected.expectedASS, rate: funnel.rr > 0 ? (funnel.ass / funnel.rr) * 100 : 0, metaRate: Number(goals?.ass_rate ?? 0) * 100, widthPct: 30 },
   ];
 
   const sumPct = (rows: { pct: string }[]) => rows.reduce((s, r) => s + (parseFloat(r.pct) || 0), 0);
-
-  // Trapezoid clip-path: top is wider, bottom is narrower (next stage width)
-  const getTrapezoidClipPath = (topPct: number, bottomPct: number) => {
-    const topInset = (100 - topPct) / 2;
-    const bottomInset = (100 - bottomPct) / 2;
-    return `polygon(${topInset}% 0%, ${100 - topInset}% 0%, ${100 - bottomInset}% 100%, ${bottomInset}% 100%)`;
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -477,33 +470,28 @@ const MixCompra = () => {
             </div>
 
             {/* ── Visual Funnel ── */}
-            <Card className="p-4 lg:p-6 border-border/50 bg-card space-y-1">
+            <Card className="p-4 lg:p-6 border-border/50 bg-card">
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Funil</h3>
-              <div className="flex flex-col items-center gap-1">
-                {funnelVisualStages.map((stage, i) => {
-                  const nextWidth = i < funnelVisualStages.length - 1 ? funnelVisualStages[i + 1].widthPct : stage.widthPct * 0.7;
+              <div className="flex flex-col items-center gap-1.5">
+                {funnelVisualStages.map((stage) => {
                   const color = getEtapaColor(stage.real, stage.expected);
                   return (
-                    <div key={stage.key} className="w-full flex flex-col items-center">
-                      <div
-                        className="relative flex items-center justify-between px-4 lg:px-6"
-                        style={{
-                          width: `${stage.widthPct}%`,
-                          height: '48px',
-                          backgroundColor: color,
-                          clipPath: getTrapezoidClipPath(100, (nextWidth / stage.widthPct) * 100),
-                        }}
-                      >
-                        <span className="text-white text-xs lg:text-sm font-semibold z-10">
-                          {stage.real} / {stage.expected}
-                        </span>
-                        <span className="text-white text-sm lg:text-base font-bold z-10">
-                          {stage.label}
-                        </span>
-                        <span className="text-white text-xs lg:text-sm font-semibold z-10">
-                          {stage.rate !== null ? `${stage.rate.toFixed(0)}% / ${stage.metaRate?.toFixed(0)}%` : '—'}
-                        </span>
-                      </div>
+                    <div
+                      key={stage.key}
+                      style={{ width: `${stage.widthPct}%`, backgroundColor: color }}
+                      className="h-11 rounded-md flex items-center justify-between px-4 text-white text-sm"
+                    >
+                      <span className="min-w-[70px] text-left text-xs font-semibold">
+                        {stage.real} / {stage.expected}
+                      </span>
+                      <span className="font-bold text-sm">
+                        {stage.label}
+                      </span>
+                      <span className="min-w-[90px] text-right text-xs font-semibold">
+                        {stage.rate !== null
+                          ? `${stage.rate.toFixed(0)}% / ${stage.metaRate?.toFixed(0)}%`
+                          : '—'}
+                      </span>
                     </div>
                   );
                 })}
