@@ -18,7 +18,7 @@ const V4Header = () => {
     { path: "/", label: "FUNIL" },
     { path: "/mix-compra", label: "MIX DE COMPRA" },
     { path: "/insights", label: "INSIGHTS" },
-    { path: "/metas", label: "METAS" },
+    
   ];
 
   const isAquisicaoActive = aquisicaoItems.some((item) => isActive(item.path));
