@@ -156,15 +156,41 @@ const MixCompra = () => {
     });
   }, [sheetsData, selectedMonth, selectedYear]);
 
-  // ── Funnel counts ──
+  // All leads (for "geral" view)
+  const allLeads = useMemo(() => sheetsData?.leads || [], [sheetsData]);
+
+  // Active leads based on view toggle
+  const activeLeads = funnelView === "month" ? filteredLeads : allLeads;
+
+  // ── Funnel counts (uses activeLeads) ──
   const funnel = useMemo(() => {
-    const mql = filteredLeads.length;
-    const cr = filteredLeads.filter((l) => isPositive(l["C.R"])).length;
-    const ra = filteredLeads.filter((l) => isPositive(l["R.A"])).length;
-    const rr = filteredLeads.filter((l) => isPositive(l["R.R"])).length;
-    const ass = filteredLeads.filter((l) => isPositive(l.ASS) || (l["DATA DA ASSINATURA"] && l["DATA DA ASSINATURA"].trim() !== "")).length;
+    const mql = activeLeads.length;
+    const cr = activeLeads.filter((l) => isPositive(l["C.R"])).length;
+    const ra = activeLeads.filter((l) => isPositive(l["R.A"])).length;
+    const rr = activeLeads.filter((l) => isPositive(l["R.R"])).length;
+    const ass = activeLeads.filter((l) => isPositive(l.ASS) || (l["DATA DA ASSINATURA"] && l["DATA DA ASSINATURA"].trim() !== "")).length;
     return { mql, cr, ra, rr, ass };
-  }, [filteredLeads]);
+  }, [activeLeads]);
+
+  // ── Leads by stage (for dialog) ──
+  const getLeadsByStage = (stageKey: string) => {
+    const leads = activeLeads;
+    switch (stageKey) {
+      case "mql": return leads;
+      case "cr": return leads.filter((l) => isPositive(l["C.R"]));
+      case "ra": return leads.filter((l) => isPositive(l["R.A"]));
+      case "rr": return leads.filter((l) => isPositive(l["R.R"]));
+      case "ass": return leads.filter((l) => isPositive(l.ASS) || (l["DATA DA ASSINATURA"] && l["DATA DA ASSINATURA"].trim() !== ""));
+      default: return [];
+    }
+  };
+
+  const handleFunnelStageClick = (stageKey: string, stageLabel: string) => {
+    const leads = getLeadsByStage(stageKey);
+    setLeadsDialogLeads(leads);
+    setLeadsDialogStage(stageLabel);
+    setLeadsDialogOpen(true);
+  };
 
   // ── KPI calcs ──
   const investimento = useMemo(() => filteredLeads.reduce((s, l) => s + parseCurrency(l.CPMQL), 0), [filteredLeads]);
