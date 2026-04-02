@@ -75,6 +75,27 @@ const calcExpectedLeads = (day: number, totalLeads: number, q1Pct: number, q1Dia
   return Math.round(q1Leads + q2Leads * (daysAfterLimit / daysRemaining));
 };
 
+const calcFunnelExpected = (day: number, goals: any, isCurrentMonth: boolean) => {
+  if (!goals) return { expectedLeads: 0, expectedCR: 0, expectedRA: 0, expectedRR: 0, expectedASS: 0 };
+  const { leads_target, cr_rate, ra_rate, rr_rate, ass_rate, pace_q1_pct, pace_q1_dia_limite } = goals;
+  const expectedLeads = isCurrentMonth
+    ? calcExpectedLeads(day, Number(leads_target ?? 0), Number(pace_q1_pct ?? 0.7), Number(pace_q1_dia_limite ?? 15))
+    : Number(leads_target ?? 0);
+  const expectedCR = Math.round(expectedLeads * Number(cr_rate ?? 0));
+  const expectedRA = Math.round(expectedCR * Number(ra_rate ?? 0));
+  const expectedRR = Math.round(expectedRA * Number(rr_rate ?? 0));
+  const expectedASS = Math.round(expectedRR * Number(ass_rate ?? 0));
+  return { expectedLeads, expectedCR, expectedRA, expectedRR, expectedASS };
+};
+
+const getEtapaColor = (real: number, expected: number): string => {
+  if (expected === 0) return '#10b981';
+  const ratio = real / expected;
+  if (ratio >= 0.85) return '#10b981';
+  if (ratio >= 0.60) return '#f59e0b';
+  return '#ef4444';
+};
+
 // ── Component ──
 
 const MixCompra = () => {
