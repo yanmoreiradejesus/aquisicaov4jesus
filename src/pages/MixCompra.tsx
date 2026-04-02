@@ -796,7 +796,7 @@ const MixCompra = () => {
                     { key: "investment_target", label: "Investimento (R$)" },
                     { key: "leads_target", label: "Leads Target" },
                     { key: "cpmql_target", label: "CPMQL Target (R$)" },
-                    { key: "ef_target", label: "E.F Target (R$)" },
+                    { key: "ef_target", label: "Meta (R$)" },
                     { key: "ef_avg", label: "E.F Médio por Fechamento (R$)" },
                     { key: "cr_rate", label: "CR (%)" },
                     { key: "ra_rate", label: "RA (%)" },
