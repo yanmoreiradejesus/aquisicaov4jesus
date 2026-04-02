@@ -393,19 +393,10 @@ const MixCompra = () => {
   const funnelVisualStages = [
     { key: "mql", label: "MQL", real: funnel.mql, expected: funnelExpected.expectedLeads, rate: null as number | null, metaRate: null as number | null, widthPct: 100 },
     { key: "cr", label: "C.R", real: funnel.cr, expected: funnelExpected.expectedCR, rate: funnel.mql > 0 ? (funnel.cr / funnel.mql) * 100 : 0, metaRate: Number(goals?.cr_rate ?? 0) * 100, widthPct: 80 },
-    { key: "ra", label: "R.A", real: funnel.ra, expected: funnelExpected.expectedRA, rate: funnel.cr > 0 ? (funnel.ra / funnel.cr) * 100 : 0, metaRate: Number(goals?.ra_rate ?? 0) * 100, widthPct: 62 },
-    { key: "rr", label: "R.R", real: funnel.rr, expected: funnelExpected.expectedRR, rate: funnel.ra > 0 ? (funnel.rr / funnel.ra) * 100 : 0, metaRate: Number(goals?.rr_rate ?? 0) * 100, widthPct: 46 },
-    { key: "ass", label: "ASS", real: funnel.ass, expected: funnelExpected.expectedASS, rate: funnel.rr > 0 ? (funnel.ass / funnel.rr) * 100 : 0, metaRate: Number(goals?.ass_rate ?? 0) * 100, widthPct: 28 },
+    { key: "ra", label: "R.A", real: funnel.ra, expected: funnelExpected.expectedRA, rate: funnel.cr > 0 ? (funnel.ra / funnel.cr) * 100 : 0, metaRate: Number(goals?.ra_rate ?? 0) * 100, widthPct: 60 },
+    { key: "rr", label: "R.R", real: funnel.rr, expected: funnelExpected.expectedRR, rate: funnel.ra > 0 ? (funnel.rr / funnel.ra) * 100 : 0, metaRate: Number(goals?.rr_rate ?? 0) * 100, widthPct: 45 },
+    { key: "ass", label: "ASS", real: funnel.ass, expected: funnelExpected.expectedASS, rate: funnel.rr > 0 ? (funnel.ass / funnel.rr) * 100 : 0, metaRate: Number(goals?.ass_rate ?? 0) * 100, widthPct: 30 },
   ];
-
-  const sumPct = (rows: { pct: string }[]) => rows.reduce((s, r) => s + (parseFloat(r.pct) || 0), 0);
-
-  // Trapezoid clip-path: top is wider, bottom is narrower (next stage width)
-  const getTrapezoidClipPath = (topPct: number, bottomPct: number) => {
-    const topInset = (100 - topPct) / 2;
-    const bottomInset = (100 - bottomPct) / 2;
-    return `polygon(${topInset}% 0%, ${100 - topInset}% 0%, ${100 - bottomInset}% 100%, ${bottomInset}% 100%)`;
-  };
 
   return (
     <div className="min-h-screen bg-background">
