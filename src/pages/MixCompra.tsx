@@ -88,7 +88,7 @@ const calcFunnelExpected = (day: number, goals: any, isCurrentMonth: boolean) =>
   return { expectedLeads, expectedCR, expectedRA, expectedRR, expectedASS };
 };
 
-const getEtapaColor = (real: number, expected: number): string => {
+const getValueMetricColor = (real: number, expected: number): string => {
   if (expected === 0) return '#10b981';
   const ratio = real / expected;
   if (ratio >= 0.85) return '#10b981';
