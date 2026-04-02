@@ -605,7 +605,7 @@ const MixCompra = () => {
                       ].join(' ');
 
                       return (
-                        <g key={stage.label}>
+                        <g key={stage.label} className="cursor-pointer" onClick={() => handleFunnelStageClick(stage.key, stage.label)}>
                           <polygon points={leftPoints} fill={leftColor} opacity="0.9" />
                           <polygon points={rightPoints} fill={rightColor} opacity="0.9" />
                           <line
