@@ -554,11 +554,11 @@ const MixCompra = () => {
                 const GAP = 6;
 
                 const svgStages = [
-                  { label: 'MQL', real: funnel.mql, expected: funnelExpected.expectedLeads, realRate: null as number | null, metaRate: null as number | null, topWidth: 680, bottomWidth: 580 },
-                  { label: 'C.R', real: funnel.cr, expected: funnelExpected.expectedCR, realRate: funnel.mql > 0 ? Math.round((funnel.cr / funnel.mql) * 100) : 0, metaRate: Math.round(Number(goals?.cr_rate ?? 0) * 100), topWidth: 570, bottomWidth: 470 },
-                  { label: 'R.A', real: funnel.ra, expected: funnelExpected.expectedRA, realRate: funnel.cr > 0 ? Math.round((funnel.ra / funnel.cr) * 100) : 0, metaRate: Math.round(Number(goals?.ra_rate ?? 0) * 100), topWidth: 460, bottomWidth: 370 },
-                  { label: 'R.R', real: funnel.rr, expected: funnelExpected.expectedRR, realRate: funnel.ra > 0 ? Math.round((funnel.rr / funnel.ra) * 100) : 0, metaRate: Math.round(Number(goals?.rr_rate ?? 0) * 100), topWidth: 360, bottomWidth: 280 },
-                  { label: 'ASS', real: funnel.ass, expected: funnelExpected.expectedASS, realRate: funnel.rr > 0 ? Math.round((funnel.ass / funnel.rr) * 100) : 0, metaRate: Math.round(Number(goals?.ass_rate ?? 0) * 100), topWidth: 270, bottomWidth: 200 },
+                  { key: 'mql', label: 'MQL', real: funnel.mql, expected: funnelExpected.expectedLeads, realRate: null as number | null, metaRate: null as number | null, topWidth: 680, bottomWidth: 580 },
+                  { key: 'cr', label: 'C.R', real: funnel.cr, expected: funnelExpected.expectedCR, realRate: funnel.mql > 0 ? Math.round((funnel.cr / funnel.mql) * 100) : 0, metaRate: Math.round(Number(goals?.cr_rate ?? 0) * 100), topWidth: 570, bottomWidth: 470 },
+                  { key: 'ra', label: 'R.A', real: funnel.ra, expected: funnelExpected.expectedRA, realRate: funnel.cr > 0 ? Math.round((funnel.ra / funnel.cr) * 100) : 0, metaRate: Math.round(Number(goals?.ra_rate ?? 0) * 100), topWidth: 460, bottomWidth: 370 },
+                  { key: 'rr', label: 'R.R', real: funnel.rr, expected: funnelExpected.expectedRR, realRate: funnel.ra > 0 ? Math.round((funnel.rr / funnel.ra) * 100) : 0, metaRate: Math.round(Number(goals?.rr_rate ?? 0) * 100), topWidth: 360, bottomWidth: 280 },
+                  { key: 'ass', label: 'ASS', real: funnel.ass, expected: funnelExpected.expectedASS, realRate: funnel.rr > 0 ? Math.round((funnel.ass / funnel.rr) * 100) : 0, metaRate: Math.round(Number(goals?.ass_rate ?? 0) * 100), topWidth: 270, bottomWidth: 200 },
                 ];
 
                 const totalHeight = svgStages.length * STAGE_HEIGHT + (svgStages.length - 1) * GAP;
