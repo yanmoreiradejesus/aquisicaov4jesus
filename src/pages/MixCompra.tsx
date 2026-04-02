@@ -75,6 +75,27 @@ const calcExpectedLeads = (day: number, totalLeads: number, q1Pct: number, q1Dia
   return Math.round(q1Leads + q2Leads * (daysAfterLimit / daysRemaining));
 };
 
+const calcFunnelExpected = (day: number, goals: any, isCurrentMonth: boolean) => {
+  if (!goals) return { expectedLeads: 0, expectedCR: 0, expectedRA: 0, expectedRR: 0, expectedASS: 0 };
+  const { leads_target, cr_rate, ra_rate, rr_rate, ass_rate, pace_q1_pct, pace_q1_dia_limite } = goals;
+  const expectedLeads = isCurrentMonth
+    ? calcExpectedLeads(day, Number(leads_target ?? 0), Number(pace_q1_pct ?? 0.7), Number(pace_q1_dia_limite ?? 15))
+    : Number(leads_target ?? 0);
+  const expectedCR = Math.round(expectedLeads * Number(cr_rate ?? 0));
+  const expectedRA = Math.round(expectedCR * Number(ra_rate ?? 0));
+  const expectedRR = Math.round(expectedRA * Number(rr_rate ?? 0));
+  const expectedASS = Math.round(expectedRR * Number(ass_rate ?? 0));
+  return { expectedLeads, expectedCR, expectedRA, expectedRR, expectedASS };
+};
+
+const getEtapaColor = (real: number, expected: number): string => {
+  if (expected === 0) return '#10b981';
+  const ratio = real / expected;
+  if (ratio >= 0.85) return '#10b981';
+  if (ratio >= 0.60) return '#f59e0b';
+  return '#ef4444';
+};
+
 // ── Component ──
 
 const MixCompra = () => {
@@ -367,15 +388,24 @@ const MixCompra = () => {
     return `${sign}${d.toFixed(1)}pp`;
   };
 
-  const funnelStages = [
-    { key: "mql", label: "MQL", rate: null, metaRate: null },
-    { key: "cr", label: "C.R", rate: funnel.mql > 0 ? (funnel.cr / funnel.mql) * 100 : 0, metaRate: Number(goals?.cr_rate ?? 0) * 100 },
-    { key: "ra", label: "R.A", rate: funnel.cr > 0 ? (funnel.ra / funnel.cr) * 100 : 0, metaRate: Number(goals?.ra_rate ?? 0) * 100 },
-    { key: "rr", label: "R.R", rate: funnel.ra > 0 ? (funnel.rr / funnel.ra) * 100 : 0, metaRate: Number(goals?.rr_rate ?? 0) * 100 },
-    { key: "ass", label: "ASS", rate: funnel.rr > 0 ? (funnel.ass / funnel.rr) * 100 : 0, metaRate: Number(goals?.ass_rate ?? 0) * 100 },
+  const funnelExpected = calcFunnelExpected(currentDay, goals, isCurrentMonth);
+
+  const funnelVisualStages = [
+    { key: "mql", label: "MQL", real: funnel.mql, expected: funnelExpected.expectedLeads, rate: null as number | null, metaRate: null as number | null, widthPct: 100 },
+    { key: "cr", label: "C.R", real: funnel.cr, expected: funnelExpected.expectedCR, rate: funnel.mql > 0 ? (funnel.cr / funnel.mql) * 100 : 0, metaRate: Number(goals?.cr_rate ?? 0) * 100, widthPct: 80 },
+    { key: "ra", label: "R.A", real: funnel.ra, expected: funnelExpected.expectedRA, rate: funnel.cr > 0 ? (funnel.ra / funnel.cr) * 100 : 0, metaRate: Number(goals?.ra_rate ?? 0) * 100, widthPct: 62 },
+    { key: "rr", label: "R.R", real: funnel.rr, expected: funnelExpected.expectedRR, rate: funnel.ra > 0 ? (funnel.rr / funnel.ra) * 100 : 0, metaRate: Number(goals?.rr_rate ?? 0) * 100, widthPct: 46 },
+    { key: "ass", label: "ASS", real: funnel.ass, expected: funnelExpected.expectedASS, rate: funnel.rr > 0 ? (funnel.ass / funnel.rr) * 100 : 0, metaRate: Number(goals?.ass_rate ?? 0) * 100, widthPct: 28 },
   ];
 
   const sumPct = (rows: { pct: string }[]) => rows.reduce((s, r) => s + (parseFloat(r.pct) || 0), 0);
+
+  // Trapezoid clip-path: top is wider, bottom is narrower (next stage width)
+  const getTrapezoidClipPath = (topPct: number, bottomPct: number) => {
+    const topInset = (100 - topPct) / 2;
+    const bottomInset = (100 - bottomPct) / 2;
+    return `polygon(${topInset}% 0%, ${100 - topInset}% 0%, ${100 - bottomInset}% 100%, ${bottomInset}% 100%)`;
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -419,15 +449,12 @@ const MixCompra = () => {
           <>
             {/* ── KPIs ── */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Leads */}
               <Card className="p-4 border-border/50 bg-card space-y-2">
                 <p className="text-xs text-muted-foreground font-medium">Leads Comprados</p>
                 <p className="text-2xl font-bold">{funnel.mql} <span className="text-sm text-muted-foreground font-normal">/ {leadsTarget}</span></p>
                 <Progress value={leadsTarget > 0 ? Math.min((funnel.mql / leadsTarget) * 100, 100) : 0} className="h-2" />
                 <p className="text-xs text-muted-foreground">{leadsTarget > 0 ? ((funnel.mql / leadsTarget) * 100).toFixed(0) : 0}%</p>
               </Card>
-
-              {/* CPMQL */}
               <Card className="p-4 border-border/50 bg-card space-y-2">
                 <p className="text-xs text-muted-foreground font-medium">CPMQL Médio</p>
                 <p className="text-2xl font-bold" style={{ color: statusColor[getCpmqlStatus(cpmqlMedio, Number(cpmqlTarget))] }}>
@@ -435,16 +462,12 @@ const MixCompra = () => {
                 </p>
                 <p className="text-xs text-muted-foreground">Target: {fmtCurrency(Number(cpmqlTarget))}</p>
               </Card>
-
-              {/* Investimento */}
               <Card className="p-4 border-border/50 bg-card space-y-2">
                 <p className="text-xs text-muted-foreground font-medium">Investimento</p>
                 <p className="text-2xl font-bold">{fmtCurrency(investimento)}</p>
                 <Progress value={Number(investTarget) > 0 ? Math.min((investimento / Number(investTarget)) * 100, 100) : 0} className="h-2" />
                 <p className="text-xs text-muted-foreground">{Number(investTarget) > 0 ? ((investimento / Number(investTarget)) * 100).toFixed(0) : 0}% de {fmtCurrency(Number(investTarget))}</p>
               </Card>
-
-              {/* Pace */}
               <Card className="p-4 border-border/50 bg-card space-y-2">
                 <p className="text-xs text-muted-foreground font-medium">Pace</p>
                 <p className="text-2xl font-bold">{funnel.mql} <span className="text-sm text-muted-foreground font-normal">/ {expectedLeads} esp.</span></p>
@@ -453,42 +476,35 @@ const MixCompra = () => {
               </Card>
             </div>
 
-            {/* ── Funnel ── */}
-            <Card className="p-4 lg:p-6 border-border/50 bg-card space-y-4">
-              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Funil</h3>
-              {/* Meta line */}
-              <div className="flex items-center flex-wrap gap-1 text-sm">
-                <span className="font-medium text-muted-foreground">Meta:</span>
-                {funnelStages.map((s, i) => (
-                  <span key={s.key} className="flex items-center gap-1">
-                    {i > 0 && <span className="text-muted-foreground mx-1">→</span>}
-                    <span className="px-2 py-0.5 rounded bg-muted/30 text-foreground text-xs font-medium">
-                      {funnelMeta[s.key as keyof typeof funnelMeta]} {s.label}
-                      {s.metaRate !== null && ` (${s.metaRate.toFixed(0)}%)`}
-                    </span>
-                  </span>
-                ))}
-              </div>
-              {/* Real line */}
-              <div className="flex items-center flex-wrap gap-1 text-sm">
-                <span className="font-medium text-muted-foreground">Real:</span>
-                {funnelStages.map((s, i) => {
-                  const st = s.rate !== null && s.metaRate !== null ? getFunnelStatus(s.rate, s.metaRate) : "green";
+            {/* ── Visual Funnel ── */}
+            <Card className="p-4 lg:p-6 border-border/50 bg-card space-y-1">
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Funil</h3>
+              <div className="flex flex-col items-center gap-1">
+                {funnelVisualStages.map((stage, i) => {
+                  const nextWidth = i < funnelVisualStages.length - 1 ? funnelVisualStages[i + 1].widthPct : stage.widthPct * 0.7;
+                  const color = getEtapaColor(stage.real, stage.expected);
                   return (
-                    <span key={s.key} className="flex items-center gap-1">
-                      {i > 0 && <span className="text-muted-foreground mx-1">→</span>}
-                      <span
-                        className="px-2 py-0.5 rounded text-xs font-medium"
+                    <div key={stage.key} className="w-full flex flex-col items-center">
+                      <div
+                        className="relative flex items-center justify-between px-4 lg:px-6"
                         style={{
-                          backgroundColor: s.rate !== null ? `${statusColor[st]}20` : undefined,
-                          color: s.rate !== null ? statusColor[st] : undefined,
-                          border: s.rate !== null ? `1px solid ${statusColor[st]}40` : undefined,
+                          width: `${stage.widthPct}%`,
+                          height: '48px',
+                          backgroundColor: color,
+                          clipPath: getTrapezoidClipPath(100, (nextWidth / stage.widthPct) * 100),
                         }}
                       >
-                        {funnel[s.key as keyof typeof funnel]} {s.label}
-                        {s.rate !== null && ` (${s.rate.toFixed(0)}%)`}
-                      </span>
-                    </span>
+                        <span className="text-white text-xs lg:text-sm font-semibold z-10">
+                          {stage.real} / {stage.expected}
+                        </span>
+                        <span className="text-white text-sm lg:text-base font-bold z-10">
+                          {stage.label}
+                        </span>
+                        <span className="text-white text-xs lg:text-sm font-semibold z-10">
+                          {stage.rate !== null ? `${stage.rate.toFixed(0)}% / ${stage.metaRate?.toFixed(0)}%` : '—'}
+                        </span>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
