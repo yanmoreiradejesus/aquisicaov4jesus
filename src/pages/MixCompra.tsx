@@ -88,11 +88,18 @@ const calcFunnelExpected = (day: number, goals: any, isCurrentMonth: boolean) =>
   return { expectedLeads, expectedCR, expectedRA, expectedRR, expectedASS };
 };
 
-const getEtapaColor = (real: number, expected: number): string => {
+const getValueMetricColor = (real: number, expected: number): string => {
   if (expected === 0) return '#10b981';
   const ratio = real / expected;
   if (ratio >= 0.85) return '#10b981';
   if (ratio >= 0.60) return '#f59e0b';
+  return '#ef4444';
+};
+
+const getConversionColor = (realRate: number, metaRate: number): string => {
+  const diff = realRate - metaRate;
+  if (diff >= -1) return '#10b981';
+  if (diff >= -4) return '#f59e0b';
   return '#ef4444';
 };
 
@@ -489,26 +496,53 @@ const MixCompra = () => {
                 const totalHeight = svgStages.length * STAGE_HEIGHT + (svgStages.length - 1) * GAP;
 
                 return (
-                  <svg viewBox={`0 0 ${FUNNEL_WIDTH} ${totalHeight}`} className="w-full max-w-3xl mx-auto">
+                  <svg viewBox={`0 -20 ${FUNNEL_WIDTH} ${totalHeight + 20}`} className="w-full max-w-3xl mx-auto">
+                    {/* Labels acima do funil */}
+                    <text
+                      x={FUNNEL_CENTER - 60} y={-6}
+                      textAnchor="middle" fill="rgba(255,255,255,0.4)"
+                      fontSize="10" fontWeight="300" letterSpacing="1.5"
+                    >
+                      VALUE METRICS
+                    </text>
+                    <text
+                      x={FUNNEL_CENTER + 60} y={-6}
+                      textAnchor="middle" fill="rgba(255,255,255,0.4)"
+                      fontSize="10" fontWeight="300" letterSpacing="1.5"
+                    >
+                      CONVERSION RATES
+                    </text>
                     {svgStages.map((stage, i) => {
                       const y = i * (STAGE_HEIGHT + GAP);
                       const halfTop = stage.topWidth / 2;
                       const halfBottom = stage.bottomWidth / 2;
-                      const color = getEtapaColor(stage.real, stage.expected);
 
-                      const points = [
+                      const leftColor = getValueMetricColor(stage.real, stage.expected);
+                      const rightColor = stage.realRate !== null
+                        ? getConversionColor(stage.realRate, stage.metaRate!)
+                        : leftColor;
+
+                      const leftPoints = [
                         `${FUNNEL_CENTER - halfTop},${y}`,
+                        `${FUNNEL_CENTER},${y}`,
+                        `${FUNNEL_CENTER},${y + STAGE_HEIGHT}`,
+                        `${FUNNEL_CENTER - halfBottom},${y + STAGE_HEIGHT}`,
+                      ].join(' ');
+
+                      const rightPoints = [
+                        `${FUNNEL_CENTER},${y}`,
                         `${FUNNEL_CENTER + halfTop},${y}`,
                         `${FUNNEL_CENTER + halfBottom},${y + STAGE_HEIGHT}`,
-                        `${FUNNEL_CENTER - halfBottom},${y + STAGE_HEIGHT}`,
+                        `${FUNNEL_CENTER},${y + STAGE_HEIGHT}`,
                       ].join(' ');
 
                       return (
                         <g key={stage.label}>
-                          <polygon points={points} fill={color} opacity="0.9" />
+                          <polygon points={leftPoints} fill={leftColor} opacity="0.9" />
+                          <polygon points={rightPoints} fill={rightColor} opacity="0.9" />
                           <line
-                            x1={FUNNEL_CENTER} y1={y + 4}
-                            x2={FUNNEL_CENTER} y2={y + STAGE_HEIGHT - 4}
+                            x1={FUNNEL_CENTER} y1={y}
+                            x2={FUNNEL_CENTER} y2={y + STAGE_HEIGHT}
                             stroke="rgba(255,255,255,0.3)" strokeWidth="1"
                           />
                           <text
