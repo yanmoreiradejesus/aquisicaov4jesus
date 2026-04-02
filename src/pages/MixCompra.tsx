@@ -187,7 +187,7 @@ const MixCompra = () => {
       const realPct = total > 0 ? (real.count / total) * 100 : 0;
       const cpmqlReal = real.count > 0 ? real.cpmqlSum / real.count : 0;
       const label = metaEntry ? metaEntry[0] : k;
-      return { label, realLeads: real.count, realPct, metaLeads, metaPct, desvio: realPct - metaPct, cpmqlReal, metaCpmql, status: getStatus(realPct, metaPct), cpmqlStatus: getCpmqlStatus(cpmqlReal, metaCpmql) };
+      return { label, realLeads: real.count, realPct, metaLeads, metaPct, desvio: realPct - metaPct, cpmqlReal, metaCpmql, status: getMixStatus(realPct, metaPct), cpmqlStatus: getCpmqlStatus(cpmqlReal, metaCpmql) };
     }).sort((a, b) => b.metaPct - a.metaPct);
   }, [filteredLeads, goals, funnel.mql]);
 
