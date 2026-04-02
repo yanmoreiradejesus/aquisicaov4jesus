@@ -96,6 +96,13 @@ const getValueMetricColor = (real: number, expected: number): string => {
   return '#ef4444';
 };
 
+const getConversionColor = (realRate: number, metaRate: number): string => {
+  const diff = realRate - metaRate;
+  if (diff >= -1) return '#10b981';
+  if (diff >= -4) return '#f59e0b';
+  return '#ef4444';
+};
+
 // ── Component ──
 
 const MixCompra = () => {
