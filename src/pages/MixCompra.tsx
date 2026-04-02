@@ -37,10 +37,17 @@ const parseCurrency = (v: string | undefined): number => {
 const fmtCurrency = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
-const getStatus = (realPct: number, metaPct: number): "green" | "yellow" | "red" => {
+const getFunnelStatus = (realPct: number, metaPct: number): "green" | "yellow" | "red" => {
   const diff = realPct - metaPct;
   if (diff >= -1) return "green";
   if (diff >= -4) return "yellow";
+  return "red";
+};
+
+const getMixStatus = (realPct: number, metaPct: number): "green" | "yellow" | "red" => {
+  const absDiff = Math.abs(realPct - metaPct);
+  if (absDiff <= 5) return "green";
+  if (absDiff <= 10) return "yellow";
   return "red";
 };
 
