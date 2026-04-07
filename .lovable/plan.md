@@ -1,29 +1,29 @@
 
 
-# Plano: Corrigir DSO zerado
+## Problem
 
-## Causa raiz
-As datas da planilha vem como `DD/MM/YYYY` (ex: "09/01/2025"). O `new Date()` do JS nao entende esse formato — retorna `Invalid Date` ou interpreta errado (MM/DD/YYYY). O diff vira `NaN` e e filtrado, resultando em DSO = 0.
+The "META" submenu page lives at route `/mix-compra`, but Thiago's `user_page_access` records still contain the old path `/metas` (from when the page was called "Metas"). The `ProtectedRoute` checks `hasPageAccess("/mix-compra")` which fails because his DB entry says `/metas`.
 
-## Correcao
+Yan (admin) works because `isAdmin` bypasses the check entirely.
 
-### `src/utils/financialData.ts`
+## Solution
 
-1. Criar funcao helper `parseDateBR(str)` que converte `DD/MM/YYYY` e `YYYY-MM-DD` para `Date` valido.
-2. Usar essa funcao em `calcKPIs` (linhas 133-134) e `calcDSOByMonth` (linha 267+) no lugar de `new Date()` direto.
+Two changes needed:
 
-```typescript
-function parseDateBR(d: string): Date | null {
-  if (!d) return null;
-  if (d.includes("/")) {
-    const [dd, mm, yyyy] = d.split("/");
-    return new Date(+yyyy, +mm - 1, +dd);
-  }
-  return new Date(d);
-}
+### 1. Database migration: update existing access records
+Run a migration to rename `/metas` to `/mix-compra` in the `user_page_access` table for all users who have `/metas` but not `/mix-compra`:
+
+```sql
+UPDATE public.user_page_access 
+SET page_path = '/mix-compra' 
+WHERE page_path = '/metas';
 ```
 
-| Arquivo | Mudanca |
-|---------|---------|
-| `src/utils/financialData.ts` | Adicionar `parseDateBR` e usa-la em `calcKPIs` (DSO) e `calcDSOByMonth` |
+### 2. Update the `handle_new_user` function
+The function already inserts `/mix-compra` for the first user, so no change needed there. But we should verify it doesn't still reference `/metas` anywhere.
+
+## Technical detail
+- File: No code file changes needed — only the DB migration
+- The `handle_new_user` function already uses `/mix-compra`, so new users are fine
+- Only existing users with the old `/metas` path are affected
 
