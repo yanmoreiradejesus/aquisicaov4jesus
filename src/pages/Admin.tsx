@@ -24,7 +24,7 @@ interface UserWithAccess {
 const AVAILABLE_PAGES = [
   { path: "/", label: "Dashboard" },
   { path: "/insights", label: "Insights" },
-  { path: "/metas", label: "Metas" },
+  { path: "/mix-compra", label: "Meta" },
   { path: "/financeiro", label: "Financeiro" },
 ];
 
