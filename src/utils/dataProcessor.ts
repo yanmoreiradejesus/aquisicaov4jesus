@@ -297,36 +297,22 @@ export const calculateFunnelData = (leads: Lead[], filters: FilterOptions, allLe
         return dateToCheck >= startDate && dateToCheck <= endDate;
       });
 
+  const parseBRL = (val: any): number => {
+    if (!val || val === "" || val === "-") return 0;
+    const str = val.toString().replace(/[R$\s]/g, "").replace(/\./g, "").replace(",", ".");
+    return parseFloat(str) || 0;
+  };
+
   const totalFee = feeSourceLeads
     .reduce((sum, lead, index) => {
-      // Sum E.F (or FEE as fallback) + BOOKING for total revenue
-      let efValue = 0;
-      let bookingValue = 0;
+      const feeValue = parseBRL(lead.FEE);
+      const efValue = parseBRL(lead["E.F"]);
+      const bookingValue = parseBRL(lead.BOOKING);
       
-      // Parse E.F or FEE
-      const efOrFee = lead["E.F"] || lead.FEE;
-      if (efOrFee && efOrFee !== "" && efOrFee !== "-") {
-        const efStr = efOrFee.toString()
-          .replace(/[R$\s]/g, "")
-          .replace(/\./g, "")
-          .replace(",", ".");
-        efValue = parseFloat(efStr) || 0;
-      }
-      
-      // Parse BOOKING separately and add it
-      const booking = lead.BOOKING;
-      if (booking && booking !== "" && booking !== "-") {
-        const bookingStr = booking.toString()
-          .replace(/[R$\s]/g, "")
-          .replace(/\./g, "")
-          .replace(",", ".");
-        bookingValue = parseFloat(bookingStr) || 0;
-      }
-      
-      const totalValue = efValue + bookingValue;
+      const totalValue = feeValue + efValue + bookingValue;
       
       if (index < 3) {
-        console.log(`Signed lead ${index}: Lead="${lead.LEAD}" E.F="${lead["E.F"]}" BOOKING="${lead.BOOKING}" -> E.F=${efValue} + BOOKING=${bookingValue} = ${totalValue}`);
+        console.log(`Signed lead ${index}: Lead="${lead.LEAD}" FEE="${lead.FEE}" E.F="${lead["E.F"]}" BOOKING="${lead.BOOKING}" -> FEE=${feeValue} + E.F=${efValue} + BOOKING=${bookingValue} = ${totalValue}`);
       }
       
       return sum + totalValue;
