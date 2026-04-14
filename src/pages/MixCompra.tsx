@@ -237,7 +237,7 @@ const MixCompra = () => {
   // Meta (E.F) calculation - revenue from signed contracts
   const metaRevenue = useMemo(() => {
     const assLeads = funnelView === "byStage" ? stageFilteredLeads.ass : filteredLeads.filter((l) => isPositive(l.ASS) || (l["DATA DA ASSINATURA"] && l["DATA DA ASSINATURA"].trim() !== ""));
-    return assLeads.reduce((s, l) => s + parseCurrency(l["E.F"]) + parseCurrency(l.BOOKING), 0);
+    return assLeads.reduce((s, l) => s + parseCurrency(l.FEE) + parseCurrency(l["E.F"]) + parseCurrency(l.BOOKING), 0);
   }, [funnelView, stageFilteredLeads, filteredLeads]);
 
   const leadsTarget = goals?.leads_target ?? 0;
