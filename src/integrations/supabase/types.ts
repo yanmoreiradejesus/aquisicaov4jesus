@@ -200,64 +200,106 @@ export type Database = {
       }
       crm_leads: {
         Row: {
+          arrematador: string | null
+          canal: string | null
           cargo: string | null
+          cidade: string | null
           created_at: string
           created_by: string | null
+          data_aquisicao: string | null
+          data_criacao_origem: string | null
           data_reuniao_agendada: string | null
           data_reuniao_realizada: string | null
+          descricao: string | null
+          documento_empresa: string | null
           email: string | null
           empresa: string | null
+          estado: string | null
           etapa: Database["public"]["Enums"]["lead_etapa"]
+          faturamento: string | null
           id: string
           motivo_desqualificacao: string | null
           nome: string
+          nome_produto: string | null
           notas: string | null
           origem: string | null
+          pais: string | null
           responsavel_id: string | null
+          segmento: string | null
           telefone: string | null
           tier: string | null
+          tipo_produto: string | null
           updated_at: string
           urgencia: string | null
+          valor_pago: number | null
         }
         Insert: {
+          arrematador?: string | null
+          canal?: string | null
           cargo?: string | null
+          cidade?: string | null
           created_at?: string
           created_by?: string | null
+          data_aquisicao?: string | null
+          data_criacao_origem?: string | null
           data_reuniao_agendada?: string | null
           data_reuniao_realizada?: string | null
+          descricao?: string | null
+          documento_empresa?: string | null
           email?: string | null
           empresa?: string | null
+          estado?: string | null
           etapa?: Database["public"]["Enums"]["lead_etapa"]
+          faturamento?: string | null
           id?: string
           motivo_desqualificacao?: string | null
           nome: string
+          nome_produto?: string | null
           notas?: string | null
           origem?: string | null
+          pais?: string | null
           responsavel_id?: string | null
+          segmento?: string | null
           telefone?: string | null
           tier?: string | null
+          tipo_produto?: string | null
           updated_at?: string
           urgencia?: string | null
+          valor_pago?: number | null
         }
         Update: {
+          arrematador?: string | null
+          canal?: string | null
           cargo?: string | null
+          cidade?: string | null
           created_at?: string
           created_by?: string | null
+          data_aquisicao?: string | null
+          data_criacao_origem?: string | null
           data_reuniao_agendada?: string | null
           data_reuniao_realizada?: string | null
+          descricao?: string | null
+          documento_empresa?: string | null
           email?: string | null
           empresa?: string | null
+          estado?: string | null
           etapa?: Database["public"]["Enums"]["lead_etapa"]
+          faturamento?: string | null
           id?: string
           motivo_desqualificacao?: string | null
           nome?: string
+          nome_produto?: string | null
           notas?: string | null
           origem?: string | null
+          pais?: string | null
           responsavel_id?: string | null
+          segmento?: string | null
           telefone?: string | null
           tier?: string | null
+          tipo_produto?: string | null
           updated_at?: string
           urgencia?: string | null
+          valor_pago?: number | null
         }
         Relationships: [
           {
