@@ -3,9 +3,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { LEAD_ETAPAS } from "@/hooks/useCrmLeads";
-import { Check, ChevronRight, Copy, MessageCircle, Pencil, Trash2, AlertCircle } from "lucide-react";
+import { Check, ChevronRight, ChevronDown, Copy, MessageCircle, Pencil, Trash2, AlertCircle } from "lucide-react";
 import { formatPhone, whatsappNumber, locationFromPhone, timeAgo } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
 import { LeadTimeline } from "./LeadTimeline";
@@ -278,19 +278,15 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
           )}
         </div>
 
-        {/* TABS: Informações | Qualificação */}
-        <Tabs defaultValue="info" className="mb-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="info">Informações do lead</TabsTrigger>
-            <TabsTrigger value="qual" className="relative">
-              Qualificação
-              {!form.qualificacao?.trim() && (
-                <AlertCircle className="h-3 w-3 ml-1.5 text-amber-400" />
-              )}
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="info" className="px-4 pt-3 pb-1 border border-border/40 rounded-lg bg-background/30">
+        {/* INFORMAÇÕES DO LEAD (collapsible) */}
+        <Collapsible className="mb-3">
+          <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-3 bg-muted/10 hover:bg-muted/20 border border-border/40 rounded-lg transition-colors group">
+            <span className="text-xs font-semibold tracking-widest uppercase text-foreground">
+              Informações do lead
+            </span>
+            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="px-4 pt-2 pb-1 border border-t-0 border-border/40 rounded-b-lg -mt-px bg-background/30">
             <HoverEditField label="Nome" value={form.nome ?? ""} onChange={(v) => set("nome", v)} />
             <HoverEditField label="Empresa" value={form.empresa ?? ""} onChange={(v) => set("empresa", v)} />
             <HoverEditField label="Telefone" value={form.telefone ?? ""} onChange={(v) => set("telefone", v)} />
@@ -324,14 +320,30 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
             )}
             <HoverEditField label="Descrição" value={form.descricao ?? ""} onChange={(v) => set("descricao", v)} multiline />
             <HoverEditField label="Notas internas" value={form.notas ?? ""} onChange={(v) => set("notas", v)} multiline />
-          </TabsContent>
+          </CollapsibleContent>
+        </Collapsible>
 
-          <TabsContent value="qual" className="px-4 pt-3 pb-3 border border-border/40 rounded-lg bg-background/30">
-            <HoverEditField
-              label="Detalhes da qualificação"
+        {/* QUALIFICAÇÃO (collapsible) */}
+        <Collapsible className="mb-6">
+          <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-3 bg-muted/10 hover:bg-muted/20 border border-border/40 rounded-lg transition-colors group">
+            <span className="text-xs font-semibold tracking-widest uppercase text-foreground flex items-center gap-2">
+              Qualificação
+              {!form.qualificacao?.trim() && (
+                <AlertCircle className="h-3.5 w-3.5 text-amber-400" />
+              )}
+            </span>
+            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="px-4 pt-3 pb-3 border border-t-0 border-border/40 rounded-b-lg -mt-px bg-background/30">
+            <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-2">
+              Detalhes da qualificação
+            </p>
+            <Textarea
+              rows={6}
               value={form.qualificacao ?? ""}
-              onChange={(v) => set("qualificacao", v)}
-              multiline
+              onChange={(e) => set("qualificacao", e.target.value)}
+              placeholder="Ex.: Dor principal — gerar leads B2B. Faturamento ~R$ 800k/mês. Já testou Meta Ads sem ROI. Decisor: CEO. Urgência alta, quer começar em 30 dias."
+              className="text-sm resize-none"
             />
             {!form.qualificacao?.trim() && (
               <p className="text-xs text-amber-400/80 mt-3 flex items-center gap-1.5">
@@ -339,8 +351,8 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                 Obrigatório para avançar o lead para "Reunião agendada".
               </p>
             )}
-          </TabsContent>
-        </Tabs>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* TIMELINE: notas, tarefas e histórico */}
         {form.id && (
