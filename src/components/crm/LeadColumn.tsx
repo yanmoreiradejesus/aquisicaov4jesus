@@ -25,7 +25,7 @@ export const LeadColumn = ({ id, label, color, leads, onEdit }: Props) => {
         }`}
       >
         {leads.map((lead) => (
-          <LeadCard key={lead.id} lead={lead} onClick={() => onEdit(lead)} />
+          <LeadCard key={lead.id} lead={lead} onClick={() => onEdit(lead)} showAge={id === "entrada"} />
         ))}
         {leads.length === 0 && (
           <div className="text-center text-xs text-muted-foreground/50 py-8">
