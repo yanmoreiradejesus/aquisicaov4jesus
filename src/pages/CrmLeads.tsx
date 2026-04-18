@@ -7,6 +7,7 @@ import { Plus, Search, Upload } from "lucide-react";
 import { useCrmLeads, LEAD_ETAPAS } from "@/hooks/useCrmLeads";
 import { LeadColumn } from "@/components/crm/LeadColumn";
 import { LeadDialog } from "@/components/crm/LeadDialog";
+import { LeadDetailSheet } from "@/components/crm/LeadDetailSheet";
 import { LeadImportDialog } from "@/components/crm/LeadImportDialog";
 import { useToast } from "@/hooks/use-toast";
 
@@ -14,6 +15,7 @@ const CrmLeads = () => {
   const { data: leads = [], isLoading, upsert, updateEtapa, remove } = useCrmLeads();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const { toast } = useToast();
@@ -109,7 +111,7 @@ const CrmLeads = () => {
                   label={etapa.label}
                   color={etapa.color}
                   leads={grouped[etapa.id] ?? []}
-                  onEdit={(l) => { setEditing(l); setDialogOpen(true); }}
+                  onEdit={(l) => { setEditing(l); setSheetOpen(true); }}
                 />
               ))}
             </div>
@@ -122,6 +124,15 @@ const CrmLeads = () => {
         onOpenChange={setDialogOpen}
         lead={editing}
         onSave={handleSave}
+        onDelete={handleDelete}
+      />
+
+      <LeadDetailSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        lead={editing}
+        onSave={handleSave}
+        onChangeEtapa={(id, etapa) => updateEtapa.mutateAsync({ id, etapa })}
         onDelete={handleDelete}
       />
 
