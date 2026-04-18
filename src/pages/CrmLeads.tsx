@@ -9,6 +9,7 @@ import { LeadColumn } from "@/components/crm/LeadColumn";
 import { LeadDialog } from "@/components/crm/LeadDialog";
 import { LeadDetailSheet } from "@/components/crm/LeadDetailSheet";
 import { LeadImportDialog } from "@/components/crm/LeadImportDialog";
+import { QualificacaoDialog } from "@/components/crm/QualificacaoDialog";
 import { useToast } from "@/hooks/use-toast";
 
 const CrmLeads = () => {
@@ -18,6 +19,8 @@ const CrmLeads = () => {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
+  const [qualOpen, setQualOpen] = useState(false);
+  const [pendingMove, setPendingMove] = useState<{ lead: any; etapa: string } | null>(null);
   const { toast } = useToast();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -39,22 +42,39 @@ const CrmLeads = () => {
     return map;
   }, [filtered]);
 
-  const handleDragEnd = (e: DragEndEvent) => {
-    const { active, over } = e;
-    if (!over) return;
-    const lead = leads.find((l: any) => l.id === active.id);
-    if (!lead || lead.etapa === over.id) return;
+  const moveLead = (leadId: string, etapa: string) => {
     updateEtapa.mutate(
-      { id: lead.id, etapa: over.id as string },
+      { id: leadId, etapa },
       {
         onSuccess: () => {
-          if (over.id === "reuniao_realizada") {
+          if (etapa === "reuniao_realizada") {
             toast({ title: "Lead avançado!", description: "Oportunidade criada automaticamente." });
           }
         },
         onError: (err: any) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
       }
     );
+  };
+
+  const handleDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over) return;
+    const lead = leads.find((l: any) => l.id === active.id);
+    if (!lead || lead.etapa === over.id) return;
+    if (over.id === "reuniao_agendada" && !lead.qualificacao?.trim()) {
+      setPendingMove({ lead, etapa: String(over.id) });
+      setQualOpen(true);
+      return;
+    }
+    moveLead(lead.id, String(over.id));
+  };
+
+  const handleConfirmQualificacao = async (qualificacao: string) => {
+    if (!pendingMove) return;
+    await upsert.mutateAsync({ ...pendingMove.lead, qualificacao });
+    moveLead(pendingMove.lead.id, pendingMove.etapa);
+    setPendingMove(null);
+    toast({ title: "Qualificação salva" });
   };
 
   const handleSave = async (lead: any) => {
@@ -137,6 +157,13 @@ const CrmLeads = () => {
       />
 
       <LeadImportDialog open={importOpen} onOpenChange={setImportOpen} />
+
+      <QualificacaoDialog
+        open={qualOpen}
+        onOpenChange={(v) => { setQualOpen(v); if (!v) setPendingMove(null); }}
+        initialValue={pendingMove?.lead?.qualificacao}
+        onConfirm={handleConfirmQualificacao}
+      />
     </div>
   );
 };

@@ -3,12 +3,13 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { LEAD_ETAPAS } from "@/hooks/useCrmLeads";
-import { Check, ChevronRight, ChevronDown, Copy, MessageCircle, Pencil, Trash2 } from "lucide-react";
+import { Check, ChevronRight, Copy, MessageCircle, Pencil, Trash2, AlertCircle } from "lucide-react";
 import { formatPhone, whatsappNumber, locationFromPhone, timeAgo } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
 import { LeadTimeline } from "./LeadTimeline";
+import { QualificacaoDialog } from "./QualificacaoDialog";
 
 interface Props {
   open: boolean;
@@ -104,13 +105,13 @@ const HoverEditField = ({
 export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtapa, onDelete }: Props) => {
   const [form, setForm] = useState<any>(null);
   const [saving, setSaving] = useState(false);
-  const [infoOpen, setInfoOpen] = useState(false);
+  const [qualOpen, setQualOpen] = useState(false);
+  const [pendingEtapa, setPendingEtapa] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     if (open) {
       setForm(lead);
-      setInfoOpen(false);
     }
   }, [open, lead]);
 
@@ -134,8 +135,27 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
 
   const handleStep = async (etapaId: string) => {
     if (etapaId === form.etapa) return;
+    // Bloqueio: ao avançar pra "reuniao_agendada" exige qualificação preenchida
+    if (etapaId === "reuniao_agendada" && !form.qualificacao?.trim()) {
+      setPendingEtapa(etapaId);
+      setQualOpen(true);
+      return;
+    }
     await onChangeEtapa(form.id, etapaId);
     setForm((p: any) => ({ ...p, etapa: etapaId }));
+  };
+
+  const handleConfirmQualificacao = async (qualificacao: string) => {
+    const updated = { ...form, qualificacao };
+    await onSave({ ...updated, tier });
+    if (pendingEtapa) {
+      await onChangeEtapa(form.id, pendingEtapa);
+      setForm({ ...updated, etapa: pendingEtapa });
+      setPendingEtapa(null);
+    } else {
+      setForm(updated);
+    }
+    toast({ title: "Qualificação salva" });
   };
 
   const handleSave = async () => {
@@ -258,17 +278,19 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
           )}
         </div>
 
-        {/* INFORMAÇÕES DO LEAD (collapsible) */}
-        <Collapsible open={infoOpen} onOpenChange={setInfoOpen} className="mb-6">
-          <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-3 bg-muted/10 hover:bg-muted/20 border border-border/40 rounded-lg transition-colors">
-            <span className="text-xs font-semibold tracking-widest uppercase text-foreground">
-              Informações do lead
-            </span>
-            <ChevronDown
-              className={`h-4 w-4 text-muted-foreground transition-transform ${infoOpen ? "rotate-180" : ""}`}
-            />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="px-4 pt-2 pb-1 border border-t-0 border-border/40 rounded-b-lg -mt-px bg-background/30">
+        {/* TABS: Informações | Qualificação */}
+        <Tabs defaultValue="info" className="mb-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="info">Informações do lead</TabsTrigger>
+            <TabsTrigger value="qual" className="relative">
+              Qualificação
+              {!form.qualificacao?.trim() && (
+                <AlertCircle className="h-3 w-3 ml-1.5 text-amber-400" />
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="info" className="px-4 pt-3 pb-1 border border-border/40 rounded-lg bg-background/30">
             <HoverEditField label="Nome" value={form.nome ?? ""} onChange={(v) => set("nome", v)} />
             <HoverEditField label="Empresa" value={form.empresa ?? ""} onChange={(v) => set("empresa", v)} />
             <HoverEditField label="Telefone" value={form.telefone ?? ""} onChange={(v) => set("telefone", v)} />
@@ -302,8 +324,23 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
             )}
             <HoverEditField label="Descrição" value={form.descricao ?? ""} onChange={(v) => set("descricao", v)} multiline />
             <HoverEditField label="Notas internas" value={form.notas ?? ""} onChange={(v) => set("notas", v)} multiline />
-          </CollapsibleContent>
-        </Collapsible>
+          </TabsContent>
+
+          <TabsContent value="qual" className="px-4 pt-3 pb-3 border border-border/40 rounded-lg bg-background/30">
+            <HoverEditField
+              label="Detalhes da qualificação"
+              value={form.qualificacao ?? ""}
+              onChange={(v) => set("qualificacao", v)}
+              multiline
+            />
+            {!form.qualificacao?.trim() && (
+              <p className="text-xs text-amber-400/80 mt-3 flex items-center gap-1.5">
+                <AlertCircle className="h-3 w-3" />
+                Obrigatório para avançar o lead para "Reunião agendada".
+              </p>
+            )}
+          </TabsContent>
+        </Tabs>
 
         {/* TIMELINE: notas, tarefas e histórico */}
         {form.id && (
@@ -328,6 +365,13 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
           </Button>
         </div>
       </SheetContent>
+
+      <QualificacaoDialog
+        open={qualOpen}
+        onOpenChange={(v) => { setQualOpen(v); if (!v) setPendingEtapa(null); }}
+        initialValue={form.qualificacao}
+        onConfirm={handleConfirmQualificacao}
+      />
     </Sheet>
   );
 };
