@@ -3,12 +3,13 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { LEAD_ETAPAS } from "@/hooks/useCrmLeads";
-import { Check, ChevronRight, ChevronDown, Copy, MessageCircle, Pencil, Trash2 } from "lucide-react";
+import { Check, ChevronRight, Copy, MessageCircle, Pencil, Trash2, AlertCircle } from "lucide-react";
 import { formatPhone, whatsappNumber, locationFromPhone, timeAgo } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
 import { LeadTimeline } from "./LeadTimeline";
+import { QualificacaoDialog } from "./QualificacaoDialog";
 
 interface Props {
   open: boolean;
