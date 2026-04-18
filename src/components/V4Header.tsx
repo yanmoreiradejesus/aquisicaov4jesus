@@ -68,7 +68,7 @@ const V4Header = () => {
                         isAquisicaoActive ? "opacity-100" : "opacity-70 hover:opacity-100"
                       }`}
                     >
-                      AQUISIÇÃO
+                      DATA ANALYTICS
                       <ChevronDown className={`h-3 w-3 transition-transform ${aquisicaoOpen ? "rotate-180" : ""}`} />
                     </button>
                     {aquisicaoOpen && (
