@@ -148,30 +148,42 @@ export type Database = {
       }
       crm_atividades: {
         Row: {
+          concluida: boolean
           created_at: string
+          data_agendada: string | null
+          data_conclusao: string | null
           descricao: string | null
           id: string
           lead_id: string | null
           oportunidade_id: string | null
           tipo: Database["public"]["Enums"]["atividade_tipo"]
+          titulo: string | null
           usuario_id: string | null
         }
         Insert: {
+          concluida?: boolean
           created_at?: string
+          data_agendada?: string | null
+          data_conclusao?: string | null
           descricao?: string | null
           id?: string
           lead_id?: string | null
           oportunidade_id?: string | null
           tipo: Database["public"]["Enums"]["atividade_tipo"]
+          titulo?: string | null
           usuario_id?: string | null
         }
         Update: {
+          concluida?: boolean
           created_at?: string
+          data_agendada?: string | null
+          data_conclusao?: string | null
           descricao?: string | null
           id?: string
           lead_id?: string | null
           oportunidade_id?: string | null
           tipo?: Database["public"]["Enums"]["atividade_tipo"]
+          titulo?: string | null
           usuario_id?: string | null
         }
         Relationships: [
@@ -581,7 +593,15 @@ export type Database = {
     Enums: {
       account_status: "ativo" | "pausado" | "encerrado"
       app_role: "admin" | "user"
-      atividade_tipo: "ligacao" | "email" | "reuniao" | "nota" | "whatsapp"
+      atividade_tipo:
+        | "ligacao"
+        | "email"
+        | "reuniao"
+        | "nota"
+        | "whatsapp"
+        | "tarefa"
+        | "mudanca_etapa"
+        | "criacao"
       cobranca_status: "pendente" | "pago" | "atrasado" | "cancelado"
       cobranca_tipo: "fee_setup" | "fee_recorrente" | "ef"
       lead_etapa:
@@ -726,7 +746,16 @@ export const Constants = {
     Enums: {
       account_status: ["ativo", "pausado", "encerrado"],
       app_role: ["admin", "user"],
-      atividade_tipo: ["ligacao", "email", "reuniao", "nota", "whatsapp"],
+      atividade_tipo: [
+        "ligacao",
+        "email",
+        "reuniao",
+        "nota",
+        "whatsapp",
+        "tarefa",
+        "mudanca_etapa",
+        "criacao",
+      ],
       cobranca_status: ["pendente", "pago", "atrasado", "cancelado"],
       cobranca_tipo: ["fee_setup", "fee_recorrente", "ef"],
       lead_etapa: [

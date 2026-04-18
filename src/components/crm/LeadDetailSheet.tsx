@@ -8,6 +8,7 @@ import { LEAD_ETAPAS } from "@/hooks/useCrmLeads";
 import { Check, ChevronRight, ChevronDown, Copy, MessageCircle, Pencil, Trash2 } from "lucide-react";
 import { formatPhone, whatsappNumber, locationFromPhone, timeAgo } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
+import { LeadTimeline } from "./LeadTimeline";
 
 interface Props {
   open: boolean;
@@ -303,6 +304,13 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
             <HoverEditField label="Notas internas" value={form.notas ?? ""} onChange={(v) => set("notas", v)} multiline />
           </CollapsibleContent>
         </Collapsible>
+
+        {/* TIMELINE: notas, tarefas e histórico */}
+        {form.id && (
+          <div className="mb-6">
+            <LeadTimeline leadId={form.id} />
+          </div>
+        )}
 
         <div className="flex gap-2 mt-6 pt-4 border-t border-border">
           {form.id && onDelete && (
