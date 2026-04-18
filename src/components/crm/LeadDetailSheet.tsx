@@ -326,11 +326,8 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
         {/* QUALIFICAÇÃO (collapsible) */}
         <Collapsible className="mb-6">
           <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-3 bg-muted/10 hover:bg-muted/20 border border-border/40 rounded-lg transition-colors group">
-            <span className="text-xs font-semibold tracking-widest uppercase text-foreground flex items-center gap-2">
+            <span className="text-xs font-semibold tracking-widest uppercase text-foreground">
               Qualificação
-              {!form.qualificacao?.trim() && (
-                <AlertCircle className="h-3.5 w-3.5 text-amber-400" />
-              )}
             </span>
             <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
           </CollapsibleTrigger>
@@ -345,12 +342,6 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
               placeholder="Ex.: Dor principal — gerar leads B2B. Faturamento ~R$ 800k/mês. Já testou Meta Ads sem ROI. Decisor: CEO. Urgência alta, quer começar em 30 dias."
               className="text-sm resize-none"
             />
-            {!form.qualificacao?.trim() && (
-              <p className="text-xs text-amber-400/80 mt-3 flex items-center gap-1.5">
-                <AlertCircle className="h-3 w-3" />
-                Obrigatório para avançar o lead para "Reunião agendada".
-              </p>
-            )}
           </CollapsibleContent>
         </Collapsible>
 
