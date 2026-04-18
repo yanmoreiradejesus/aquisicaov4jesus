@@ -236,6 +236,7 @@ export type Database = {
           notas: string | null
           origem: string | null
           pais: string | null
+          qualificacao: string | null
           responsavel_id: string | null
           segmento: string | null
           telefone: string | null
@@ -270,6 +271,7 @@ export type Database = {
           notas?: string | null
           origem?: string | null
           pais?: string | null
+          qualificacao?: string | null
           responsavel_id?: string | null
           segmento?: string | null
           telefone?: string | null
@@ -304,6 +306,7 @@ export type Database = {
           notas?: string | null
           origem?: string | null
           pais?: string | null
+          qualificacao?: string | null
           responsavel_id?: string | null
           segmento?: string | null
           telefone?: string | null
