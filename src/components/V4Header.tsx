@@ -146,7 +146,7 @@ const V4Header = () => {
               {/* Aquisição group */}
               {visibleAquisicaoItems.length > 0 && (
                 <div className="px-4 py-2">
-                  <span className="text-white/50 text-[10px] font-medium uppercase tracking-widest">Aquisição</span>
+                  <span className="text-white/50 text-[10px] font-medium uppercase tracking-widest">Data Analytics</span>
                   <div className="mt-1 space-y-0.5">
                     {visibleAquisicaoItems.map((item) => (
                       <Link
