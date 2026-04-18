@@ -3,16 +3,18 @@ import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "
 import V4Header from "@/components/V4Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Upload } from "lucide-react";
 import { useCrmLeads, LEAD_ETAPAS } from "@/hooks/useCrmLeads";
 import { LeadColumn } from "@/components/crm/LeadColumn";
 import { LeadDialog } from "@/components/crm/LeadDialog";
+import { LeadImportDialog } from "@/components/crm/LeadImportDialog";
 import { useToast } from "@/hooks/use-toast";
 
 const CrmLeads = () => {
   const { data: leads = [], isLoading, upsert, updateEtapa, remove } = useCrmLeads();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const { toast } = useToast();
 
@@ -86,6 +88,9 @@ const CrmLeads = () => {
                 className="pl-9 w-full md:w-64"
               />
             </div>
+            <Button variant="outline" onClick={() => setImportOpen(true)}>
+              <Upload className="h-4 w-4 mr-1" /> Importar CSV
+            </Button>
             <Button onClick={() => { setEditing(null); setDialogOpen(true); }}>
               <Plus className="h-4 w-4 mr-1" /> Novo Lead
             </Button>
@@ -119,6 +124,8 @@ const CrmLeads = () => {
         onSave={handleSave}
         onDelete={handleDelete}
       />
+
+      <LeadImportDialog open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 };
