@@ -1,12 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { LEAD_ETAPAS } from "@/hooks/useCrmLeads";
-import { Check, ChevronRight, Copy, MessageCircle, Trash2 } from "lucide-react";
+import { Check, ChevronRight, ChevronDown, Copy, MessageCircle, Pencil, Trash2 } from "lucide-react";
 import { formatPhone, whatsappNumber, locationFromPhone, timeAgo } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
 
@@ -19,14 +18,102 @@ interface Props {
   onDelete?: (id: string) => Promise<void> | void;
 }
 
+/** Deriva o Tier a partir do faturamento (texto livre, ex.: "R$ 350.000", "1.5 mi", "2 milhões") */
+function tierFromFaturamento(fat?: string | null): string {
+  if (!fat) return "—";
+  const raw = String(fat).toLowerCase().trim();
+  // captura primeiro número (aceita vírgula ou ponto como decimal)
+  const m = raw.match(/([\d]+(?:[.,]\d+)?)/);
+  if (!m) return "—";
+  let n = parseFloat(m[1].replace(/\./g, "").replace(",", "."));
+  if (isNaN(n)) {
+    n = parseFloat(m[1].replace(",", "."));
+    if (isNaN(n)) return "—";
+  }
+  // multiplicadores
+  if (/(milhão|milhões|mi\b|mm\b)/.test(raw)) n *= 1_000_000;
+  else if (/(mil\b|k\b)/.test(raw)) n *= 1_000;
+  else if (/bilh/.test(raw)) n *= 1_000_000_000;
+
+  if (n <= 100_000) return "Tiny";
+  if (n <= 200_000) return "Small";
+  if (n <= 4_000_000) return "Medium";
+  if (n <= 16_000_000) return "Large";
+  return "Enterprise";
+}
+
+/** Campo com edição hover: mostra valor; ícone de lápis aparece no hover; clicar habilita input */
+const HoverEditField = ({
+  label,
+  value,
+  onChange,
+  multiline,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  multiline?: boolean;
+}) => {
+  const [editing, setEditing] = useState(false);
+  return (
+    <div className="group flex items-start justify-between gap-3 py-2 border-b border-border/30 last:border-0">
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1">
+          {label}
+        </p>
+        {editing ? (
+          multiline ? (
+            <Textarea
+              autoFocus
+              rows={3}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              onBlur={() => setEditing(false)}
+              className="text-sm"
+            />
+          ) : (
+            <Input
+              autoFocus
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              onBlur={() => setEditing(false)}
+              onKeyDown={(e) => e.key === "Enter" && setEditing(false)}
+              className="h-8 text-sm"
+            />
+          )
+        ) : (
+          <p className="text-sm text-foreground break-words whitespace-pre-wrap">
+            {value || <span className="text-muted-foreground/60">—</span>}
+          </p>
+        )}
+      </div>
+      {!editing && (
+        <button
+          onClick={() => setEditing(true)}
+          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground shrink-0"
+          title={`Editar ${label}`}
+        >
+          <Pencil className="h-3 w-3" />
+        </button>
+      )}
+    </div>
+  );
+};
+
 export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtapa, onDelete }: Props) => {
   const [form, setForm] = useState<any>(null);
   const [saving, setSaving] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (open) setForm(lead);
+    if (open) {
+      setForm(lead);
+      setInfoOpen(false);
+    }
   }, [open, lead]);
+
+  const tier = useMemo(() => tierFromFaturamento(form?.faturamento), [form?.faturamento]);
 
   if (!form) return null;
 
@@ -54,7 +141,7 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
     if (!form.nome?.trim()) return;
     setSaving(true);
     try {
-      const payload = { ...form };
+      const payload = { ...form, tier };
       if (payload.valor_pago === "" || payload.valor_pago == null) payload.valor_pago = null;
       else payload.valor_pago = Number(payload.valor_pago);
       if (!payload.data_aquisicao) payload.data_aquisicao = null;
@@ -124,7 +211,7 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
         </div>
 
         {/* CONTATO RÁPIDO */}
-        <div className="bg-muted/20 border border-border/40 rounded-lg p-4 mb-6 space-y-3">
+        <div className="bg-muted/20 border border-border/40 rounded-lg p-4 mb-4 space-y-3">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
@@ -165,85 +252,57 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
           )}
           {loc && (
             <p className="text-xs text-muted-foreground pt-1">
-              📍 {loc.cidade} / {loc.estado} <span className="opacity-60">(via DDD)</span>
+              📍 {loc.cidade} / {loc.estado}
             </p>
           )}
         </div>
 
-        {/* DETALHES editáveis */}
-        <div className="space-y-4">
-          <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-            Detalhes
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-1.5 md:col-span-2">
-              <Label>Nome *</Label>
-              <Input value={form.nome ?? ""} onChange={(e) => set("nome", e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Empresa</Label>
-              <Input value={form.empresa ?? ""} onChange={(e) => set("empresa", e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Telefone</Label>
-              <Input value={form.telefone ?? ""} onChange={(e) => set("telefone", e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>E-mail</Label>
-              <Input type="email" value={form.email ?? ""} onChange={(e) => set("email", e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Cargo</Label>
-              <Input value={form.cargo ?? ""} onChange={(e) => set("cargo", e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Faturamento</Label>
-              <Input value={form.faturamento ?? ""} onChange={(e) => set("faturamento", e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Segmento</Label>
-              <Input value={form.segmento ?? ""} onChange={(e) => set("segmento", e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Canal</Label>
-              <Input value={form.canal ?? ""} onChange={(e) => set("canal", e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Tier</Label>
-              <Select value={form.tier ?? ""} onValueChange={(v) => set("tier", v)}>
-                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="A">A</SelectItem>
-                  <SelectItem value="B">B</SelectItem>
-                  <SelectItem value="C">C</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Valor pago (R$)</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={form.valor_pago ?? ""}
-                onChange={(e) => set("valor_pago", e.target.value)}
-              />
-            </div>
-            {form.etapa === "desqualificado" && (
-              <div className="space-y-1.5 md:col-span-2">
-                <Label>Motivo da desqualificação</Label>
-                <Input value={form.motivo_desqualificacao ?? ""} onChange={(e) => set("motivo_desqualificacao", e.target.value)} />
+        {/* INFORMAÇÕES DO LEAD (collapsible) */}
+        <Collapsible open={infoOpen} onOpenChange={setInfoOpen} className="mb-6">
+          <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-3 bg-muted/10 hover:bg-muted/20 border border-border/40 rounded-lg transition-colors">
+            <span className="text-xs font-semibold tracking-widest uppercase text-foreground">
+              Informações do lead
+            </span>
+            <ChevronDown
+              className={`h-4 w-4 text-muted-foreground transition-transform ${infoOpen ? "rotate-180" : ""}`}
+            />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="px-4 pt-2 pb-1 border border-t-0 border-border/40 rounded-b-lg -mt-px bg-background/30">
+            <HoverEditField label="Nome" value={form.nome ?? ""} onChange={(v) => set("nome", v)} />
+            <HoverEditField label="Empresa" value={form.empresa ?? ""} onChange={(v) => set("empresa", v)} />
+            <HoverEditField label="Telefone" value={form.telefone ?? ""} onChange={(v) => set("telefone", v)} />
+            <HoverEditField label="E-mail" value={form.email ?? ""} onChange={(v) => set("email", v)} />
+            <HoverEditField label="Cargo" value={form.cargo ?? ""} onChange={(v) => set("cargo", v)} />
+            <HoverEditField label="Faturamento" value={form.faturamento ?? ""} onChange={(v) => set("faturamento", v)} />
+
+            {/* Tier — derivado, não editável */}
+            <div className="flex items-start justify-between gap-3 py-2 border-b border-border/30">
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1">
+                  Tier <span className="text-muted-foreground/60 normal-case tracking-normal">(auto)</span>
+                </p>
+                <p className="text-sm text-foreground">{tier}</p>
               </div>
+            </div>
+
+            <HoverEditField label="Segmento" value={form.segmento ?? ""} onChange={(v) => set("segmento", v)} />
+            <HoverEditField label="Canal" value={form.canal ?? ""} onChange={(v) => set("canal", v)} />
+            <HoverEditField
+              label="Valor pago (R$)"
+              value={form.valor_pago != null ? String(form.valor_pago) : ""}
+              onChange={(v) => set("valor_pago", v)}
+            />
+            {form.etapa === "desqualificado" && (
+              <HoverEditField
+                label="Motivo da desqualificação"
+                value={form.motivo_desqualificacao ?? ""}
+                onChange={(v) => set("motivo_desqualificacao", v)}
+              />
             )}
-            <div className="space-y-1.5 md:col-span-2">
-              <Label>Descrição</Label>
-              <Textarea rows={3} value={form.descricao ?? ""} onChange={(e) => set("descricao", e.target.value)} />
-            </div>
-            <div className="space-y-1.5 md:col-span-2">
-              <Label>Notas internas</Label>
-              <Textarea rows={3} value={form.notas ?? ""} onChange={(e) => set("notas", e.target.value)} />
-            </div>
-          </div>
-        </div>
+            <HoverEditField label="Descrição" value={form.descricao ?? ""} onChange={(v) => set("descricao", v)} multiline />
+            <HoverEditField label="Notas internas" value={form.notas ?? ""} onChange={(v) => set("notas", v)} multiline />
+          </CollapsibleContent>
+        </Collapsible>
 
         <div className="flex gap-2 mt-6 pt-4 border-t border-border">
           {form.id && onDelete && (
