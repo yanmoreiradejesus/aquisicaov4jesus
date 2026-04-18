@@ -14,6 +14,337 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounts: {
+        Row: {
+          account_manager_id: string | null
+          cliente_nome: string
+          created_at: string
+          data_fim_contrato: string | null
+          data_inicio_contrato: string
+          health_score: number | null
+          id: string
+          notas: string | null
+          oportunidade_id: string | null
+          produtos_contratados: Json | null
+          proxima_revisao: string | null
+          status: Database["public"]["Enums"]["account_status"]
+          updated_at: string
+        }
+        Insert: {
+          account_manager_id?: string | null
+          cliente_nome: string
+          created_at?: string
+          data_fim_contrato?: string | null
+          data_inicio_contrato?: string
+          health_score?: number | null
+          id?: string
+          notas?: string | null
+          oportunidade_id?: string | null
+          produtos_contratados?: Json | null
+          proxima_revisao?: string | null
+          status?: Database["public"]["Enums"]["account_status"]
+          updated_at?: string
+        }
+        Update: {
+          account_manager_id?: string | null
+          cliente_nome?: string
+          created_at?: string
+          data_fim_contrato?: string | null
+          data_inicio_contrato?: string
+          health_score?: number | null
+          id?: string
+          notas?: string | null
+          oportunidade_id?: string | null
+          produtos_contratados?: Json | null
+          proxima_revisao?: string | null
+          status?: Database["public"]["Enums"]["account_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_account_manager_id_fkey"
+            columns: ["account_manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_oportunidade_id_fkey"
+            columns: ["oportunidade_id"]
+            isOneToOne: false
+            referencedRelation: "crm_oportunidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cobrancas: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          data_pagamento: string | null
+          forma_pagamento: string | null
+          id: string
+          nota_fiscal: string | null
+          notas: string | null
+          oportunidade_id: string | null
+          parcela_num: number | null
+          parcela_total: number | null
+          status: Database["public"]["Enums"]["cobranca_status"]
+          tipo: Database["public"]["Enums"]["cobranca_tipo"]
+          updated_at: string
+          valor: number
+          vencimento: string
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          data_pagamento?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          nota_fiscal?: string | null
+          notas?: string | null
+          oportunidade_id?: string | null
+          parcela_num?: number | null
+          parcela_total?: number | null
+          status?: Database["public"]["Enums"]["cobranca_status"]
+          tipo: Database["public"]["Enums"]["cobranca_tipo"]
+          updated_at?: string
+          valor: number
+          vencimento: string
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          data_pagamento?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          nota_fiscal?: string | null
+          notas?: string | null
+          oportunidade_id?: string | null
+          parcela_num?: number | null
+          parcela_total?: number | null
+          status?: Database["public"]["Enums"]["cobranca_status"]
+          tipo?: Database["public"]["Enums"]["cobranca_tipo"]
+          updated_at?: string
+          valor?: number
+          vencimento?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cobrancas_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cobrancas_oportunidade_id_fkey"
+            columns: ["oportunidade_id"]
+            isOneToOne: false
+            referencedRelation: "crm_oportunidades"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_atividades: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          id: string
+          lead_id: string | null
+          oportunidade_id: string | null
+          tipo: Database["public"]["Enums"]["atividade_tipo"]
+          usuario_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          lead_id?: string | null
+          oportunidade_id?: string | null
+          tipo: Database["public"]["Enums"]["atividade_tipo"]
+          usuario_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          lead_id?: string | null
+          oportunidade_id?: string | null
+          tipo?: Database["public"]["Enums"]["atividade_tipo"]
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_atividades_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_atividades_oportunidade_id_fkey"
+            columns: ["oportunidade_id"]
+            isOneToOne: false
+            referencedRelation: "crm_oportunidades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_atividades_usuario_id_fkey"
+            columns: ["usuario_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_leads: {
+        Row: {
+          cargo: string | null
+          created_at: string
+          created_by: string | null
+          data_reuniao_agendada: string | null
+          data_reuniao_realizada: string | null
+          email: string | null
+          empresa: string | null
+          etapa: Database["public"]["Enums"]["lead_etapa"]
+          id: string
+          motivo_desqualificacao: string | null
+          nome: string
+          notas: string | null
+          origem: string | null
+          responsavel_id: string | null
+          telefone: string | null
+          tier: string | null
+          updated_at: string
+          urgencia: string | null
+        }
+        Insert: {
+          cargo?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_reuniao_agendada?: string | null
+          data_reuniao_realizada?: string | null
+          email?: string | null
+          empresa?: string | null
+          etapa?: Database["public"]["Enums"]["lead_etapa"]
+          id?: string
+          motivo_desqualificacao?: string | null
+          nome: string
+          notas?: string | null
+          origem?: string | null
+          responsavel_id?: string | null
+          telefone?: string | null
+          tier?: string | null
+          updated_at?: string
+          urgencia?: string | null
+        }
+        Update: {
+          cargo?: string | null
+          created_at?: string
+          created_by?: string | null
+          data_reuniao_agendada?: string | null
+          data_reuniao_realizada?: string | null
+          email?: string | null
+          empresa?: string | null
+          etapa?: Database["public"]["Enums"]["lead_etapa"]
+          id?: string
+          motivo_desqualificacao?: string | null
+          nome?: string
+          notas?: string | null
+          origem?: string | null
+          responsavel_id?: string | null
+          telefone?: string | null
+          tier?: string | null
+          updated_at?: string
+          urgencia?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_leads_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_leads_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_oportunidades: {
+        Row: {
+          created_at: string
+          data_fechamento_previsto: string | null
+          data_fechamento_real: string | null
+          data_proposta: string | null
+          etapa: Database["public"]["Enums"]["oportunidade_etapa"]
+          id: string
+          lead_id: string | null
+          motivo_perda: string | null
+          nome_oportunidade: string
+          notas: string | null
+          responsavel_id: string | null
+          updated_at: string
+          valor_ef: number | null
+          valor_fee: number | null
+          valor_total: number | null
+        }
+        Insert: {
+          created_at?: string
+          data_fechamento_previsto?: string | null
+          data_fechamento_real?: string | null
+          data_proposta?: string | null
+          etapa?: Database["public"]["Enums"]["oportunidade_etapa"]
+          id?: string
+          lead_id?: string | null
+          motivo_perda?: string | null
+          nome_oportunidade: string
+          notas?: string | null
+          responsavel_id?: string | null
+          updated_at?: string
+          valor_ef?: number | null
+          valor_fee?: number | null
+          valor_total?: number | null
+        }
+        Update: {
+          created_at?: string
+          data_fechamento_previsto?: string | null
+          data_fechamento_real?: string | null
+          data_proposta?: string | null
+          etapa?: Database["public"]["Enums"]["oportunidade_etapa"]
+          id?: string
+          lead_id?: string | null
+          motivo_perda?: string | null
+          nome_oportunidade?: string
+          notas?: string | null
+          responsavel_id?: string | null
+          updated_at?: string
+          valor_ef?: number | null
+          valor_fee?: number | null
+          valor_total?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_oportunidades_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_oportunidades_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mix_goals: {
         Row: {
           ass_rate: number | null
@@ -203,9 +534,27 @@ export type Database = {
         }
         Returns: boolean
       }
+      marcar_cobrancas_atrasadas: { Args: never; Returns: undefined }
     }
     Enums: {
+      account_status: "ativo" | "pausado" | "encerrado"
       app_role: "admin" | "user"
+      atividade_tipo: "ligacao" | "email" | "reuniao" | "nota" | "whatsapp"
+      cobranca_status: "pendente" | "pago" | "atrasado" | "cancelado"
+      cobranca_tipo: "fee_setup" | "fee_recorrente" | "ef"
+      lead_etapa:
+        | "entrada"
+        | "tentativa_contato"
+        | "contato_realizado"
+        | "desqualificado"
+        | "reuniao_agendada"
+        | "reuniao_realizada"
+      oportunidade_etapa:
+        | "proposta"
+        | "negociacao"
+        | "fechado"
+        | "follow_up_longo"
+        | "perdido"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -333,7 +682,26 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_status: ["ativo", "pausado", "encerrado"],
       app_role: ["admin", "user"],
+      atividade_tipo: ["ligacao", "email", "reuniao", "nota", "whatsapp"],
+      cobranca_status: ["pendente", "pago", "atrasado", "cancelado"],
+      cobranca_tipo: ["fee_setup", "fee_recorrente", "ef"],
+      lead_etapa: [
+        "entrada",
+        "tentativa_contato",
+        "contato_realizado",
+        "desqualificado",
+        "reuniao_agendada",
+        "reuniao_realizada",
+      ],
+      oportunidade_etapa: [
+        "proposta",
+        "negociacao",
+        "fechado",
+        "follow_up_longo",
+        "perdido",
+      ],
     },
   },
 } as const
