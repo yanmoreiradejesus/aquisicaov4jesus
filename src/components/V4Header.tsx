@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import logo from "@/assets/v4-logo.png";
-import { LogOut, Shield, ChevronDown, Menu, X } from "lucide-react";
+import { LogOut, Shield, ChevronDown, Menu, X, Home } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
 const V4Header = () => {
@@ -14,11 +14,11 @@ const V4Header = () => {
   const isActive = (path: string) => location.pathname === path;
 
   const aquisicaoItems = [
-    { path: "/dashboard-comercial", label: "DASHBOARD" },
-    { path: "/", label: "FUNIL" },
-    { path: "/mix-compra", label: "META" },
-    { path: "/insights", label: "INSIGHTS" },
-    
+    { path: "/aquisicao/dashboard", label: "DASHBOARD" },
+    { path: "/aquisicao/funil", label: "FUNIL" },
+    { path: "/aquisicao/meta", label: "META" },
+    { path: "/aquisicao/insights", label: "INSIGHTS" },
+    { path: "/aquisicao/financeiro", label: "FINANCEIRO" },
   ];
 
   const isAquisicaoActive = aquisicaoItems.some((item) => isActive(item.path));
@@ -49,6 +49,17 @@ const V4Header = () => {
 
               {/* Desktop nav */}
               <nav className="hidden md:flex items-center gap-4 lg:gap-6">
+                <Link
+                  to="/"
+                  className={`font-body text-xs lg:text-sm font-medium tracking-wider transition-all duration-300 text-white flex items-center gap-1 ${
+                    isActive("/") ? "opacity-100" : "opacity-70 hover:opacity-100"
+                  }`}
+                  title="Hub"
+                >
+                  <Home className="h-3 w-3" />
+                  HUB
+                </Link>
+
                 {visibleAquisicaoItems.length > 0 && (
                   <div className="relative" ref={dropdownRef}>
                     <button
@@ -77,17 +88,6 @@ const V4Header = () => {
                       </div>
                     )}
                   </div>
-                )}
-
-                {hasPageAccess("/financeiro") && (
-                  <Link
-                    to="/financeiro"
-                    className={`font-body text-xs lg:text-sm font-medium tracking-wider transition-all duration-300 text-white ${
-                      isActive("/financeiro") ? "opacity-100" : "opacity-70 hover:opacity-100"
-                    }`}
-                  >
-                    FINANCEIRO
-                  </Link>
                 )}
               </nav>
             </div>
@@ -163,19 +163,18 @@ const V4Header = () => {
                 </div>
               )}
 
-              {/* Financeiro */}
-              {hasPageAccess("/financeiro") && (
-                <div className="px-4 py-2">
-                  <Link
-                    to="/financeiro"
-                    className={`block px-3 py-2.5 rounded-md text-sm font-medium text-white transition-colors ${
-                      isActive("/financeiro") ? "bg-white/20" : "hover:bg-white/10"
-                    }`}
-                  >
-                    FINANCEIRO
-                  </Link>
-                </div>
-              )}
+              {/* Hub link (mobile) */}
+              <div className="px-4 py-2">
+                <Link
+                  to="/"
+                  className={`flex items-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium text-white transition-colors ${
+                    isActive("/") ? "bg-white/20" : "hover:bg-white/10"
+                  }`}
+                >
+                  <Home className="h-3.5 w-3.5" />
+                  HUB
+                </Link>
+              </div>
 
               {/* Admin */}
               {isAdmin && (

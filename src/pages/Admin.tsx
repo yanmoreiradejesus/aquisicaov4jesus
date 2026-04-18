@@ -22,10 +22,12 @@ interface UserWithAccess {
 }
 
 const AVAILABLE_PAGES = [
-  { path: "/", label: "Dashboard" },
-  { path: "/insights", label: "Insights" },
-  { path: "/mix-compra", label: "Meta" },
-  { path: "/financeiro", label: "Financeiro" },
+  // Aquisição app
+  { path: "/aquisicao/funil", label: "Aquisição · Funil" },
+  { path: "/aquisicao/dashboard", label: "Aquisição · Dashboard" },
+  { path: "/aquisicao/insights", label: "Aquisição · Insights" },
+  { path: "/aquisicao/meta", label: "Aquisição · Meta" },
+  { path: "/aquisicao/financeiro", label: "Aquisição · Financeiro" },
 ];
 
 const Admin = () => {
