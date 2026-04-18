@@ -157,6 +157,13 @@ const CrmLeads = () => {
       />
 
       <LeadImportDialog open={importOpen} onOpenChange={setImportOpen} />
+
+      <QualificacaoDialog
+        open={qualOpen}
+        onOpenChange={(v) => { setQualOpen(v); if (!v) setPendingMove(null); }}
+        initialValue={pendingMove?.lead?.qualificacao}
+        onConfirm={handleConfirmQualificacao}
+      />
     </div>
   );
 };
