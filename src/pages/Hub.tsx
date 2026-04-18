@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import V4Header from "@/components/V4Header";
 import { Card } from "@/components/ui/card";
-import { TrendingUp, ArrowRight, LayoutGrid } from "lucide-react";
+import { TrendingUp, ArrowRight, LayoutGrid, Briefcase } from "lucide-react";
 
 interface AppCard {
   id: string;
@@ -29,6 +29,19 @@ const APPS: AppCard[] = [
       "/aquisicao/financeiro",
     ],
     icon: TrendingUp,
+  },
+  {
+    id: "comercial",
+    title: "Comercial",
+    description: "CRM de leads e oportunidades, gestão de contas e cobranças.",
+    href: "/comercial/leads",
+    accessPaths: [
+      "/comercial/leads",
+      "/comercial/oportunidades",
+      "/comercial/accounts",
+      "/comercial/cobrancas",
+    ],
+    icon: Briefcase,
   },
   {
     id: "app-v4",

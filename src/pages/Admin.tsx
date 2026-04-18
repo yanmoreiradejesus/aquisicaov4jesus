@@ -28,6 +28,11 @@ const AVAILABLE_PAGES = [
   { path: "/aquisicao/insights", label: "Data Analytics · Insights" },
   { path: "/aquisicao/meta", label: "Data Analytics · Meta" },
   { path: "/aquisicao/financeiro", label: "Data Analytics · Financeiro" },
+  // Comercial app
+  { path: "/comercial/leads", label: "Comercial · CRM Leads" },
+  { path: "/comercial/oportunidades", label: "Comercial · CRM Oportunidades" },
+  { path: "/comercial/accounts", label: "Comercial · Accounts" },
+  { path: "/comercial/cobrancas", label: "Comercial · Cobranças" },
   // External apps (subdomain)
   { path: "/app-v4", label: "App V4 (app.v4jesus.com)" },
 ];

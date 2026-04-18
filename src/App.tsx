@@ -14,6 +14,8 @@ import DashboardComercial from "./pages/DashboardComercial";
 import MixCompra from "./pages/MixCompra";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import CrmLeads from "./pages/CrmLeads";
+import ComercialPlaceholder from "./pages/ComercialPlaceholder";
 
 const AppRoutes = () => {
   const location = useLocation();
@@ -63,6 +65,29 @@ const AppRoutes = () => {
       <Route path="/mix-compra" element={<Navigate to="/aquisicao/meta" replace />} />
       <Route path="/metas" element={<Navigate to="/aquisicao/meta" replace />} />
       <Route path="/financeiro" element={<Navigate to="/aquisicao/financeiro" replace />} />
+
+      {/* Comercial app */}
+      <Route path="/comercial" element={<Navigate to="/comercial/leads" replace />} />
+      <Route path="/comercial/leads" element={
+        <ProtectedRoute requiredPath="/comercial/leads">
+          <PageTransition><CrmLeads /></PageTransition>
+        </ProtectedRoute>
+      } />
+      <Route path="/comercial/oportunidades" element={
+        <ProtectedRoute requiredPath="/comercial/oportunidades">
+          <PageTransition><ComercialPlaceholder titulo="CRM Oportunidades" descricao="Pipeline de oportunidades (proposta, negociação, fechado, follow-up, perdido). Em breve." /></PageTransition>
+        </ProtectedRoute>
+      } />
+      <Route path="/comercial/accounts" element={
+        <ProtectedRoute requiredPath="/comercial/accounts">
+          <PageTransition><ComercialPlaceholder titulo="Account Managing" descricao="Gestão de contas ativas, health score e renovações. Em breve." /></PageTransition>
+        </ProtectedRoute>
+      } />
+      <Route path="/comercial/cobrancas" element={
+        <ProtectedRoute requiredPath="/comercial/cobrancas">
+          <PageTransition><ComercialPlaceholder titulo="Cobranças" descricao="Conciliação de parcelas geradas automaticamente a partir de contratos fechados. Em breve." /></PageTransition>
+        </ProtectedRoute>
+      } />
 
       {/* Admin */}
       <Route path="/admin" element={
