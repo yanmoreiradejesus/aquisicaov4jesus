@@ -22,12 +22,14 @@ interface UserWithAccess {
 }
 
 const AVAILABLE_PAGES = [
-  // Aquisição app
-  { path: "/aquisicao/funil", label: "Aquisição · Funil" },
-  { path: "/aquisicao/dashboard", label: "Aquisição · Dashboard" },
-  { path: "/aquisicao/insights", label: "Aquisição · Insights" },
-  { path: "/aquisicao/meta", label: "Aquisição · Meta" },
-  { path: "/aquisicao/financeiro", label: "Aquisição · Financeiro" },
+  // Data Analytics app
+  { path: "/aquisicao/funil", label: "Data Analytics · Funil" },
+  { path: "/aquisicao/dashboard", label: "Data Analytics · Dashboard" },
+  { path: "/aquisicao/insights", label: "Data Analytics · Insights" },
+  { path: "/aquisicao/meta", label: "Data Analytics · Meta" },
+  { path: "/aquisicao/financeiro", label: "Data Analytics · Financeiro" },
+  // External apps (subdomain)
+  { path: "/app-v4", label: "App V4 (app.v4jesus.com)" },
 ];
 
 const Admin = () => {

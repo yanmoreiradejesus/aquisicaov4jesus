@@ -68,7 +68,7 @@ const V4Header = () => {
                         isAquisicaoActive ? "opacity-100" : "opacity-70 hover:opacity-100"
                       }`}
                     >
-                      AQUISIÇÃO
+                      DATA ANALYTICS
                       <ChevronDown className={`h-3 w-3 transition-transform ${aquisicaoOpen ? "rotate-180" : ""}`} />
                     </button>
                     {aquisicaoOpen && (
@@ -146,7 +146,7 @@ const V4Header = () => {
               {/* Aquisição group */}
               {visibleAquisicaoItems.length > 0 && (
                 <div className="px-4 py-2">
-                  <span className="text-white/50 text-[10px] font-medium uppercase tracking-widest">Aquisição</span>
+                  <span className="text-white/50 text-[10px] font-medium uppercase tracking-widest">Data Analytics</span>
                   <div className="mt-1 space-y-0.5">
                     {visibleAquisicaoItems.map((item) => (
                       <Link

@@ -2,13 +2,14 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import V4Header from "@/components/V4Header";
 import { Card } from "@/components/ui/card";
-import { TrendingUp, ArrowRight } from "lucide-react";
+import { TrendingUp, ArrowRight, LayoutGrid } from "lucide-react";
 
 interface AppCard {
   id: string;
   title: string;
   description: string;
   href: string;
+  external?: boolean;
   // The app is visible if the user has access to ANY of these paths (or is admin)
   accessPaths: string[];
   icon: React.ComponentType<{ className?: string }>;
@@ -16,8 +17,8 @@ interface AppCard {
 
 const APPS: AppCard[] = [
   {
-    id: "aquisicao",
-    title: "Aquisição",
+    id: "data-analytics",
+    title: "Data Analytics",
     description: "Funil de vendas, dashboard comercial, metas e insights de aquisição.",
     href: "/aquisicao/funil",
     accessPaths: [
@@ -28,6 +29,15 @@ const APPS: AppCard[] = [
       "/aquisicao/financeiro",
     ],
     icon: TrendingUp,
+  },
+  {
+    id: "app-v4",
+    title: "App V4",
+    description: "Sistema operacional V4 Jesus.",
+    href: "https://app.v4jesus.com",
+    external: true,
+    accessPaths: ["/app-v4"],
+    icon: LayoutGrid,
   },
 ];
 
@@ -63,22 +73,35 @@ const Hub = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
             {visibleApps.map((app) => {
               const Icon = app.icon;
-              return (
-                <Link key={app.id} to={app.href} className="group">
-                  <Card className="p-6 lg:p-8 h-full transition-all duration-300 hover:border-primary/50 hover:shadow-lg cursor-pointer">
-                    <div className="flex items-start justify-between gap-4 mb-4">
-                      <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <Icon className="h-6 w-6 text-primary" />
-                      </div>
-                      <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-foreground" />
+              const cardInner = (
+                <Card className="p-6 lg:p-8 h-full transition-all duration-300 hover:border-primary/50 hover:shadow-lg cursor-pointer">
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Icon className="h-6 w-6 text-primary" />
                     </div>
-                    <h2 className="font-heading text-xl lg:text-2xl font-bold text-foreground mb-2">
-                      {app.title}
-                    </h2>
-                    <p className="text-sm text-muted-foreground">
-                      {app.description}
-                    </p>
-                  </Card>
+                    <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-foreground" />
+                  </div>
+                  <h2 className="font-heading text-xl lg:text-2xl font-bold text-foreground mb-2">
+                    {app.title}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    {app.description}
+                  </p>
+                </Card>
+              );
+              return app.external ? (
+                <a
+                  key={app.id}
+                  href={app.href}
+                  className="group"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {cardInner}
+                </a>
+              ) : (
+                <Link key={app.id} to={app.href} className="group">
+                  {cardInner}
                 </Link>
               );
             })}
