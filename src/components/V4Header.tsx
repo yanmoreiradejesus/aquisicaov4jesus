@@ -8,8 +8,10 @@ const V4Header = () => {
   const location = useLocation();
   const { user, isAdmin, hasPageAccess, signOut } = useAuth();
   const [aquisicaoOpen, setAquisicaoOpen] = useState(false);
+  const [comercialOpen, setComercialOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const comercialRef = useRef<HTMLDivElement>(null);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -21,13 +23,25 @@ const V4Header = () => {
     { path: "/aquisicao/financeiro", label: "FINANCEIRO" },
   ];
 
+  const comercialItems = [
+    { path: "/comercial/leads", label: "CRM LEADS" },
+    { path: "/comercial/oportunidades", label: "OPORTUNIDADES" },
+    { path: "/comercial/accounts", label: "ACCOUNTS" },
+    { path: "/comercial/cobrancas", label: "COBRANÇAS" },
+  ];
+
   const isAquisicaoActive = aquisicaoItems.some((item) => isActive(item.path));
   const visibleAquisicaoItems = aquisicaoItems.filter((item) => hasPageAccess(item.path));
+  const isComercialActive = comercialItems.some((item) => isActive(item.path));
+  const visibleComercialItems = comercialItems.filter((item) => hasPageAccess(item.path));
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setAquisicaoOpen(false);
+      }
+      if (comercialRef.current && !comercialRef.current.contains(event.target as Node)) {
+        setComercialOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -78,6 +92,35 @@ const V4Header = () => {
                             key={item.path}
                             to={item.path}
                             onClick={() => setAquisicaoOpen(false)}
+                            className={`block px-4 py-2 font-body text-xs lg:text-sm font-medium tracking-wider text-white transition-all duration-200 ${
+                              isActive(item.path) ? "bg-white/20" : "hover:bg-white/10"
+                            }`}
+                          >
+                            {item.label}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {visibleComercialItems.length > 0 && (
+                  <div className="relative" ref={comercialRef}>
+                    <button
+                      onClick={() => setComercialOpen(!comercialOpen)}
+                      className={`font-body text-xs lg:text-sm font-medium tracking-wider transition-all duration-300 text-white flex items-center gap-1 ${
+                        isComercialActive ? "opacity-100" : "opacity-70 hover:opacity-100"
+                      }`}
+                    >
+                      COMERCIAL
+                      <ChevronDown className={`h-3 w-3 transition-transform ${comercialOpen ? "rotate-180" : ""}`} />
+                    </button>
+                    {comercialOpen && (
+                      <div className="absolute top-full left-0 mt-2 bg-[#b5070f] rounded-md shadow-lg py-1 min-w-[180px] z-50">
+                        {visibleComercialItems.map((item) => (
+                          <Link
+                            key={item.path}
+                            to={item.path}
+                            onClick={() => setComercialOpen(false)}
                             className={`block px-4 py-2 font-body text-xs lg:text-sm font-medium tracking-wider text-white transition-all duration-200 ${
                               isActive(item.path) ? "bg-white/20" : "hover:bg-white/10"
                             }`}
@@ -149,6 +192,26 @@ const V4Header = () => {
                   <span className="text-white/50 text-[10px] font-medium uppercase tracking-widest">Data Analytics</span>
                   <div className="mt-1 space-y-0.5">
                     {visibleAquisicaoItems.map((item) => (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        className={`block px-3 py-2.5 rounded-md text-sm font-medium text-white transition-colors ${
+                          isActive(item.path) ? "bg-white/20" : "hover:bg-white/10"
+                        }`}
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Comercial group */}
+              {visibleComercialItems.length > 0 && (
+                <div className="px-4 py-2">
+                  <span className="text-white/50 text-[10px] font-medium uppercase tracking-widest">Comercial</span>
+                  <div className="mt-1 space-y-0.5">
+                    {visibleComercialItems.map((item) => (
                       <Link
                         key={item.path}
                         to={item.path}
