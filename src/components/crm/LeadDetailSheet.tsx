@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,7 +104,6 @@ const HoverEditField = ({
 
 export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtapa, onDelete }: Props) => {
   const [form, setForm] = useState<any>(null);
-  const [saving, setSaving] = useState(false);
   const [qualOpen, setQualOpen] = useState(false);
   const [pendingEtapa, setPendingEtapa] = useState<string | null>(null);
   const { toast } = useToast();
@@ -116,6 +115,32 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
   }, [open, lead]);
 
   const tier = useMemo(() => tierFromFaturamento(form?.faturamento), [form?.faturamento]);
+
+  // Autosave com debounce
+  const initialIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open) {
+      initialIdRef.current = null;
+      return;
+    }
+    if (!form?.id) return;
+    // pula o primeiro render após abrir (evita salvar sem mudança)
+    if (initialIdRef.current !== form.id) {
+      initialIdRef.current = form.id;
+      return;
+    }
+    if (!form.nome?.trim()) return;
+    const t = setTimeout(() => {
+      const payload = { ...form, tier };
+      if (payload.valor_pago === "" || payload.valor_pago == null) payload.valor_pago = null;
+      else payload.valor_pago = Number(payload.valor_pago);
+      if (!payload.data_aquisicao) payload.data_aquisicao = null;
+      if (!payload.data_criacao_origem) payload.data_criacao_origem = null;
+      Promise.resolve(onSave(payload)).catch(() => {});
+    }, 600);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, tier, open]);
 
   if (!form) return null;
 
@@ -135,7 +160,6 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
 
   const handleStep = async (etapaId: string) => {
     if (etapaId === form.etapa) return;
-    // Bloqueio: ao avançar pra "reuniao_agendada" exige qualificação preenchida
     if (etapaId === "reuniao_agendada" && !form.qualificacao?.trim()) {
       setPendingEtapa(etapaId);
       setQualOpen(true);
@@ -154,24 +178,6 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
       setPendingEtapa(null);
     } else {
       setForm(updated);
-    }
-    toast({ title: "Qualificação salva" });
-  };
-
-  const handleSave = async () => {
-    if (!form.nome?.trim()) return;
-    setSaving(true);
-    try {
-      const payload = { ...form, tier };
-      if (payload.valor_pago === "" || payload.valor_pago == null) payload.valor_pago = null;
-      else payload.valor_pago = Number(payload.valor_pago);
-      if (!payload.data_aquisicao) payload.data_aquisicao = null;
-      if (!payload.data_criacao_origem) payload.data_criacao_origem = null;
-      await onSave(payload);
-      toast({ title: "Lead atualizado" });
-      onOpenChange(false);
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -352,21 +358,17 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
           </div>
         )}
 
-        <div className="flex gap-2 mt-6 pt-4 border-t border-border">
-          {form.id && onDelete && (
+        {form.id && onDelete && (
+          <div className="flex mt-6 pt-4 border-t border-border">
             <Button
               variant="outline"
               onClick={() => { onDelete(form.id); onOpenChange(false); }}
-              className="mr-auto text-destructive hover:text-destructive"
+              className="text-destructive hover:text-destructive"
             >
               <Trash2 className="h-4 w-4 mr-1" /> Excluir
             </Button>
-          )}
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={saving || !form.nome?.trim()}>
-            {saving ? "Salvando..." : "Salvar"}
-          </Button>
-        </div>
+          </div>
+        )}
       </SheetContent>
 
       <QualificacaoDialog
