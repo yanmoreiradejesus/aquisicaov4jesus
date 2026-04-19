@@ -353,17 +353,87 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
           </CollapsibleContent>
         </Collapsible>
 
-        {/* GOOGLE CALENDAR — só aparece se reuniao_agendada + data + email */}
-        {form.etapa === "reuniao_agendada" && form.data_reuniao_agendada && form.email && (
-          <div className="mb-6 px-4 py-4 border border-border/40 rounded-lg bg-muted/10">
-            <div className="flex items-center gap-2 mb-3">
+        {/* GOOGLE CALENDAR — sempre visível em Reunião agendada */}
+        {form.etapa === "reuniao_agendada" && (
+          <div className="mb-6 px-4 py-4 border border-border/40 rounded-lg bg-muted/10 space-y-4">
+            <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-primary" />
               <span className="text-xs font-semibold tracking-widest uppercase text-foreground">
-                Google Calendar
+                Reunião + Google Calendar
               </span>
             </div>
 
-            {form.google_event_id ? (
+            {/* Data + Hora */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1 block">
+                  Data da reunião
+                </label>
+                <Input
+                  type="date"
+                  value={
+                    form.data_reuniao_agendada
+                      ? new Date(form.data_reuniao_agendada).toISOString().slice(0, 10)
+                      : ""
+                  }
+                  onChange={(e) => {
+                    const dateStr = e.target.value; // YYYY-MM-DD
+                    if (!dateStr) {
+                      set("data_reuniao_agendada", null);
+                      return;
+                    }
+                    const existing = form.data_reuniao_agendada
+                      ? new Date(form.data_reuniao_agendada)
+                      : null;
+                    const hh = existing ? existing.getHours() : 10;
+                    const mm = existing ? existing.getMinutes() : 0;
+                    const [y, m, d] = dateStr.split("-").map(Number);
+                    const newDate = new Date(y, m - 1, d, hh, mm);
+                    set("data_reuniao_agendada", newDate.toISOString());
+                  }}
+                  className="h-9 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1 block">
+                  Hora
+                </label>
+                <Input
+                  type="time"
+                  value={
+                    form.data_reuniao_agendada
+                      ? (() => {
+                          const dt = new Date(form.data_reuniao_agendada);
+                          return `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`;
+                        })()
+                      : ""
+                  }
+                  onChange={(e) => {
+                    const timeStr = e.target.value; // HH:MM
+                    if (!timeStr) return;
+                    const [hh, mm] = timeStr.split(":").map(Number);
+                    const base = form.data_reuniao_agendada
+                      ? new Date(form.data_reuniao_agendada)
+                      : new Date();
+                    base.setHours(hh, mm, 0, 0);
+                    set("data_reuniao_agendada", base.toISOString());
+                  }}
+                  className="h-9 text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Avisos / Estado do Google */}
+            {(!form.data_reuniao_agendada || !form.email) ? (
+              <div className="flex items-start gap-2 text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-md px-3 py-2">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>
+                  Preencha {!form.email && "e-mail do lead"}
+                  {!form.email && !form.data_reuniao_agendada && " e "}
+                  {!form.data_reuniao_agendada && "data da reunião"} para criar o invite no Google Calendar.
+                </span>
+              </div>
+            ) : form.google_event_id ? (
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 text-sm">
                   <Check className="h-4 w-4 text-emerald-400" />
@@ -385,22 +455,17 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                 <Loader2 className="h-4 w-4 animate-spin" /> Verificando conexão…
               </div>
             ) : !googleConnected ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
                   Conecte seu Google Calendar para criar o evento e enviar o convite automaticamente para o lead.
                 </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={connectGoogle}
-                  disabled={googleLoading}
-                >
+                <Button size="sm" variant="outline" onClick={connectGoogle} disabled={googleLoading}>
                   {googleLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Calendar className="h-4 w-4 mr-1" />}
                   Conectar Google Calendar
                 </Button>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">
                   Conectado como <span className="text-foreground">{emailGoogle}</span>. O lead receberá um convite com link do Google Meet.
                 </p>
@@ -435,15 +500,6 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                 </div>
               </div>
             )}
-          </div>
-        )}
-
-        {form.etapa === "reuniao_agendada" && (!form.data_reuniao_agendada || !form.email) && (
-          <div className="mb-6 px-4 py-3 border border-amber-500/30 bg-amber-500/10 rounded-lg flex items-start gap-2 text-sm text-amber-300">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-            <span>
-              Para criar invite no Google Calendar, preencha {!form.email && "e-mail"}{!form.email && !form.data_reuniao_agendada && " e "}{!form.data_reuniao_agendada && "data da reunião"}.
-            </span>
           </div>
         )}
 
