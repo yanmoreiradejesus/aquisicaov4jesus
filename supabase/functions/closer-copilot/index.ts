@@ -150,7 +150,7 @@ ${contextBlock}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "anthropic/claude-opus-4-5",
+        model: "openai/gpt-5",
         stream: true,
         messages: [{ role: "system", content: systemPrompt }, ...userMessages],
       }),
