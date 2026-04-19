@@ -1,53 +1,44 @@
 
-## Plano — Copilot estilo iMessage com anexos
 
-### 1. Estética iMessage
-Refazer `CloserCopilot.tsx` com visual Apple Messages:
-- **Bolhas**: usuário à direita em azul iOS (`#007AFF`), assistente à esquerda em cinza claro (`#E9E9EB` light / `#3A3A3C` dark), bordas arredondadas grandes (`rounded-[18px]`), "tail" sutil (cantos diferentes).
-- **Layout**: fundo gradiente sutil tipo Messages, espaçamento generoso, timestamps discretos agrupados.
-- **Typography**: SF-style (system font stack), 14px base.
-- **Indicador de digitação**: 3 pontinhos animados na bolha do assistente (não texto "pensando").
-- **Input bar**: pill arredondada (`rounded-full`), botão `+` à esquerda (anexos), botão de envio circular azul à direita aparece só quando há texto.
-- **Quick actions**: pílulas estilo "suggestions" acima do input quando vazio.
+## Plano — Redesenhar UX do dialog "Avançar oportunidade"
 
-### 2. Upload de arquivos (PDFs, imagens, prints)
-- **Storage bucket** novo: `copilot-attachments` (privado, RLS por usuário).
-- Botão `+` no input abre file picker aceitando: `image/*, application/pdf`.
-- Upload direto via `supabase.storage` para `copilot-attachments/{user_id}/{oportunidade_id}/{timestamp}-{filename}`.
-- Preview do anexo aparece como "card" acima do input antes de enviar (chip removível).
-- Ao enviar mensagem com anexo: a bolha mostra thumbnail (imagem) ou ícone+nome (pdf).
+O dialog atual sobrecarrega o usuário com muitos campos densos e mal hierarquizados. Vou reescrever o `OportunidadeAvancarDialog.tsx` em formato **wizard de etapas** com layout limpo, focado em uma decisão por vez.
 
-### 3. Processamento dos anexos pela IA
-- **Imagens** → enviar diretamente como `image_url` (base64 ou URL signed) no formato OpenAI multimodal.
-- **PDFs** → extrair texto via `pdf-parse` (npm) na edge function, anexar como contexto textual com label `[Conteúdo do PDF: nome.pdf]`.
-- Edge function `closer-copilot` aceita novo campo `attachments: [{ url, type, name, extracted_text? }]` e injeta no payload de mensagens.
+### Mudanças
 
-### 4. Registro automático em "Notas internas" da oportunidade
-Toda interação relevante vira atividade + entrada em `notas`:
-- **Ao fazer upload**: atividade tipo `nota` com texto `📎 Anexo enviado ao Copilot: nome-do-arquivo` + URL signed (válida por 7 dias).
-- **Botão "Salvar conversa nas notas"** (no header do Copilot): pega histórico atual, formata em markdown e:
-  - Concatena ao campo `notas` da oportunidade (com separador `--- Conversa Copilot [data] ---`).
-  - Cria atividade tipo `nota` no histórico com o conteúdo.
-- Toast de confirmação.
+**1. Layout em wizard (steps numerados)**
+- Header com indicador de progresso (1 de 2 / 2 de 2) e badge da etapa destino.
+- Botão "Voltar" no footer entre passos; "Confirmar" só no último.
+- Largura `sm:max-w-xl`, padding generoso, sem scroll forçado quando possível.
 
-### 5. Tabela `crm_copilot_attachments` (opcional, leve)
-Para listar anexos da oportunidade:
-- Colunas: `id, oportunidade_id, user_id, file_name, file_path, file_type, file_size, extracted_text, created_at`.
-- RLS: usuário autenticado vê/cria do que lhe pertence; admin vê tudo.
-- Edge function lista anexos passados ao montar contexto (recall entre sessões).
+**2. Step 1 — Resultado da reunião** (só quando proposta → negociação)
+- Bloco "Temperatura" no topo (decisão rápida e visual): 3 cards grandes lado a lado com ícone + label + descrição curta ("Pronto para fechar" / "Precisa nutrir" / "Esfriou").
+- Bloco "Transcrição" abaixo: Textarea maior (rows 8), placeholder mais útil, contador de caracteres.
+
+**3. Step 2 — Próxima atividade** (sempre que `requiresTask`)
+- Form de criação **vertical e respirado** (não 3 inputs apertados em linha):
+  - Input "O que precisa ser feito?" (full width).
+  - Linha com data/hora + botão "Adicionar tarefa" (azul, primary, não outline).
+- Quick-presets de data: chips "Amanhã 9h", "Em 3 dias", "Próxima semana".
+- Lista de tarefas (existentes + novas) com visual unificado:
+  - Existentes em cinza com badge "já criada".
+  - Novas em azul claro com botão remover.
+- Empty state amigável quando vazio: "Nenhuma tarefa ainda — adicione a próxima ação".
+- Contador visual ("2 tarefas pendentes ✓") em verde quando atinge mínimo.
+
+**4. Etapas que não exigem reunião** (ex: negociação → contrato)
+- Mostra apenas Step 2 (sem wizard, dialog único). Header explica o porquê.
+
+**5. Microajustes UX**
+- Erros inline com ícone, não texto solto.
+- Botão "Confirmar avanço" desabilitado e com tooltip explicando o que falta quando inválido (em vez de só mostrar erro após click).
+- Tecla Enter no input de tarefa adiciona (não submete o form).
+- Auto-foco no primeiro campo relevante ao abrir/trocar step.
+- Adicionar `DialogDescription` (resolve warning do console).
 
 ### Arquivos
-- **Migration**: criar bucket `copilot-attachments` + tabela `crm_copilot_attachments` + RLS.
-- **Reescrever**: `src/components/crm/CloserCopilot.tsx` (UI iMessage + upload + save-to-notes).
-- **Editar**: `supabase/functions/closer-copilot/index.ts` (multimodal + PDF parse + carregar anexos).
-- **Sem mudanças**: `OportunidadeDetailSheet.tsx` (a aba já existe).
+- **Reescrever**: `src/components/crm/OportunidadeAvancarDialog.tsx` (mantém mesma API/props — `OportunidadeColumn` não muda).
 
-### Confirmações técnicas
-- Lovable AI Gateway suporta multimodal (image_url) via `openai/gpt-5` ✓.
-- `pdf-parse` roda em Deno via `npm:pdf-parse` ✓.
-- Storage com signed URLs para a IA acessar imagens.
+### Sem mudanças
+- Backend, schema, hook `useCrmOportunidades.updateEtapa`, `OportunidadeColumn.tsx`.
 
-### Ordem de execução
-1. Migration (bucket + tabela + RLS).
-2. Reescrever componente com UI iMessage + upload + save-to-notes.
-3. Atualizar edge function (multimodal + PDF + carregar anexos do banco).
