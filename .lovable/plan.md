@@ -1,47 +1,33 @@
 
 ## Plano
 
-Reorganizar a aba **Reunião** do detalhe da oportunidade com fluxo automático e suporte a múltiplas reuniões.
+Persistir o resumo da reunião e melhorar a UX da transcrição na aba **Reunião**.
 
-### Mudanças em `OportunidadeDetailSheet.tsx`
+### 1. Persistir resumo no banco
+- Adicionar coluna `resumo_reuniao` (text) em `crm_oportunidades` via migration.
+- Ao gerar resumo automaticamente (Sonnet) ou via reprocessar (Opus), salvar em `crm_oportunidades.resumo_reuniao` junto com a transcrição.
+- Ao abrir a oportunidade, carregar o resumo salvo direto do banco — sem reprocessar.
 
-**1. Reordenar tabs**: `Informações | Reunião | Tarefas | Histórico` (Reunião antes de Tarefas).
+### 2. Lógica de reprocessamento
+- Botão **"Reprocessar resumo"** sempre usa **Opus 4.5** (melhor qualidade sob demanda).
+- Reprocessar **descarta o resumo antigo** e salva o novo no mesmo campo.
+- Reprocessar **NÃO** dispara nova sugestão de tarefa (evita duplicar tarefas pra mesma reunião).
+- O auto-processo inicial (Sonnet + tarefa Opus) continua acontecendo só uma vez por hash de transcrição (ref `autoTaskCreatedRef` já existe).
 
-**2. Defaults de IA fixos por ação** (remove o seletor único):
-- Resumo → sempre **Sonnet 4.5**
-- Tarefa → sempre **Opus 4.5**
-- Remove o toggle de modelo da UI e o estado `aiProvider`.
+### 3. Transcrição com altura limitada + expandir
+- Quando em modo readonly, o `div` da transcrição tem `max-height` padrão (~200px) com `overflow-hidden` e fade no rodapé.
+- Botão chevron (`ChevronDown` / `ChevronUp`) na parte inferior central alterna estado `transcricaoExpanded`.
+- Quando expandido, mostra o texto completo.
+- **Não aplicar** essa limitação ao resumo (continua exibido por inteiro).
 
-**3. Topo da aba Reunião**:
-- Mover o seletor de **Temperatura** para a seção superior fixa (junto ao bloco de contato/lead, acima das tabs ou logo no topo da aba) — ajustável a qualquer momento.
-- Logo abaixo, **Transcrição** já visível (textarea grande como entrada principal).
+### Arquivos afetados
+- **Migration**: `ALTER TABLE crm_oportunidades ADD COLUMN resumo_reuniao text;`
+- **`src/components/crm/OportunidadeDetailSheet.tsx`**:
+  - Carregar `resumo_reuniao` da oportunidade no estado `aiResumo`.
+  - Salvar resumo no banco após gerar (auto e reprocessar).
+  - Função `handleReprocessSummary` força provider Opus, salva e NÃO chama `suggest_task`.
+  - Adicionar estado `transcricaoExpanded` e UI de fade + chevron.
 
-**4. Auto-processamento ao salvar transcrição**:
-- Detectar quando `transcricao_reuniao` muda e tem ≥20 chars (debounce do autosave existente).
-- Disparar automaticamente em paralelo: `summarize` (Sonnet) e `suggest_task` (Opus).
-- Usar flag `processedTranscriptHash` (ref) para não reprocessar o mesmo texto.
-- Mostrar loaders enquanto processa.
-
-**5. Ordem de exibição pós-transcrição**:
-1. **Resumo IA** (primeiro, em destaque, formatação markdown atual)
-2. **Tarefa sugerida** (logo abaixo, com botão "Criar tarefa")
-3. Botões manuais "Reprocessar resumo" / "Reprocessar tarefa" (caso queira refazer)
-
-**6. Múltiplas reuniões**:
-- Adicionar botão **"+ Nova reunião"** no topo da aba.
-- Ao clicar: salva a reunião atual (transcrição + resumo) como atividade tipo `reuniao` em `crm_atividades` (título: "Reunião — DD/MM/YYYY", descrição com transcrição + resumo), depois limpa o campo de transcrição para nova entrada.
-- Lista de reuniões anteriores aparece como cards colapsáveis acima da transcrição atual (lendo de `crm_atividades` tipo `reuniao` da oportunidade), cada um mostrando data e resumo expandível.
-- A transcrição "ativa" em `crm_oportunidades.transcricao_reuniao` continua sendo a reunião em andamento; ao arquivar via "Nova reunião" ela vira histórico.
-
-**7. Aplicar resumo nas notas**: mantém comportamento atual (já cria atividade no histórico).
-
-### Sem mudanças no banco
-- Reaproveita enum `reuniao` já existente em `crm_atividades.tipo`.
-- Reaproveita `useOportunidadeAtividades` para listar/criar.
-
-### Sem mudanças na edge function
-- Continua aceitando `provider` (`sonnet`/`opus45`/`haiku45`); só passamos os defaults certos por ação.
-
-### Notas
-- Resumos automáticos só rodam quando o usuário para de digitar (debounce ~1.2s) e a transcrição passa de ≥20 chars OU foi alterada substancialmente desde o último processamento.
-- Se o usuário quiser desligar auto-processamento futuramente, fica fácil adicionar um toggle.
+### Sem mudanças
+- Edge function (`meeting-ai`) já aceita provider `opus45`.
+- `useOportunidadeAtividades` permanece igual.
