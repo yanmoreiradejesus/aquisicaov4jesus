@@ -5,9 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { OPORTUNIDADE_ETAPAS } from "@/hooks/useCrmOportunidades";
 import {
   Check,
+  ChevronDown,
   Copy,
   MessageCircle,
   Pencil,
@@ -16,6 +18,7 @@ import {
   Sparkles,
   Loader2,
   ListTodo,
+  Archive,
 } from "lucide-react";
 import { formatPhone, whatsappNumber, locationFromPhone, timeAgo } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
@@ -237,10 +240,17 @@ export const OportunidadeDetailSheet = ({
   const [tarefaDialogOpen, setTarefaDialogOpen] = useState(false);
   const [aiResumo, setAiResumo] = useState<string>("");
   const [aiTarefa, setAiTarefa] = useState<{ titulo: string; descricao: string; prazo_sugerido_dias: number; prioridade: string } | null>(null);
-  const [aiLoading, setAiLoading] = useState<null | "resumo" | "tarefa">(null);
-  const [aiProvider, setAiProvider] = useState<"haiku45" | "sonnet" | "opus45">("sonnet");
+  const [aiLoadingResumo, setAiLoadingResumo] = useState(false);
+  const [aiLoadingTarefa, setAiLoadingTarefa] = useState(false);
+  const processedHashRef = useRef<string>("");
   const { toast } = useToast();
-  const { addTarefa, addNota } = useOportunidadeAtividades(oportunidade?.id ?? null);
+  const { data: atividades, addTarefa, addNota, addReuniao } = useOportunidadeAtividades(oportunidade?.id ?? null);
+
+  // Reuniões arquivadas (histórico) — atividades tipo "reuniao"
+  const reunioesArquivadas = useMemo(
+    () => (atividades ?? []).filter((a: any) => a.tipo === "reuniao"),
+    [atividades],
+  );
 
   useEffect(() => {
     if (open) {
@@ -248,7 +258,9 @@ export const OportunidadeDetailSheet = ({
       setActiveTab("informacoes");
       setAiResumo("");
       setAiTarefa(null);
-      setAiLoading(null);
+      setAiLoadingResumo(false);
+      setAiLoadingTarefa(false);
+      processedHashRef.current = "";
     }
   }, [open, oportunidade]);
 
@@ -284,6 +296,20 @@ export const OportunidadeDetailSheet = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form, open]);
 
+  // Auto-processamento quando a transcrição fica estável (debounce) — Sonnet (resumo) + Opus 4.5 (tarefa)
+  const autoProcessRef = useRef<(txt: string) => void>(() => {});
+  useEffect(() => {
+    if (!open || !form?.id) return;
+    const txt = (form.transcricao_reuniao ?? "").trim();
+    if (txt.length < 20) return;
+    if (processedHashRef.current === txt) return;
+    const t = setTimeout(() => {
+      processedHashRef.current = txt;
+      autoProcessRef.current(txt);
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [form?.transcricao_reuniao, open, form?.id]);
+
   if (!form) return null;
 
   const set = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }));
@@ -313,13 +339,21 @@ export const OportunidadeDetailSheet = ({
     onOpenChange(false);
   };
 
-  const callMeetingAI = async (action: "summarize" | "suggest_task") => {
-    const transcricao = (form.transcricao_reuniao ?? "").trim();
+  const callMeetingAI = async (
+    action: "summarize" | "suggest_task",
+    opts?: { silent?: boolean; transcricaoOverride?: string },
+  ): Promise<any> => {
+    const transcricao = (opts?.transcricaoOverride ?? form.transcricao_reuniao ?? "").trim();
     if (transcricao.length < 20) {
-      toast({ title: "Transcrição vazia", description: "Cole a transcrição da reunião antes de usar a IA.", variant: "destructive" });
-      return;
+      if (!opts?.silent) {
+        toast({ title: "Transcrição vazia", description: "Cole a transcrição da reunião antes de usar a IA.", variant: "destructive" });
+      }
+      return null;
     }
-    setAiLoading(action === "summarize" ? "resumo" : "tarefa");
+    // Sonnet para resumo, Opus 4.5 para sugestão de tarefa
+    const provider = action === "summarize" ? "sonnet" : "opus45";
+    if (action === "summarize") setAiLoadingResumo(true);
+    else setAiLoadingTarefa(true);
     try {
       const contexto = {
         nome_oportunidade: form.nome_oportunidade,
@@ -333,20 +367,32 @@ export const OportunidadeDetailSheet = ({
         } : null,
       };
       const { data, error } = await supabase.functions.invoke("meeting-ai", {
-        body: { action, transcricao, contexto, provider: aiProvider },
+        body: { action, transcricao, contexto, provider },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
       if (action === "summarize") {
         setAiResumo((data as any).resumo ?? "");
+        return (data as any).resumo ?? "";
       } else {
         setAiTarefa((data as any).tarefa ?? null);
+        return (data as any).tarefa ?? null;
       }
     } catch (e: any) {
-      toast({ title: "Erro na IA", description: e?.message ?? "Falha ao chamar IA", variant: "destructive" });
+      if (!opts?.silent) {
+        toast({ title: "Erro na IA", description: e?.message ?? "Falha ao chamar IA", variant: "destructive" });
+      }
+      return null;
     } finally {
-      setAiLoading(null);
+      if (action === "summarize") setAiLoadingResumo(false);
+      else setAiLoadingTarefa(false);
     }
+  };
+
+  // Conecta o auto-processamento ao callMeetingAI (definido acima)
+  autoProcessRef.current = (txt: string) => {
+    callMeetingAI("summarize", { silent: true, transcricaoOverride: txt });
+    callMeetingAI("suggest_task", { silent: true, transcricaoOverride: txt });
   };
 
   const aplicarResumoNasNotas = async () => {
@@ -354,7 +400,6 @@ export const OportunidadeDetailSheet = ({
     const atual = (form.notas ?? "").trim();
     const bloco = `\n\n---\n📝 Resumo IA da reunião:\n${aiResumo}`;
     set("notas", atual ? atual + bloco : aiResumo);
-    // Também registra no histórico como atividade de nota
     if (form.id) {
       try {
         await addNota.mutateAsync(`📝 **Resumo IA da reunião**\n\n${aiResumo}`);
@@ -377,6 +422,30 @@ export const OportunidadeDetailSheet = ({
       setAiTarefa(null);
     } catch (e: any) {
       toast({ title: "Erro ao criar tarefa", description: e?.message, variant: "destructive" });
+    }
+  };
+
+  const arquivarReuniaoAtual = async () => {
+    const txt = (form.transcricao_reuniao ?? "").trim();
+    if (!form.id || txt.length < 20) {
+      toast({ title: "Nada para arquivar", description: "Cole uma transcrição antes de iniciar uma nova reunião.", variant: "destructive" });
+      return;
+    }
+    const dataStr = new Date().toLocaleDateString("pt-BR");
+    const titulo = `Reunião — ${dataStr}`;
+    const descricao = aiResumo
+      ? `📝 **Resumo**\n\n${aiResumo}\n\n---\n\n**Transcrição completa:**\n\n${txt}`
+      : `**Transcrição:**\n\n${txt}`;
+    try {
+      await addReuniao.mutateAsync({ titulo, descricao });
+      // Limpa transcrição ativa e estados de IA
+      set("transcricao_reuniao", "");
+      setAiResumo("");
+      setAiTarefa(null);
+      processedHashRef.current = "";
+      toast({ title: "Reunião arquivada", description: "Comece uma nova transcrição." });
+    } catch (e: any) {
+      toast({ title: "Erro ao arquivar", description: e?.message, variant: "destructive" });
     }
   };
 
@@ -473,11 +542,11 @@ export const OportunidadeDetailSheet = ({
             <TabsTrigger value="informacoes" className="text-[11px] py-2 rounded-lg data-[state=active]:bg-surface-elevated data-[state=active]:shadow-ios-sm transition-all duration-200 ease-ios">
               Informações
             </TabsTrigger>
-            <TabsTrigger value="tarefas" className="text-[11px] py-2 rounded-lg data-[state=active]:bg-surface-elevated data-[state=active]:shadow-ios-sm transition-all duration-200 ease-ios">
-              Tarefas
-            </TabsTrigger>
             <TabsTrigger value="reuniao" className="text-[11px] py-2 rounded-lg data-[state=active]:bg-surface-elevated data-[state=active]:shadow-ios-sm transition-all duration-200 ease-ios">
               Reunião
+            </TabsTrigger>
+            <TabsTrigger value="tarefas" className="text-[11px] py-2 rounded-lg data-[state=active]:bg-surface-elevated data-[state=active]:shadow-ios-sm transition-all duration-200 ease-ios">
+              Tarefas
             </TabsTrigger>
             <TabsTrigger value="historico" className="text-[11px] py-2 rounded-lg data-[state=active]:bg-surface-elevated data-[state=active]:shadow-ios-sm transition-all duration-200 ease-ios">
               Histórico
@@ -609,124 +678,133 @@ export const OportunidadeDetailSheet = ({
 
           <TabsContent value="reuniao" className="mt-4">
             <div className="px-4 py-3 border border-border/40 rounded-lg bg-background/30 space-y-4">
-              <div>
-                <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-2">
-                  Temperatura
-                </p>
-                <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-surface-2/50 border border-border/40">
-                  {[
-                    { id: "quente", label: "Quente", emoji: "🔥", on: "bg-temp-hot/20 text-temp-hot ring-1 ring-temp-hot/50 shadow-ios-sm" },
-                    { id: "morno", label: "Morno", emoji: "🌤️", on: "bg-temp-warm/20 text-temp-warm ring-1 ring-temp-warm/50 shadow-ios-sm" },
-                    { id: "frio", label: "Frio", emoji: "❄️", on: "bg-temp-cold/20 text-temp-cold ring-1 ring-temp-cold/50 shadow-ios-sm" },
-                  ].map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => set("temperatura", t.id)}
-                      className={cn(
-                        "rounded-lg px-3 py-2 text-[13px] font-display font-medium transition-all duration-200 ease-ios flex items-center justify-center gap-1.5",
-                        form.temperatura === t.id
-                          ? t.on
-                          : "text-muted-foreground hover:text-foreground hover:bg-surface-elevated/60",
-                      )}
-                    >
-                      <span className="text-base leading-none">{t.emoji}</span>
-                      {t.label}
-                    </button>
-                  ))}
+              {/* TOPO FIXO: Temperatura + ações */}
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div className="flex-1 min-w-[260px]">
+                  <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-2">
+                    Temperatura
+                  </p>
+                  <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-surface-2/50 border border-border/40">
+                    {[
+                      { id: "quente", label: "Quente", emoji: "🔥", on: "bg-temp-hot/20 text-temp-hot ring-1 ring-temp-hot/50 shadow-ios-sm" },
+                      { id: "morno", label: "Morno", emoji: "🌤️", on: "bg-temp-warm/20 text-temp-warm ring-1 ring-temp-warm/50 shadow-ios-sm" },
+                      { id: "frio", label: "Frio", emoji: "❄️", on: "bg-temp-cold/20 text-temp-cold ring-1 ring-temp-cold/50 shadow-ios-sm" },
+                    ].map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => set("temperatura", t.id)}
+                        className={cn(
+                          "rounded-lg px-3 py-2 text-[13px] font-display font-medium transition-all duration-200 ease-ios flex items-center justify-center gap-1.5",
+                          form.temperatura === t.id
+                            ? t.on
+                            : "text-muted-foreground hover:text-foreground hover:bg-surface-elevated/60",
+                        )}
+                      >
+                        <span className="text-base leading-none">{t.emoji}</span>
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-end pb-0.5">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={arquivarReuniaoAtual}
+                    disabled={!((form.transcricao_reuniao ?? "").trim().length >= 20) || addReuniao.isPending}
+                    className="h-9 text-[11px]"
+                    title="Arquivar transcrição atual e iniciar uma nova reunião"
+                  >
+                    <Archive className="h-3.5 w-3.5 mr-1.5" />
+                    + Nova reunião
+                  </Button>
                 </div>
               </div>
 
-              <div>
+              {/* REUNIÕES ANTERIORES (arquivadas) */}
+              {reunioesArquivadas.length > 0 && (
+                <div className="space-y-2 border-t border-border/40 pt-3">
+                  <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                    Reuniões anteriores ({reunioesArquivadas.length})
+                  </p>
+                  <div className="space-y-1.5">
+                    {reunioesArquivadas.map((r: any) => (
+                      <Collapsible key={r.id}>
+                        <CollapsibleTrigger className="w-full flex items-center justify-between px-3 py-2 rounded-md bg-surface-2/40 border border-border/40 hover:bg-surface-2/60 transition-colors text-left group">
+                          <span className="text-xs font-medium text-foreground truncate">
+                            {r.titulo || `Reunião — ${new Date(r.created_at).toLocaleDateString("pt-BR")}`}
+                          </span>
+                          <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180 shrink-0" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <div className="px-3 py-3 border border-t-0 border-border/40 rounded-b-md bg-background/20">
+                            <div className="prose prose-sm prose-invert max-w-none
+                              prose-headings:text-foreground prose-headings:font-semibold prose-headings:tracking-tight
+                              prose-p:text-sm prose-p:text-foreground/85 prose-p:leading-relaxed prose-p:my-1
+                              prose-strong:text-foreground
+                              prose-ul:my-1 prose-li:text-sm prose-li:text-foreground/80
+                              prose-hr:my-2 prose-hr:border-border/40">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{r.descricao ?? ""}</ReactMarkdown>
+                            </div>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* TRANSCRIÇÃO ATIVA */}
+              <div className="border-t border-border/40 pt-3">
                 <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-2">
-                  Transcrição da reunião de vendas
+                  Transcrição da reunião atual
                 </p>
                 <Textarea
-                  rows={12}
+                  rows={10}
                   value={form.transcricao_reuniao ?? ""}
                   onChange={(e) => set("transcricao_reuniao", e.target.value)}
                   placeholder="Cole aqui a transcrição completa da reunião — dores, decisores, objeções, próximos passos..."
                   className="text-sm resize-none"
                 />
                 <p className="text-[10px] text-muted-foreground/60 mt-1.5">
-                  Salvamento automático após 600ms.
+                  Salvamento automático após 600ms. Resumo (Sonnet 4.5) e tarefa sugerida (Opus 4.5) são gerados automaticamente.
                 </p>
               </div>
 
-              {/* IA — Resumo e próxima tarefa */}
-              <div className="border-t border-border/40 pt-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-                    Modelo IA
-                  </span>
-                  <div className="inline-flex flex-wrap rounded-md border border-border/40 bg-surface-2/40 p-0.5">
-                    {[
-                      { id: "haiku45" as const, label: "Haiku 4.5" },
-                      { id: "sonnet" as const, label: "Sonnet 4.5 ★" },
-                      { id: "opus45" as const, label: "Opus 4.5" },
-                    ].map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => setAiProvider(p.id)}
-                        className={cn(
-                          "px-2.5 py-1 text-[10px] font-medium rounded transition-colors",
-                          aiProvider === p.id
-                            ? "bg-primary text-primary-foreground"
-                            : "text-muted-foreground hover:text-foreground",
-                        )}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => callMeetingAI("summarize")}
-                    disabled={aiLoading !== null}
-                    className="h-8 text-[11px]"
-                  >
-                    {aiLoading === "resumo" ? (
-                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                    )}
-                    Resumir reunião
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => callMeetingAI("suggest_task")}
-                    disabled={aiLoading !== null}
-                    className="h-8 text-[11px]"
-                  >
-                    {aiLoading === "tarefa" ? (
-                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                    ) : (
-                      <ListTodo className="h-3.5 w-3.5 mr-1.5" />
-                    )}
-                    Sugerir próxima tarefa
-                  </Button>
-                </div>
-
-                {aiResumo && (
-                  <div className="rounded-lg border border-border/40 bg-surface-2/40 p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-                        Resumo IA
-                      </p>
-                      <div className="flex items-center gap-1">
-                        <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px]" onClick={aplicarResumoNasNotas}>
-                          Adicionar às notas
-                        </Button>
-                        <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px]" onClick={() => setAiResumo("")}>
-                          Descartar
-                        </Button>
-                      </div>
+              {/* RESUMO IA — primeira coisa que aparece após transcrição */}
+              {(aiLoadingResumo || aiResumo) && (
+                <div className="rounded-lg border border-border/40 bg-surface-2/40 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground flex items-center gap-1.5">
+                      <Sparkles className="h-3 w-3 text-primary" />
+                      Resumo IA <span className="text-muted-foreground/60">· Sonnet 4.5</span>
+                    </p>
+                    <div className="flex items-center gap-1">
+                      {aiResumo && (
+                        <>
+                          <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px]" onClick={aplicarResumoNasNotas}>
+                            Adicionar às notas
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[10px]"
+                            onClick={() => callMeetingAI("summarize")}
+                            disabled={aiLoadingResumo}
+                          >
+                            {aiLoadingResumo ? <Loader2 className="h-3 w-3 animate-spin" /> : "Reprocessar"}
+                          </Button>
+                        </>
+                      )}
                     </div>
+                  </div>
+                  {aiLoadingResumo && !aiResumo ? (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground py-3">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Gerando resumo da reunião…
+                    </div>
+                  ) : (
                     <div className="prose prose-sm prose-invert max-w-none
                       prose-headings:text-foreground prose-headings:font-semibold prose-headings:tracking-tight
                       prose-h2:text-[13px] prose-h2:uppercase prose-h2:tracking-widest prose-h2:text-primary prose-h2:mt-4 prose-h2:mb-2 prose-h2:pb-1 prose-h2:border-b prose-h2:border-border/40
@@ -738,33 +816,60 @@ export const OportunidadeDetailSheet = ({
                       prose-code:text-primary prose-code:bg-primary/10 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-[11px] prose-code:before:content-none prose-code:after:content-none">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{aiResumo}</ReactMarkdown>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
+              )}
 
-                {aiTarefa && (
-                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-semibold tracking-widest uppercase text-primary">
-                        Tarefa sugerida ({aiTarefa.prioridade})
-                      </p>
-                      <span className="text-[10px] text-muted-foreground">
-                        em {aiTarefa.prazo_sugerido_dias}d
-                      </span>
-                    </div>
-                    <p className="text-sm font-medium text-foreground">{aiTarefa.titulo}</p>
-                    <p className="text-xs text-muted-foreground whitespace-pre-wrap">{aiTarefa.descricao}</p>
-                    <div className="flex items-center gap-2 pt-1">
-                      <Button size="sm" className="h-7 text-[11px]" onClick={criarTarefaSugerida}>
-                        <Plus className="h-3 w-3 mr-1" />
-                        Criar tarefa
-                      </Button>
-                      <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => setAiTarefa(null)}>
-                        Descartar
-                      </Button>
+              {/* TAREFA SUGERIDA */}
+              {(aiLoadingTarefa || aiTarefa) && (
+                <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-semibold tracking-widest uppercase text-primary flex items-center gap-1.5">
+                      <ListTodo className="h-3 w-3" />
+                      Tarefa sugerida <span className="text-muted-foreground/60 font-medium">· Opus 4.5</span>
+                      {aiTarefa && <span className="ml-1">({aiTarefa.prioridade})</span>}
+                    </p>
+                    <div className="flex items-center gap-1">
+                      {aiTarefa && (
+                        <>
+                          <span className="text-[10px] text-muted-foreground mr-1">
+                            em {aiTarefa.prazo_sugerido_dias}d
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[10px]"
+                            onClick={() => callMeetingAI("suggest_task")}
+                            disabled={aiLoadingTarefa}
+                          >
+                            {aiLoadingTarefa ? <Loader2 className="h-3 w-3 animate-spin" /> : "Reprocessar"}
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
-                )}
-              </div>
+                  {aiLoadingTarefa && !aiTarefa ? (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Sugerindo próxima tarefa…
+                    </div>
+                  ) : aiTarefa ? (
+                    <>
+                      <p className="text-sm font-medium text-foreground">{aiTarefa.titulo}</p>
+                      <p className="text-xs text-muted-foreground whitespace-pre-wrap">{aiTarefa.descricao}</p>
+                      <div className="flex items-center gap-2 pt-1">
+                        <Button size="sm" className="h-7 text-[11px]" onClick={criarTarefaSugerida}>
+                          <Plus className="h-3 w-3 mr-1" />
+                          Criar tarefa
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => setAiTarefa(null)}>
+                          Descartar
+                        </Button>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+              )}
             </div>
           </TabsContent>
 
