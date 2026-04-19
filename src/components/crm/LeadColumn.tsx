@@ -22,7 +22,7 @@ export const LeadColumn = ({ id, label, color, leads, onEdit }: Props) => {
           color
         )}
       >
-        <span className="text-[10.5px] font-semibold uppercase tracking-[0.12em]">
+        <span className="font-display text-[11px] font-semibold uppercase tracking-[0.14em]">
           {label}
         </span>
         <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-foreground/10 backdrop-blur-sm tabular-nums min-w-[22px] text-center">

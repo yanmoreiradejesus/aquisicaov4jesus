@@ -96,7 +96,7 @@ const CrmLeads = () => {
             <p className="text-[10px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-1">
               Comercial
             </p>
-            <h1 className="font-heading text-3xl lg:text-4xl font-bold text-foreground tracking-wider uppercase">
+            <h1 className="font-display text-[28px] lg:text-[34px] font-semibold text-foreground tracking-[-0.02em] normal-case">
               CRM Leads
             </h1>
           </div>

@@ -279,7 +279,7 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-screen sm:max-w-[min(96vw,1400px)] overflow-y-auto glass-strong border-l-border/60">
         <SheetHeader>
-          <SheetTitle className="font-heading text-2xl tracking-wider uppercase pr-10">
+          <SheetTitle className="font-display text-[22px] font-semibold tracking-[-0.02em] normal-case pr-10">
             {form.empresa || form.nome}
           </SheetTitle>
         </SheetHeader>
@@ -426,22 +426,24 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                 <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-2">
                   Temperatura *
                 </p>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-surface-2/50 border border-border/40">
                   {[
-                    { id: "Quente", emoji: "🔥", base: "border-red-500/40 bg-red-500/10 text-red-300", on: "border-red-500 bg-red-500/20 text-red-200 ring-2 ring-red-500/40" },
-                    { id: "Morno", emoji: "🌤️", base: "border-amber-500/40 bg-amber-500/10 text-amber-300", on: "border-amber-500 bg-amber-500/20 text-amber-200 ring-2 ring-amber-500/40" },
-                    { id: "Frio", emoji: "❄️", base: "border-sky-500/40 bg-sky-500/10 text-sky-300", on: "border-sky-500 bg-sky-500/20 text-sky-200 ring-2 ring-sky-500/40" },
+                    { id: "Quente", emoji: "🔥", on: "bg-temp-hot/20 text-temp-hot ring-1 ring-temp-hot/50 shadow-ios-sm" },
+                    { id: "Morno", emoji: "🌤️", on: "bg-temp-warm/20 text-temp-warm ring-1 ring-temp-warm/50 shadow-ios-sm" },
+                    { id: "Frio", emoji: "❄️", on: "bg-temp-cold/20 text-temp-cold ring-1 ring-temp-cold/50 shadow-ios-sm" },
                   ].map((t) => (
                     <button
                       key={t.id}
                       type="button"
                       onClick={() => set("temperatura", t.id)}
                       className={cn(
-                        "rounded-md border px-3 py-2 text-sm font-medium transition-all",
-                        form.temperatura === t.id ? t.on : `${t.base} opacity-70 hover:opacity-100`,
+                        "rounded-lg px-3 py-2 text-[13px] font-display font-medium transition-all duration-200 ease-ios flex items-center justify-center gap-1.5",
+                        form.temperatura === t.id
+                          ? t.on
+                          : "text-muted-foreground hover:text-foreground hover:bg-surface-elevated/60",
                       )}
                     >
-                      <span className="mr-1">{t.emoji}</span>
+                      <span className="text-base leading-none">{t.emoji}</span>
                       {t.id}
                     </button>
                   ))}
@@ -478,11 +480,13 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
           <TabsContent value="reuniao" className="mt-4">
             <div className="px-4 py-4 border border-border/40 rounded-lg bg-muted/10 space-y-4">
               {(!form.qualificacao?.trim() || !form.temperatura) && (
-                <div className="flex items-start gap-2 text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-md px-3 py-2">
-                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                  <span>
-                    Preencha a <strong>qualificação</strong> e a <strong>temperatura</strong> do lead na aba Qualificação antes de criar o invite.
-                  </span>
+                <div className="flex items-center gap-3 rounded-xl bg-surface-2/60 border border-border/40 px-3.5 py-2.5 backdrop-blur-sm">
+                  <div className="flex items-center justify-center h-7 w-7 rounded-full bg-temp-warm/15 text-temp-warm shrink-0">
+                    <AlertCircle className="h-3.5 w-3.5" />
+                  </div>
+                  <p className="text-[13px] font-display text-foreground/90 leading-snug">
+                    Complete <span className="font-semibold text-foreground">qualificação</span> e <span className="font-semibold text-foreground">temperatura</span> na aba Qualificação para criar o invite.
+                  </p>
                 </div>
               )}
 
