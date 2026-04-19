@@ -84,7 +84,8 @@ const V4Header = () => {
         }`}
       >
         <div
-          className={`${glassPill} flex items-center gap-1 h-11 px-2 transition-all duration-300 ${
+          key={location.pathname}
+          className={`${glassPill} flex items-center gap-1 h-11 px-2 transition-all duration-300 animate-in fade-in-0 slide-in-from-top-4 zoom-in-95 duration-500 ease-out ${
             scrolled ? "bg-red-700" : ""
           }`}
         >
