@@ -263,8 +263,22 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
     if (etapaId === "reuniao_agendada") setActiveTab("reuniao");
   };
 
-  const handleConfirmQualificacao = async (qualificacao: string, temperatura: string) => {
-    const updated = { ...form, qualificacao, temperatura };
+  const handleConfirmQualificacao = async (payload: {
+    qualificacao: string;
+    temperatura: string;
+    data_reuniao_agendada: string;
+    reuniao_local?: string;
+  }) => {
+    const notasExtra = payload.reuniao_local
+      ? `${form.notas ? form.notas + "\n\n" : ""}📍 Reunião: ${payload.reuniao_local}`
+      : form.notas;
+    const updated = {
+      ...form,
+      qualificacao: payload.qualificacao,
+      temperatura: payload.temperatura,
+      data_reuniao_agendada: payload.data_reuniao_agendada,
+      notas: notasExtra,
+    };
     await onSave({ ...updated, tier });
     if (pendingEtapa) {
       await onChangeEtapa(form.id, pendingEtapa);
