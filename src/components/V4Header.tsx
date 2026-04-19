@@ -77,14 +77,23 @@ const V4Header = () => {
   );
 
   const prefersReducedMotion = useReducedMotion();
+  const [barReady, setBarReady] = useState(prefersReducedMotion ? true : false);
 
-  // Phase 1: 0→300ms pulsing dot. Phase 2: 300→700ms horizontal expansion. Phase 3: 700→1000ms materialize.
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      setBarReady(true);
+      return;
+    }
+    setBarReady(false);
+  }, [location.pathname, prefersReducedMotion]);
+
+  // Phase 1: 0→300ms pulsing dot (44x44 circle). Phase 2: 300→700ms horizontal expansion. Phase 3: 700→1000ms materialize content.
   const barAnimate = prefersReducedMotion
     ? { width: "100%", height: 44, borderRadius: 9999, opacity: 1, scale: 1 }
     : {
-        width: ["12px", "12px", "100%", "100%"],
-        height: ["12px", "12px", "12px", "44px"],
-        borderRadius: ["9999px", "9999px", "6px", "9999px"],
+        width: ["44px", "44px", "100%", "100%"],
+        height: ["44px", "44px", "44px", "44px"],
+        borderRadius: ["9999px", "9999px", "9999px", "9999px"],
         opacity: [0, 1, 1, 1],
         scale: [0, 1, 1, 1],
         boxShadow: [
@@ -123,13 +132,14 @@ const V4Header = () => {
       >
         <motion.div
           key={location.pathname}
-          initial={prefersReducedMotion ? false : { width: 12, height: 12, borderRadius: 9999, opacity: 0, scale: 0 }}
+          initial={prefersReducedMotion ? false : { width: 44, height: 44, borderRadius: 9999, opacity: 0, scale: 0 }}
           animate={barAnimate}
           transition={barTransition}
-          className={`border border-red-700/60 bg-red-600 flex items-center gap-1 px-2 overflow-hidden ${
-            scrolled ? "bg-red-700" : ""
-          }`}
-          style={{ minWidth: 12 }}
+          onAnimationComplete={() => setBarReady(true)}
+          className={`border border-red-700/60 bg-red-600 flex items-center gap-1 px-2 ${
+            barReady ? "" : "overflow-hidden"
+          } ${scrolled ? "bg-red-700" : ""}`}
+          style={{ minWidth: 44 }}
         >
           <motion.div
             variants={contentVariants}
