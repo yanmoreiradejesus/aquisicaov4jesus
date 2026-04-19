@@ -706,6 +706,10 @@ export const OportunidadeDetailSheet = ({
             </Accordion>
           </TabsContent>
 
+          <TabsContent value="copilot" className="mt-4">
+            {form.id && <CloserCopilot oportunidadeId={form.id} />}
+          </TabsContent>
+
           <TabsContent value="tarefas" className="mt-4">
             <div className="flex items-center justify-between mb-3">
               <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
