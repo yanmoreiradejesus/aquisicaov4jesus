@@ -236,6 +236,7 @@ export const OportunidadeDetailSheet = ({
   const [aiResumo, setAiResumo] = useState<string>("");
   const [aiTarefa, setAiTarefa] = useState<{ titulo: string; descricao: string; prazo_sugerido_dias: number; prioridade: string } | null>(null);
   const [aiLoading, setAiLoading] = useState<null | "resumo" | "tarefa">(null);
+  const [aiProvider, setAiProvider] = useState<"gemini" | "claude">("gemini");
   const { toast } = useToast();
   const { addTarefa } = useOportunidadeAtividades(oportunidade?.id ?? null);
 
