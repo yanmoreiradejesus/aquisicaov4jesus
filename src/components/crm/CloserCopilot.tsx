@@ -284,23 +284,22 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
 
   return (
     <div
-      className="flex flex-col h-[640px] rounded-2xl overflow-hidden border border-border/40"
+      className="flex flex-col h-[640px] rounded-2xl overflow-hidden border border-white/5"
       style={{
-        background:
-          "linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--surface-2)/0.4) 100%)",
+        background: "#000000",
         fontFamily:
           '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
       }}
     >
-      {/* Header iMessage-style */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/40 bg-background/60 backdrop-blur-md">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/5 bg-black/80 backdrop-blur-md">
         <div className="flex items-center gap-2.5">
           <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#007AFF] to-[#5856D6] flex items-center justify-center text-white text-[13px] font-semibold">
             🧠
           </div>
           <div>
-            <p className="text-[13px] font-semibold leading-tight">Copilot Closer</p>
-            <p className="text-[10px] text-muted-foreground leading-tight">
+            <p className="text-[13px] font-semibold leading-tight text-white">Copilot Closer</p>
+            <p className="text-[10px] text-white/50 leading-tight">
               consultor de vendas · online
             </p>
           </div>
@@ -311,7 +310,7 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2 text-[10px]"
+                className="h-7 px-2 text-[10px] text-white/70 hover:text-white hover:bg-white/10"
                 onClick={saveToNotes}
                 disabled={savingNotes}
               >
@@ -321,7 +320,7 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2 text-[10px]"
+                className="h-7 px-2 text-[10px] text-white/70 hover:text-white hover:bg-white/10"
                 onClick={() => setMessages([])}
                 disabled={loading}
               >
@@ -335,10 +334,10 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
         {messages.length === 0 && (
-          <div className="text-center py-12 space-y-2">
-            <div className="text-4xl">💬</div>
-            <p className="text-[13px] text-muted-foreground max-w-xs mx-auto">
-              Mande uma mensagem, anexe prints/PDFs ou use uma sugestão abaixo.
+          <div className="text-center py-16 space-y-3">
+            <p className="text-[15px] font-medium text-white/90">Como posso ajudar?</p>
+            <p className="text-[12px] text-white/40 max-w-xs mx-auto">
+              Faça uma pergunta, anexe prints ou PDFs, ou escolha uma sugestão abaixo.
             </p>
           </div>
         )}
@@ -350,7 +349,7 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
           return (
             <div key={i}>
               {showTime && m.ts && (
-                <div className="text-center text-[10px] text-muted-foreground/70 my-2">
+                <div className="text-center text-[10px] text-white/35 my-2">
                   {formatTime(m.ts)}
                 </div>
               )}
@@ -380,7 +379,7 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
                           className={`flex items-center gap-2 px-3 py-2.5 rounded-2xl ${
                             isUser
                               ? "bg-[#007AFF] text-white"
-                              : "bg-muted text-foreground"
+                              : "bg-[#1C1C1E] text-white/95"
                           }`}
                         >
                           <FileText className="h-4 w-4 shrink-0" />
@@ -396,12 +395,12 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
                       className={`px-3.5 py-2 text-[14px] leading-snug ${
                         isUser
                           ? "bg-[#007AFF] text-white rounded-[18px] rounded-br-[6px] self-end"
-                          : "bg-muted text-foreground rounded-[18px] rounded-bl-[6px] self-start"
+                          : "bg-[#1C1C1E] text-white/95 rounded-[18px] rounded-bl-[6px] self-start"
                       }`}
                       style={{ wordBreak: "break-word" }}
                     >
                       {m.role === "assistant" ? (
-                        <div className="prose prose-sm max-w-none [&>*]:my-1 [&_ul]:my-1 [&_li]:my-0 [&_p]:text-[14px] [&_strong]:font-semibold dark:prose-invert">
+                        <div className="prose prose-sm prose-invert max-w-none [&>*]:my-1 [&_ul]:my-1 [&_li]:my-0 [&_p]:text-[14px] [&_p]:text-white/95 [&_strong]:font-semibold [&_strong]:text-white [&_a]:text-[#0A84FF] [&_code]:text-white [&_code]:bg-white/10 [&_code]:px-1 [&_code]:rounded">
                           <ReactMarkdown>{m.content}</ReactMarkdown>
                         </div>
                       ) : (
@@ -418,10 +417,10 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
         {/* Typing indicator */}
         {loading && messages[messages.length - 1]?.role !== "assistant" && (
           <div className="flex justify-start">
-            <div className="bg-muted rounded-[18px] rounded-bl-[6px] px-4 py-3 flex gap-1">
-              <span className="h-2 w-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "0ms" }} />
-              <span className="h-2 w-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "150ms" }} />
-              <span className="h-2 w-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+            <div className="bg-[#1C1C1E] rounded-[18px] rounded-bl-[6px] px-4 py-3 flex gap-1">
+              <span className="h-2 w-2 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="h-2 w-2 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: "150ms" }} />
+              <span className="h-2 w-2 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: "300ms" }} />
             </div>
           </div>
         )}
@@ -435,7 +434,7 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
               key={qa.key}
               onClick={() => !loading && send({ quickAction: qa.key })}
               disabled={loading}
-              className="text-[11px] px-3 py-1.5 rounded-full bg-muted hover:bg-muted/70 transition-colors disabled:opacity-50"
+              className="text-[11px] px-3 py-1.5 rounded-full bg-[#1C1C1E] text-white/85 hover:bg-[#2C2C2E] transition-colors disabled:opacity-50"
             >
               {qa.label}
             </button>
@@ -445,17 +444,17 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
 
       {/* Pending attachments preview */}
       {pending.length > 0 && (
-        <div className="px-3 pt-2 flex flex-wrap gap-2 border-t border-border/30">
+        <div className="px-3 pt-2 flex flex-wrap gap-2 border-t border-white/5">
           {pending.map((a) => (
             <div
               key={a.id}
-              className="relative group flex items-center gap-1.5 bg-muted rounded-xl pl-2 pr-7 py-1.5 max-w-[200px]"
+              className="relative group flex items-center gap-1.5 bg-[#1C1C1E] text-white/90 rounded-xl pl-2 pr-7 py-1.5 max-w-[200px]"
             >
               {a.isImage ? <ImageIcon className="h-3.5 w-3.5 shrink-0" /> : <FileText className="h-3.5 w-3.5 shrink-0" />}
               <span className="text-[11px] truncate">{a.name}</span>
               <button
                 onClick={() => removePending(a.id)}
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full bg-foreground/20 hover:bg-foreground/40 flex items-center justify-center"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full bg-white/15 hover:bg-white/30 flex items-center justify-center"
               >
                 <X className="h-2.5 w-2.5" />
               </button>
@@ -465,7 +464,7 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
       )}
 
       {/* Input bar iMessage-style */}
-      <div className="p-2.5 border-t border-border/40 bg-background/60 backdrop-blur-md">
+      <div className="p-2.5 border-t border-white/5 bg-black/80 backdrop-blur-md">
         <div className="flex items-end gap-2">
           <input
             ref={fileInputRef}
@@ -478,13 +477,13 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading || loading}
-            className="h-8 w-8 rounded-full bg-muted hover:bg-muted/70 flex items-center justify-center shrink-0 transition-colors disabled:opacity-50"
+            className="h-8 w-8 rounded-full bg-[#1C1C1E] hover:bg-[#2C2C2E] text-white/85 flex items-center justify-center shrink-0 transition-colors disabled:opacity-50"
             title="Anexar imagem ou PDF"
           >
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           </button>
 
-          <div className="flex-1 flex items-end bg-muted rounded-[20px] border border-border/50 min-h-[34px] px-3 py-1.5">
+          <div className="flex-1 flex items-end bg-[#1C1C1E] rounded-[20px] border border-white/10 min-h-[34px] px-3 py-1.5">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -494,9 +493,9 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
                   send({ text: input });
                 }
               }}
-              placeholder="iMessage"
+              placeholder=""
               rows={1}
-              className="flex-1 bg-transparent outline-none resize-none text-[14px] leading-snug max-h-[120px] py-0.5"
+              className="flex-1 bg-transparent outline-none resize-none text-[14px] leading-snug max-h-[120px] py-0.5 text-white placeholder:text-white/30"
               disabled={loading}
               style={{
                 fontFamily: 'inherit',
