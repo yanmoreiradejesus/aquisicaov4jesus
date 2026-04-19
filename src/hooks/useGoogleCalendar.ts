@@ -72,11 +72,21 @@ export function useGoogleCalendar() {
     }
   }, []);
 
-  const createEvent = useCallback(async (leadId: string, durationMinutes = 30) => {
+  const createEvent = useCallback(async (
+    leadId: string,
+    opts?: {
+      closerId?: string | null;
+      extraAttendees?: { email: string; nome?: string; funcao?: string }[];
+    }
+  ) => {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("create-google-calendar-event", {
-        body: { lead_id: leadId, duration_minutes: durationMinutes },
+        body: {
+          lead_id: leadId,
+          closer_id: opts?.closerId ?? null,
+          extra_attendees: opts?.extraAttendees ?? [],
+        },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
