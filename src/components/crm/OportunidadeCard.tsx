@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import { Calendar, DollarSign } from "lucide-react";
+import { Calendar, DollarSign, Flame, Thermometer, Snowflake, ListTodo } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   oportunidade: any;
@@ -21,10 +23,34 @@ const fmtDate = (iso?: string | null) => {
   return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 };
 
+const TEMP_META: Record<string, { icon: any; color: string; label: string }> = {
+  quente: { icon: Flame, color: "bg-red-500/10 text-red-400 border-red-500/30", label: "Quente" },
+  morno: { icon: Thermometer, color: "bg-amber-500/10 text-amber-400 border-amber-500/30", label: "Morno" },
+  frio: { icon: Snowflake, color: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30", label: "Frio" },
+};
+
 export const OportunidadeCard = ({ oportunidade, onClick }: Props) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: oportunidade.id,
   });
+
+  const [tarefasPendentes, setTarefasPendentes] = useState<number>(0);
+
+  useEffect(() => {
+    let active = true;
+    supabase
+      .from("crm_atividades" as any)
+      .select("id", { count: "exact", head: true })
+      .eq("oportunidade_id", oportunidade.id)
+      .eq("tipo", "tarefa")
+      .eq("concluida", false)
+      .then(({ count }) => {
+        if (active) setTarefasPendentes(count ?? 0);
+      });
+    return () => {
+      active = false;
+    };
+  }, [oportunidade.id, oportunidade.updated_at]);
 
   const style = transform
     ? {
@@ -41,6 +67,8 @@ export const OportunidadeCard = ({ oportunidade, onClick }: Props) => {
   const valorEf = fmtBRL(oportunidade.valor_ef);
   const valorFee = fmtBRL(oportunidade.valor_fee);
   const dataPrev = fmtDate(oportunidade.data_fechamento_previsto);
+  const tempMeta = oportunidade.temperatura ? TEMP_META[oportunidade.temperatura] : null;
+  const TempIcon = tempMeta?.icon;
 
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
@@ -54,14 +82,29 @@ export const OportunidadeCard = ({ oportunidade, onClick }: Props) => {
             : "shadow-ios-sm hover:border-primary/40 hover:bg-surface-2/80"
         )}
       >
-        <div className="font-display font-semibold text-[13px] leading-snug text-foreground truncate tracking-[-0.01em]">
-          {titulo}
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="font-display font-semibold text-[13px] leading-snug text-foreground truncate tracking-[-0.01em]">
+              {titulo}
+            </div>
+            {subtitulo && (
+              <p className="font-display font-normal text-[11px] text-muted-foreground truncate mt-0.5">
+                {subtitulo}
+              </p>
+            )}
+          </div>
+          {tempMeta && TempIcon && (
+            <span
+              className={cn(
+                "shrink-0 inline-flex items-center justify-center h-6 w-6 rounded-md border",
+                tempMeta.color
+              )}
+              title={`Temperatura: ${tempMeta.label}`}
+            >
+              <TempIcon className="h-3 w-3" />
+            </span>
+          )}
         </div>
-        {subtitulo && (
-          <p className="font-display font-normal text-[11px] text-muted-foreground truncate mt-0.5">
-            {subtitulo}
-          </p>
-        )}
 
         <div className="flex items-center gap-1.5 mt-2 flex-wrap">
           {valorEf && (
@@ -77,6 +120,11 @@ export const OportunidadeCard = ({ oportunidade, onClick }: Props) => {
           {dataPrev && (
             <span className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide bg-amber-500/10 text-amber-300 border-amber-500/30 inline-flex items-center gap-1 tabular-nums">
               <Calendar className="h-2.5 w-2.5" />{dataPrev}
+            </span>
+          )}
+          {tarefasPendentes > 0 && (
+            <span className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide bg-primary/10 text-primary border-primary/30 inline-flex items-center gap-1 tabular-nums">
+              <ListTodo className="h-2.5 w-2.5" />{tarefasPendentes}
             </span>
           )}
         </div>
