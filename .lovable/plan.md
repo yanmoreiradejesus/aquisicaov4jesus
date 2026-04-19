@@ -1,31 +1,33 @@
 
 
-## 3 ajustes rápidos
+## Botão "Enviar confirmação WhatsApp" após agendamento
 
-### 1. Novos motivos de desqualificação
-Em `src/components/crm/DesqualificacaoDialog.tsx`, substituir o array `MOTIVOS` pela nova lista (17 itens, ordem alfabética conforme enviado):
-Adolescente/Criança, Blocklist, Cliente, Cliente oculto, Contatos inválidos, Deixou de responder, Duplicado, Engano/Não Lembra, Ex-cliente (detrator), Nunca respondeu, Pessoa Física, Sem autoridade, Sem budget, Sem interesse, Sem timing, Serviço fora de escopo, SPAM.
+### Onde aparece
+Em `LeadDetailSheet.tsx`, na seção "Informações da reunião" (que mostra data/hora e link do Google Calendar). Quando `data_reuniao_agendada` E `google_event_link` estiverem preenchidos, mostrar um botão verde **"Enviar confirmação no WhatsApp"** abaixo das infos.
 
-### 2. Header todo vermelho (teste de cor)
-Em `src/components/V4Header.tsx`, trocar o glassmorphism vermelho atual (gradiente `from-red-600/25` translúcido) por um **fundo vermelho sólido** no tom da barra antiga — `bg-red-600` (com hover/scroll mantendo `bg-red-700` para profundidade). Manter:
-- Pill flutuante, bordas arredondadas, sombra
-- Tipografia branca (já está)
-- Indicadores ativos: trocar `bg-white/10` por `bg-white/20` para contrastar melhor sobre vermelho sólido
-- Dropdowns continuam com glass escuro (não muda)
-- Mobile sidebar idem: fundo `bg-red-600` sólido
+### O que faz
+Abre `https://wa.me/<telefone>?text=<mensagem URL-encoded>` em nova aba, com a mensagem já pronta:
 
-Sem backdrop-blur no header (vira sólido). Mantém o efeito macOS pela forma (pill + sombra), trocando só o material.
+```
+Oi [Nome]! Agendamento confirmado — nossa conversa é [Data] às [Hora] (45min a 1h). Segue o link: [Link].
 
-### 3. Renomear "CRM Leads" → "Leads"
-Procurar todas as ocorrências de "CRM Leads" e trocar por "Leads":
-- `src/components/V4Header.tsx` (item de navegação)
-- `src/pages/CrmLeads.tsx` (título da página, se houver)
-- Qualquer breadcrumb/título
+Qualquer coisa é só me chamar aqui.
+```
 
-Mantém a rota `/comercial/leads` igual — só muda o label visível.
+### Preenchimento dos placeholders
+- **[Nome]** → primeiro nome de `lead.nome` (split no espaço, primeira parte)
+- **[Data]** → `data_reuniao_agendada` formatada `dd/MM/yyyy` (date-fns + locale pt-BR, já usado no projeto)
+- **[Hora]** → mesma data formatada `HH'h'mm` (ex: "14h30")
+- **[Link]** → `lead.google_event_link`
+- **Telefone** → `lead.telefone` normalizado (só dígitos, com 55 prefix se faltar) — usar utilitário `ddd.ts` se aplicável, senão regex simples
 
-### Arquivos a editar
-- `src/components/crm/DesqualificacaoDialog.tsx`
-- `src/components/V4Header.tsx`
-- `src/pages/CrmLeads.tsx`
+### Validações / fallbacks
+- Se faltar telefone → botão desabilitado com tooltip "Lead sem telefone".
+- Se faltar `google_event_link` → não mostra botão (aguardando agendamento).
+- Toast de sucesso "Abrindo WhatsApp..." ao clicar.
+
+### Arquivo a editar
+- `src/components/crm/LeadDetailSheet.tsx` (apenas — adiciona o botão e a função `enviarConfirmacaoWhats`)
+
+Sem mudanças de schema, sem edge function, sem novas libs.
 
