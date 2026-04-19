@@ -296,6 +296,20 @@ export const OportunidadeDetailSheet = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form, open]);
 
+  // Auto-processamento quando a transcrição fica estável (debounce) — Sonnet (resumo) + Opus 4.5 (tarefa)
+  const autoProcessRef = useRef<(txt: string) => void>(() => {});
+  useEffect(() => {
+    if (!open || !form?.id) return;
+    const txt = (form.transcricao_reuniao ?? "").trim();
+    if (txt.length < 20) return;
+    if (processedHashRef.current === txt) return;
+    const t = setTimeout(() => {
+      processedHashRef.current = txt;
+      autoProcessRef.current(txt);
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [form?.transcricao_reuniao, open, form?.id]);
+
   if (!form) return null;
 
   const set = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }));
