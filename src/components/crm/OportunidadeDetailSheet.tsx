@@ -236,6 +236,7 @@ export const OportunidadeDetailSheet = ({
   const [aiResumo, setAiResumo] = useState<string>("");
   const [aiTarefa, setAiTarefa] = useState<{ titulo: string; descricao: string; prazo_sugerido_dias: number; prioridade: string } | null>(null);
   const [aiLoading, setAiLoading] = useState<null | "resumo" | "tarefa">(null);
+  const [aiProvider, setAiProvider] = useState<"gemini" | "claude">("gemini");
   const { toast } = useToast();
   const { addTarefa } = useOportunidadeAtividades(oportunidade?.id ?? null);
 
@@ -330,7 +331,7 @@ export const OportunidadeDetailSheet = ({
         } : null,
       };
       const { data, error } = await supabase.functions.invoke("meeting-ai", {
-        body: { action, transcricao, contexto },
+        body: { action, transcricao, contexto, provider: aiProvider },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
@@ -646,6 +647,31 @@ export const OportunidadeDetailSheet = ({
 
               {/* IA — Resumo e próxima tarefa */}
               <div className="border-t border-border/40 pt-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                    Modelo IA
+                  </span>
+                  <div className="inline-flex rounded-md border border-border/40 bg-surface-2/40 p-0.5">
+                    {[
+                      { id: "gemini" as const, label: "Gemini Flash" },
+                      { id: "claude" as const, label: "Claude Sonnet 4.5" },
+                    ].map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setAiProvider(p.id)}
+                        className={cn(
+                          "px-2.5 py-1 text-[10px] font-medium rounded transition-colors",
+                          aiProvider === p.id
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <Button
                     size="sm"

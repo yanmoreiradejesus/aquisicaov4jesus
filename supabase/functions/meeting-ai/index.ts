@@ -10,7 +10,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { action, transcricao, contexto } = await req.json();
+    const { action, transcricao, contexto, provider } = await req.json();
+    const useClaude = provider === "claude";
 
     if (!transcricao || typeof transcricao !== "string" || transcricao.trim().length < 20) {
       return new Response(
@@ -26,7 +27,7 @@ Deno.serve(async (req) => {
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurada");
+    if (!useClaude && !LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurada");
 
     const ctxStr = contexto
       ? `\n\nContexto da oportunidade:\n${JSON.stringify(contexto).slice(0, 1500)}`
@@ -108,14 +109,47 @@ Transcrição:
       };
     }
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+    let resp: Response;
+    if (useClaude) {
+      const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+      if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY não configurada");
+
+      const anthropicBody: any = {
+        model: "claude-sonnet-4-5-20250929",
+        max_tokens: 2048,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userPrompt }],
+      };
+      if (action === "suggest_task") {
+        anthropicBody.tools = [
+          {
+            name: "sugerir_tarefa",
+            description: "Retorna a próxima tarefa sugerida para o vendedor.",
+            input_schema: body.tools[0].function.parameters,
+          },
+        ];
+        anthropicBody.tool_choice = { type: "tool", name: "sugerir_tarefa" };
+      }
+
+      resp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(anthropicBody),
+      });
+    } else {
+      resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
+    }
 
     if (resp.status === 429) {
       return new Response(JSON.stringify({ error: "Limite de uso da IA atingido. Tente novamente em instantes." }), {
@@ -131,8 +165,8 @@ Transcrição:
     }
     if (!resp.ok) {
       const t = await resp.text();
-      console.error("AI gateway error:", resp.status, t);
-      return new Response(JSON.stringify({ error: "Falha ao chamar a IA" }), {
+      console.error("AI provider error:", resp.status, t);
+      return new Response(JSON.stringify({ error: `Falha ao chamar a IA (${resp.status})` }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -141,19 +175,27 @@ Transcrição:
     const data = await resp.json();
 
     if (action === "summarize") {
-      const content = data.choices?.[0]?.message?.content ?? "";
+      const content = useClaude
+        ? (data.content?.find((b: any) => b.type === "text")?.text ?? "")
+        : (data.choices?.[0]?.message?.content ?? "");
       return new Response(JSON.stringify({ resumo: content }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } else {
-      const tc = data.choices?.[0]?.message?.tool_calls?.[0];
-      if (!tc?.function?.arguments) {
+      let args: any = null;
+      if (useClaude) {
+        const toolUse = data.content?.find((b: any) => b.type === "tool_use");
+        args = toolUse?.input ?? null;
+      } else {
+        const tc = data.choices?.[0]?.message?.tool_calls?.[0];
+        if (tc?.function?.arguments) args = JSON.parse(tc.function.arguments);
+      }
+      if (!args) {
         return new Response(JSON.stringify({ error: "IA não retornou tarefa estruturada." }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const args = JSON.parse(tc.function.arguments);
       return new Response(JSON.stringify({ tarefa: args }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
