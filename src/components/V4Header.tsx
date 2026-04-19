@@ -132,7 +132,7 @@ const V4Header = () => {
             style={{ willChange: "opacity" }}
           >
             {/* Logo */}
-            <motion.div variants={itemVariants}>
+            <motion.div>
               <Link
                 to="/"
                 className="flex items-center pl-2 pr-2 h-8 rounded-full hover:bg-white/[0.04] transition-colors"
@@ -143,12 +143,12 @@ const V4Header = () => {
             </motion.div>
 
             {/* Divider */}
-            <motion.div variants={itemVariants} className="hidden md:block w-px h-4 bg-white/10 mx-1" />
+            <motion.div className="hidden md:block w-px h-4 bg-white/10 mx-1" />
 
             {/* Desktop nav */}
             <nav className="hidden md:flex items-center gap-0.5">
               {visibleAquisicaoItems.length > 0 && (
-                <motion.div variants={itemVariants} className="relative" ref={dropdownRef}>
+                <motion.div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setAquisicaoOpen(!aquisicaoOpen)}
                     className={`${navItemBase} ${isAquisicaoActive ? navItemActive : navItemIdle}`}
@@ -181,7 +181,7 @@ const V4Header = () => {
               )}
 
               {visibleComercialItems.length > 0 && (
-                <motion.div variants={itemVariants} className="relative" ref={comercialRef}>
+                <motion.div className="relative" ref={comercialRef}>
                   <button
                     onClick={() => setComercialOpen(!comercialOpen)}
                     className={`${navItemBase} ${isComercialActive ? navItemActive : navItemIdle}`}
@@ -217,10 +217,10 @@ const V4Header = () => {
             {/* Right side: divider + admin + signout */}
             <div className="hidden md:flex items-center gap-0.5 ml-1">
               {(isAdmin || user) && (
-                <motion.div variants={itemVariants} className="w-px h-4 bg-white/10 mx-1" />
+                <motion.div className="w-px h-4 bg-white/10 mx-1" />
               )}
               {isAdmin && (
-                <motion.div variants={itemVariants}>
+                <motion.div>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Link
@@ -240,7 +240,7 @@ const V4Header = () => {
                 </motion.div>
               )}
               {user && (
-                <motion.div variants={itemVariants}>
+                <motion.div>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
@@ -258,7 +258,7 @@ const V4Header = () => {
 
             {/* Mobile hamburger */}
             <motion.button
-              variants={itemVariants}
+             
               onClick={() => setMobileMenuOpen(true)}
               className="md:hidden ml-auto flex items-center justify-center h-8 w-8 rounded-full text-foreground/70 hover:text-foreground hover:bg-white/[0.06] transition-colors"
             >
