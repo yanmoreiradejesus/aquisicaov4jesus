@@ -464,7 +464,7 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
       )}
 
       {/* Input bar iMessage-style */}
-      <div className="p-2.5 border-t border-border/40 bg-background/60 backdrop-blur-md">
+      <div className="p-2.5 border-t border-white/5 bg-black/80 backdrop-blur-md">
         <div className="flex items-end gap-2">
           <input
             ref={fileInputRef}
@@ -477,13 +477,13 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading || loading}
-            className="h-8 w-8 rounded-full bg-muted hover:bg-muted/70 flex items-center justify-center shrink-0 transition-colors disabled:opacity-50"
+            className="h-8 w-8 rounded-full bg-[#1C1C1E] hover:bg-[#2C2C2E] text-white/85 flex items-center justify-center shrink-0 transition-colors disabled:opacity-50"
             title="Anexar imagem ou PDF"
           >
             {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           </button>
 
-          <div className="flex-1 flex items-end bg-muted rounded-[20px] border border-border/50 min-h-[34px] px-3 py-1.5">
+          <div className="flex-1 flex items-end bg-[#1C1C1E] rounded-[20px] border border-white/10 min-h-[34px] px-3 py-1.5">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -493,9 +493,9 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
                   send({ text: input });
                 }
               }}
-              placeholder="iMessage"
+              placeholder=""
               rows={1}
-              className="flex-1 bg-transparent outline-none resize-none text-[14px] leading-snug max-h-[120px] py-0.5"
+              className="flex-1 bg-transparent outline-none resize-none text-[14px] leading-snug max-h-[120px] py-0.5 text-white placeholder:text-white/30"
               disabled={loading}
               style={{
                 fontFamily: 'inherit',
