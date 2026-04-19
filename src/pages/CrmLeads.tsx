@@ -218,7 +218,11 @@ const CrmLeads = () => {
         onDelete={handleDelete}
       />
 
-      <LeadImportDialog open={importOpen} onOpenChange={setImportOpen} />
+      <LeadImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onOpenExport={() => { setImportOpen(false); setExportOpen(true); }}
+      />
 
       <LeadExportDialog
         open={exportOpen}
