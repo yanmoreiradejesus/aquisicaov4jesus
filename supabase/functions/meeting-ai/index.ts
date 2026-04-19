@@ -10,7 +10,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { action, transcricao, contexto } = await req.json();
+    const { action, transcricao, contexto, provider } = await req.json();
+    const useClaude = provider === "claude";
 
     if (!transcricao || typeof transcricao !== "string" || transcricao.trim().length < 20) {
       return new Response(
