@@ -28,6 +28,27 @@ interface Props {
   onDelete?: (id: string) => Promise<void> | void;
 }
 
+/** Deriva o Tier a partir do faturamento (mesmo critério do CRM Lead) */
+function tierFromFaturamento(fat?: string | null): string {
+  if (!fat) return "—";
+  const raw = String(fat).toLowerCase().trim();
+  const m = raw.match(/([\d]+(?:[.,]\d+)?)/);
+  if (!m) return "—";
+  let n = parseFloat(m[1].replace(/\./g, "").replace(",", "."));
+  if (isNaN(n)) {
+    n = parseFloat(m[1].replace(",", "."));
+    if (isNaN(n)) return "—";
+  }
+  if (/(milhão|milhões|mi\b|mm\b)/.test(raw)) n *= 1_000_000;
+  else if (/(mil\b|k\b)/.test(raw)) n *= 1_000;
+  else if (/bilh/.test(raw)) n *= 1_000_000_000;
+  if (n <= 100_000) return "Tiny";
+  if (n <= 200_000) return "Small";
+  if (n <= 4_000_000) return "Medium";
+  if (n <= 16_000_000) return "Large";
+  return "Enterprise";
+}
+
 const HoverEditField = ({
   label,
   value,
