@@ -19,7 +19,7 @@ export function useCrmOportunidades() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("crm_oportunidades" as any)
-        .select("*, lead:crm_leads(id,nome,empresa,telefone,email)")
+        .select("*, lead:crm_leads(*)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as any[];
