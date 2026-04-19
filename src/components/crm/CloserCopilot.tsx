@@ -395,12 +395,12 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
                       className={`px-3.5 py-2 text-[14px] leading-snug ${
                         isUser
                           ? "bg-[#007AFF] text-white rounded-[18px] rounded-br-[6px] self-end"
-                          : "bg-muted text-foreground rounded-[18px] rounded-bl-[6px] self-start"
+                          : "bg-[#1C1C1E] text-white/95 rounded-[18px] rounded-bl-[6px] self-start"
                       }`}
                       style={{ wordBreak: "break-word" }}
                     >
                       {m.role === "assistant" ? (
-                        <div className="prose prose-sm max-w-none [&>*]:my-1 [&_ul]:my-1 [&_li]:my-0 [&_p]:text-[14px] [&_strong]:font-semibold dark:prose-invert">
+                        <div className="prose prose-sm prose-invert max-w-none [&>*]:my-1 [&_ul]:my-1 [&_li]:my-0 [&_p]:text-[14px] [&_p]:text-white/95 [&_strong]:font-semibold [&_strong]:text-white [&_a]:text-[#0A84FF] [&_code]:text-white [&_code]:bg-white/10 [&_code]:px-1 [&_code]:rounded">
                           <ReactMarkdown>{m.content}</ReactMarkdown>
                         </div>
                       ) : (
