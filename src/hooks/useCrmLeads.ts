@@ -7,13 +7,13 @@ export type LeadEtapa = Database["public"]["Enums"] extends { lead_etapa: infer 
 export type Lead = Database["public"]["Tables"] extends { crm_leads: { Row: infer R } } ? R : any;
 
 export const LEAD_ETAPAS: { id: string; label: string; color: string }[] = [
+  { id: "desqualificado", label: "Desqualificado", color: "bg-red-500/10 text-red-400 border-red-500/30" },
   { id: "entrada", label: "Entrada", color: "bg-blue-500/10 text-blue-400 border-blue-500/30" },
   { id: "tentativa_contato", label: "Tentativa de Contato", color: "bg-amber-500/10 text-amber-400 border-amber-500/30" },
   { id: "contato_realizado", label: "Contato Realizado", color: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30" },
   { id: "reuniao_agendada", label: "Reunião Agendada", color: "bg-violet-500/10 text-violet-400 border-violet-500/30" },
   { id: "no_show", label: "No-Show", color: "bg-orange-500/10 text-orange-400 border-orange-500/30" },
   { id: "reuniao_realizada", label: "Reunião Realizada", color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" },
-  { id: "desqualificado", label: "Desqualificado", color: "bg-red-500/10 text-red-400 border-red-500/30" },
 ];
 
 export function useCrmLeads() {
