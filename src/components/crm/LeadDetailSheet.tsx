@@ -716,6 +716,33 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                       )}
                     </div>
                   )}
+
+                  {form.google_event_link && form.data_reuniao_agendada && (() => {
+                    const waNumber = whatsappNumber(form.telefone || "");
+                    const disabled = !waNumber;
+                    const handleSendConfirm = () => {
+                      if (!waNumber) return;
+                      const dt = new Date(form.data_reuniao_agendada);
+                      const primeiroNome = (form.nome || "").trim().split(/\s+/)[0] || "";
+                      const dataFmt = format(dt, "dd/MM/yyyy", { locale: ptBR });
+                      const horaFmt = format(dt, "HH'h'mm", { locale: ptBR });
+                      const msg = `Oi ${primeiroNome}! Agendamento confirmado — nossa conversa é ${dataFmt} às ${horaFmt} (45min a 1h). Segue o link: ${form.google_event_link}.\n\nQualquer coisa é só me chamar aqui.`;
+                      window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`, "_blank", "noopener,noreferrer");
+                      toast({ title: "Abrindo WhatsApp..." });
+                    };
+                    return (
+                      <Button
+                        size="sm"
+                        onClick={handleSendConfirm}
+                        disabled={disabled}
+                        title={disabled ? "Lead sem telefone" : undefined}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto"
+                      >
+                        <MessageCircle className="h-4 w-4 mr-1" />
+                        Enviar confirmação no WhatsApp
+                      </Button>
+                    );
+                  })()}
                   <p className="text-sm text-muted-foreground">
                     {form.google_event_id
                       ? "Adicione novos convidados acima e clique em Atualizar invite para reenviar."
