@@ -379,7 +379,7 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
                           className={`flex items-center gap-2 px-3 py-2.5 rounded-2xl ${
                             isUser
                               ? "bg-[#007AFF] text-white"
-                              : "bg-muted text-foreground"
+                              : "bg-[#1C1C1E] text-white/95"
                           }`}
                         >
                           <FileText className="h-4 w-4 shrink-0" />
