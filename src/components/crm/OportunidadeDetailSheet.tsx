@@ -643,6 +643,83 @@ export const OportunidadeDetailSheet = ({
                   Salvamento automático após 600ms.
                 </p>
               </div>
+
+              {/* IA — Resumo e próxima tarefa */}
+              <div className="border-t border-border/40 pt-4 space-y-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => callMeetingAI("summarize")}
+                    disabled={aiLoading !== null}
+                    className="h-8 text-[11px]"
+                  >
+                    {aiLoading === "resumo" ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                    )}
+                    Resumir reunião
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => callMeetingAI("suggest_task")}
+                    disabled={aiLoading !== null}
+                    className="h-8 text-[11px]"
+                  >
+                    {aiLoading === "tarefa" ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <ListTodo className="h-3.5 w-3.5 mr-1.5" />
+                    )}
+                    Sugerir próxima tarefa
+                  </Button>
+                </div>
+
+                {aiResumo && (
+                  <div className="rounded-lg border border-border/40 bg-surface-2/40 p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                        Resumo IA
+                      </p>
+                      <div className="flex items-center gap-1">
+                        <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px]" onClick={aplicarResumoNasNotas}>
+                          Adicionar às notas
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px]" onClick={() => setAiResumo("")}>
+                          Descartar
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-sm whitespace-pre-wrap text-foreground">{aiResumo}</p>
+                  </div>
+                )}
+
+                {aiTarefa && (
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-semibold tracking-widest uppercase text-primary">
+                        Tarefa sugerida ({aiTarefa.prioridade})
+                      </p>
+                      <span className="text-[10px] text-muted-foreground">
+                        em {aiTarefa.prazo_sugerido_dias}d
+                      </span>
+                    </div>
+                    <p className="text-sm font-medium text-foreground">{aiTarefa.titulo}</p>
+                    <p className="text-xs text-muted-foreground whitespace-pre-wrap">{aiTarefa.descricao}</p>
+                    <div className="flex items-center gap-2 pt-1">
+                      <Button size="sm" className="h-7 text-[11px]" onClick={criarTarefaSugerida}>
+                        <Plus className="h-3 w-3 mr-1" />
+                        Criar tarefa
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => setAiTarefa(null)}>
+                        Descartar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </TabsContent>
 
