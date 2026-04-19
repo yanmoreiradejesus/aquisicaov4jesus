@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.fetch-financial-data]
 verify_jwt = false
+
+[functions.start-google-oauth]
+verify_jwt = false
