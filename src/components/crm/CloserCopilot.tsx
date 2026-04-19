@@ -444,17 +444,17 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
 
       {/* Pending attachments preview */}
       {pending.length > 0 && (
-        <div className="px-3 pt-2 flex flex-wrap gap-2 border-t border-border/30">
+        <div className="px-3 pt-2 flex flex-wrap gap-2 border-t border-white/5">
           {pending.map((a) => (
             <div
               key={a.id}
-              className="relative group flex items-center gap-1.5 bg-muted rounded-xl pl-2 pr-7 py-1.5 max-w-[200px]"
+              className="relative group flex items-center gap-1.5 bg-[#1C1C1E] text-white/90 rounded-xl pl-2 pr-7 py-1.5 max-w-[200px]"
             >
               {a.isImage ? <ImageIcon className="h-3.5 w-3.5 shrink-0" /> : <FileText className="h-3.5 w-3.5 shrink-0" />}
               <span className="text-[11px] truncate">{a.name}</span>
               <button
                 onClick={() => removePending(a.id)}
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full bg-foreground/20 hover:bg-foreground/40 flex items-center justify-center"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full bg-white/15 hover:bg-white/30 flex items-center justify-center"
               >
                 <X className="h-2.5 w-2.5" />
               </button>
