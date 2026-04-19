@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import V4Header from "@/components/V4Header";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -266,7 +265,6 @@ const Metas = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background animate-fade-in">
-        <V4Header />
         <div className="mx-auto max-w-7xl p-4 lg:p-8 space-y-8">
           <FunnelSkeleton />
         </div>
@@ -275,7 +273,6 @@ const Metas = () => {
   }
 
   return <div className="min-h-screen bg-background">
-      <V4Header />
       
       <main className="container mx-auto max-w-7xl space-y-8 px-4 lg:px-8 py-8">
 

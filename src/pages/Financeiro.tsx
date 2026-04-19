@@ -1,5 +1,4 @@
 import { useState, useMemo, useCallback } from "react";
-import V4Header from "@/components/V4Header";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   MOCK_DATA, filterRecords, calcKPIs, calcMonthlyData,
@@ -217,7 +216,6 @@ const Financeiro = () => {
   if (isLoadingData) {
     return (
       <div className="min-h-screen bg-background">
-        <V4Header />
         <div className="container mx-auto px-4 lg:px-8 py-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
@@ -233,7 +231,6 @@ const Financeiro = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <V4Header />
       <div className="container mx-auto px-4 lg:px-8 py-6 space-y-6">
         <div className="rounded-lg border border-border/50 bg-card px-4 py-3">
           <div className="flex flex-wrap items-center gap-2">

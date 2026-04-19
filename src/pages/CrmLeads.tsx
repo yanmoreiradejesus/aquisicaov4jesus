@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
-import V4Header from "@/components/V4Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Upload, ListChecks, LayoutGrid } from "lucide-react";
@@ -149,7 +148,6 @@ const CrmLeads = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <V4Header />
       <main className="container mx-auto px-4 lg:px-8 py-6 lg:py-10 animate-fade-in">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div>
