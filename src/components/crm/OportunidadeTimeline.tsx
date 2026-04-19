@@ -62,7 +62,13 @@ export const OportunidadeTimeline = ({
 
   const [nota, setNota] = useState("");
   const [tarefaTitulo, setTarefaTitulo] = useState("");
-  const [tarefaData, setTarefaData] = useState("");
+  // Default: hoje + 3 dias (evita tarefa nascer atrasada)
+  const defaultTarefaData = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 3);
+    return d.toISOString().slice(0, 10);
+  })();
+  const [tarefaData, setTarefaData] = useState(defaultTarefaData);
   const [tarefaHora, setTarefaHora] = useState("09:00");
 
   const [internalDialog, setInternalDialog] = useState(false);
@@ -87,7 +93,7 @@ export const OportunidadeTimeline = ({
     const iso = new Date(`${tarefaData}T${tarefaHora || "09:00"}:00`).toISOString();
     await addTarefa.mutateAsync({ titulo: tarefaTitulo.trim(), data_agendada: iso });
     setTarefaTitulo("");
-    setTarefaData("");
+    setTarefaData(defaultTarefaData);
     setTarefaHora("09:00");
     setDialogOpen(false);
     toast({ title: "Tarefa criada" });

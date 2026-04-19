@@ -23,6 +23,8 @@ import { OportunidadeTimeline } from "./OportunidadeTimeline";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useOportunidadeAtividades } from "@/hooks/useOportunidadeAtividades";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface Props {
   open: boolean;
@@ -236,9 +238,9 @@ export const OportunidadeDetailSheet = ({
   const [aiResumo, setAiResumo] = useState<string>("");
   const [aiTarefa, setAiTarefa] = useState<{ titulo: string; descricao: string; prazo_sugerido_dias: number; prioridade: string } | null>(null);
   const [aiLoading, setAiLoading] = useState<null | "resumo" | "tarefa">(null);
-  const [aiProvider, setAiProvider] = useState<"gemini" | "claude">("gemini");
+  const [aiProvider, setAiProvider] = useState<"gemini" | "claude" | "claude-opus">("gemini");
   const { toast } = useToast();
-  const { addTarefa } = useOportunidadeAtividades(oportunidade?.id ?? null);
+  const { addTarefa, addNota } = useOportunidadeAtividades(oportunidade?.id ?? null);
 
   useEffect(() => {
     if (open) {
@@ -347,12 +349,18 @@ export const OportunidadeDetailSheet = ({
     }
   };
 
-  const aplicarResumoNasNotas = () => {
+  const aplicarResumoNasNotas = async () => {
     if (!aiResumo) return;
     const atual = (form.notas ?? "").trim();
     const bloco = `\n\n---\n📝 Resumo IA da reunião:\n${aiResumo}`;
     set("notas", atual ? atual + bloco : aiResumo);
-    toast({ title: "Resumo adicionado às notas" });
+    // Também registra no histórico como atividade de nota
+    if (form.id) {
+      try {
+        await addNota.mutateAsync(`📝 **Resumo IA da reunião**\n\n${aiResumo}`);
+      } catch (_) { /* silencioso */ }
+    }
+    toast({ title: "Resumo adicionado às notas e ao histórico" });
   };
 
   const criarTarefaSugerida = async () => {
@@ -651,10 +659,11 @@ export const OportunidadeDetailSheet = ({
                   <span className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
                     Modelo IA
                   </span>
-                  <div className="inline-flex rounded-md border border-border/40 bg-surface-2/40 p-0.5">
+                  <div className="inline-flex flex-wrap rounded-md border border-border/40 bg-surface-2/40 p-0.5">
                     {[
                       { id: "gemini" as const, label: "Gemini Flash" },
                       { id: "claude" as const, label: "Claude Sonnet 4.5" },
+                      { id: "claude-opus" as const, label: "Claude Opus 4.5" },
                     ].map((p) => (
                       <button
                         key={p.id}
@@ -704,8 +713,8 @@ export const OportunidadeDetailSheet = ({
                 </div>
 
                 {aiResumo && (
-                  <div className="rounded-lg border border-border/40 bg-surface-2/40 p-3">
-                    <div className="flex items-center justify-between mb-2">
+                  <div className="rounded-lg border border-border/40 bg-surface-2/40 p-4">
+                    <div className="flex items-center justify-between mb-3">
                       <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
                         Resumo IA
                       </p>
@@ -718,7 +727,17 @@ export const OportunidadeDetailSheet = ({
                         </Button>
                       </div>
                     </div>
-                    <p className="text-sm whitespace-pre-wrap text-foreground">{aiResumo}</p>
+                    <div className="prose prose-sm prose-invert max-w-none
+                      prose-headings:text-foreground prose-headings:font-semibold prose-headings:tracking-tight
+                      prose-h2:text-[13px] prose-h2:uppercase prose-h2:tracking-widest prose-h2:text-primary prose-h2:mt-4 prose-h2:mb-2 prose-h2:pb-1 prose-h2:border-b prose-h2:border-border/40
+                      prose-h3:text-xs prose-h3:uppercase prose-h3:tracking-wider prose-h3:text-muted-foreground prose-h3:mt-3 prose-h3:mb-1
+                      prose-p:text-sm prose-p:text-foreground/90 prose-p:leading-relaxed prose-p:my-1.5
+                      prose-strong:text-foreground prose-strong:font-semibold
+                      prose-ul:my-1.5 prose-ul:space-y-1 prose-li:text-sm prose-li:text-foreground/85 prose-li:marker:text-primary/60
+                      prose-hr:my-3 prose-hr:border-border/40
+                      prose-code:text-primary prose-code:bg-primary/10 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-[11px] prose-code:before:content-none prose-code:after:content-none">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{aiResumo}</ReactMarkdown>
+                    </div>
                   </div>
                 )}
 
