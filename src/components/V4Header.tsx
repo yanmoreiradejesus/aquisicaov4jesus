@@ -61,9 +61,9 @@ const V4Header = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // macOS-style glass pill: stronger blur + saturation, gradient fill, inner highlight border
+  // macOS-style glass pill, tinted RED (V4 brand) — same hue as the legacy top bar
   const glassPill =
-    "rounded-full border border-white/[0.08] bg-gradient-to-b from-white/[0.08] to-white/[0.03] backdrop-blur-2xl backdrop-saturate-200 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.5),0_2px_8px_-2px_rgba(0,0,0,0.3),inset_0_1px_0_0_rgba(255,255,255,0.08)]";
+    "rounded-full border border-red-500/25 bg-gradient-to-b from-red-600/25 via-red-700/15 to-red-900/10 backdrop-blur-2xl backdrop-saturate-200 shadow-[0_8px_32px_-8px_rgba(220,38,38,0.35),0_2px_8px_-2px_rgba(0,0,0,0.4),inset_0_1px_0_0_rgba(255,255,255,0.10)]";
 
   // Active item: subtle pill + dot indicator (macOS Dock style)
   const navItemBase =
@@ -85,7 +85,7 @@ const V4Header = () => {
       >
         <div
           className={`${glassPill} flex items-center gap-1 h-11 px-2 transition-all duration-300 ${
-            scrolled ? "bg-gradient-to-b from-white/[0.10] to-white/[0.05]" : ""
+            scrolled ? "from-red-600/35 via-red-700/20 to-red-900/15" : ""
           }`}
         >
           {/* Logo */}
