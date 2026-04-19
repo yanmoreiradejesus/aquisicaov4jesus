@@ -1,42 +1,28 @@
 
+## Plano
 
-## Plan
+Remover **Gemini Flash** e **Claude Opus 4** do seletor de IA da aba Reunião, e adicionar os novos modelos **Opus 4.5** e **Haiku 4.5**.
 
-### 1. Nova aba "Qualificação" no OportunidadeDetailSheet
-Hoje o sheet tem accordion "Informações da Oportunidade" e "Informações do Lead". Vou adicionar um terceiro accordion **"Qualificação"** (também fechado por padrão) puxando do lead vinculado:
-- `qualificacao`, `tier`, `urgencia`, `temperatura` (do lead)
-- `faturamento`, `segmento`, `cargo`, `nome_produto`, `tipo_produto`
-- `descricao`, `motivo_desqualificacao`, `notas` do lead
-- `data_reuniao_agendada`, `data_reuniao_realizada`
-- `arrematador`, `canal`, `origem`, `data_aquisicao`
+### Seletor final (4 opções, todas Anthropic)
 
-Tudo read-only (mesmo padrão do `ReadOnlyRow` já usado).
+1. **Claude Haiku 4.5** — mais rápido e barato
+2. **Claude Sonnet 4.5** — equilibrado (recomendado, default)
+3. **Claude Opus 4.5** — premium, máxima qualidade
 
-### 2. Corrigir nome da oportunidade ao criar via lead
-Dois pontos:
+### Mudanças
 
-**a) Trigger Postgres `auto_create_oportunidade`** (gatilha quando lead vai para `reuniao_realizada`):
-```sql
-nome_oportunidade = COALESCE(empresa, nome) || ' - Oportunidade'
-```
-Vou alterar para:
-```sql
-nome_oportunidade = COALESCE(NEW.empresa, NEW.nome)
-```
-(sem o sufixo " - Oportunidade")
+**`supabase/functions/meeting-ai/index.ts`**
+- Remover branches `gemini` e `opus` (Opus 4)
+- Aceitar apenas: `sonnet` (4.5), `opus45` (4.5), `haiku45` (4.5)
+- Default vira `sonnet`
+- Como não há mais Gemini, remover também a chamada ao Lovable AI Gateway — função passa a usar só `ANTHROPIC_API_KEY`
 
-**b) Criação manual** via `OportunidadeDialog`/`useCrmOportunidades.upsert`: verificar se há algum default que injeta " - Oportunidade". Se sim, remover.
+**`src/components/crm/OportunidadeDetailSheet.tsx`**
+- Trocar o toggle/select atual por um `Select` com 3 opções (Haiku 4.5, Sonnet 4.5, Opus 4.5)
+- Default state: `"sonnet"`
+- Marcar Sonnet 4.5 como recomendado na descrição
+- Remover refs aos providers antigos (`gemini`, `opus`)
 
-### 3. Investigar lead Sattis sem dados
-O usuário diz que o lead da Sattis foi criado mas "as informações do lead não vieram". Provavelmente:
-- A oportunidade foi criada manualmente sem `lead_id` vinculado, OU
-- O `lead_id` aponta para um registro com campos vazios.
-
-Vou checar via SQL antes de implementar para confirmar o cenário e, se necessário, adicionar um fallback no sheet quando `lead_id` for null (mostrar "Sem lead vinculado" + botão para vincular).
-
-### Arquivos
-- `supabase/migrations/` — atualizar função `auto_create_oportunidade` (remover sufixo)
-- `src/components/crm/OportunidadeDetailSheet.tsx` — novo accordion "Qualificação"
-- `src/components/crm/OportunidadeDialog.tsx` / `useCrmOportunidades.ts` — remover sufixo se houver
-- (verificação read-only na DB para o caso Sattis antes de codar)
-
+### Notas
+- Resumos antigos no histórico continuam intactos (mudança é só no seletor de geração nova)
+- `LOVABLE_API_KEY` deixa de ser usada nessa função (mas continua disponível pra outras features)
