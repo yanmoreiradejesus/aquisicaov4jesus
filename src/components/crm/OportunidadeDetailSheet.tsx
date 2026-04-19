@@ -325,13 +325,21 @@ export const OportunidadeDetailSheet = ({
     onOpenChange(false);
   };
 
-  const callMeetingAI = async (action: "summarize" | "suggest_task") => {
-    const transcricao = (form.transcricao_reuniao ?? "").trim();
+  const callMeetingAI = async (
+    action: "summarize" | "suggest_task",
+    opts?: { silent?: boolean; transcricaoOverride?: string },
+  ): Promise<any> => {
+    const transcricao = (opts?.transcricaoOverride ?? form.transcricao_reuniao ?? "").trim();
     if (transcricao.length < 20) {
-      toast({ title: "Transcrição vazia", description: "Cole a transcrição da reunião antes de usar a IA.", variant: "destructive" });
-      return;
+      if (!opts?.silent) {
+        toast({ title: "Transcrição vazia", description: "Cole a transcrição da reunião antes de usar a IA.", variant: "destructive" });
+      }
+      return null;
     }
-    setAiLoading(action === "summarize" ? "resumo" : "tarefa");
+    // Sonnet para resumo, Opus 4.5 para sugestão de tarefa
+    const provider = action === "summarize" ? "sonnet" : "opus45";
+    if (action === "summarize") setAiLoadingResumo(true);
+    else setAiLoadingTarefa(true);
     try {
       const contexto = {
         nome_oportunidade: form.nome_oportunidade,
@@ -345,28 +353,49 @@ export const OportunidadeDetailSheet = ({
         } : null,
       };
       const { data, error } = await supabase.functions.invoke("meeting-ai", {
-        body: { action, transcricao, contexto, provider: aiProvider },
+        body: { action, transcricao, contexto, provider },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
       if (action === "summarize") {
         setAiResumo((data as any).resumo ?? "");
+        return (data as any).resumo ?? "";
       } else {
         setAiTarefa((data as any).tarefa ?? null);
+        return (data as any).tarefa ?? null;
       }
     } catch (e: any) {
-      toast({ title: "Erro na IA", description: e?.message ?? "Falha ao chamar IA", variant: "destructive" });
+      if (!opts?.silent) {
+        toast({ title: "Erro na IA", description: e?.message ?? "Falha ao chamar IA", variant: "destructive" });
+      }
+      return null;
     } finally {
-      setAiLoading(null);
+      if (action === "summarize") setAiLoadingResumo(false);
+      else setAiLoadingTarefa(false);
     }
   };
+
+  // Auto-processamento quando a transcrição fica estável (debounce) e tem ≥20 chars
+  useEffect(() => {
+    if (!open || !form?.id) return;
+    const txt = (form.transcricao_reuniao ?? "").trim();
+    if (txt.length < 20) return;
+    if (processedHashRef.current === txt) return;
+    const t = setTimeout(() => {
+      processedHashRef.current = txt;
+      // Dispara em paralelo: resumo (Sonnet) + tarefa (Opus 4.5)
+      callMeetingAI("summarize", { silent: true, transcricaoOverride: txt });
+      callMeetingAI("suggest_task", { silent: true, transcricaoOverride: txt });
+    }, 1200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form?.transcricao_reuniao, open, form?.id]);
 
   const aplicarResumoNasNotas = async () => {
     if (!aiResumo) return;
     const atual = (form.notas ?? "").trim();
     const bloco = `\n\n---\n📝 Resumo IA da reunião:\n${aiResumo}`;
     set("notas", atual ? atual + bloco : aiResumo);
-    // Também registra no histórico como atividade de nota
     if (form.id) {
       try {
         await addNota.mutateAsync(`📝 **Resumo IA da reunião**\n\n${aiResumo}`);
@@ -389,6 +418,30 @@ export const OportunidadeDetailSheet = ({
       setAiTarefa(null);
     } catch (e: any) {
       toast({ title: "Erro ao criar tarefa", description: e?.message, variant: "destructive" });
+    }
+  };
+
+  const arquivarReuniaoAtual = async () => {
+    const txt = (form.transcricao_reuniao ?? "").trim();
+    if (!form.id || txt.length < 20) {
+      toast({ title: "Nada para arquivar", description: "Cole uma transcrição antes de iniciar uma nova reunião.", variant: "destructive" });
+      return;
+    }
+    const dataStr = new Date().toLocaleDateString("pt-BR");
+    const titulo = `Reunião — ${dataStr}`;
+    const descricao = aiResumo
+      ? `📝 **Resumo**\n\n${aiResumo}\n\n---\n\n**Transcrição completa:**\n\n${txt}`
+      : `**Transcrição:**\n\n${txt}`;
+    try {
+      await addReuniao.mutateAsync({ titulo, descricao });
+      // Limpa transcrição ativa e estados de IA
+      set("transcricao_reuniao", "");
+      setAiResumo("");
+      setAiTarefa(null);
+      processedHashRef.current = "";
+      toast({ title: "Reunião arquivada", description: "Comece uma nova transcrição." });
+    } catch (e: any) {
+      toast({ title: "Erro ao arquivar", description: e?.message, variant: "destructive" });
     }
   };
 
