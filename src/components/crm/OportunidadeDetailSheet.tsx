@@ -352,7 +352,7 @@ export const OportunidadeDetailSheet = ({
 
   const callMeetingAI = async (
     action: "summarize" | "suggest_task",
-    opts?: { silent?: boolean; transcricaoOverride?: string },
+    opts?: { silent?: boolean; transcricaoOverride?: string; providerOverride?: "sonnet" | "opus45" | "haiku45" },
   ): Promise<any> => {
     const transcricao = (opts?.transcricaoOverride ?? form.transcricao_reuniao ?? "").trim();
     if (transcricao.length < 20) {
@@ -361,8 +361,8 @@ export const OportunidadeDetailSheet = ({
       }
       return null;
     }
-    // Sonnet para resumo, Opus 4.5 para sugestão de tarefa
-    const provider = action === "summarize" ? "sonnet" : "opus45";
+    // Sonnet para resumo (auto), Opus 4.5 para sugestão de tarefa e reprocessamento manual
+    const provider = opts?.providerOverride ?? (action === "summarize" ? "sonnet" : "opus45");
     if (action === "summarize") setAiLoadingResumo(true);
     else setAiLoadingTarefa(true);
     try {
@@ -383,8 +383,18 @@ export const OportunidadeDetailSheet = ({
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
       if (action === "summarize") {
-        setAiResumo((data as any).resumo ?? "");
-        return (data as any).resumo ?? "";
+        const resumo = (data as any).resumo ?? "";
+        setAiResumo(resumo);
+        // Persiste o resumo no banco (descarta o antigo)
+        if (form.id && resumo) {
+          setForm((p: any) => ({ ...p, resumo_reuniao: resumo }));
+          supabase
+            .from("crm_oportunidades")
+            .update({ resumo_reuniao: resumo })
+            .eq("id", form.id)
+            .then(() => {});
+        }
+        return resumo;
       } else {
         setAiTarefa((data as any).tarefa ?? null);
         return (data as any).tarefa ?? null;
@@ -398,6 +408,11 @@ export const OportunidadeDetailSheet = ({
       if (action === "summarize") setAiLoadingResumo(false);
       else setAiLoadingTarefa(false);
     }
+  };
+
+  // Reprocessar resumo sob demanda — sempre Opus 4.5, NÃO gera nova tarefa
+  const handleReprocessSummary = () => {
+    callMeetingAI("summarize", { providerOverride: "opus45" });
   };
 
   // Conecta o auto-processamento ao callMeetingAI (definido acima)
