@@ -389,6 +389,11 @@ export const OportunidadeDetailSheet = ({
     }
   };
 
+  // Conecta o auto-processamento ao callMeetingAI (definido acima)
+  autoProcessRef.current = (txt: string) => {
+    callMeetingAI("summarize", { silent: true, transcricaoOverride: txt });
+    callMeetingAI("suggest_task", { silent: true, transcricaoOverride: txt });
+  };
 
   const aplicarResumoNasNotas = async () => {
     if (!aiResumo) return;
