@@ -258,6 +258,15 @@ const CrmLeads = () => {
         onOpenChange={(v) => { setDesqualOpen(v); if (!v) setDesqualLead(null); }}
         onConfirm={handleConfirmDesqualificacao}
       />
+
+      <TasksOverviewDialog
+        open={tasksOpen}
+        onOpenChange={setTasksOpen}
+        onOpenLead={(leadId) => {
+          const lead = leads.find((l: any) => l.id === leadId);
+          if (lead) { setEditing(lead); setSheetOpen(true); }
+        }}
+      />
     </div>
   );
 };
