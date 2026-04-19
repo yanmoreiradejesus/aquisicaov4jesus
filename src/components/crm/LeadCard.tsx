@@ -76,9 +76,9 @@ export const LeadCard = ({ lead, onClick, showAge }: Props) => {
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <h4 className="font-display font-semibold text-[13.5px] leading-tight text-foreground line-clamp-1 tracking-[-0.01em]">
+              <div className="font-display font-semibold text-[14px] leading-tight text-foreground line-clamp-1 tracking-[-0.01em] normal-case">
                 {lead.empresa || lead.nome}
-              </h4>
+              </div>
               {lead.empresa && (
                 <p className="font-display text-[11px] text-muted-foreground line-clamp-1 mt-0.5 tracking-[-0.005em]">
                   {lead.nome}
