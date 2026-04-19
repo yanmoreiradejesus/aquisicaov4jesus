@@ -252,7 +252,7 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
 
   const handleStep = async (etapaId: string) => {
     if (etapaId === form.etapa) return;
-    if (etapaId === "reuniao_agendada" && !form.qualificacao?.trim()) {
+    if (etapaId === "reuniao_agendada" && (!form.qualificacao?.trim() || !form.temperatura)) {
       setPendingEtapa(etapaId);
       setQualOpen(true);
       return;
@@ -262,8 +262,8 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
     if (etapaId === "reuniao_agendada") setActiveTab("reuniao");
   };
 
-  const handleConfirmQualificacao = async (qualificacao: string) => {
-    const updated = { ...form, qualificacao };
+  const handleConfirmQualificacao = async (qualificacao: string, temperatura: string) => {
+    const updated = { ...form, qualificacao, temperatura };
     await onSave({ ...updated, tier });
     if (pendingEtapa) {
       await onChangeEtapa(form.id, pendingEtapa);
@@ -279,20 +279,9 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-screen sm:max-w-[min(96vw,1400px)] overflow-y-auto">
         <SheetHeader>
-          <div className="flex items-start justify-between gap-3">
-            <SheetTitle className="font-heading text-2xl tracking-wider uppercase">
-              {form.empresa || form.nome}
-            </SheetTitle>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setTarefaDialogOpen(true)}
-              className="shrink-0"
-            >
-              <CalendarClock className="h-3.5 w-3.5 mr-1.5" />
-              Nova tarefa
-            </Button>
-          </div>
+          <SheetTitle className="font-heading text-2xl tracking-wider uppercase pr-10">
+            {form.empresa || form.nome}
+          </SheetTitle>
         </SheetHeader>
 
         {/* STEPPER estilo Salesforce */}
@@ -352,15 +341,18 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
 
         {/* TABS principais */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="grid grid-cols-4 w-full h-auto">
+          <TabsList className="grid grid-cols-5 w-full h-auto">
             <TabsTrigger value="informacoes" className="text-[11px] py-2">
               Informações
+            </TabsTrigger>
+            <TabsTrigger value="tarefas" className="text-[11px] py-2">
+              Tarefas
             </TabsTrigger>
             <TabsTrigger value="qualificacao" className="text-[11px] py-2">
               Qualificação
             </TabsTrigger>
             <TabsTrigger value="reuniao" className="text-[11px] py-2">
-              Informações da Reunião
+              Reunião
             </TabsTrigger>
             <TabsTrigger value="historico" className="text-[11px] py-2">
               Histórico
@@ -405,31 +397,90 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
             </div>
           </TabsContent>
 
+          {/* TAB: Tarefas */}
+          <TabsContent value="tarefas" className="mt-4">
+            <div className="flex justify-end mb-3">
+              <Button size="sm" onClick={() => setTarefaDialogOpen(true)}>
+                <CalendarClock className="h-3.5 w-3.5 mr-1.5" />
+                Nova tarefa
+              </Button>
+            </div>
+            {form.id && (
+              <LeadTimeline
+                leadId={form.id}
+                hideNotaComposer
+                tarefaDialogOpen={tarefaDialogOpen}
+                onTarefaDialogOpenChange={setTarefaDialogOpen}
+              />
+            )}
+          </TabsContent>
+
           {/* TAB: Qualificação */}
           <TabsContent value="qualificacao" className="mt-4">
-            <div className="px-4 py-3 border border-border/40 rounded-lg bg-background/30">
-              <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-2">
-                Detalhes da qualificação
-              </p>
-              <Textarea
-                rows={8}
-                value={form.qualificacao ?? ""}
-                onChange={(e) => set("qualificacao", e.target.value)}
-                placeholder="Ex.: Dor principal — gerar leads B2B. Faturamento ~R$ 800k/mês. Já testou Meta Ads sem ROI. Decisor: CEO. Urgência alta, quer começar em 30 dias."
-                className="text-sm resize-none"
+            <div className="px-4 py-3 border border-border/40 rounded-lg bg-background/30 space-y-4">
+              <div>
+                <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-2">
+                  Temperatura *
+                </p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: "Quente", emoji: "🔥", base: "border-red-500/40 bg-red-500/10 text-red-300", on: "border-red-500 bg-red-500/20 text-red-200 ring-2 ring-red-500/40" },
+                    { id: "Morno", emoji: "🌤️", base: "border-amber-500/40 bg-amber-500/10 text-amber-300", on: "border-amber-500 bg-amber-500/20 text-amber-200 ring-2 ring-amber-500/40" },
+                    { id: "Frio", emoji: "❄️", base: "border-sky-500/40 bg-sky-500/10 text-sky-300", on: "border-sky-500 bg-sky-500/20 text-sky-200 ring-2 ring-sky-500/40" },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => set("temperatura", t.id)}
+                      className={cn(
+                        "rounded-md border px-3 py-2 text-sm font-medium transition-all",
+                        form.temperatura === t.id ? t.on : `${t.base} opacity-70 hover:opacity-100`,
+                      )}
+                    >
+                      <span className="mr-1">{t.emoji}</span>
+                      {t.id}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <HoverEditField
+                label="Instagram da empresa"
+                value={form.instagram ?? ""}
+                onChange={(v) => set("instagram", v)}
               />
+              <HoverEditField
+                label="Site da empresa"
+                value={form.site ?? ""}
+                onChange={(v) => set("site", v)}
+              />
+
+              <div>
+                <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-2">
+                  Detalhes da qualificação *
+                </p>
+                <Textarea
+                  rows={8}
+                  value={form.qualificacao ?? ""}
+                  onChange={(e) => set("qualificacao", e.target.value)}
+                  placeholder="Ex.: Dor principal — gerar leads B2B. Faturamento ~R$ 800k/mês. Já testou Meta Ads sem ROI. Decisor: CEO. Urgência alta, quer começar em 30 dias."
+                  className="text-sm resize-none"
+                />
+              </div>
             </div>
           </TabsContent>
 
           {/* TAB: Informações da Reunião */}
           <TabsContent value="reuniao" className="mt-4">
             <div className="px-4 py-4 border border-border/40 rounded-lg bg-muted/10 space-y-4">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-primary" />
-                <span className="text-xs font-semibold tracking-widest uppercase text-foreground">
-                  Reunião + Google Calendar
-                </span>
-              </div>
+              {(!form.qualificacao?.trim() || !form.temperatura) && (
+                <div className="flex items-start gap-2 text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-md px-3 py-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>
+                    Preencha a <strong>qualificação</strong> e a <strong>temperatura</strong> do lead na aba Qualificação antes de criar o invite.
+                  </span>
+                </div>
+              )}
 
               {/* Data + Hora */}
               <div className="grid grid-cols-2 gap-3">
@@ -640,15 +691,23 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                     </div>
                   )}
                   <p className="text-sm text-muted-foreground">
-                    Conectado como <span className="text-foreground">{emailGoogle}</span>.
                     {form.google_event_id
-                      ? " Adicione novos convidados acima e clique em Atualizar invite para reenviar."
-                      : " O lead receberá um convite com link do Google Meet."}
+                      ? "Adicione novos convidados acima e clique em Atualizar invite para reenviar."
+                      : "O lead receberá um convite com link do Google Meet."}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
                       size="sm"
                       onClick={async () => {
+                        if (!form.qualificacao?.trim() || !form.temperatura) {
+                          toast({
+                            title: "Qualificação obrigatória",
+                            description: "Preencha qualificação e temperatura na aba Qualificação.",
+                            variant: "destructive",
+                          });
+                          setActiveTab("qualificacao");
+                          return;
+                        }
                         try {
                           const validExtras = extraAttendees.filter(
                             (a) => a.email.trim() && /\S+@\S+\.\S+/.test(a.email)
@@ -675,7 +734,7 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                           });
                         }
                       }}
-                      disabled={googleLoading}
+                      disabled={googleLoading || !form.qualificacao?.trim() || !form.temperatura}
                     >
                       {googleLoading ? (
                         <Loader2 className="h-4 w-4 mr-1 animate-spin" />
@@ -730,6 +789,7 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
         open={qualOpen}
         onOpenChange={(v) => { setQualOpen(v); if (!v) setPendingEtapa(null); }}
         initialValue={form.qualificacao}
+        initialTemperatura={form.temperatura}
         onConfirm={handleConfirmQualificacao}
       />
     </Sheet>

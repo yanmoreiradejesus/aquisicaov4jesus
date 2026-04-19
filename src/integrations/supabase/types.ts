@@ -232,6 +232,7 @@ export type Database = {
           google_event_id: string | null
           google_event_link: string | null
           id: string
+          instagram: string | null
           motivo_desqualificacao: string | null
           nome: string
           nome_produto: string | null
@@ -241,7 +242,9 @@ export type Database = {
           qualificacao: string | null
           responsavel_id: string | null
           segmento: string | null
+          site: string | null
           telefone: string | null
+          temperatura: string | null
           tier: string | null
           tipo_produto: string | null
           updated_at: string
@@ -269,6 +272,7 @@ export type Database = {
           google_event_id?: string | null
           google_event_link?: string | null
           id?: string
+          instagram?: string | null
           motivo_desqualificacao?: string | null
           nome: string
           nome_produto?: string | null
@@ -278,7 +282,9 @@ export type Database = {
           qualificacao?: string | null
           responsavel_id?: string | null
           segmento?: string | null
+          site?: string | null
           telefone?: string | null
+          temperatura?: string | null
           tier?: string | null
           tipo_produto?: string | null
           updated_at?: string
@@ -306,6 +312,7 @@ export type Database = {
           google_event_id?: string | null
           google_event_link?: string | null
           id?: string
+          instagram?: string | null
           motivo_desqualificacao?: string | null
           nome?: string
           nome_produto?: string | null
@@ -315,7 +322,9 @@ export type Database = {
           qualificacao?: string | null
           responsavel_id?: string | null
           segmento?: string | null
+          site?: string | null
           telefone?: string | null
+          temperatura?: string | null
           tier?: string | null
           tipo_produto?: string | null
           updated_at?: string
