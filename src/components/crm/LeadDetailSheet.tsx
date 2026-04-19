@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { LEAD_ETAPAS } from "@/hooks/useCrmLeads";
 import {
   Check,
@@ -13,10 +17,12 @@ import {
   Trash2,
   AlertCircle,
   Calendar,
+  CalendarIcon,
   ExternalLink,
   Loader2,
   Plus,
   CalendarClock,
+  RefreshCw,
 } from "lucide-react";
 import { formatPhone, whatsappNumber, locationFromPhone, timeAgo } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
@@ -26,6 +32,7 @@ import { useGoogleCalendar } from "@/hooks/useGoogleCalendar";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X, UserPlus } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Props {
   open: boolean;
