@@ -478,6 +478,10 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                       />
                     </PopoverContent>
                   </Popover>
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1 block">
+                    Hora
                   </label>
                   <Input
                     type="time"
