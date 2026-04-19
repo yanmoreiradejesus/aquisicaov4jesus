@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import { Calendar, DollarSign, Flame, Thermometer, Snowflake, ListTodo } from "lucide-react";
+import { Calendar, DollarSign, Flame, Thermometer, Snowflake, ListTodo, Copy, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { formatPhone, whatsappNumber } from "@/lib/ddd";
+import { useToast } from "@/hooks/use-toast";
 
 interface Props {
   oportunidade: any;
@@ -23,16 +25,25 @@ const fmtDate = (iso?: string | null) => {
   return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 };
 
-const TEMP_META: Record<string, { icon: any; color: string; label: string }> = {
-  quente: { icon: Flame, color: "bg-red-500/10 text-red-400 border-red-500/30", label: "Quente" },
-  morno: { icon: Thermometer, color: "bg-amber-500/10 text-amber-400 border-amber-500/30", label: "Morno" },
-  frio: { icon: Snowflake, color: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30", label: "Frio" },
+// Tag estilo "etiqueta de reunião" (oportunidade) — usada nas demais colunas
+const TEMP_META: Record<string, { icon: any; color: string; accent: string; label: string }> = {
+  quente: { icon: Flame, color: "bg-red-500/10 text-red-400 border-red-500/30", accent: "bg-temp-hot", label: "Quente" },
+  morno: { icon: Thermometer, color: "bg-amber-500/10 text-amber-400 border-amber-500/30", accent: "bg-temp-warm", label: "Morno" },
+  frio: { icon: Snowflake, color: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30", accent: "bg-temp-cold", label: "Frio" },
+};
+
+// Pílula no padrão LeadCard (label vindo do CRM Leads — "Quente", "Morno", "Frio")
+const LEAD_TEMP_PILL: Record<string, { emoji: string; cls: string; accent: string }> = {
+  Quente: { emoji: "🔥", cls: "bg-temp-hot/15 text-temp-hot border-temp-hot/40", accent: "bg-temp-hot" },
+  Morno: { emoji: "🌤️", cls: "bg-temp-warm/15 text-temp-warm border-temp-warm/40", accent: "bg-temp-warm" },
+  Frio: { emoji: "❄️", cls: "bg-temp-cold/15 text-temp-cold border-temp-cold/40", accent: "bg-temp-cold" },
 };
 
 export const OportunidadeCard = ({ oportunidade, onClick }: Props) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: oportunidade.id,
   });
+  const { toast } = useToast();
 
   const [tarefasPendentes, setTarefasPendentes] = useState<number>(0);
 
@@ -62,6 +73,110 @@ export const OportunidadeCard = ({ oportunidade, onClick }: Props) => {
     : undefined;
 
   const lead = oportunidade.lead;
+  const isProposta = oportunidade.etapa === "proposta";
+
+  // ===== MODO PROPOSTA: card no estilo do CRM Leads, com a temperatura herdada do lead =====
+  if (isProposta && lead) {
+    const leadTemp = lead.temperatura ? LEAD_TEMP_PILL[lead.temperatura] : null;
+    const accent = leadTemp?.accent ?? "bg-border/60";
+    const phone = lead.telefone as string | undefined;
+    const phoneFmt = formatPhone(phone);
+    const wa = whatsappNumber(phone);
+
+    const stopHard = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+    };
+    const copyPhone = (e: React.MouseEvent) => {
+      stopHard(e);
+      if (!phoneFmt) return;
+      navigator.clipboard.writeText(phoneFmt);
+      toast({ title: "Telefone copiado", description: phoneFmt });
+    };
+
+    return (
+      <div ref={setNodeRef} style={style} {...attributes}>
+        <div
+          className={cn(
+            "group relative overflow-hidden rounded-xl border bg-surface-1/80 backdrop-blur-sm",
+            isDragging
+              ? "border-primary/50 shadow-ios-xl ring-1 ring-primary/30 opacity-60 scale-[1.02]"
+              : "border-border/50 card-lift shadow-ios-sm hover:border-primary/40 hover:bg-surface-2/80",
+          )}
+        >
+          {/* Accent strip (igual LeadCard) */}
+          <span className={cn("absolute left-0 top-0 bottom-0 w-[3px]", accent)} />
+
+          <div
+            {...listeners}
+            onClick={onClick}
+            className="pl-3.5 pr-3 py-3 cursor-grab active:cursor-grabbing"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="font-display font-semibold text-[13px] leading-snug text-foreground truncate tracking-[-0.01em]">
+                  {lead.empresa || lead.nome}
+                </div>
+                {lead.empresa && (
+                  <p className="font-display font-normal text-[11px] text-muted-foreground truncate mt-0.5">
+                    {lead.nome}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+              {leadTemp && (
+                <span
+                  className={cn(
+                    "text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide",
+                    leadTemp.cls,
+                  )}
+                >
+                  {leadTemp.emoji} {lead.temperatura}
+                </span>
+              )}
+              {tarefasPendentes > 0 && (
+                <span className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide bg-primary/10 text-primary border-primary/30 inline-flex items-center gap-1 tabular-nums">
+                  <ListTodo className="h-2.5 w-2.5" />{tarefasPendentes}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {phoneFmt && (
+            <div className="flex items-center gap-1 px-3 pb-2.5 pt-1.5 border-t border-border/30">
+              <button
+                onClick={copyPhone}
+                onPointerDown={(e) => e.stopPropagation()}
+                className="flex-1 flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors px-1.5 py-1 rounded-md hover:bg-muted/40 min-w-0"
+                title="Copiar telefone"
+              >
+                <Copy className="h-3 w-3 shrink-0" />
+                <span className="truncate tabular-nums">{phoneFmt}</span>
+              </button>
+              {wa && (
+                <a
+                  href={`https://wa.me/${wa}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="flex items-center justify-center h-7 w-7 rounded-md bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:scale-105 transition-all shrink-0"
+                  title="Abrir WhatsApp"
+                  aria-label="Abrir WhatsApp"
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ===== DEMAIS COLUNAS: visual atual com a etiqueta de temperatura definida na aba Reunião =====
   const titulo = oportunidade.nome_oportunidade;
   const subtitulo = lead?.empresa || lead?.nome;
   const valorEf = fmtBRL(oportunidade.valor_ef);
