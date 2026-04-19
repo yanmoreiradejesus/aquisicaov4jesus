@@ -250,6 +250,7 @@ const CrmLeads = () => {
         onOpenChange={(v) => { setQualOpen(v); if (!v) setPendingMove(null); }}
         initialValue={pendingMove?.lead?.qualificacao}
         initialTemperatura={pendingMove?.lead?.temperatura}
+        initialDataReuniao={pendingMove?.lead?.data_reuniao_agendada}
         onConfirm={handleConfirmQualificacao}
       />
 
