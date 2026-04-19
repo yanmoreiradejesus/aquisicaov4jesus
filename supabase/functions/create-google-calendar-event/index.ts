@@ -22,6 +22,12 @@ async function refreshAccessToken(refreshToken: string) {
   return json as { access_token: string; expires_in: number };
 }
 
+interface ExtraAttendee {
+  email: string;
+  nome?: string;
+  funcao?: string;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -48,7 +54,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { lead_id, duration_minutes } = await req.json();
+    const body = await req.json();
+    const lead_id: string | undefined = body.lead_id;
+    const closer_id: string | null = body.closer_id ?? null;
+    const extra_attendees: ExtraAttendee[] = Array.isArray(body.extra_attendees)
+      ? body.extra_attendees.filter((a: any) => a && typeof a.email === "string" && a.email.trim())
+      : [];
+
     if (!lead_id) {
       return new Response(JSON.stringify({ error: "Missing lead_id" }), {
         status: 400,
@@ -61,7 +73,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Get lead
+    // Lead
     const { data: lead, error: leadErr } = await admin
       .from("crm_leads")
       .select("*")
@@ -87,7 +99,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get token
+    // Token Google
     const { data: tokenRow, error: tokenErr } = await admin
       .from("user_google_tokens")
       .select("*")
@@ -101,7 +113,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Refresh access token
     let accessToken = tokenRow.access_token;
     const isExpired =
       !tokenRow.expires_at || new Date(tokenRow.expires_at).getTime() < Date.now() + 60_000;
@@ -118,15 +129,65 @@ Deno.serve(async (req) => {
         .eq("user_id", userData.user.id);
     }
 
+    // Closer (profile)
+    let closerEmail: string | null = null;
+    let closerName: string | null = null;
+    if (closer_id) {
+      const { data: closerProfile } = await admin
+        .from("profiles")
+        .select("email, full_name")
+        .eq("id", closer_id)
+        .maybeSingle();
+      if (closerProfile) {
+        closerEmail = closerProfile.email;
+        closerName = closerProfile.full_name ?? closerProfile.email;
+      }
+    }
+
+    // 1h fixo
     const start = new Date(lead.data_reuniao_agendada);
-    const end = new Date(start.getTime() + (duration_minutes ?? 30) * 60_000);
+    const end = new Date(start.getTime() + 60 * 60_000);
+
+    const empresaCliente = lead.empresa || lead.nome;
+    const summary = `V4 Company + ${empresaCliente}`;
+
+    const description = `Para acessar a reunião basta clicar no link abaixo e depois no botão azul de "Entrar com Google Meet" ou se estiver em inglês "Login with Google Meet". Algumas informações sobre a nossa reunião:
+
+💻  1) É fundamental acessar de um computador ou notebook com câmera, para visualizar melhor as informações;
+
+
+🎥 2) Não é obrigatório, mas é melhor usar uma webcam;
+
+
+🎧 3) Fundamental você ter microfone e de preferência um fone de ouvido, também;
+
+
+📶4) É importante ter uma boa conexão de 'internet'. Se possível, com cabo.`;
+
+    // Attendees: lead + conta Google conectada + closer + extras
+    const attendeesMap = new Map<string, { email: string; displayName?: string }>();
+    const addAttendee = (email?: string | null, displayName?: string | null) => {
+      if (!email) return;
+      const key = email.toLowerCase().trim();
+      if (!key) return;
+      if (!attendeesMap.has(key)) {
+        attendeesMap.set(key, { email: key, displayName: displayName ?? undefined });
+      }
+    };
+    addAttendee(lead.email, lead.nome);
+    addAttendee(tokenRow.email_google, "V4 Company");
+    addAttendee(closerEmail, closerName ?? "Closer V4");
+    for (const a of extra_attendees) {
+      addAttendee(a.email, a.nome || a.funcao || undefined);
+    }
+    const attendees = Array.from(attendeesMap.values());
 
     const event = {
-      summary: `Reunião — ${lead.empresa || lead.nome}`,
-      description: `Reunião comercial agendada via CRM V4 Jesus.\n\nLead: ${lead.nome}\nEmpresa: ${lead.empresa ?? "—"}\nTelefone: ${lead.telefone ?? "—"}\n${lead.qualificacao ? `\nQualificação:\n${lead.qualificacao}` : ""}`,
+      summary,
+      description,
       start: { dateTime: start.toISOString(), timeZone: "America/Sao_Paulo" },
       end: { dateTime: end.toISOString(), timeZone: "America/Sao_Paulo" },
-      attendees: [{ email: lead.email, displayName: lead.nome }],
+      attendees,
       conferenceData: {
         createRequest: {
           requestId: `lead-${lead.id}-${Date.now()}`,
@@ -157,13 +218,25 @@ Deno.serve(async (req) => {
       });
     }
 
-    await admin
-      .from("crm_leads")
-      .update({
-        google_event_id: calJson.id,
-        google_event_link: calJson.htmlLink,
-      })
-      .eq("id", lead_id);
+    // Notas: anexar convidados extras às notas existentes
+    let notasUpdate: string | null = null;
+    if (extra_attendees.length > 0) {
+      const linhas = extra_attendees.map((a) => {
+        const nome = a.nome?.trim() || "(sem nome)";
+        const funcao = a.funcao?.trim() ? ` — ${a.funcao.trim()}` : "";
+        return `• ${nome}${funcao} <${a.email}>`;
+      });
+      const bloco = `\n\n[Convidados adicionais da reunião — ${new Date().toLocaleString("pt-BR")}]\n${linhas.join("\n")}`;
+      notasUpdate = ((lead.notas ?? "").trim() + bloco).trim();
+    }
+
+    const updatePayload: Record<string, unknown> = {
+      google_event_id: calJson.id,
+      google_event_link: calJson.htmlLink,
+    };
+    if (notasUpdate !== null) updatePayload.notas = notasUpdate;
+
+    await admin.from("crm_leads").update(updatePayload).eq("id", lead_id);
 
     return new Response(
       JSON.stringify({

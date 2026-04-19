@@ -23,6 +23,9 @@ import { useToast } from "@/hooks/use-toast";
 import { LeadTimeline } from "./LeadTimeline";
 import { QualificacaoDialog } from "./QualificacaoDialog";
 import { useGoogleCalendar } from "@/hooks/useGoogleCalendar";
+import { supabase } from "@/integrations/supabase/client";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { X, UserPlus } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -169,6 +172,9 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
   const [pendingEtapa, setPendingEtapa] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("informacoes");
   const [tarefaDialogOpen, setTarefaDialogOpen] = useState(false);
+  const [closerId, setCloserId] = useState<string>("");
+  const [profiles, setProfiles] = useState<{ id: string; full_name: string | null; email: string }[]>([]);
+  const [extraAttendees, setExtraAttendees] = useState<{ email: string; nome: string; funcao: string }[]>([]);
   const { toast } = useToast();
   const {
     isConnected: googleConnected,
@@ -178,6 +184,15 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
     createEvent: createGoogleEvent,
     disconnect: disconnectGoogle,
   } = useGoogleCalendar();
+
+  useEffect(() => {
+    supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .eq("approved", true)
+      .order("full_name", { ascending: true })
+      .then(({ data }) => setProfiles(data ?? []));
+  }, []);
 
   useEffect(() => {
     if (open) {
@@ -469,6 +484,93 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                 </div>
               </div>
 
+              {/* Closer */}
+              <div>
+                <label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1 block">
+                  Closer responsável
+                </label>
+                <Select value={closerId} onValueChange={setCloserId}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Selecione o closer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {profiles.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.full_name || p.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Convidados adicionais */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                    Convidados adicionais
+                  </label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    onClick={() =>
+                      setExtraAttendees((arr) => [...arr, { email: "", nome: "", funcao: "" }])
+                    }
+                  >
+                    <UserPlus className="h-3 w-3 mr-1" /> Adicionar
+                  </Button>
+                </div>
+                {extraAttendees.length === 0 && (
+                  <p className="text-[11px] text-muted-foreground/70 italic">
+                    Nenhum convidado extra. Adicione para incluir no invite e nas notas.
+                  </p>
+                )}
+                {extraAttendees.map((a, idx) => (
+                  <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-center">
+                    <Input
+                      placeholder="Nome"
+                      value={a.nome}
+                      onChange={(e) =>
+                        setExtraAttendees((arr) =>
+                          arr.map((x, i) => (i === idx ? { ...x, nome: e.target.value } : x))
+                        )
+                      }
+                      className="h-8 text-sm"
+                    />
+                    <Input
+                      placeholder="Função"
+                      value={a.funcao}
+                      onChange={(e) =>
+                        setExtraAttendees((arr) =>
+                          arr.map((x, i) => (i === idx ? { ...x, funcao: e.target.value } : x))
+                        )
+                      }
+                      className="h-8 text-sm"
+                    />
+                    <Input
+                      placeholder="email@empresa.com"
+                      type="email"
+                      value={a.email}
+                      onChange={(e) =>
+                        setExtraAttendees((arr) =>
+                          arr.map((x, i) => (i === idx ? { ...x, email: e.target.value } : x))
+                        )
+                      }
+                      className="h-8 text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setExtraAttendees((arr) => arr.filter((_, i) => i !== idx))}
+                      className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-destructive"
+                      title="Remover"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
               {/* Avisos / Estado do Google */}
               {(!form.data_reuniao_agendada || !form.email) ? (
                 <div className="flex items-start gap-2 text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-md px-3 py-2">
@@ -520,7 +622,13 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                       size="sm"
                       onClick={async () => {
                         try {
-                          const res = await createGoogleEvent(form.id, 30);
+                          const validExtras = extraAttendees.filter(
+                            (a) => a.email.trim() && /\S+@\S+\.\S+/.test(a.email)
+                          );
+                          const res = await createGoogleEvent(form.id, {
+                            closerId: closerId || null,
+                            extraAttendees: validExtras,
+                          });
                           setForm((p: any) => ({
                             ...p,
                             google_event_id: res.event_id,
