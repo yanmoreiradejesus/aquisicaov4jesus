@@ -108,5 +108,5 @@ export function useOportunidadeAtividades(oportunidadeId?: string | null) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["crm_atividades_op", oportunidadeId] }),
   });
 
-  return { ...query, addNota, addTarefa, toggleTarefa, remove };
+  return { ...query, addNota, addTarefa, toggleTarefa, addReuniao, remove };
 }
