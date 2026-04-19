@@ -141,9 +141,21 @@ const CrmLeads = () => {
             <p className="text-[10px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-1">
               Aquisição
             </p>
-            <h1 className="font-display text-[28px] lg:text-[34px] font-semibold text-foreground tracking-[-0.02em] normal-case">
-              Leads
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="font-display text-[28px] lg:text-[34px] font-semibold text-foreground tracking-[-0.02em] normal-case">
+                Leads
+              </h1>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setTasksOpen(true)}
+                className="h-8 rounded-lg gap-1.5 text-xs"
+                title="Visão geral de tarefas"
+              >
+                <ListChecks className="h-3.5 w-3.5" />
+                Tarefas
+              </Button>
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2 glass rounded-2xl p-1.5 shadow-ios-sm">
             <div className="relative">
