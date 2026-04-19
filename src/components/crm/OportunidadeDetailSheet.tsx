@@ -242,7 +242,9 @@ export const OportunidadeDetailSheet = ({
   const [aiTarefa, setAiTarefa] = useState<{ titulo: string; descricao: string; prazo_sugerido_dias: number; prioridade: string } | null>(null);
   const [aiLoadingResumo, setAiLoadingResumo] = useState(false);
   const [aiLoadingTarefa, setAiLoadingTarefa] = useState(false);
+  const [transcricaoEditing, setTranscricaoEditing] = useState(false);
   const processedHashRef = useRef<string>("");
+  const autoTaskCreatedRef = useRef<string>("");
   const { toast } = useToast();
   const { data: atividades, addTarefa, addNota, addReuniao } = useOportunidadeAtividades(oportunidade?.id ?? null);
 
