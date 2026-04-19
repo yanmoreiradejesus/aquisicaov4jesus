@@ -86,6 +86,22 @@ export const LeadImportDialog = ({ open, onOpenChange }: Props) => {
         </DialogHeader>
 
         <div className="space-y-4 py-2">
+          {lastImport && !result && (
+            <div className="rounded-lg border border-border/50 bg-surface-2/40 p-3 flex items-start gap-3">
+              <History className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+              <div className="text-xs space-y-0.5 flex-1 min-w-0">
+                <div className="text-muted-foreground">Última importação</div>
+                <div className="text-foreground font-medium">
+                  {new Date(lastImport.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                </div>
+                <div className="text-muted-foreground truncate">
+                  Último lead: <span className="text-foreground">{lastImport.nome}</span>
+                  {lastImport.empresa && <span> · {lastImport.empresa}</span>}
+                </div>
+              </div>
+            </div>
+          )}
+
           {!result && (
             <>
               <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/40 transition-colors">
