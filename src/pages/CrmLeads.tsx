@@ -29,6 +29,7 @@ const CrmLeads = () => {
   const [pendingMove, setPendingMove] = useState<{ lead: any; etapa: string } | null>(null);
   const [desqualOpen, setDesqualOpen] = useState(false);
   const [desqualLead, setDesqualLead] = useState<any | null>(null);
+  const [tasksOpen, setTasksOpen] = useState(false);
   const { toast } = useToast();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
