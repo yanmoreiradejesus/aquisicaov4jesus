@@ -542,11 +542,11 @@ export const OportunidadeDetailSheet = ({
             <TabsTrigger value="informacoes" className="text-[11px] py-2 rounded-lg data-[state=active]:bg-surface-elevated data-[state=active]:shadow-ios-sm transition-all duration-200 ease-ios">
               Informações
             </TabsTrigger>
-            <TabsTrigger value="tarefas" className="text-[11px] py-2 rounded-lg data-[state=active]:bg-surface-elevated data-[state=active]:shadow-ios-sm transition-all duration-200 ease-ios">
-              Tarefas
-            </TabsTrigger>
             <TabsTrigger value="reuniao" className="text-[11px] py-2 rounded-lg data-[state=active]:bg-surface-elevated data-[state=active]:shadow-ios-sm transition-all duration-200 ease-ios">
               Reunião
+            </TabsTrigger>
+            <TabsTrigger value="tarefas" className="text-[11px] py-2 rounded-lg data-[state=active]:bg-surface-elevated data-[state=active]:shadow-ios-sm transition-all duration-200 ease-ios">
+              Tarefas
             </TabsTrigger>
             <TabsTrigger value="historico" className="text-[11px] py-2 rounded-lg data-[state=active]:bg-surface-elevated data-[state=active]:shadow-ios-sm transition-all duration-200 ease-ios">
               Histórico
