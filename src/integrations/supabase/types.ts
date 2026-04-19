@@ -662,6 +662,7 @@ export type Database = {
         | "desqualificado"
         | "reuniao_agendada"
         | "reuniao_realizada"
+        | "no_show"
       oportunidade_etapa:
         | "proposta"
         | "negociacao"
@@ -816,6 +817,7 @@ export const Constants = {
         "desqualificado",
         "reuniao_agendada",
         "reuniao_realizada",
+        "no_show",
       ],
       oportunidade_etapa: [
         "proposta",
