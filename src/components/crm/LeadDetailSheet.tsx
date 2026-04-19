@@ -605,23 +605,6 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                     {!form.data_reuniao_agendada && "data da reunião"} para criar o invite no Google Calendar.
                   </span>
                 </div>
-              ) : form.google_event_id ? (
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-emerald-400" />
-                    <span className="text-foreground">Evento criado e convite enviado para {form.email}</span>
-                  </div>
-                  {form.google_event_link && (
-                    <a
-                      href={form.google_event_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-sm text-primary hover:underline shrink-0"
-                    >
-                      Abrir <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
-                </div>
               ) : googleConnected === null ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" /> Verificando conexão…
@@ -638,8 +621,29 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                 </div>
               ) : (
                 <div className="space-y-2">
+                  {form.google_event_id && (
+                    <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-md border border-emerald-500/30 bg-emerald-500/10">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Check className="h-4 w-4 text-emerald-400" />
+                        <span className="text-foreground">Evento criado · convite enviado para {form.email}</span>
+                      </div>
+                      {form.google_event_link && (
+                        <a
+                          href={form.google_event_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-sm text-primary hover:underline shrink-0"
+                        >
+                          Abrir <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
+                    </div>
+                  )}
                   <p className="text-sm text-muted-foreground">
-                    Conectado como <span className="text-foreground">{emailGoogle}</span>. O lead receberá um convite com link do Google Meet.
+                    Conectado como <span className="text-foreground">{emailGoogle}</span>.
+                    {form.google_event_id
+                      ? " Adicione novos convidados acima e clique em Atualizar invite para reenviar."
+                      : " O lead receberá um convite com link do Google Meet."}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
@@ -658,10 +662,14 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                             google_event_id: res.event_id,
                             google_event_link: res.event_link,
                           }));
-                          toast({ title: "Evento criado!", description: `Convite enviado para ${form.email}` });
+                          setExtraAttendees([]);
+                          toast({
+                            title: form.google_event_id ? "Invite atualizado!" : "Evento criado!",
+                            description: `Convite enviado para ${form.email}`,
+                          });
                         } catch (e: any) {
                           toast({
-                            title: "Falha ao criar evento",
+                            title: "Falha ao processar invite",
                             description: e?.message ?? String(e),
                             variant: "destructive",
                           });
@@ -669,8 +677,14 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                       }}
                       disabled={googleLoading}
                     >
-                      {googleLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Calendar className="h-4 w-4 mr-1" />}
-                      Criar evento no Google Calendar
+                      {googleLoading ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : form.google_event_id ? (
+                        <RefreshCw className="h-4 w-4 mr-1" />
+                      ) : (
+                        <Calendar className="h-4 w-4 mr-1" />
+                      )}
+                      {form.google_event_id ? "Atualizar invite" : "Criar evento no Google Calendar"}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={disconnectGoogle} disabled={googleLoading}>
                       Desconectar
