@@ -209,7 +209,7 @@ const V4Header = () => {
               {/* Comercial group */}
               {visibleComercialItems.length > 0 && (
                 <div className="px-4 py-2">
-                  <span className="text-white/50 text-[10px] font-medium uppercase tracking-widest">Comercial</span>
+                  <span className="text-white/50 text-[10px] font-medium uppercase tracking-widest">Revenue</span>
                   <div className="mt-1 space-y-0.5">
                     {visibleComercialItems.map((item) => (
                       <Link
