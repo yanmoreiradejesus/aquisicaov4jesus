@@ -361,6 +361,8 @@ export type Database = {
           nome_oportunidade: string
           notas: string | null
           responsavel_id: string | null
+          temperatura: string | null
+          transcricao_reuniao: string | null
           updated_at: string
           valor_ef: number | null
           valor_fee: number | null
@@ -378,6 +380,8 @@ export type Database = {
           nome_oportunidade: string
           notas?: string | null
           responsavel_id?: string | null
+          temperatura?: string | null
+          transcricao_reuniao?: string | null
           updated_at?: string
           valor_ef?: number | null
           valor_fee?: number | null
@@ -395,6 +399,8 @@ export type Database = {
           nome_oportunidade?: string
           notas?: string | null
           responsavel_id?: string | null
+          temperatura?: string | null
+          transcricao_reuniao?: string | null
           updated_at?: string
           valor_ef?: number | null
           valor_fee?: number | null
@@ -672,6 +678,7 @@ export type Database = {
         | "contrato"
         | "fechado_ganho"
         | "fechado_perdido"
+        | "follow_infinito"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -831,6 +838,7 @@ export const Constants = {
         "contrato",
         "fechado_ganho",
         "fechado_perdido",
+        "follow_infinito",
       ],
     },
   },
