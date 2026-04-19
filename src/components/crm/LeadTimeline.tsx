@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -18,7 +18,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useLeadAtividades, type Atividade, type AtividadeTipo } from "@/hooks/useLeadAtividades";
 import { useToast } from "@/hooks/use-toast";
 
@@ -33,15 +39,36 @@ const TIPO_META: Record<AtividadeTipo, { label: string; icon: any; color: string
   reuniao: { label: "Reunião", icon: Users, color: "text-violet-400 bg-violet-500/10 border-violet-500/30" },
 };
 
-export const LeadTimeline = ({ leadId }: { leadId: string }) => {
+interface LeadTimelineProps {
+  leadId: string;
+  /** Esconde o composer de Nota inline (caso queira renderizar em outro lugar) */
+  hideNotaComposer?: boolean;
+  /** Controle externo do dialog de Tarefa */
+  tarefaDialogOpen?: boolean;
+  onTarefaDialogOpenChange?: (open: boolean) => void;
+}
+
+export const LeadTimeline = ({
+  leadId,
+  hideNotaComposer,
+  tarefaDialogOpen,
+  onTarefaDialogOpenChange,
+}: LeadTimelineProps) => {
   const { data: atividades = [], addNota, addTarefa, toggleTarefa, remove } = useLeadAtividades(leadId);
   const { toast } = useToast();
 
-  const [tab, setTab] = useState<"nota" | "tarefa">("nota");
   const [nota, setNota] = useState("");
   const [tarefaTitulo, setTarefaTitulo] = useState("");
   const [tarefaData, setTarefaData] = useState("");
   const [tarefaHora, setTarefaHora] = useState("09:00");
+
+  // Permite controle externo OU interno do dialog
+  const [internalDialog, setInternalDialog] = useState(false);
+  const dialogOpen = tarefaDialogOpen ?? internalDialog;
+  const setDialogOpen = (v: boolean) => {
+    if (onTarefaDialogOpenChange) onTarefaDialogOpenChange(v);
+    else setInternalDialog(v);
+  };
 
   const handleAddNota = async () => {
     if (!nota.trim()) return;
@@ -60,44 +87,75 @@ export const LeadTimeline = ({ leadId }: { leadId: string }) => {
     setTarefaTitulo("");
     setTarefaData("");
     setTarefaHora("09:00");
+    setDialogOpen(false);
     toast({ title: "Tarefa criada" });
   };
 
   return (
     <div className="space-y-4">
-      {/* Composer */}
-      <div className="border border-border/40 rounded-lg bg-muted/10 p-3">
-        <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
-          <TabsList className="grid grid-cols-2 w-full mb-3">
-            <TabsTrigger value="nota" className="text-xs">
-              <StickyNote className="h-3.5 w-3.5 mr-1.5" /> Nota
-            </TabsTrigger>
-            <TabsTrigger value="tarefa" className="text-xs">
-              <CalendarClock className="h-3.5 w-3.5 mr-1.5" /> Tarefa
-            </TabsTrigger>
-          </TabsList>
+      {/* Composer de Nota (inline) */}
+      {!hideNotaComposer && (
+        <div className="border border-border/40 rounded-lg bg-muted/10 p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <StickyNote className="h-3.5 w-3.5 text-amber-400" />
+            <span className="text-xs font-semibold tracking-widest uppercase text-foreground">
+              Nova nota
+            </span>
+          </div>
+          <Textarea
+            placeholder="Escreva uma nota sobre este lead..."
+            value={nota}
+            onChange={(e) => setNota(e.target.value)}
+            rows={3}
+            className="text-sm resize-none"
+          />
+          <div className="flex justify-end">
+            <Button size="sm" onClick={handleAddNota} disabled={!nota.trim() || addNota.isPending}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar nota
+            </Button>
+          </div>
+        </div>
+      )}
 
-          <TabsContent value="nota" className="space-y-2 mt-0">
-            <Textarea
-              placeholder="Escreva uma nota sobre este lead..."
-              value={nota}
-              onChange={(e) => setNota(e.target.value)}
-              rows={3}
-              className="text-sm resize-none"
-            />
-            <div className="flex justify-end">
-              <Button size="sm" onClick={handleAddNota} disabled={!nota.trim() || addNota.isPending}>
-                <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar nota
-              </Button>
-            </div>
-          </TabsContent>
+      {/* Histórico */}
+      <div>
+        <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-3">
+          Histórico do lead
+        </p>
+        {atividades.length === 0 ? (
+          <p className="text-xs text-muted-foreground/60 italic py-4 text-center">
+            Sem registros ainda
+          </p>
+        ) : (
+          <ol className="relative border-l border-border/40 ml-2 space-y-3">
+            {atividades.map((a) => (
+              <TimelineItem
+                key={a.id}
+                a={a}
+                onToggle={(c) => toggleTarefa.mutate({ id: a.id, concluida: c })}
+                onDelete={() => remove.mutate(a.id)}
+              />
+            ))}
+          </ol>
+        )}
+      </div>
 
-          <TabsContent value="tarefa" className="space-y-2 mt-0">
+      {/* Dialog para criar tarefa */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarClock className="h-4 w-4 text-emerald-400" />
+              Nova tarefa
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
             <Input
               placeholder="Título da tarefa (ex: Ligar para apresentar proposta)"
               value={tarefaTitulo}
               onChange={(e) => setTarefaTitulo(e.target.value)}
               className="h-9 text-sm"
+              autoFocus
             />
             <div className="grid grid-cols-2 gap-2">
               <Input
@@ -113,32 +171,17 @@ export const LeadTimeline = ({ leadId }: { leadId: string }) => {
                 className="h-9 text-sm"
               />
             </div>
-            <div className="flex justify-end">
-              <Button size="sm" onClick={handleAddTarefa} disabled={addTarefa.isPending}>
-                <Plus className="h-3.5 w-3.5 mr-1" /> Criar tarefa
-              </Button>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
-
-      {/* Histórico */}
-      <div>
-        <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-3">
-          Histórico do lead
-        </p>
-        {atividades.length === 0 ? (
-          <p className="text-xs text-muted-foreground/60 italic py-4 text-center">
-            Sem registros ainda
-          </p>
-        ) : (
-          <ol className="relative border-l border-border/40 ml-2 space-y-3">
-            {atividades.map((a) => (
-              <TimelineItem key={a.id} a={a} onToggle={(c) => toggleTarefa.mutate({ id: a.id, concluida: c })} onDelete={() => remove.mutate(a.id)} />
-            ))}
-          </ol>
-        )}
-      </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={() => setDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button size="sm" onClick={handleAddTarefa} disabled={addTarefa.isPending}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> Criar tarefa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
