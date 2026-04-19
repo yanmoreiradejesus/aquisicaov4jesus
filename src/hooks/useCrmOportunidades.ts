@@ -5,9 +5,10 @@ import { supabase } from "@/integrations/supabase/client";
 export const OPORTUNIDADE_ETAPAS: { id: string; label: string; color: string }[] = [
   { id: "proposta", label: "Proposta", color: "bg-blue-500/10 text-blue-400 border-blue-500/30" },
   { id: "negociacao", label: "Negociação", color: "bg-amber-500/10 text-amber-400 border-amber-500/30" },
-  { id: "contrato", label: "Contrato", color: "bg-violet-500/10 text-violet-400 border-violet-500/30" },
-  { id: "fechado_ganho", label: "Fechado/Ganho", color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" },
-  { id: "fechado_perdido", label: "Fechado/Perdido", color: "bg-red-500/10 text-red-400 border-red-500/30" },
+  { id: "contrato", label: "Dúvidas e Fechamento", color: "bg-violet-500/10 text-violet-400 border-violet-500/30" },
+  { id: "fechado_ganho", label: "Ganho", color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" },
+  { id: "follow_infinito", label: "Follow Infinito", color: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30" },
+  { id: "fechado_perdido", label: "Perdido", color: "bg-red-500/10 text-red-400 border-red-500/30" },
 ];
 
 export function useCrmOportunidades() {
