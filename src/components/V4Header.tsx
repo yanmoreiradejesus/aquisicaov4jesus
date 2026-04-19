@@ -77,14 +77,23 @@ const V4Header = () => {
   );
 
   const prefersReducedMotion = useReducedMotion();
+  const [barReady, setBarReady] = useState(prefersReducedMotion ? true : false);
 
-  // Phase 1: 0→300ms pulsing dot. Phase 2: 300→700ms horizontal expansion. Phase 3: 700→1000ms materialize.
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      setBarReady(true);
+      return;
+    }
+    setBarReady(false);
+  }, [location.pathname, prefersReducedMotion]);
+
+  // Phase 1: 0→300ms pulsing dot (44x44 circle). Phase 2: 300→700ms horizontal expansion. Phase 3: 700→1000ms materialize content.
   const barAnimate = prefersReducedMotion
     ? { width: "100%", height: 44, borderRadius: 9999, opacity: 1, scale: 1 }
     : {
-        width: ["12px", "12px", "100%", "100%"],
-        height: ["12px", "12px", "12px", "44px"],
-        borderRadius: ["9999px", "9999px", "6px", "9999px"],
+        width: ["44px", "44px", "100%", "100%"],
+        height: ["44px", "44px", "44px", "44px"],
+        borderRadius: ["9999px", "9999px", "9999px", "9999px"],
         opacity: [0, 1, 1, 1],
         scale: [0, 1, 1, 1],
         boxShadow: [
