@@ -399,9 +399,12 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
 
           {/* TAB: Tarefas */}
           <TabsContent value="tarefas" className="mt-4">
-            <div className="flex justify-end mb-3">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                Tarefas do lead
+              </p>
               <Button size="sm" onClick={() => setTarefaDialogOpen(true)}>
-                <CalendarClock className="h-3.5 w-3.5 mr-1.5" />
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
                 Nova tarefa
               </Button>
             </div>
@@ -409,6 +412,7 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
               <LeadTimeline
                 leadId={form.id}
                 hideNotaComposer
+                onlyTarefas
                 tarefaDialogOpen={tarefaDialogOpen}
                 onTarefaDialogOpenChange={setTarefaDialogOpen}
               />
