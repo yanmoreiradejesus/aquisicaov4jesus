@@ -24,6 +24,7 @@ import {
 import { formatPhone, whatsappNumber, locationFromPhone, timeAgo } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
 import { OportunidadeTimeline } from "./OportunidadeTimeline";
+import { CloserCopilot } from "./CloserCopilot";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useOportunidadeAtividades } from "@/hooks/useOportunidadeAtividades";
@@ -585,12 +586,15 @@ export const OportunidadeDetailSheet = ({
 
         {/* TABS */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="grid grid-cols-4 w-full h-auto rounded-xl bg-surface-2/60 p-1 backdrop-blur-sm">
+          <TabsList className="grid grid-cols-5 w-full h-auto rounded-xl bg-surface-2/60 p-1 backdrop-blur-sm">
             <TabsTrigger value="informacoes" className="text-[11px] py-2 rounded-lg data-[state=active]:bg-surface-elevated data-[state=active]:shadow-ios-sm transition-all duration-200 ease-ios">
               Informações
             </TabsTrigger>
             <TabsTrigger value="reuniao" className="text-[11px] py-2 rounded-lg data-[state=active]:bg-surface-elevated data-[state=active]:shadow-ios-sm transition-all duration-200 ease-ios">
               Reunião
+            </TabsTrigger>
+            <TabsTrigger value="copilot" className="text-[11px] py-2 rounded-lg data-[state=active]:bg-surface-elevated data-[state=active]:shadow-ios-sm transition-all duration-200 ease-ios">
+              Copilot 🧠
             </TabsTrigger>
             <TabsTrigger value="tarefas" className="text-[11px] py-2 rounded-lg data-[state=active]:bg-surface-elevated data-[state=active]:shadow-ios-sm transition-all duration-200 ease-ios">
               Tarefas
@@ -700,6 +704,10 @@ export const OportunidadeDetailSheet = ({
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
+          </TabsContent>
+
+          <TabsContent value="copilot" className="mt-4">
+            {form.id && <CloserCopilot oportunidadeId={form.id} />}
           </TabsContent>
 
           <TabsContent value="tarefas" className="mt-4">
