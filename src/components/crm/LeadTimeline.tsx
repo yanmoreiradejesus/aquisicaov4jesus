@@ -46,6 +46,8 @@ interface LeadTimelineProps {
   /** Controle externo do dialog de Tarefa */
   tarefaDialogOpen?: boolean;
   onTarefaDialogOpenChange?: (open: boolean) => void;
+  /** Mostra somente atividades do tipo "tarefa" e oculta o título "Histórico do lead" */
+  onlyTarefas?: boolean;
 }
 
 export const LeadTimeline = ({
@@ -53,8 +55,10 @@ export const LeadTimeline = ({
   hideNotaComposer,
   tarefaDialogOpen,
   onTarefaDialogOpenChange,
+  onlyTarefas,
 }: LeadTimelineProps) => {
-  const { data: atividades = [], addNota, addTarefa, toggleTarefa, remove } = useLeadAtividades(leadId);
+  const { data: atividadesAll = [], addNota, addTarefa, toggleTarefa, remove } = useLeadAtividades(leadId);
+  const atividades = onlyTarefas ? atividadesAll.filter((a) => a.tipo === "tarefa") : atividadesAll;
   const { toast } = useToast();
 
   const [nota, setNota] = useState("");
