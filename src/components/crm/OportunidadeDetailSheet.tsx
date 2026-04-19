@@ -632,11 +632,16 @@ export const OportunidadeDetailSheet = ({
                     onChange={(v) => set("valor_fee", v)}
                     type="number"
                   />
-                  <HoverEditField
-                    label="Valor total do contrato"
-                    value={form.valor_total != null ? String(form.valor_total) : ""}
-                    onChange={(v) => set("valor_total", v)}
-                    type="number"
+                  <ReadOnlyRow
+                    label="Valor total do contrato (EF + Fee)"
+                    value={(() => {
+                      const ef = Number(form.valor_ef) || 0;
+                      const fee = Number(form.valor_fee) || 0;
+                      const total = ef + fee;
+                      return total > 0
+                        ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(total)
+                        : null;
+                    })()}
                   />
                   <HoverEditField
                     label="Fechamento previsto"
@@ -652,12 +657,6 @@ export const OportunidadeDetailSheet = ({
                       multiline
                     />
                   )}
-                  <HoverEditField
-                    label="Notas internas"
-                    value={form.notas ?? ""}
-                    onChange={(v) => set("notas", v)}
-                    multiline
-                  />
                 </AccordionContent>
               </AccordionItem>
 
