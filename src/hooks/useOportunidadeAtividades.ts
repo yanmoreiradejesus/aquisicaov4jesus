@@ -84,6 +84,22 @@ export function useOportunidadeAtividades(oportunidadeId?: string | null) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["crm_atividades_op", oportunidadeId] }),
   });
 
+  const addReuniao = useMutation({
+    mutationFn: async ({ titulo, descricao }: { titulo: string; descricao: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+      const { error } = await supabase.from("crm_atividades" as any).insert({
+        oportunidade_id: oportunidadeId,
+        tipo: "reuniao",
+        titulo,
+        descricao,
+        usuario_id: user.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm_atividades_op", oportunidadeId] }),
+  });
+
   const remove = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("crm_atividades" as any).delete().eq("id", id);
