@@ -473,6 +473,51 @@ export const OportunidadeDetailSheet = ({
                   )}
                 </AccordionContent>
               </AccordionItem>
+
+              {/* Qualificação — campos de qualificação do lead vinculado, somente leitura */}
+              <AccordionItem
+                value="qualificacao"
+                className="border border-border/40 rounded-lg bg-background/30 px-4"
+              >
+                <AccordionTrigger className="text-[11px] font-semibold tracking-widest uppercase text-foreground hover:no-underline py-3">
+                  Qualificação
+                </AccordionTrigger>
+                <AccordionContent className="pb-2">
+                  {!lead ? (
+                    <p className="text-sm text-muted-foreground py-2">Nenhum lead vinculado a esta oportunidade.</p>
+                  ) : (
+                    <div>
+                      <ReadOnlyRow label="Qualificação" value={lead.qualificacao} />
+                      <ReadOnlyRow label="Tier (auto)" value={tierFromFaturamento(lead.faturamento)} />
+                      <ReadOnlyRow label="Urgência" value={lead.urgencia} />
+                      <ReadOnlyRow label="Temperatura" value={lead.temperatura} />
+                      <ReadOnlyRow label="Faturamento" value={lead.faturamento} />
+                      <ReadOnlyRow label="Segmento" value={lead.segmento} />
+                      <ReadOnlyRow label="Cargo" value={lead.cargo} />
+                      <ReadOnlyRow label="Nome do produto" value={lead.nome_produto} />
+                      <ReadOnlyRow label="Tipo de produto" value={lead.tipo_produto} />
+                      <ReadOnlyRow label="Canal" value={lead.canal} />
+                      <ReadOnlyRow label="Origem" value={lead.origem} />
+                      <ReadOnlyRow label="Arrematador" value={lead.arrematador} />
+                      <ReadOnlyRow
+                        label="Data de aquisição"
+                        value={lead.data_aquisicao ? new Date(lead.data_aquisicao).toLocaleDateString("pt-BR") : null}
+                      />
+                      <ReadOnlyRow
+                        label="Reunião agendada"
+                        value={lead.data_reuniao_agendada ? new Date(lead.data_reuniao_agendada).toLocaleString("pt-BR") : null}
+                      />
+                      <ReadOnlyRow
+                        label="Reunião realizada"
+                        value={lead.data_reuniao_realizada ? new Date(lead.data_reuniao_realizada).toLocaleString("pt-BR") : null}
+                      />
+                      <ReadOnlyRow label="Descrição" value={lead.descricao} />
+                      <ReadOnlyRow label="Motivo da desqualificação" value={lead.motivo_desqualificacao} />
+                      <ReadOnlyRow label="Notas do lead" value={lead.notas} />
+                    </div>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
             </Accordion>
           </TabsContent>
 
