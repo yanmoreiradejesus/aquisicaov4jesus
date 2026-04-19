@@ -254,20 +254,6 @@ const V4Header = () => {
                 </div>
               )}
 
-              <div className="px-3 py-2">
-                <Link
-                  to="/"
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-[13px] font-medium transition-colors ${
-                    isActive("/")
-                      ? "bg-foreground/10 text-foreground"
-                      : "text-foreground/75 hover:bg-foreground/5 hover:text-foreground"
-                  }`}
-                >
-                  <Home className="h-3.5 w-3.5" />
-                  Hub
-                </Link>
-              </div>
-
               {isAdmin && (
                 <div className="px-3 py-2">
                   <Link
