@@ -1,15 +1,35 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { OPORTUNIDADE_ETAPAS } from "@/hooks/useCrmOportunidades";
-import { Plus, Trash2, Flame, Thermometer, Snowflake, CheckCircle2, Circle } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Flame,
+  Thermometer,
+  Snowflake,
+  CheckCircle2,
+  Circle,
+  ArrowLeft,
+  ArrowRight,
+  AlertCircle,
+  Calendar as CalendarIcon,
+  ListTodo,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface NovaTarefa {
@@ -30,13 +50,73 @@ interface Props {
 }
 
 const TEMPERATURAS = [
-  { value: "quente", label: "Quente", icon: Flame, color: "text-red-400" },
-  { value: "morno", label: "Morno", icon: Thermometer, color: "text-amber-400" },
-  { value: "frio", label: "Frio", icon: Snowflake, color: "text-cyan-400" },
+  {
+    value: "quente",
+    label: "Quente",
+    desc: "Pronto para fechar",
+    icon: Flame,
+    color: "text-red-400",
+    ring: "ring-red-400/40",
+    bg: "bg-red-400/10",
+  },
+  {
+    value: "morno",
+    label: "Morno",
+    desc: "Precisa nutrir",
+    icon: Thermometer,
+    color: "text-amber-400",
+    ring: "ring-amber-400/40",
+    bg: "bg-amber-400/10",
+  },
+  {
+    value: "frio",
+    label: "Frio",
+    desc: "Esfriou",
+    icon: Snowflake,
+    color: "text-cyan-400",
+    ring: "ring-cyan-400/40",
+    bg: "bg-cyan-400/10",
+  },
 ];
 
-// Etapas que exigem pelo menos 1 tarefa criada
 const REQUIRES_TASK = new Set(["negociacao", "contrato", "follow_infinito"]);
+
+const formatLocalDateTime = (d: Date) => {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(
+    d.getMinutes(),
+  )}`;
+};
+
+const PRESETS = [
+  {
+    label: "Amanhã 9h",
+    build: () => {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      d.setHours(9, 0, 0, 0);
+      return d;
+    },
+  },
+  {
+    label: "Em 3 dias",
+    build: () => {
+      const d = new Date();
+      d.setDate(d.getDate() + 3);
+      d.setHours(9, 0, 0, 0);
+      return d;
+    },
+  },
+  {
+    label: "Próxima semana",
+    build: () => {
+      const d = new Date();
+      d.setDate(d.getDate() + 7);
+      d.setHours(9, 0, 0, 0);
+      return d;
+    },
+  },
+];
 
 export const OportunidadeAvancarDialog = ({
   open,
@@ -49,7 +129,11 @@ export const OportunidadeAvancarDialog = ({
   const etapaOrigem = oportunidade?.etapa;
   const isPropostaParaNegociacao = etapaOrigem === "proposta" && etapaDestino === "negociacao";
   const requiresTask = REQUIRES_TASK.has(etapaDestino);
+  const hasMeetingStep = isPropostaParaNegociacao;
+  const hasTaskStep = requiresTask;
+  const totalSteps = (hasMeetingStep ? 1 : 0) + (hasTaskStep ? 1 : 0) || 1;
 
+  const [step, setStep] = useState(1);
   const [transcricao, setTranscricao] = useState("");
   const [temperatura, setTemperatura] = useState<string>("");
   const [tarefas, setTarefas] = useState<NovaTarefa[]>([]);
@@ -58,22 +142,23 @@ export const OportunidadeAvancarDialog = ({
   const [tarefasExistentes, setTarefasExistentes] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitted, setSubmitted] = useState(false);
+
+  const transcricaoRef = useRef<HTMLTextAreaElement>(null);
+  const tarefaTituloRef = useRef<HTMLInputElement>(null);
 
   // Reset ao abrir
   useEffect(() => {
     if (open && oportunidade) {
+      setStep(1);
+      setSubmitted(false);
       setTranscricao(oportunidade.transcricao_reuniao || "");
       setTemperatura(oportunidade.temperatura || "");
       setTarefas([]);
       setNovaTarefaTitulo("");
-      // Default: amanhã às 09:00
-      const amanha = new Date();
-      amanha.setDate(amanha.getDate() + 1);
-      amanha.setHours(9, 0, 0, 0);
-      setNovaTarefaData(amanha.toISOString().slice(0, 16));
+      setNovaTarefaData(formatLocalDateTime(PRESETS[0].build()));
       setErrors({});
 
-      // Buscar tarefas existentes pendentes da oportunidade
       supabase
         .from("crm_atividades" as any)
         .select("id, titulo, descricao, data_agendada, concluida")
@@ -84,59 +169,105 @@ export const OportunidadeAvancarDialog = ({
     }
   }, [open, oportunidade]);
 
+  // Auto-focus por step
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => {
+      if (currentStepKey() === "meeting") transcricaoRef.current?.focus();
+      else if (currentStepKey() === "task") tarefaTituloRef.current?.focus();
+    }, 80);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, step, hasMeetingStep, hasTaskStep]);
+
+  const currentStepKey = (): "meeting" | "task" | "none" => {
+    if (hasMeetingStep && step === 1) return "meeting";
+    if (hasTaskStep) return "task";
+    return "none";
+  };
+
   const tarefasPendentes = useMemo(
     () => tarefasExistentes.length + tarefas.length,
-    [tarefasExistentes, tarefas]
+    [tarefasExistentes, tarefas],
   );
 
   const adicionarTarefa = () => {
     const titulo = novaTarefaTitulo.trim();
-    if (!titulo || !novaTarefaData) {
-      setErrors((p) => ({ ...p, novaTarefa: "Preencha título e data" }));
+    const newErrors: Record<string, string> = { ...errors };
+    if (!titulo) {
+      newErrors.novaTarefa = "Descreva a tarefa";
+      setErrors(newErrors);
+      return;
+    }
+    if (!novaTarefaData) {
+      newErrors.novaTarefa = "Escolha data e horário";
+      setErrors(newErrors);
       return;
     }
     setTarefas((p) => [...p, { titulo, data_agendada: new Date(novaTarefaData).toISOString() }]);
     setNovaTarefaTitulo("");
-    setErrors((p) => ({ ...p, novaTarefa: "", tarefas: "" }));
+    delete newErrors.novaTarefa;
+    delete newErrors.tarefas;
+    setErrors(newErrors);
+    setTimeout(() => tarefaTituloRef.current?.focus(), 50);
   };
 
   const removerTarefa = (i: number) => setTarefas((p) => p.filter((_, idx) => idx !== i));
 
-  const validar = (): boolean => {
-    const schema = z.object({
-      transcricao: isPropostaParaNegociacao
-        ? z.string().trim().min(20, "Cole a transcrição da reunião (mín. 20 caracteres)")
-        : z.string().optional(),
-      temperatura: isPropostaParaNegociacao
-        ? z.string().min(1, "Selecione a temperatura")
-        : z.string().optional(),
-    });
-
-    const r = schema.safeParse({ transcricao, temperatura });
-    const newErrors: Record<string, string> = {};
-    if (!r.success) {
-      r.error.issues.forEach((i) => {
-        newErrors[i.path[0] as string] = i.message;
-      });
+  // Validação derivada (live) para tooltip do botão
+  const liveErrors = useMemo(() => {
+    const e: Record<string, string> = {};
+    if (hasMeetingStep) {
+      if (transcricao.trim().length < 20) e.transcricao = "Cole a transcrição (mín. 20 caracteres)";
+      if (!temperatura) e.temperatura = "Selecione a temperatura";
     }
-
-    if (isPropostaParaNegociacao && tarefas.length === 0) {
-      newErrors.tarefas = "Crie a próxima atividade (vira tarefa)";
-    } else if (requiresTask && tarefasPendentes === 0) {
-      newErrors.tarefas = "É obrigatório ter ao menos 1 tarefa pendente nesta etapa";
+    if (hasTaskStep) {
+      if (isPropostaParaNegociacao && tarefas.length === 0)
+        e.tarefas = "Crie a próxima atividade";
+      else if (requiresTask && tarefasPendentes === 0)
+        e.tarefas = "Adicione ao menos 1 tarefa pendente";
     }
+    return e;
+  }, [
+    hasMeetingStep,
+    hasTaskStep,
+    transcricao,
+    temperatura,
+    tarefas,
+    tarefasPendentes,
+    isPropostaParaNegociacao,
+    requiresTask,
+  ]);
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const isStepValid = (s: number): boolean => {
+    if (s === 1 && hasMeetingStep) return !liveErrors.transcricao && !liveErrors.temperatura;
+    return !liveErrors.tarefas;
+  };
+
+  const isAllValid = Object.keys(liveErrors).length === 0;
+
+  const handleNext = () => {
+    if (!isStepValid(step)) {
+      setSubmitted(true);
+      setErrors(liveErrors);
+      return;
+    }
+    setSubmitted(false);
+    setErrors({});
+    setStep((s) => s + 1);
   };
 
   const submit = async () => {
-    if (!validar()) return;
+    setSubmitted(true);
+    if (!isAllValid) {
+      setErrors(liveErrors);
+      return;
+    }
     setSaving(true);
     try {
       await onConfirm({
-        transcricao_reuniao: isPropostaParaNegociacao ? transcricao.trim() : undefined,
-        temperatura: isPropostaParaNegociacao ? temperatura : undefined,
+        transcricao_reuniao: hasMeetingStep ? transcricao.trim() : undefined,
+        temperatura: hasMeetingStep ? temperatura : undefined,
         novasTarefas: tarefas,
       });
       onOpenChange(false);
@@ -145,49 +276,74 @@ export const OportunidadeAvancarDialog = ({
     }
   };
 
+  const showStep = currentStepKey();
+  const stepNumber = hasMeetingStep && step === 1 ? 1 : hasMeetingStep ? 2 : 1;
+  const stepLabel =
+    showStep === "meeting"
+      ? "Resultado da reunião"
+      : showStep === "task"
+      ? "Próxima atividade"
+      : "Confirmar";
+
+  const isLastStep = stepNumber === totalSteps;
+
   return (
     <Dialog open={open} onOpenChange={(v) => !saving && onOpenChange(v)}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="font-heading tracking-wider uppercase flex items-center gap-2">
-            Avançar para
-            <Badge variant="outline" className={cn("font-display", etapaInfo?.color)}>
-              {etapaInfo?.label}
-            </Badge>
-          </DialogTitle>
-          <DialogDescription>
-            {isPropostaParaNegociacao
-              ? "Antes de mover esta oportunidade, registre o resultado da reunião."
-              : requiresTask
-              ? "Esta etapa exige ao menos uma tarefa pendente para acompanhamento."
+      <DialogContent className="sm:max-w-xl max-h-[92vh] overflow-y-auto p-0 gap-0">
+        {/* Header */}
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/40 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <DialogTitle className="font-heading tracking-wider uppercase flex items-center gap-2 text-base">
+              Avançar para
+              <Badge variant="outline" className={cn("font-display", etapaInfo?.color)}>
+                {etapaInfo?.label}
+              </Badge>
+            </DialogTitle>
+            {totalSteps > 1 && (
+              <span className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground tabular-nums">
+                Passo {stepNumber} de {totalSteps}
+              </span>
+            )}
+          </div>
+          <DialogDescription className="text-xs leading-relaxed">
+            {showStep === "meeting"
+              ? "Registre o resultado da reunião antes de mover esta oportunidade."
+              : showStep === "task"
+              ? requiresTask
+                ? "Esta etapa exige ao menos uma tarefa pendente para acompanhamento."
+                : "Adicione a próxima atividade desta oportunidade."
               : "Confirme o avanço da oportunidade."}
           </DialogDescription>
+
+          {totalSteps > 1 && (
+            <div className="flex gap-1.5 pt-1">
+              {Array.from({ length: totalSteps }).map((_, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "h-1 flex-1 rounded-full transition-colors",
+                    i < stepNumber ? "bg-primary" : "bg-border/60",
+                  )}
+                />
+              ))}
+            </div>
+          )}
+
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-foreground/80 pt-1">
+            {stepLabel}
+          </p>
         </DialogHeader>
 
-        <div className="space-y-5 py-2">
-          {isPropostaParaNegociacao && (
+        {/* Body */}
+        <div className="px-6 py-5 space-y-6">
+          {showStep === "meeting" && (
             <>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-                  Transcrição da reunião *
-                </Label>
-                <Textarea
-                  rows={6}
-                  value={transcricao}
-                  onChange={(e) => setTranscricao(e.target.value)}
-                  placeholder="Cole aqui a transcrição da reunião de vendas..."
-                  className={cn(errors.transcricao && "border-destructive")}
-                />
-                {errors.transcricao && (
-                  <p className="text-[11px] text-destructive">{errors.transcricao}</p>
-                )}
-              </div>
-
-              <div className="space-y-2">
+              {/* Temperatura */}
+              <div className="space-y-2.5">
                 <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
                   Temperatura *
                 </Label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-2.5">
                   {TEMPERATURAS.map((t) => {
                     const Icon = t.icon;
                     const active = temperatura === t.value;
@@ -197,104 +353,259 @@ export const OportunidadeAvancarDialog = ({
                         type="button"
                         onClick={() => setTemperatura(t.value)}
                         className={cn(
-                          "flex flex-col items-center gap-1 py-3 rounded-xl border transition-all",
+                          "group flex flex-col items-center gap-1.5 py-4 px-2 rounded-xl border text-center transition-all",
                           active
-                            ? "border-primary/60 bg-primary/10 shadow-ios-sm"
-                            : "border-border/40 hover:border-border bg-surface-1/50"
+                            ? cn("border-transparent ring-2", t.ring, t.bg, "shadow-ios-sm")
+                            : "border-border/40 hover:border-border bg-surface-1/50 hover:bg-surface-1",
                         )}
                       >
-                        <Icon className={cn("h-5 w-5", active ? t.color : "text-muted-foreground")} />
-                        <span className="text-[11px] font-semibold">{t.label}</span>
+                        <Icon
+                          className={cn(
+                            "h-6 w-6 transition-colors",
+                            active ? t.color : "text-muted-foreground group-hover:text-foreground",
+                          )}
+                        />
+                        <span className="text-[12px] font-semibold leading-none">{t.label}</span>
+                        <span className="text-[10px] text-muted-foreground leading-tight">
+                          {t.desc}
+                        </span>
                       </button>
                     );
                   })}
                 </div>
-                {errors.temperatura && (
-                  <p className="text-[11px] text-destructive">{errors.temperatura}</p>
+                {submitted && liveErrors.temperatura && (
+                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
+                    <AlertCircle className="h-3 w-3" /> {liveErrors.temperatura}
+                  </p>
+                )}
+              </div>
+
+              {/* Transcrição */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                    Transcrição da reunião *
+                  </Label>
+                  <span className="text-[10px] text-muted-foreground tabular-nums">
+                    {transcricao.length} caracteres
+                  </span>
+                </div>
+                <Textarea
+                  ref={transcricaoRef}
+                  rows={8}
+                  value={transcricao}
+                  onChange={(e) => setTranscricao(e.target.value)}
+                  placeholder="Cole aqui a transcrição completa da reunião — pontos discutidos, objeções, próximos passos, decisores envolvidos..."
+                  className={cn(
+                    "resize-none text-sm leading-relaxed",
+                    submitted && liveErrors.transcricao && "border-destructive",
+                  )}
+                />
+                {submitted && liveErrors.transcricao && (
+                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
+                    <AlertCircle className="h-3 w-3" /> {liveErrors.transcricao}
+                  </p>
                 )}
               </div>
             </>
           )}
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-                Próxima(s) atividade(s) {requiresTask && "*"}
-              </Label>
-              <span className="text-[10px] text-muted-foreground tabular-nums">
-                {tarefasPendentes} pendente{tarefasPendentes !== 1 ? "s" : ""}
-              </span>
-            </div>
-
-            {tarefasExistentes.length > 0 && (
-              <div className="space-y-1.5">
-                {tarefasExistentes.map((t) => (
-                  <div
-                    key={t.id}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-1/60 border border-border/40 text-[12px]"
-                  >
-                    <Circle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                    <span className="flex-1 truncate">{t.titulo || t.descricao}</span>
-                    {t.data_agendada && (
-                      <span className="text-[10px] text-muted-foreground tabular-nums">
-                        {new Date(t.data_agendada).toLocaleDateString("pt-BR")}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {tarefas.map((t, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/30 text-[12px]"
-              >
-                <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
-                <span className="flex-1 truncate">{t.titulo}</span>
-                <span className="text-[10px] text-muted-foreground tabular-nums">
-                  {new Date(t.data_agendada).toLocaleDateString("pt-BR")}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => removerTarefa(i)}
-                  className="text-muted-foreground hover:text-destructive"
+          {showStep === "task" && (
+            <div className="space-y-4">
+              {/* Counter */}
+              <div className="flex items-center justify-between">
+                <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                  Tarefas {requiresTask && "*"}
+                </Label>
+                <span
+                  className={cn(
+                    "text-[10px] font-semibold tabular-nums px-2 py-0.5 rounded-full",
+                    tarefasPendentes > 0
+                      ? "bg-emerald-400/10 text-emerald-400"
+                      : "bg-muted text-muted-foreground",
+                  )}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                  {tarefasPendentes > 0
+                    ? `${tarefasPendentes} pendente${tarefasPendentes !== 1 ? "s" : ""} ✓`
+                    : "Nenhuma"}
+                </span>
               </div>
-            ))}
 
-            <div className="flex flex-col sm:flex-row gap-2 mt-2">
-              <Input
-                placeholder="Título da tarefa"
-                value={novaTarefaTitulo}
-                onChange={(e) => setNovaTarefaTitulo(e.target.value)}
-                className="flex-1"
-                maxLength={200}
-              />
-              <Input
-                type="datetime-local"
-                value={novaTarefaData}
-                onChange={(e) => setNovaTarefaData(e.target.value)}
-                className="sm:w-52"
-              />
-              <Button type="button" variant="outline" onClick={adicionarTarefa}>
-                <Plus className="h-4 w-4 mr-1" /> Adicionar
-              </Button>
+              {/* Lista */}
+              {tarefasExistentes.length === 0 && tarefas.length === 0 ? (
+                <div className="flex flex-col items-center gap-2 py-6 px-4 rounded-xl border border-dashed border-border/50 bg-surface-1/30 text-center">
+                  <ListTodo className="h-6 w-6 text-muted-foreground/60" />
+                  <p className="text-xs text-muted-foreground">
+                    Nenhuma tarefa ainda — adicione a próxima ação abaixo.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {tarefasExistentes.map((t) => (
+                    <div
+                      key={t.id}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-1/60 border border-border/40 text-[12px]"
+                    >
+                      <Circle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <span className="flex-1 truncate">{t.titulo || t.descricao}</span>
+                      {t.data_agendada && (
+                        <span className="text-[10px] text-muted-foreground tabular-nums">
+                          {new Date(t.data_agendada).toLocaleDateString("pt-BR")}
+                        </span>
+                      )}
+                      <Badge
+                        variant="outline"
+                        className="text-[9px] uppercase tracking-wider px-1.5 py-0 border-border/40"
+                      >
+                        já criada
+                      </Badge>
+                    </div>
+                  ))}
+                  {tarefas.map((t, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/30 text-[12px]"
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span className="flex-1 truncate">{t.titulo}</span>
+                      <span className="text-[10px] text-muted-foreground tabular-nums">
+                        {new Date(t.data_agendada).toLocaleString("pt-BR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removerTarefa(i)}
+                        className="text-muted-foreground hover:text-destructive transition-colors"
+                        aria-label="Remover tarefa"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Form criar */}
+              <div className="space-y-3 pt-1">
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                    O que precisa ser feito?
+                  </Label>
+                  <Input
+                    ref={tarefaTituloRef}
+                    placeholder="Ex.: Ligar para o decisor financeiro"
+                    value={novaTarefaTitulo}
+                    onChange={(e) => setNovaTarefaTitulo(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        adicionarTarefa();
+                      }
+                    }}
+                    maxLength={200}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                    Quando
+                  </Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {PRESETS.map((p) => (
+                      <button
+                        key={p.label}
+                        type="button"
+                        onClick={() => setNovaTarefaData(formatLocalDateTime(p.build()))}
+                        className="text-[11px] px-2.5 py-1 rounded-full border border-border/50 bg-surface-1/60 hover:bg-surface-1 hover:border-border transition-colors flex items-center gap-1"
+                      >
+                        <CalendarIcon className="h-3 w-3" /> {p.label}
+                      </button>
+                    ))}
+                  </div>
+                  <Input
+                    type="datetime-local"
+                    value={novaTarefaData}
+                    onChange={(e) => setNovaTarefaData(e.target.value)}
+                  />
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={adicionarTarefa}
+                  className="w-full"
+                  disabled={!novaTarefaTitulo.trim() || !novaTarefaData}
+                >
+                  <Plus className="h-4 w-4 mr-1.5" /> Adicionar tarefa
+                </Button>
+
+                {errors.novaTarefa && (
+                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
+                    <AlertCircle className="h-3 w-3" /> {errors.novaTarefa}
+                  </p>
+                )}
+                {submitted && liveErrors.tarefas && (
+                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
+                    <AlertCircle className="h-3 w-3" /> {liveErrors.tarefas}
+                  </p>
+                )}
+              </div>
             </div>
-            {errors.novaTarefa && <p className="text-[11px] text-destructive">{errors.novaTarefa}</p>}
-            {errors.tarefas && <p className="text-[11px] text-destructive">{errors.tarefas}</p>}
-          </div>
+          )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-            Cancelar
-          </Button>
-          <Button onClick={submit} disabled={saving}>
-            {saving ? "Salvando..." : "Confirmar avanço"}
-          </Button>
+        {/* Footer */}
+        <DialogFooter className="px-6 py-4 border-t border-border/40 gap-2 sm:gap-2">
+          {stepNumber > 1 ? (
+            <Button
+              variant="ghost"
+              onClick={() => setStep((s) => s - 1)}
+              disabled={saving}
+              className="mr-auto"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              disabled={saving}
+              className="mr-auto"
+            >
+              Cancelar
+            </Button>
+          )}
+
+          {!isLastStep ? (
+            <Button onClick={handleNext} disabled={!isStepValid(step)}>
+              Continuar <ArrowRight className="h-4 w-4 ml-1" />
+            </Button>
+          ) : (
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button onClick={submit} disabled={saving || !isAllValid}>
+                      {saving ? "Salvando..." : "Confirmar avanço"}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {!isAllValid && (
+                  <TooltipContent side="top" className="max-w-xs">
+                    <p className="text-xs font-semibold mb-1">Falta preencher:</p>
+                    <ul className="text-[11px] space-y-0.5 list-disc list-inside">
+                      {Object.values(liveErrors).map((m, i) => (
+                        <li key={i}>{m}</li>
+                      ))}
+                    </ul>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
