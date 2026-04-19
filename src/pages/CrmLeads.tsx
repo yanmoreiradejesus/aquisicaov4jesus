@@ -3,8 +3,8 @@ import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "
 import V4Header from "@/components/V4Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Upload, ListChecks } from "lucide-react";
-import { TasksOverviewDialog } from "@/components/crm/TasksOverviewDialog";
+import { Plus, Search, Upload, ListChecks, LayoutGrid } from "lucide-react";
+import { TasksOverviewView } from "@/components/crm/TasksOverviewView";
 import { useCrmLeads, LEAD_ETAPAS } from "@/hooks/useCrmLeads";
 import { LeadColumn } from "@/components/crm/LeadColumn";
 import { LeadDialog } from "@/components/crm/LeadDialog";
@@ -15,6 +15,7 @@ import { QualificacaoDialog } from "@/components/crm/QualificacaoDialog";
 import { DesqualificacaoDialog } from "@/components/crm/DesqualificacaoDialog";
 import { LeadsFilterPopover, EMPTY_FILTERS, type LeadFilters } from "@/components/crm/LeadsFilterPopover";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 const CrmLeads = () => {
   const { data: leads = [], isLoading, upsert, updateEtapa, remove } = useCrmLeads();
@@ -29,7 +30,7 @@ const CrmLeads = () => {
   const [pendingMove, setPendingMove] = useState<{ lead: any; etapa: string } | null>(null);
   const [desqualOpen, setDesqualOpen] = useState(false);
   const [desqualLead, setDesqualLead] = useState<any | null>(null);
-  const [tasksOpen, setTasksOpen] = useState(false);
+  const [view, setView] = useState<"kanban" | "tarefas">("kanban");
   const { toast } = useToast();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -115,7 +116,6 @@ const CrmLeads = () => {
     setDesqualLead(null);
   };
 
-  // Auto-move "entrada" -> "tentativa_contato" ao copiar telefone ou abrir whatsapp
   const handlePhoneInteract = (lead: any) => {
     if (lead.etapa === "entrada") {
       moveLead(lead.id, "tentativa_contato");
@@ -132,6 +132,21 @@ const CrmLeads = () => {
     toast({ title: "Lead excluído" });
   };
 
+  const ToggleBtn = ({ value, icon: Icon, label }: { value: "kanban" | "tarefas"; icon: any; label: string }) => (
+    <button
+      onClick={() => setView(value)}
+      className={cn(
+        "h-8 px-3 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 transition-all",
+        view === value
+          ? "bg-primary text-primary-foreground shadow-ios-sm"
+          : "text-muted-foreground hover:text-foreground hover:bg-surface-2/60"
+      )}
+    >
+      <Icon className="h-3.5 w-3.5" />
+      {label}
+    </button>
+  );
+
   return (
     <div className="min-h-screen bg-background">
       <V4Header />
@@ -141,77 +156,82 @@ const CrmLeads = () => {
             <p className="text-[10px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-1">
               Aquisição
             </p>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <h1 className="font-display text-[28px] lg:text-[34px] font-semibold text-foreground tracking-[-0.02em] normal-case">
                 Leads
               </h1>
+              <div className="inline-flex items-center gap-1 p-1 rounded-xl glass shadow-ios-sm">
+                <ToggleBtn value="kanban" icon={LayoutGrid} label="Kanban" />
+                <ToggleBtn value="tarefas" icon={ListChecks} label="Tarefas" />
+              </div>
+            </div>
+          </div>
+          {view === "kanban" && (
+            <div className="flex flex-wrap items-center gap-2 glass rounded-2xl p-1.5 shadow-ios-sm">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar leads..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 w-full md:w-64 h-9 rounded-xl border-transparent bg-surface-2/60 focus-visible:ring-2 focus-visible:ring-primary/40"
+                />
+              </div>
+              <LeadsFilterPopover filters={filters} onChange={setFilters} leads={leads} />
               <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setTasksOpen(true)}
-                className="h-8 rounded-lg gap-1.5 text-xs"
-                title="Visão geral de tarefas"
+                variant="ghost"
+                onClick={() => { setEditing(null); setDialogOpen(true); }}
+                className="h-9 rounded-xl hover:bg-surface-2/80"
               >
-                <ListChecks className="h-3.5 w-3.5" />
-                Tarefas
+                <Plus className="h-4 w-4 mr-1.5" /> Novo Lead
+              </Button>
+              <Button
+                onClick={() => setImportOpen(true)}
+                className="h-9 rounded-xl bg-gradient-to-b from-primary to-primary/85 shadow-ios-md hover:shadow-ios-glow active:scale-[0.98] transition-all"
+              >
+                <Upload className="h-4 w-4 mr-1.5" /> Importar
               </Button>
             </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 glass rounded-2xl p-1.5 shadow-ios-sm">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                placeholder="Buscar leads..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 w-full md:w-64 h-9 rounded-xl border-transparent bg-surface-2/60 focus-visible:ring-2 focus-visible:ring-primary/40"
-              />
-            </div>
-            <LeadsFilterPopover filters={filters} onChange={setFilters} leads={leads} />
-            <Button
-              variant="ghost"
-              onClick={() => { setEditing(null); setDialogOpen(true); }}
-              className="h-9 rounded-xl hover:bg-surface-2/80"
-            >
-              <Plus className="h-4 w-4 mr-1.5" /> Novo Lead
-            </Button>
-            <Button
-              onClick={() => setImportOpen(true)}
-              className="h-9 rounded-xl bg-gradient-to-b from-primary to-primary/85 shadow-ios-md hover:shadow-ios-glow active:scale-[0.98] transition-all"
-            >
-              <Upload className="h-4 w-4 mr-1.5" /> Importar
-            </Button>
-          </div>
+          )}
         </div>
 
-        {isLoading ? (
-          <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4">
-            {LEAD_ETAPAS.map((e) => (
-              <div key={e.id} className="w-72 shrink-0 space-y-2">
-                <div className="h-10 rounded-t-xl bg-surface-2/60 shimmer" />
-                <div className="h-20 rounded-xl bg-surface-1/60 shimmer" />
-                <div className="h-20 rounded-xl bg-surface-1/60 shimmer" />
-                <div className="h-20 rounded-xl bg-surface-1/60 shimmer" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+        {view === "kanban" ? (
+          isLoading ? (
             <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4">
-              {LEAD_ETAPAS.map((etapa) => (
-                <LeadColumn
-                  key={etapa.id}
-                  id={etapa.id}
-                  label={etapa.label}
-                  color={etapa.color}
-                  leads={grouped[etapa.id] ?? []}
-                  onEdit={(l) => { setEditing(l); setSheetOpen(true); }}
-                  defaultCollapsed={etapa.id === "desqualificado"}
-                  onPhoneInteract={handlePhoneInteract}
-                />
+              {LEAD_ETAPAS.map((e) => (
+                <div key={e.id} className="w-72 shrink-0 space-y-2">
+                  <div className="h-10 rounded-t-xl bg-surface-2/60 shimmer" />
+                  <div className="h-20 rounded-xl bg-surface-1/60 shimmer" />
+                  <div className="h-20 rounded-xl bg-surface-1/60 shimmer" />
+                  <div className="h-20 rounded-xl bg-surface-1/60 shimmer" />
+                </div>
               ))}
             </div>
-          </DndContext>
+          ) : (
+            <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+              <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4">
+                {LEAD_ETAPAS.map((etapa) => (
+                  <LeadColumn
+                    key={etapa.id}
+                    id={etapa.id}
+                    label={etapa.label}
+                    color={etapa.color}
+                    leads={grouped[etapa.id] ?? []}
+                    onEdit={(l) => { setEditing(l); setSheetOpen(true); }}
+                    defaultCollapsed={etapa.id === "desqualificado"}
+                    onPhoneInteract={handlePhoneInteract}
+                  />
+                ))}
+              </div>
+            </DndContext>
+          )
+        ) : (
+          <TasksOverviewView
+            onOpenLead={(leadId) => {
+              const lead = leads.find((l: any) => l.id === leadId);
+              if (lead) { setEditing(lead); setSheetOpen(true); }
+            }}
+          />
         )}
       </main>
 
@@ -257,15 +277,6 @@ const CrmLeads = () => {
         open={desqualOpen}
         onOpenChange={(v) => { setDesqualOpen(v); if (!v) setDesqualLead(null); }}
         onConfirm={handleConfirmDesqualificacao}
-      />
-
-      <TasksOverviewDialog
-        open={tasksOpen}
-        onOpenChange={setTasksOpen}
-        onOpenLead={(leadId) => {
-          const lead = leads.find((l: any) => l.id === leadId);
-          if (lead) { setEditing(lead); setSheetOpen(true); }
-        }}
       />
     </div>
   );
