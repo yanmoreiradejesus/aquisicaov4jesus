@@ -123,12 +123,14 @@ export const LeadTimeline = ({
 
       {/* Histórico */}
       <div>
-        <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-3">
-          Histórico do lead
-        </p>
+        {!onlyTarefas && (
+          <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-3">
+            Histórico do lead
+          </p>
+        )}
         {atividades.length === 0 ? (
           <p className="text-xs text-muted-foreground/60 italic py-4 text-center">
-            Sem registros ainda
+            {onlyTarefas ? "Nenhuma tarefa criada ainda" : "Sem registros ainda"}
           </p>
         ) : (
           <ol className="relative border-l border-border/40 ml-2 space-y-3">
