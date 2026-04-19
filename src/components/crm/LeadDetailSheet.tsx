@@ -437,34 +437,47 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                   <label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1 block">
                     Data da reunião
                   </label>
-                  <Input
-                    type="date"
-                    value={
-                      form.data_reuniao_agendada
-                        ? new Date(form.data_reuniao_agendada).toISOString().slice(0, 10)
-                        : ""
-                    }
-                    onChange={(e) => {
-                      const dateStr = e.target.value;
-                      if (!dateStr) {
-                        set("data_reuniao_agendada", null);
-                        return;
-                      }
-                      const existing = form.data_reuniao_agendada
-                        ? new Date(form.data_reuniao_agendada)
-                        : null;
-                      const hh = existing ? existing.getHours() : 10;
-                      const mm = existing ? existing.getMinutes() : 0;
-                      const [y, m, d] = dateStr.split("-").map(Number);
-                      const newDate = new Date(y, m - 1, d, hh, mm);
-                      set("data_reuniao_agendada", newDate.toISOString());
-                    }}
-                    className="h-9 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1 block">
-                    Hora
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "h-9 w-full justify-start text-left font-normal text-sm",
+                          !form.data_reuniao_agendada && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {form.data_reuniao_agendada
+                          ? format(new Date(form.data_reuniao_agendada), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                          : "Selecione a data"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarPicker
+                        mode="single"
+                        selected={form.data_reuniao_agendada ? new Date(form.data_reuniao_agendada) : undefined}
+                        onSelect={(d) => {
+                          if (!d) {
+                            set("data_reuniao_agendada", null);
+                            return;
+                          }
+                          const existing = form.data_reuniao_agendada
+                            ? new Date(form.data_reuniao_agendada)
+                            : null;
+                          const hh = existing ? existing.getHours() : 10;
+                          const mm = existing ? existing.getMinutes() : 0;
+                          const newDate = new Date(d.getFullYear(), d.getMonth(), d.getDate(), hh, mm);
+                          set("data_reuniao_agendada", newDate.toISOString());
+                        }}
+                        initialFocus
+                        locale={ptBR}
+                        defaultMonth={form.data_reuniao_agendada ? new Date(form.data_reuniao_agendada) : new Date()}
+                        fromYear={new Date().getFullYear() - 1}
+                        toYear={new Date().getFullYear() + 3}
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
                   </label>
                   <Input
                     type="time"
