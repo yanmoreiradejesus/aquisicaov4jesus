@@ -262,7 +262,9 @@ export const OportunidadeDetailSheet = ({
       setAiTarefa(null);
       setAiLoadingResumo(false);
       setAiLoadingTarefa(false);
+      setTranscricaoEditing(!(oportunidade?.transcricao_reuniao ?? "").trim());
       processedHashRef.current = "";
+      autoTaskCreatedRef.current = "";
     }
   }, [open, oportunidade]);
 
