@@ -375,21 +375,6 @@ export const OportunidadeDetailSheet = ({
     }
   };
 
-  // Auto-processamento quando a transcrição fica estável (debounce) e tem ≥20 chars
-  useEffect(() => {
-    if (!open || !form?.id) return;
-    const txt = (form.transcricao_reuniao ?? "").trim();
-    if (txt.length < 20) return;
-    if (processedHashRef.current === txt) return;
-    const t = setTimeout(() => {
-      processedHashRef.current = txt;
-      // Dispara em paralelo: resumo (Sonnet) + tarefa (Opus 4.5)
-      callMeetingAI("summarize", { silent: true, transcricaoOverride: txt });
-      callMeetingAI("suggest_task", { silent: true, transcricaoOverride: txt });
-    }, 1200);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form?.transcricao_reuniao, open, form?.id]);
 
   const aplicarResumoNasNotas = async () => {
     if (!aiResumo) return;
