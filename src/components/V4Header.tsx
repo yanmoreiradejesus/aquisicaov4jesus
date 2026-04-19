@@ -62,9 +62,12 @@ const V4Header = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Solid red bar (V4 brand) — legacy top bar look, keeping the floating pill shape
-  const glassPill =
-    "rounded-full border border-red-700/60 bg-red-600 shadow-[0_8px_32px_-8px_rgba(220,38,38,0.45),0_2px_8px_-2px_rgba(0,0,0,0.4)]";
+  // Preload the logo as early as possible so it's decoded BEFORE the header animates in.
+  // Without this, the PNG can paint a frame or two after the bar opens.
+  useEffect(() => {
+    const img = new Image();
+    img.src = logo;
+  }, []);
 
   // Active item: subtle pill + dot indicator (macOS Dock style)
   const navItemBase =
@@ -77,21 +80,12 @@ const V4Header = () => {
   );
 
   const prefersReducedMotion = useReducedMotion();
+  // Animation runs ONCE on first mount (the header is now persistent across routes).
   const [barReady, setBarReady] = useState(prefersReducedMotion ? true : false);
-
-  useEffect(() => {
-    if (prefersReducedMotion) {
-      setBarReady(true);
-      return;
-    }
-    setBarReady(false);
-  }, [location.pathname, prefersReducedMotion]);
 
   // Smooth GPU-only animation: scaleX from a "dot" to full bar. Single content fade after.
   const barInitial = prefersReducedMotion ? false : { scaleX: 0.04, opacity: 0 };
-  const barAnimate = prefersReducedMotion
-    ? { scaleX: 1, opacity: 1 }
-    : { scaleX: 1, opacity: 1 };
+  const barAnimate = { scaleX: 1, opacity: 1 };
   const barTransition = prefersReducedMotion
     ? { duration: 0 }
     : {
@@ -107,14 +101,13 @@ const V4Header = () => {
 
   return (
     <TooltipProvider delayDuration={200}>
-      {/* Floating pill header */}
+      {/* Floating pill header — persistent across route changes */}
       <header
         className={`fixed top-3 left-1/2 -translate-x-1/2 z-40 transition-all duration-300 ease-out px-3 sm:px-0 w-[calc(100%-1.5rem)] sm:w-auto max-w-[min(100%-1.5rem,1100px)] flex justify-center ${
           scrolled ? "scale-[0.98]" : ""
         }`}
       >
         <motion.div
-          key={location.pathname}
           initial={barInitial}
           animate={barAnimate}
           transition={barTransition}
@@ -131,24 +124,31 @@ const V4Header = () => {
             className="flex items-center gap-1 w-full whitespace-nowrap"
             style={{ willChange: "opacity" }}
           >
-            {/* Logo */}
-            <motion.div>
-              <Link
-                to="/"
-                className="flex items-center pl-2 pr-2 h-8 rounded-full hover:bg-white/[0.04] transition-colors"
-                title="Hub"
-              >
-                <img src={logo} alt="V4 Company" className="h-4 w-auto opacity-90" />
-              </Link>
-            </motion.div>
+            {/* Logo — fixed dimensions so it reserves space from the first frame. */}
+            <Link
+              to="/"
+              className="flex items-center pl-2 pr-2 h-8 rounded-full hover:bg-white/[0.04] transition-colors"
+              title="Hub"
+            >
+              <img
+                src={logo}
+                alt="V4 Company"
+                width={56}
+                height={16}
+                decoding="sync"
+                fetchPriority="high"
+                className="h-4 w-auto opacity-90 select-none"
+                draggable={false}
+              />
+            </Link>
 
             {/* Divider */}
-            <motion.div className="hidden md:block w-px h-4 bg-white/10 mx-1" />
+            <div className="hidden md:block w-px h-4 bg-white/10 mx-1" />
 
             {/* Desktop nav */}
             <nav className="hidden md:flex items-center gap-0.5">
               {visibleAquisicaoItems.length > 0 && (
-                <motion.div className="relative" ref={dropdownRef}>
+                <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setAquisicaoOpen(!aquisicaoOpen)}
                     className={`${navItemBase} ${isAquisicaoActive ? navItemActive : navItemIdle}`}
@@ -177,11 +177,11 @@ const V4Header = () => {
                       ))}
                     </div>
                   )}
-                </motion.div>
+                </div>
               )}
 
               {visibleComercialItems.length > 0 && (
-                <motion.div className="relative" ref={comercialRef}>
+                <div className="relative" ref={comercialRef}>
                   <button
                     onClick={() => setComercialOpen(!comercialOpen)}
                     className={`${navItemBase} ${isComercialActive ? navItemActive : navItemIdle}`}
@@ -210,60 +210,55 @@ const V4Header = () => {
                       ))}
                     </div>
                   )}
-                </motion.div>
+                </div>
               )}
             </nav>
 
             {/* Right side: divider + admin + signout */}
             <div className="hidden md:flex items-center gap-0.5 ml-1">
               {(isAdmin || user) && (
-                <motion.div className="w-px h-4 bg-white/10 mx-1" />
+                <div className="w-px h-4 bg-white/10 mx-1" />
               )}
               {isAdmin && (
-                <motion.div>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Link
-                        to="/admin"
-                        className={`relative flex items-center justify-center h-8 w-8 rounded-full transition-all duration-200 ${
-                          isActive("/admin")
-                            ? "bg-white/[0.08] text-foreground"
-                            : "text-foreground/65 hover:text-foreground hover:bg-white/[0.06] hover:scale-[1.05]"
-                        }`}
-                      >
-                        <Shield className="h-3.5 w-3.5" />
-                        {isActive("/admin") && <ActiveDot />}
-                      </Link>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" sideOffset={8} className="rounded-lg text-xs">Admin</TooltipContent>
-                  </Tooltip>
-                </motion.div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Link
+                      to="/admin"
+                      className={`relative flex items-center justify-center h-8 w-8 rounded-full transition-all duration-200 ${
+                        isActive("/admin")
+                          ? "bg-white/[0.08] text-foreground"
+                          : "text-foreground/65 hover:text-foreground hover:bg-white/[0.06] hover:scale-[1.05]"
+                      }`}
+                    >
+                      <Shield className="h-3.5 w-3.5" />
+                      {isActive("/admin") && <ActiveDot />}
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" sideOffset={8} className="rounded-lg text-xs">Admin</TooltipContent>
+                </Tooltip>
               )}
               {user && (
-                <motion.div>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={signOut}
-                        className="flex items-center justify-center h-8 w-8 rounded-full text-foreground/65 hover:text-foreground hover:bg-white/[0.06] hover:scale-[1.05] transition-all duration-200"
-                      >
-                        <LogOut className="h-3.5 w-3.5" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" sideOffset={8} className="rounded-lg text-xs">Sair</TooltipContent>
-                  </Tooltip>
-                </motion.div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={signOut}
+                      className="flex items-center justify-center h-8 w-8 rounded-full text-foreground/65 hover:text-foreground hover:bg-white/[0.06] hover:scale-[1.05] transition-all duration-200"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" sideOffset={8} className="rounded-lg text-xs">Sair</TooltipContent>
+                </Tooltip>
               )}
             </div>
 
             {/* Mobile hamburger */}
-            <motion.button
-             
+            <button
               onClick={() => setMobileMenuOpen(true)}
               className="md:hidden ml-auto flex items-center justify-center h-8 w-8 rounded-full text-foreground/70 hover:text-foreground hover:bg-white/[0.06] transition-colors"
             >
               <Menu className="h-4 w-4" />
-            </motion.button>
+            </button>
           </motion.div>
         </motion.div>
       </header>
