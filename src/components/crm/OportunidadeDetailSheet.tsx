@@ -340,51 +340,79 @@ export const OportunidadeDetailSheet = ({
           </TabsList>
 
           <TabsContent value="informacoes" className="mt-4">
-            <div className="px-4 py-2 border border-border/40 rounded-lg bg-background/30">
-              <HoverEditField
-                label="Nome da oportunidade"
-                value={form.nome_oportunidade ?? ""}
-                onChange={(v) => set("nome_oportunidade", v)}
-              />
-              <HoverEditField
-                label="Valor EF (entrada)"
-                value={form.valor_ef != null ? String(form.valor_ef) : ""}
-                onChange={(v) => set("valor_ef", v)}
-                type="number"
-              />
-              <HoverEditField
-                label="Fee mensal"
-                value={form.valor_fee != null ? String(form.valor_fee) : ""}
-                onChange={(v) => set("valor_fee", v)}
-                type="number"
-              />
-              <HoverEditField
-                label="Valor total do contrato"
-                value={form.valor_total != null ? String(form.valor_total) : ""}
-                onChange={(v) => set("valor_total", v)}
-                type="number"
-              />
-              <HoverEditField
-                label="Fechamento previsto"
-                value={form.data_fechamento_previsto ?? ""}
-                onChange={(v) => set("data_fechamento_previsto", v)}
-                type="date"
-              />
-              {form.etapa === "fechado_perdido" && (
-                <HoverEditField
-                  label="Motivo da perda"
-                  value={form.motivo_perda ?? ""}
-                  onChange={(v) => set("motivo_perda", v)}
-                  multiline
-                />
-              )}
-              <HoverEditField
-                label="Notas internas"
-                value={form.notas ?? ""}
-                onChange={(v) => set("notas", v)}
-                multiline
-              />
-            </div>
+            <Accordion type="multiple" className="space-y-2">
+              {/* Oportunidade */}
+              <AccordionItem
+                value="oportunidade"
+                className="border border-border/40 rounded-lg bg-background/30 px-4"
+              >
+                <AccordionTrigger className="text-[11px] font-semibold tracking-widest uppercase text-foreground hover:no-underline py-3">
+                  Informações da oportunidade
+                </AccordionTrigger>
+                <AccordionContent className="pb-2">
+                  <HoverEditField
+                    label="Nome da oportunidade"
+                    value={form.nome_oportunidade ?? ""}
+                    onChange={(v) => set("nome_oportunidade", v)}
+                  />
+                  <HoverEditField
+                    label="Valor EF (entrada)"
+                    value={form.valor_ef != null ? String(form.valor_ef) : ""}
+                    onChange={(v) => set("valor_ef", v)}
+                    type="number"
+                  />
+                  <HoverEditField
+                    label="Fee mensal"
+                    value={form.valor_fee != null ? String(form.valor_fee) : ""}
+                    onChange={(v) => set("valor_fee", v)}
+                    type="number"
+                  />
+                  <HoverEditField
+                    label="Valor total do contrato"
+                    value={form.valor_total != null ? String(form.valor_total) : ""}
+                    onChange={(v) => set("valor_total", v)}
+                    type="number"
+                  />
+                  <HoverEditField
+                    label="Fechamento previsto"
+                    value={form.data_fechamento_previsto ?? ""}
+                    onChange={(v) => set("data_fechamento_previsto", v)}
+                    type="date"
+                  />
+                  {form.etapa === "fechado_perdido" && (
+                    <HoverEditField
+                      label="Motivo da perda"
+                      value={form.motivo_perda ?? ""}
+                      onChange={(v) => set("motivo_perda", v)}
+                      multiline
+                    />
+                  )}
+                  <HoverEditField
+                    label="Notas internas"
+                    value={form.notas ?? ""}
+                    onChange={(v) => set("notas", v)}
+                    multiline
+                  />
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Lead vinculado — TODOS os campos do CRM Lead, somente leitura */}
+              <AccordionItem
+                value="lead"
+                className="border border-border/40 rounded-lg bg-background/30 px-4"
+              >
+                <AccordionTrigger className="text-[11px] font-semibold tracking-widest uppercase text-foreground hover:no-underline py-3">
+                  Informações do lead
+                </AccordionTrigger>
+                <AccordionContent className="pb-2">
+                  {!lead ? (
+                    <p className="text-sm text-muted-foreground py-2">Nenhum lead vinculado a esta oportunidade.</p>
+                  ) : (
+                    <LeadReadOnlyFields lead={lead} />
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </TabsContent>
 
           <TabsContent value="tarefas" className="mt-4">
