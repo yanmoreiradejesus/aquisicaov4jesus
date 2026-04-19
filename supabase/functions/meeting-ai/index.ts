@@ -9,8 +9,8 @@ const corsHeaders = {
 
 const MODEL_MAP: Record<string, string> = {
   sonnet: "claude-sonnet-4-5-20250929",
-  opus45: "claude-opus-4-5-20251015",
-  haiku45: "claude-haiku-4-5",
+  opus45: "claude-opus-4-5-20251101",
+  haiku45: "claude-haiku-4-5-20251001",
 };
 
 Deno.serve(async (req) => {
