@@ -13,11 +13,16 @@ import {
   Pencil,
   Trash2,
   Plus,
+  Sparkles,
+  Loader2,
+  ListTodo,
 } from "lucide-react";
 import { formatPhone, whatsappNumber, locationFromPhone, timeAgo } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
 import { OportunidadeTimeline } from "./OportunidadeTimeline";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useOportunidadeAtividades } from "@/hooks/useOportunidadeAtividades";
 
 interface Props {
   open: boolean;
