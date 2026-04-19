@@ -233,7 +233,11 @@ export const OportunidadeDetailSheet = ({
   const [form, setForm] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<string>("informacoes");
   const [tarefaDialogOpen, setTarefaDialogOpen] = useState(false);
+  const [aiResumo, setAiResumo] = useState<string>("");
+  const [aiTarefa, setAiTarefa] = useState<{ titulo: string; descricao: string; prazo_sugerido_dias: number; prioridade: string } | null>(null);
+  const [aiLoading, setAiLoading] = useState<null | "resumo" | "tarefa">(null);
   const { toast } = useToast();
+  const { addTarefa } = useOportunidadeAtividades(oportunidade?.id ?? null);
 
   useEffect(() => {
     if (open) {
