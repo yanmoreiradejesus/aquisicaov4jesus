@@ -252,16 +252,17 @@ export const OportunidadeDetailSheet = ({
 
     const t = setTimeout(() => {
       const payload: any = { ...form };
-      // normaliza
       payload.valor_ef = payload.valor_ef === "" || payload.valor_ef == null ? null : Number(payload.valor_ef);
       payload.valor_fee = payload.valor_fee === "" || payload.valor_fee == null ? null : Number(payload.valor_fee);
-      payload.valor_total = payload.valor_total === "" || payload.valor_total == null ? null : Number(payload.valor_total);
       payload.data_fechamento_previsto = payload.data_fechamento_previsto || null;
       payload.motivo_perda = payload.motivo_perda?.trim() || null;
       payload.notas = payload.notas?.trim() || null;
       payload.transcricao_reuniao = payload.transcricao_reuniao?.trim() || null;
       payload.temperatura = payload.temperatura || null;
       delete payload.lead;
+      delete payload.valor_total;
+      delete payload.created_at;
+      delete payload.updated_at;
       Promise.resolve(onSave(payload)).catch(() => {});
     }, 600);
     return () => clearTimeout(t);
