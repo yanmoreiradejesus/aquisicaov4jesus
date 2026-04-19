@@ -240,10 +240,17 @@ export const OportunidadeDetailSheet = ({
   const [tarefaDialogOpen, setTarefaDialogOpen] = useState(false);
   const [aiResumo, setAiResumo] = useState<string>("");
   const [aiTarefa, setAiTarefa] = useState<{ titulo: string; descricao: string; prazo_sugerido_dias: number; prioridade: string } | null>(null);
-  const [aiLoading, setAiLoading] = useState<null | "resumo" | "tarefa">(null);
-  const [aiProvider, setAiProvider] = useState<"haiku45" | "sonnet" | "opus45">("sonnet");
+  const [aiLoadingResumo, setAiLoadingResumo] = useState(false);
+  const [aiLoadingTarefa, setAiLoadingTarefa] = useState(false);
+  const processedHashRef = useRef<string>("");
   const { toast } = useToast();
-  const { addTarefa, addNota } = useOportunidadeAtividades(oportunidade?.id ?? null);
+  const { data: atividades, addTarefa, addNota, addReuniao } = useOportunidadeAtividades(oportunidade?.id ?? null);
+
+  // Reuniões arquivadas (histórico) — atividades tipo "reuniao"
+  const reunioesArquivadas = useMemo(
+    () => (atividades ?? []).filter((a: any) => a.tipo === "reuniao"),
+    [atividades],
+  );
 
   useEffect(() => {
     if (open) {
@@ -251,7 +258,9 @@ export const OportunidadeDetailSheet = ({
       setActiveTab("informacoes");
       setAiResumo("");
       setAiTarefa(null);
-      setAiLoading(null);
+      setAiLoadingResumo(false);
+      setAiLoadingTarefa(false);
+      processedHashRef.current = "";
     }
   }, [open, oportunidade]);
 
