@@ -12,15 +12,23 @@ interface Props {
 }
 
 const MOTIVOS = [
-  "Sem fit com o ICP",
-  "Sem orçamento",
-  "Sem urgência / momento errado",
-  "Já tem agência / fornecedor",
-  "Não respondeu / sumiu",
-  "Concorrente escolhido",
-  "Lead duplicado",
-  "Contato inválido",
-  "Outro",
+  "Adolescente/Criança",
+  "Blocklist",
+  "Cliente",
+  "Cliente oculto",
+  "Contatos inválidos",
+  "Deixou de responder",
+  "Duplicado",
+  "Engano/Não Lembra",
+  "Ex-cliente (detrator)",
+  "Nunca respondeu",
+  "Pessoa Física",
+  "Sem autoridade",
+  "Sem budget",
+  "Sem interesse",
+  "Sem timing",
+  "Serviço fora de escopo",
+  "SPAM",
 ];
 
 export const DesqualificacaoDialog = ({ open, onOpenChange, onConfirm }: Props) => {

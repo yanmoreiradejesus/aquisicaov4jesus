@@ -26,7 +26,7 @@ const V4Header = () => {
   ];
 
   const comercialItems = [
-    { path: "/comercial/leads", label: "CRM Leads" },
+    { path: "/comercial/leads", label: "Leads" },
     { path: "/comercial/oportunidades", label: "Oportunidades" },
     { path: "/comercial/accounts", label: "Accounts" },
     { path: "/comercial/cobrancas", label: "Cobranças" },
@@ -61,18 +61,18 @@ const V4Header = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // macOS-style glass pill, tinted RED (V4 brand) — same hue as the legacy top bar
+  // Solid red bar (V4 brand) — legacy top bar look, keeping the floating pill shape
   const glassPill =
-    "rounded-full border border-red-500/25 bg-gradient-to-b from-red-600/25 via-red-700/15 to-red-900/10 backdrop-blur-2xl backdrop-saturate-200 shadow-[0_8px_32px_-8px_rgba(220,38,38,0.35),0_2px_8px_-2px_rgba(0,0,0,0.4),inset_0_1px_0_0_rgba(255,255,255,0.10)]";
+    "rounded-full border border-red-700/60 bg-red-600 shadow-[0_8px_32px_-8px_rgba(220,38,38,0.45),0_2px_8px_-2px_rgba(0,0,0,0.4)]";
 
   // Active item: subtle pill + dot indicator (macOS Dock style)
   const navItemBase =
     "relative font-body text-[13px] font-medium tracking-tight flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all duration-200 ease-out";
-  const navItemIdle = "text-foreground/65 hover:text-foreground hover:bg-white/[0.06] hover:scale-[1.02]";
-  const navItemActive = "text-foreground bg-white/[0.08]";
+  const navItemIdle = "text-white/80 hover:text-white hover:bg-white/15 hover:scale-[1.02]";
+  const navItemActive = "text-white bg-white/20";
 
   const ActiveDot = () => (
-    <span className="absolute -bottom-[6px] left-1/2 -translate-x-1/2 h-[3px] w-[3px] rounded-full bg-foreground/80" />
+    <span className="absolute -bottom-[6px] left-1/2 -translate-x-1/2 h-[3px] w-[3px] rounded-full bg-white/90" />
   );
 
   return (
@@ -85,7 +85,7 @@ const V4Header = () => {
       >
         <div
           className={`${glassPill} flex items-center gap-1 h-11 px-2 transition-all duration-300 ${
-            scrolled ? "from-red-600/35 via-red-700/20 to-red-900/15" : ""
+            scrolled ? "bg-red-700" : ""
           }`}
         >
           {/* Logo */}
