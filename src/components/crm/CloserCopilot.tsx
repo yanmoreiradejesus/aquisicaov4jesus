@@ -334,10 +334,10 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
         {messages.length === 0 && (
-          <div className="text-center py-12 space-y-2">
-            <div className="text-4xl">💬</div>
-            <p className="text-[13px] text-muted-foreground max-w-xs mx-auto">
-              Mande uma mensagem, anexe prints/PDFs ou use uma sugestão abaixo.
+          <div className="text-center py-16 space-y-3">
+            <p className="text-[15px] font-medium text-white/90">Como posso ajudar?</p>
+            <p className="text-[12px] text-white/40 max-w-xs mx-auto">
+              Faça uma pergunta, anexe prints ou PDFs, ou escolha uma sugestão abaixo.
             </p>
           </div>
         )}
