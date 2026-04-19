@@ -140,7 +140,7 @@ const CrmLeads = () => {
               Aquisição
             </p>
             <h1 className="font-display text-[28px] lg:text-[34px] font-semibold text-foreground tracking-[-0.02em] normal-case">
-              CRM Leads
+              Leads
             </h1>
           </div>
           <div className="flex flex-wrap items-center gap-2 glass rounded-2xl p-1.5 shadow-ios-sm">
