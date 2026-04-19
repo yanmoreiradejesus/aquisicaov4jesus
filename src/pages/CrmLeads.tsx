@@ -94,26 +94,12 @@ const CrmLeads = () => {
     moveLead(lead.id, String(over.id));
   };
 
-  const handleConfirmQualificacao = async (payload: {
-    qualificacao: string;
-    temperatura: string;
-    data_reuniao_agendada: string;
-    reuniao_local?: string;
-  }) => {
+  const handleConfirmQualificacao = async (qualificacao: string, temperatura: string) => {
     if (!pendingMove) return;
-    const notasExtra = payload.reuniao_local
-      ? `${pendingMove.lead.notas ? pendingMove.lead.notas + "\n\n" : ""}📍 Reunião: ${payload.reuniao_local}`
-      : pendingMove.lead.notas;
-    await upsert.mutateAsync({
-      ...pendingMove.lead,
-      qualificacao: payload.qualificacao,
-      temperatura: payload.temperatura,
-      data_reuniao_agendada: payload.data_reuniao_agendada,
-      notas: notasExtra,
-    });
+    await upsert.mutateAsync({ ...pendingMove.lead, qualificacao, temperatura });
     moveLead(pendingMove.lead.id, pendingMove.etapa);
     setPendingMove(null);
-    toast({ title: "Reunião agendada", description: "Qualificação e dados da reunião salvos." });
+    toast({ title: "Qualificação salva" });
   };
 
   const handleConfirmDesqualificacao = async (motivo: string, razao: string) => {
@@ -250,7 +236,6 @@ const CrmLeads = () => {
         onOpenChange={(v) => { setQualOpen(v); if (!v) setPendingMove(null); }}
         initialValue={pendingMove?.lead?.qualificacao}
         initialTemperatura={pendingMove?.lead?.temperatura}
-        initialDataReuniao={pendingMove?.lead?.data_reuniao_agendada}
         onConfirm={handleConfirmQualificacao}
       />
 

@@ -3,29 +3,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-
-export interface QualificacaoPayload {
-  qualificacao: string;
-  temperatura: string;
-  data_reuniao_agendada: string; // ISO
-  reuniao_local?: string;
-}
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   initialValue?: string | null;
   initialTemperatura?: string | null;
-  initialDataReuniao?: string | null;
-  initialLocal?: string | null;
-  onConfirm: (payload: QualificacaoPayload) => Promise<void> | void;
+  onConfirm: (qualificacao: string, temperatura: string) => Promise<void> | void;
 }
 
 const TEMPERATURAS = [
@@ -34,60 +19,23 @@ const TEMPERATURAS = [
   { id: "Frio", emoji: "❄️", classes: "border-sky-500/40 bg-sky-500/10 text-sky-300", active: "border-sky-500 bg-sky-500/20 text-sky-200" },
 ];
 
-export const QualificacaoDialog = ({
-  open,
-  onOpenChange,
-  initialValue,
-  initialTemperatura,
-  initialDataReuniao,
-  initialLocal,
-  onConfirm,
-}: Props) => {
+export const QualificacaoDialog = ({ open, onOpenChange, initialValue, initialTemperatura, onConfirm }: Props) => {
   const [value, setValue] = useState("");
   const [temperatura, setTemperatura] = useState<string>("");
-  const [dataReuniao, setDataReuniao] = useState<Date | undefined>(undefined);
-  const [hora, setHora] = useState<string>("");
-  const [local, setLocal] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (open) {
       setValue(initialValue ?? "");
       setTemperatura(initialTemperatura ?? "");
-      if (initialDataReuniao) {
-        const d = new Date(initialDataReuniao);
-        setDataReuniao(d);
-        setHora(format(d, "HH:mm"));
-      } else {
-        setDataReuniao(undefined);
-        setHora("");
-      }
-      setLocal(initialLocal ?? "");
     }
-  }, [open, initialValue, initialTemperatura, initialDataReuniao, initialLocal]);
-
-  const buildIso = (): string | null => {
-    if (!dataReuniao || !hora) return null;
-    const [hh, mm] = hora.split(":").map(Number);
-    if (isNaN(hh) || isNaN(mm)) return null;
-    const d = new Date(dataReuniao);
-    d.setHours(hh, mm, 0, 0);
-    return d.toISOString();
-  };
-
-  const iso = buildIso();
-  const canSubmit = !!value.trim() && !!temperatura && !!iso;
+  }, [open, initialValue, initialTemperatura]);
 
   const submit = async () => {
-    if (!canSubmit || !iso) return;
+    if (!value.trim() || !temperatura) return;
     setSaving(true);
     try {
-      await onConfirm({
-        qualificacao: value.trim(),
-        temperatura,
-        data_reuniao_agendada: iso,
-        reuniao_local: local.trim() || undefined,
-      });
+      await onConfirm(value.trim(), temperatura);
       onOpenChange(false);
     } finally {
       setSaving(false);
@@ -96,18 +44,17 @@ export const QualificacaoDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !saving && onOpenChange(v)}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="font-heading tracking-wider uppercase">
-            Qualificação + reunião
+            Qualificação obrigatória
           </DialogTitle>
           <DialogDescription>
-            Antes de avançar para <strong>Reunião agendada</strong>, registre a qualificação, temperatura e os dados da reunião.
+            Antes de avançar para <strong>Reunião agendada</strong>, registre os detalhes da qualificação e a temperatura do lead.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          {/* Temperatura */}
           <div className="space-y-2">
             <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
               Temperatura *
@@ -131,7 +78,6 @@ export const QualificacaoDialog = ({
             </div>
           </div>
 
-          {/* Qualificação */}
           <div className="space-y-2">
             <Label htmlFor="qualificacao" className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
               Detalhes da qualificação *
@@ -139,70 +85,11 @@ export const QualificacaoDialog = ({
             <Textarea
               id="qualificacao"
               autoFocus
-              rows={5}
+              rows={7}
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              placeholder="Ex.: Dor principal — gerar leads B2B. Faturamento ~R$ 800k/mês. Decisor: CEO. Urgência alta."
+              placeholder="Ex.: Dor principal — gerar leads B2B. Faturamento ~R$ 800k/mês. Já testou Meta Ads sem ROI. Decisor: CEO. Urgência alta, quer começar em 30 dias."
               className="text-sm resize-none"
-            />
-          </div>
-
-          {/* Data + Hora reunião */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-                Data da reunião *
-              </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal h-9",
-                      !dataReuniao && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dataReuniao ? format(dataReuniao, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={dataReuniao}
-                    onSelect={setDataReuniao}
-                    initialFocus
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="hora-reuniao" className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-                Horário *
-              </Label>
-              <Input
-                id="hora-reuniao"
-                type="time"
-                value={hora}
-                onChange={(e) => setHora(e.target.value)}
-                className="h-9"
-              />
-            </div>
-          </div>
-
-          {/* Local / link opcional */}
-          <div className="space-y-2">
-            <Label htmlFor="local-reuniao" className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-              Local ou link da reunião <span className="opacity-60">(opcional)</span>
-            </Label>
-            <Input
-              id="local-reuniao"
-              value={local}
-              onChange={(e) => setLocal(e.target.value)}
-              placeholder="Google Meet, Zoom, endereço..."
-              className="h-9"
             />
           </div>
         </div>
@@ -211,7 +98,7 @@ export const QualificacaoDialog = ({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancelar
           </Button>
-          <Button onClick={submit} disabled={!canSubmit || saving}>
+          <Button onClick={submit} disabled={!value.trim() || !temperatura || saving}>
             {saving ? "Salvando..." : "Confirmar e avançar"}
           </Button>
         </DialogFooter>
