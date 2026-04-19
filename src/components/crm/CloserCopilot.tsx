@@ -184,7 +184,7 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
         ))}
         {loading && messages[messages.length - 1]?.role !== "assistant" && (
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-            <Loader2 className="h-3 w-3 animate-spin" /> Opus está pensando...
+            <Loader2 className="h-3 w-3 animate-spin" /> Copilot está pensando...
           </div>
         )}
       </div>
