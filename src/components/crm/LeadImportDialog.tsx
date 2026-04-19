@@ -20,6 +20,19 @@ export const LeadImportDialog = ({ open, onOpenChange }: Props) => {
   const [result, setResult] = useState<ImportResult | null>(null);
   const { toast } = useToast();
   const qc = useQueryClient();
+  const [lastImport, setLastImport] = useState<{ created_at: string; nome: string; empresa: string | null } | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      const { data } = await supabase
+        .from("crm_leads" as any)
+        .select("created_at, nome, empresa")
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (data && data.length) setLastImport(data[0] as any);
+    })();
+  }, [open]);
 
   const reset = () => {
     setFile(null);
