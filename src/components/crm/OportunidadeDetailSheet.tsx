@@ -238,7 +238,7 @@ export const OportunidadeDetailSheet = ({
   const [aiResumo, setAiResumo] = useState<string>("");
   const [aiTarefa, setAiTarefa] = useState<{ titulo: string; descricao: string; prazo_sugerido_dias: number; prioridade: string } | null>(null);
   const [aiLoading, setAiLoading] = useState<null | "resumo" | "tarefa">(null);
-  const [aiProvider, setAiProvider] = useState<"gemini" | "claude" | "claude-opus">("gemini");
+  const [aiProvider, setAiProvider] = useState<"haiku45" | "sonnet" | "opus45">("sonnet");
   const { toast } = useToast();
   const { addTarefa, addNota } = useOportunidadeAtividades(oportunidade?.id ?? null);
 
@@ -661,9 +661,9 @@ export const OportunidadeDetailSheet = ({
                   </span>
                   <div className="inline-flex flex-wrap rounded-md border border-border/40 bg-surface-2/40 p-0.5">
                     {[
-                      { id: "gemini" as const, label: "Gemini Flash" },
-                      { id: "claude" as const, label: "Claude Sonnet 4.5" },
-                      { id: "claude-opus" as const, label: "Claude Opus 4" },
+                      { id: "haiku45" as const, label: "Haiku 4.5" },
+                      { id: "sonnet" as const, label: "Sonnet 4.5 ★" },
+                      { id: "opus45" as const, label: "Opus 4.5" },
                     ].map((p) => (
                       <button
                         key={p.id}

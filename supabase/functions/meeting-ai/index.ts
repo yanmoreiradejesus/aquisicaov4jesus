@@ -1,9 +1,16 @@
 // Edge function: meeting-ai
 // Actions: "summarize" -> resumo da reunião | "suggest_task" -> próxima tarefa sugerida
+// Providers (Anthropic only): "sonnet" (default), "opus45", "haiku45"
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+const MODEL_MAP: Record<string, string> = {
+  sonnet: "claude-sonnet-4-5-20250929",
+  opus45: "claude-opus-4-5-20251015",
+  haiku45: "claude-haiku-4-5",
 };
 
 Deno.serve(async (req) => {
@@ -11,9 +18,8 @@ Deno.serve(async (req) => {
 
   try {
     const { action, transcricao, contexto, provider } = await req.json();
-    const useClaude = provider === "claude" || provider === "claude-opus";
-    const claudeModel =
-      provider === "claude-opus" ? "claude-opus-4-20250514" : "claude-sonnet-4-5-20250929";
+    const providerKey = MODEL_MAP[provider as string] ? (provider as string) : "sonnet";
+    const claudeModel = MODEL_MAP[providerKey];
 
     if (!transcricao || typeof transcricao !== "string" || transcricao.trim().length < 20) {
       return new Response(
@@ -28,8 +34,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!useClaude && !LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurada");
+    const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY não configurada");
 
     const ctxStr = contexto
       ? `\n\nContexto da oportunidade:\n${JSON.stringify(contexto).slice(0, 1500)}`
@@ -37,7 +43,7 @@ Deno.serve(async (req) => {
 
     let systemPrompt = "";
     let userPrompt = "";
-    let body: any;
+    let taskToolSchema: any = null;
 
     if (action === "summarize") {
       systemPrompt =
@@ -71,13 +77,6 @@ Deno.serve(async (req) => {
 
 Transcrição:
 """${transcricao}"""${ctxStr}`;
-      body = {
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-      };
     } else {
       systemPrompt =
         "Você é um SDR/closer experiente. Sugere a PRÓXIMA tarefa mais estratégica do vendedor, de forma específica e acionável, em português do Brasil.";
@@ -85,82 +84,50 @@ Transcrição:
 
 Transcrição:
 """${transcricao}"""${ctxStr}`;
-      body = {
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "sugerir_tarefa",
-              description: "Retorna a próxima tarefa sugerida para o vendedor.",
-              parameters: {
-                type: "object",
-                properties: {
-                  titulo: { type: "string", description: "Título curto e acionável (máx. 80 caracteres)" },
-                  descricao: { type: "string", description: "Descrição detalhada do que fazer e por quê (2-4 linhas)" },
-                  prazo_sugerido_dias: {
-                    type: "integer",
-                    description: "Em quantos dias a tarefa deve ser executada (0=hoje, 1=amanhã)",
-                    minimum: 0,
-                    maximum: 30,
-                  },
-                  prioridade: { type: "string", enum: ["alta", "media", "baixa"] },
-                },
-                required: ["titulo", "descricao", "prazo_sugerido_dias", "prioridade"],
-                additionalProperties: false,
-              },
-            },
+      taskToolSchema = {
+        type: "object",
+        properties: {
+          titulo: { type: "string", description: "Título curto e acionável (máx. 80 caracteres)" },
+          descricao: { type: "string", description: "Descrição detalhada do que fazer e por quê (2-4 linhas)" },
+          prazo_sugerido_dias: {
+            type: "integer",
+            description: "Em quantos dias a tarefa deve ser executada (0=hoje, 1=amanhã)",
+            minimum: 0,
+            maximum: 30,
           },
-        ],
-        tool_choice: { type: "function", function: { name: "sugerir_tarefa" } },
+          prioridade: { type: "string", enum: ["alta", "media", "baixa"] },
+        },
+        required: ["titulo", "descricao", "prazo_sugerido_dias", "prioridade"],
+        additionalProperties: false,
       };
     }
 
-    let resp: Response;
-    if (useClaude) {
-      const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-      if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY não configurada");
-
-      const anthropicBody: any = {
-        model: claudeModel,
-        max_tokens: 2048,
-        system: systemPrompt,
-        messages: [{ role: "user", content: userPrompt }],
-      };
-      if (action === "suggest_task") {
-        anthropicBody.tools = [
-          {
-            name: "sugerir_tarefa",
-            description: "Retorna a próxima tarefa sugerida para o vendedor.",
-            input_schema: body.tools[0].function.parameters,
-          },
-        ];
-        anthropicBody.tool_choice = { type: "tool", name: "sugerir_tarefa" };
-      }
-
-      resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "x-api-key": ANTHROPIC_API_KEY,
-          "anthropic-version": "2023-06-01",
-          "Content-Type": "application/json",
+    const anthropicBody: any = {
+      model: claudeModel,
+      max_tokens: 2048,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userPrompt }],
+    };
+    if (action === "suggest_task") {
+      anthropicBody.tools = [
+        {
+          name: "sugerir_tarefa",
+          description: "Retorna a próxima tarefa sugerida para o vendedor.",
+          input_schema: taskToolSchema,
         },
-        body: JSON.stringify(anthropicBody),
-      });
-    } else {
-      resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
+      ];
+      anthropicBody.tool_choice = { type: "tool", name: "sugerir_tarefa" };
     }
+
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(anthropicBody),
+    });
 
     if (resp.status === 429) {
       return new Response(JSON.stringify({ error: "Limite de uso da IA atingido. Tente novamente em instantes." }), {
@@ -186,21 +153,13 @@ Transcrição:
     const data = await resp.json();
 
     if (action === "summarize") {
-      const content = useClaude
-        ? (data.content?.find((b: any) => b.type === "text")?.text ?? "")
-        : (data.choices?.[0]?.message?.content ?? "");
+      const content = data.content?.find((b: any) => b.type === "text")?.text ?? "";
       return new Response(JSON.stringify({ resumo: content }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } else {
-      let args: any = null;
-      if (useClaude) {
-        const toolUse = data.content?.find((b: any) => b.type === "tool_use");
-        args = toolUse?.input ?? null;
-      } else {
-        const tc = data.choices?.[0]?.message?.tool_calls?.[0];
-        if (tc?.function?.arguments) args = JSON.parse(tc.function.arguments);
-      }
+      const toolUse = data.content?.find((b: any) => b.type === "tool_use");
+      const args = toolUse?.input ?? null;
       if (!args) {
         return new Response(JSON.stringify({ error: "IA não retornou tarefa estruturada." }), {
           status: 500,
