@@ -349,7 +349,7 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
           return (
             <div key={i}>
               {showTime && m.ts && (
-                <div className="text-center text-[10px] text-muted-foreground/70 my-2">
+                <div className="text-center text-[10px] text-white/35 my-2">
                   {formatTime(m.ts)}
                 </div>
               )}
