@@ -164,6 +164,7 @@ const CrmLeads = () => {
                   color={etapa.color}
                   leads={grouped[etapa.id] ?? []}
                   onEdit={(l) => { setEditing(l); setSheetOpen(true); }}
+                  defaultCollapsed={etapa.id === "desqualificado"}
                 />
               ))}
             </div>
