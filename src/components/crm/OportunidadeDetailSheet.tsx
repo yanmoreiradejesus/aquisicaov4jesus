@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { OPORTUNIDADE_ETAPAS } from "@/hooks/useCrmOportunidades";
 import {
   Check,
@@ -25,6 +26,27 @@ interface Props {
   onSave: (op: any) => Promise<void> | void;
   onChangeEtapa: (id: string, etapaDestino: string, op: any) => void;
   onDelete?: (id: string) => Promise<void> | void;
+}
+
+/** Deriva o Tier a partir do faturamento (mesmo critério do CRM Lead) */
+function tierFromFaturamento(fat?: string | null): string {
+  if (!fat) return "—";
+  const raw = String(fat).toLowerCase().trim();
+  const m = raw.match(/([\d]+(?:[.,]\d+)?)/);
+  if (!m) return "—";
+  let n = parseFloat(m[1].replace(/\./g, "").replace(",", "."));
+  if (isNaN(n)) {
+    n = parseFloat(m[1].replace(",", "."));
+    if (isNaN(n)) return "—";
+  }
+  if (/(milhão|milhões|mi\b|mm\b)/.test(raw)) n *= 1_000_000;
+  else if (/(mil\b|k\b)/.test(raw)) n *= 1_000;
+  else if (/bilh/.test(raw)) n *= 1_000_000_000;
+  if (n <= 100_000) return "Tiny";
+  if (n <= 200_000) return "Small";
+  if (n <= 4_000_000) return "Medium";
+  if (n <= 16_000_000) return "Large";
+  return "Enterprise";
 }
 
 const HoverEditField = ({
@@ -130,6 +152,67 @@ const SalesforceStepper = ({
           </button>
         );
       })}
+    </div>
+  );
+};
+
+/** Linha somente-leitura para exibir um campo do lead */
+const ReadOnlyRow = ({ label, value }: { label: string; value?: string | number | null }) => {
+  const v = value == null || value === "" ? null : String(value);
+  return (
+    <div className="flex items-start justify-between gap-3 py-2 border-b border-border/30 last:border-0">
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1">{label}</p>
+        <p className="text-sm text-foreground break-words whitespace-pre-wrap">
+          {v ?? <span className="text-muted-foreground/60">—</span>}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+/** Renderiza TODOS os campos do lead vinculado (espelha CRM Lead) */
+const LeadReadOnlyFields = ({ lead }: { lead: any }) => {
+  const tier = tierFromFaturamento(lead?.faturamento);
+  const fmtDate = (d?: string | null) => {
+    if (!d) return null;
+    try { return new Date(d).toLocaleString("pt-BR"); } catch { return d; }
+  };
+  return (
+    <div>
+      <ReadOnlyRow label="Nome" value={lead.nome} />
+      <ReadOnlyRow label="Empresa" value={lead.empresa} />
+      <ReadOnlyRow label="Telefone" value={lead.telefone} />
+      <ReadOnlyRow label="WhatsApp" value={lead.telefone} />
+      <ReadOnlyRow label="E-mail" value={lead.email} />
+      <ReadOnlyRow label="Instagram" value={lead.instagram} />
+      <ReadOnlyRow label="Site" value={lead.site} />
+      <ReadOnlyRow label="Cargo" value={lead.cargo} />
+      <ReadOnlyRow label="Documento empresa" value={lead.documento_empresa} />
+      <ReadOnlyRow label="Faturamento" value={lead.faturamento} />
+      <ReadOnlyRow label="Tier (auto)" value={tier} />
+      <ReadOnlyRow label="Segmento" value={lead.segmento} />
+      <ReadOnlyRow label="Canal" value={lead.canal} />
+      <ReadOnlyRow label="Origem" value={lead.origem} />
+      <ReadOnlyRow label="Urgência" value={lead.urgencia} />
+      <ReadOnlyRow label="Temperatura" value={lead.temperatura} />
+      <ReadOnlyRow label="Qualificação" value={lead.qualificacao} />
+      <ReadOnlyRow label="Cidade" value={lead.cidade} />
+      <ReadOnlyRow label="Estado" value={lead.estado} />
+      <ReadOnlyRow label="País" value={lead.pais} />
+      <ReadOnlyRow label="Etapa atual do lead" value={lead.etapa} />
+      <ReadOnlyRow label="Nome do produto" value={lead.nome_produto} />
+      <ReadOnlyRow label="Tipo de produto" value={lead.tipo_produto} />
+      <ReadOnlyRow label="Valor pago (R$)" value={lead.valor_pago} />
+      <ReadOnlyRow label="Arrematador" value={lead.arrematador} />
+      <ReadOnlyRow label="Data de aquisição" value={fmtDate(lead.data_aquisicao)} />
+      <ReadOnlyRow label="Data de criação na origem" value={fmtDate(lead.data_criacao_origem)} />
+      <ReadOnlyRow label="Reunião agendada" value={fmtDate(lead.data_reuniao_agendada)} />
+      <ReadOnlyRow label="Reunião realizada" value={fmtDate(lead.data_reuniao_realizada)} />
+      <ReadOnlyRow label="Motivo da desqualificação" value={lead.motivo_desqualificacao} />
+      <ReadOnlyRow label="Descrição" value={lead.descricao} />
+      <ReadOnlyRow label="Notas do lead" value={lead.notas} />
+      <ReadOnlyRow label="Lead criado em" value={fmtDate(lead.created_at)} />
     </div>
   );
 };
@@ -318,51 +401,79 @@ export const OportunidadeDetailSheet = ({
           </TabsList>
 
           <TabsContent value="informacoes" className="mt-4">
-            <div className="px-4 py-2 border border-border/40 rounded-lg bg-background/30">
-              <HoverEditField
-                label="Nome da oportunidade"
-                value={form.nome_oportunidade ?? ""}
-                onChange={(v) => set("nome_oportunidade", v)}
-              />
-              <HoverEditField
-                label="Valor EF (entrada)"
-                value={form.valor_ef != null ? String(form.valor_ef) : ""}
-                onChange={(v) => set("valor_ef", v)}
-                type="number"
-              />
-              <HoverEditField
-                label="Fee mensal"
-                value={form.valor_fee != null ? String(form.valor_fee) : ""}
-                onChange={(v) => set("valor_fee", v)}
-                type="number"
-              />
-              <HoverEditField
-                label="Valor total do contrato"
-                value={form.valor_total != null ? String(form.valor_total) : ""}
-                onChange={(v) => set("valor_total", v)}
-                type="number"
-              />
-              <HoverEditField
-                label="Fechamento previsto"
-                value={form.data_fechamento_previsto ?? ""}
-                onChange={(v) => set("data_fechamento_previsto", v)}
-                type="date"
-              />
-              {form.etapa === "fechado_perdido" && (
-                <HoverEditField
-                  label="Motivo da perda"
-                  value={form.motivo_perda ?? ""}
-                  onChange={(v) => set("motivo_perda", v)}
-                  multiline
-                />
-              )}
-              <HoverEditField
-                label="Notas internas"
-                value={form.notas ?? ""}
-                onChange={(v) => set("notas", v)}
-                multiline
-              />
-            </div>
+            <Accordion type="multiple" className="space-y-2">
+              {/* Oportunidade */}
+              <AccordionItem
+                value="oportunidade"
+                className="border border-border/40 rounded-lg bg-background/30 px-4"
+              >
+                <AccordionTrigger className="text-[11px] font-semibold tracking-widest uppercase text-foreground hover:no-underline py-3">
+                  Informações da oportunidade
+                </AccordionTrigger>
+                <AccordionContent className="pb-2">
+                  <HoverEditField
+                    label="Nome da oportunidade"
+                    value={form.nome_oportunidade ?? ""}
+                    onChange={(v) => set("nome_oportunidade", v)}
+                  />
+                  <HoverEditField
+                    label="Valor EF (entrada)"
+                    value={form.valor_ef != null ? String(form.valor_ef) : ""}
+                    onChange={(v) => set("valor_ef", v)}
+                    type="number"
+                  />
+                  <HoverEditField
+                    label="Fee mensal"
+                    value={form.valor_fee != null ? String(form.valor_fee) : ""}
+                    onChange={(v) => set("valor_fee", v)}
+                    type="number"
+                  />
+                  <HoverEditField
+                    label="Valor total do contrato"
+                    value={form.valor_total != null ? String(form.valor_total) : ""}
+                    onChange={(v) => set("valor_total", v)}
+                    type="number"
+                  />
+                  <HoverEditField
+                    label="Fechamento previsto"
+                    value={form.data_fechamento_previsto ?? ""}
+                    onChange={(v) => set("data_fechamento_previsto", v)}
+                    type="date"
+                  />
+                  {form.etapa === "fechado_perdido" && (
+                    <HoverEditField
+                      label="Motivo da perda"
+                      value={form.motivo_perda ?? ""}
+                      onChange={(v) => set("motivo_perda", v)}
+                      multiline
+                    />
+                  )}
+                  <HoverEditField
+                    label="Notas internas"
+                    value={form.notas ?? ""}
+                    onChange={(v) => set("notas", v)}
+                    multiline
+                  />
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Lead vinculado — TODOS os campos do CRM Lead, somente leitura */}
+              <AccordionItem
+                value="lead"
+                className="border border-border/40 rounded-lg bg-background/30 px-4"
+              >
+                <AccordionTrigger className="text-[11px] font-semibold tracking-widest uppercase text-foreground hover:no-underline py-3">
+                  Informações do lead
+                </AccordionTrigger>
+                <AccordionContent className="pb-2">
+                  {!lead ? (
+                    <p className="text-sm text-muted-foreground py-2">Nenhum lead vinculado a esta oportunidade.</p>
+                  ) : (
+                    <LeadReadOnlyFields lead={lead} />
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </TabsContent>
 
           <TabsContent value="tarefas" className="mt-4">
