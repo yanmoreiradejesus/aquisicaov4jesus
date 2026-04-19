@@ -820,10 +820,11 @@ export const OportunidadeDetailSheet = ({
                             size="sm"
                             variant="ghost"
                             className="h-6 px-2 text-[10px]"
-                            onClick={() => callMeetingAI("summarize")}
+                            onClick={handleReprocessSummary}
                             disabled={aiLoadingResumo}
+                            title="Reprocessar com Opus 4.5 (não cria nova tarefa)"
                           >
-                            {aiLoadingResumo ? <Loader2 className="h-3 w-3 animate-spin" /> : "Reprocessar"}
+                            {aiLoadingResumo ? <Loader2 className="h-3 w-3 animate-spin" /> : "Reprocessar (Opus)"}
                           </Button>
                         </>
                       )}
