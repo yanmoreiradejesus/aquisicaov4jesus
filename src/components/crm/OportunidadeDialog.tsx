@@ -123,22 +123,12 @@ export const OportunidadeDialog = ({ open, onOpenChange, oportunidade, onSave, o
             <Input type="number" step="0.01" value={form.valor_fee} onChange={(e) => set("valor_fee", e.target.value)} placeholder="0,00" />
           </div>
 
-          <div className="sm:col-span-2 space-y-1.5">
-            <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">Valor total do contrato</Label>
-            <Input type="number" step="0.01" value={form.valor_total} onChange={(e) => set("valor_total", e.target.value)} placeholder="0,00" />
-          </div>
-
           {form.etapa === "fechado_perdido" && (
             <div className="sm:col-span-2 space-y-1.5">
               <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">Motivo da perda</Label>
               <Textarea rows={2} value={form.motivo_perda} onChange={(e) => set("motivo_perda", e.target.value)} />
             </div>
           )}
-
-          <div className="sm:col-span-2 space-y-1.5">
-            <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">Notas</Label>
-            <Textarea rows={3} value={form.notas} onChange={(e) => set("notas", e.target.value)} />
-          </div>
         </div>
 
         <DialogFooter className="flex sm:justify-between gap-2">
