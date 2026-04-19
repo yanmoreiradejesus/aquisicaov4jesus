@@ -23,6 +23,9 @@ import { useToast } from "@/hooks/use-toast";
 import { LeadTimeline } from "./LeadTimeline";
 import { QualificacaoDialog } from "./QualificacaoDialog";
 import { useGoogleCalendar } from "@/hooks/useGoogleCalendar";
+import { supabase } from "@/integrations/supabase/client";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { X, UserPlus } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -169,6 +172,9 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
   const [pendingEtapa, setPendingEtapa] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("informacoes");
   const [tarefaDialogOpen, setTarefaDialogOpen] = useState(false);
+  const [closerId, setCloserId] = useState<string>("");
+  const [profiles, setProfiles] = useState<{ id: string; full_name: string | null; email: string }[]>([]);
+  const [extraAttendees, setExtraAttendees] = useState<{ email: string; nome: string; funcao: string }[]>([]);
   const { toast } = useToast();
   const {
     isConnected: googleConnected,
@@ -178,6 +184,15 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
     createEvent: createGoogleEvent,
     disconnect: disconnectGoogle,
   } = useGoogleCalendar();
+
+  useEffect(() => {
+    supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .eq("approved", true)
+      .order("full_name", { ascending: true })
+      .then(({ data }) => setProfiles(data ?? []));
+  }, []);
 
   useEffect(() => {
     if (open) {
