@@ -11,7 +11,9 @@ Deno.serve(async (req) => {
 
   try {
     const { action, transcricao, contexto, provider } = await req.json();
-    const useClaude = provider === "claude";
+    const useClaude = provider === "claude" || provider === "claude-opus";
+    const claudeModel =
+      provider === "claude-opus" ? "claude-opus-4-5-20250929" : "claude-sonnet-4-5-20250929";
 
     if (!transcricao || typeof transcricao !== "string" || transcricao.trim().length < 20) {
       return new Response(
@@ -39,24 +41,33 @@ Deno.serve(async (req) => {
 
     if (action === "summarize") {
       systemPrompt =
-        "Você é um analista comercial sênior. Resuma reuniões de vendas em português do Brasil de forma objetiva e estruturada, focando em decisões e próximos passos. Não invente informações.";
-      userPrompt = `Resuma a transcrição abaixo no seguinte formato Markdown:
+        "Você é um analista comercial sênior especializado em B2B. Estruture resumos de reuniões de vendas em português do Brasil de forma visualmente organizada, escaneável e profissional usando Markdown rico (cabeçalhos, listas, negrito, emojis sutis nos cabeçalhos). Seja específico, cite trechos quando relevante e NUNCA invente informações — se algo não foi mencionado, escreva '_Não mencionado_'.";
+      userPrompt = `Gere um resumo executivo da reunião abaixo seguindo EXATAMENTE este formato Markdown (use ## para seções, ### para subseções, **negrito** para destaques):
 
-**Resumo executivo** (2-3 linhas)
+## 🎯 Resumo Executivo
+2-3 linhas objetivas com o panorama da reunião e o estágio comercial atual.
 
-**Dores identificadas**
-- ...
+## 👥 Participantes & Papéis
+- **[Nome]** — papel/cargo, nível de influência (decisor / influenciador / usuário)
 
-**Decisores e influenciadores**
-- ...
+## 🔥 Dores & Necessidades
+- **[Categoria]:** descrição da dor com impacto no negócio
 
-**Objeções**
-- ...
+## 💬 Objeções Levantadas
+- **[Tipo: preço/timing/autoridade/etc]:** o que foi dito + como foi tratada (ou não)
 
-**Próximos passos acordados**
-- ...
+## ✅ Próximos Passos Acordados
+- [ ] **Quem:** ação | **Quando:** prazo
+(use checkboxes; se não houver prazo claro, escreva "a definir")
 
-**Sinais de compra / temperatura** (quente/morno/frio + justificativa)
+## 🌡️ Temperatura & Sinais de Compra
+**Classificação:** 🔥 Quente / 🌤️ Morno / ❄️ Frio
+**Justificativa:** 1-2 linhas com sinais concretos (urgência, orçamento, autoridade, fit).
+
+## ⚡ Insights Estratégicos
+2-3 bullets com observações finas que o vendedor deve agir (riscos, alavancas, follow-up crítico).
+
+---
 
 Transcrição:
 """${transcricao}"""${ctxStr}`;
@@ -115,7 +126,7 @@ Transcrição:
       if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY não configurada");
 
       const anthropicBody: any = {
-        model: "claude-sonnet-4-5-20250929",
+        model: claudeModel,
         max_tokens: 2048,
         system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
