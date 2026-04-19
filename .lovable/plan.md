@@ -1,33 +1,45 @@
 
 ## Plano
 
-Persistir o resumo da reunião e melhorar a UX da transcrição na aba **Reunião**.
+Adicionar um **AI Copilot Closer** dentro da `OportunidadeDetailSheet`, usando **Claude Opus 4.5** como consultor de vendas que tem acesso a tudo sobre o lead/oportunidade.
 
-### 1. Persistir resumo no banco
-- Adicionar coluna `resumo_reuniao` (text) em `crm_oportunidades` via migration.
-- Ao gerar resumo automaticamente (Sonnet) ou via reprocessar (Opus), salvar em `crm_oportunidades.resumo_reuniao` junto com a transcrição.
-- Ao abrir a oportunidade, carregar o resumo salvo direto do banco — sem reprocessar.
+### 1. Nova aba "Copilot 🧠" na Detail Sheet
+- Adicionar tab entre **Reunião** e **Tarefas**.
+- Interface de chat: histórico de mensagens + input + botão enviar.
+- Quick actions (chips clicáveis): "Quebrar objeção", "Sugerir follow-up", "Próximo passo", "Análise de perfil", "Script de fechamento".
 
-### 2. Lógica de reprocessamento
-- Botão **"Reprocessar resumo"** sempre usa **Opus 4.5** (melhor qualidade sob demanda).
-- Reprocessar **descarta o resumo antigo** e salva o novo no mesmo campo.
-- Reprocessar **NÃO** dispara nova sugestão de tarefa (evita duplicar tarefas pra mesma reunião).
-- O auto-processo inicial (Sonnet + tarefa Opus) continua acontecendo só uma vez por hash de transcrição (ref `autoTaskCreatedRef` já existe).
+### 2. Edge function `closer-copilot`
+- Recebe: `oportunidade_id`, `messages` (histórico do chat), opcional `quick_action`.
+- Monta um **contexto rico** buscando do banco:
+  - **Oportunidade**: etapa, valores (ef/fee), datas, motivo_perda, temperatura, transcrição, resumo, notas.
+  - **Lead**: nome, empresa, cargo, segmento, faturamento, tier, urgência, qualificação, origem, canal, descrição, cidade/estado, instagram, site, temperatura, datas de reunião.
+  - **Atividades** (`crm_atividades`): histórico completo de interações (notas, ligações, emails, mudanças de etapa, tarefas).
+- System prompt: papel de consultor de vendas sênior B2B, tom direto, focado em ação. Estrutura sugestões em bullets curtos. Sempre ancorado em dados reais do contexto.
+- Chama Lovable AI com `anthropic/claude-opus-4-5` (Opus mais avançado disponível na gateway).
+- Stream da resposta (SSE) — token por token — pra UX fluida.
+- Trata 429/402 com mensagens claras.
 
-### 3. Transcrição com altura limitada + expandir
-- Quando em modo readonly, o `div` da transcrição tem `max-height` padrão (~200px) com `overflow-hidden` e fade no rodapé.
-- Botão chevron (`ChevronDown` / `ChevronUp`) na parte inferior central alterna estado `transcricaoExpanded`.
-- Quando expandido, mostra o texto completo.
-- **Não aplicar** essa limitação ao resumo (continua exibido por inteiro).
+### 3. Componente `CloserCopilot.tsx`
+- `messages: { role, content }[]` no estado local (não persistido — sessão por aba aberta).
+- Streaming via `fetch` + reader (padrão da skill).
+- Markdown rendering com `react-markdown` (já no projeto via outras telas? se não, instalar).
+- Ao clicar em quick action: pré-preenche input ou envia direto.
+- Indicador "Opus está pensando..." durante stream.
+- Botão "Limpar conversa".
 
-### Arquivos afetados
-- **Migration**: `ALTER TABLE crm_oportunidades ADD COLUMN resumo_reuniao text;`
-- **`src/components/crm/OportunidadeDetailSheet.tsx`**:
-  - Carregar `resumo_reuniao` da oportunidade no estado `aiResumo`.
-  - Salvar resumo no banco após gerar (auto e reprocessar).
-  - Função `handleReprocessSummary` força provider Opus, salva e NÃO chama `suggest_task`.
-  - Adicionar estado `transcricaoExpanded` e UI de fade + chevron.
+### 4. Sem persistência inicial
+- Conversa vive no estado do componente (reset ao fechar a sheet).
+- Se quiser persistir depois, criamos tabela `crm_copilot_messages`.
 
-### Sem mudanças
-- Edge function (`meeting-ai`) já aceita provider `opus45`.
-- `useOportunidadeAtividades` permanece igual.
+### Arquivos
+- **Nova edge function**: `supabase/functions/closer-copilot/index.ts`
+- **Novo componente**: `src/components/crm/CloserCopilot.tsx`
+- **Editar**: `src/components/crm/OportunidadeDetailSheet.tsx` (adicionar tab)
+- **Possível install**: `react-markdown` se ainda não estiver
+
+### Modelo
+- `anthropic/claude-opus-4-5` via Lovable AI Gateway (mesma rota usada hoje em `meeting-ai`).
+
+### Confirmações
+- Lovable AI já habilitado ✓ (`LOVABLE_API_KEY` presente).
+- Sem migration necessária.
