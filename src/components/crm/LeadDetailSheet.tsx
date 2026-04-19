@@ -353,6 +353,100 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
           </CollapsibleContent>
         </Collapsible>
 
+        {/* GOOGLE CALENDAR — só aparece se reuniao_agendada + data + email */}
+        {form.etapa === "reuniao_agendada" && form.data_reuniao_agendada && form.email && (
+          <div className="mb-6 px-4 py-4 border border-border/40 rounded-lg bg-muted/10">
+            <div className="flex items-center gap-2 mb-3">
+              <Calendar className="h-4 w-4 text-primary" />
+              <span className="text-xs font-semibold tracking-widest uppercase text-foreground">
+                Google Calendar
+              </span>
+            </div>
+
+            {form.google_event_id ? (
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <Check className="h-4 w-4 text-emerald-400" />
+                  <span className="text-foreground">Evento criado e convite enviado para {form.email}</span>
+                </div>
+                {form.google_event_link && (
+                  <a
+                    href={form.google_event_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-sm text-primary hover:underline shrink-0"
+                  >
+                    Abrir <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+              </div>
+            ) : googleConnected === null ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Verificando conexão…
+              </div>
+            ) : !googleConnected ? (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Conecte seu Google Calendar para criar o evento e enviar o convite automaticamente para o lead.
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={connectGoogle}
+                  disabled={googleLoading}
+                >
+                  {googleLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Calendar className="h-4 w-4 mr-1" />}
+                  Conectar Google Calendar
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Conectado como <span className="text-foreground">{emailGoogle}</span>. O lead receberá um convite com link do Google Meet.
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        const res = await createGoogleEvent(form.id, 30);
+                        setForm((p: any) => ({
+                          ...p,
+                          google_event_id: res.event_id,
+                          google_event_link: res.event_link,
+                        }));
+                        toast({ title: "Evento criado!", description: `Convite enviado para ${form.email}` });
+                      } catch (e: any) {
+                        toast({
+                          title: "Falha ao criar evento",
+                          description: e?.message ?? String(e),
+                          variant: "destructive",
+                        });
+                      }
+                    }}
+                    disabled={googleLoading}
+                  >
+                    {googleLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Calendar className="h-4 w-4 mr-1" />}
+                    Criar evento no Google Calendar
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={disconnectGoogle} disabled={googleLoading}>
+                    Desconectar
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {form.etapa === "reuniao_agendada" && (!form.data_reuniao_agendada || !form.email) && (
+          <div className="mb-6 px-4 py-3 border border-amber-500/30 bg-amber-500/10 rounded-lg flex items-start gap-2 text-sm text-amber-300">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <span>
+              Para criar invite no Google Calendar, preencha {!form.email && "e-mail"}{!form.email && !form.data_reuniao_agendada && " e "}{!form.data_reuniao_agendada && "data da reunião"}.
+            </span>
+          </div>
+        )}
+
         {/* TIMELINE: notas, tarefas e histórico */}
         {form.id && (
           <div className="mb-6">
