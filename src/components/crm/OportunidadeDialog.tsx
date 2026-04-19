@@ -59,13 +59,14 @@ export const OportunidadeDialog = ({ open, onOpenChange, oportunidade, onSave, o
         ...form,
         valor_ef: form.valor_ef === "" ? null : Number(form.valor_ef),
         valor_fee: form.valor_fee === "" ? null : Number(form.valor_fee),
-        valor_total: form.valor_total === "" ? null : Number(form.valor_total),
         data_fechamento_previsto: form.data_fechamento_previsto || null,
         motivo_perda: form.motivo_perda?.trim() || null,
         notas: form.notas?.trim() || null,
       };
-      // remove read-only join
       delete payload.lead;
+      delete payload.valor_total;
+      delete payload.created_at;
+      delete payload.updated_at;
       await onSave(payload);
       onOpenChange(false);
     } finally {

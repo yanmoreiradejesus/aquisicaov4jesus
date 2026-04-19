@@ -40,7 +40,13 @@ export function useCrmOportunidades() {
 
   const upsert = useMutation({
     mutationFn: async (op: any) => {
-      const { lead, ...payload } = op;
+      const { lead, created_at, updated_at, valor_total, ...rest } = op;
+      const payload = {
+        ...rest,
+        valor_ef: rest.valor_ef === "" || rest.valor_ef == null ? null : Number(rest.valor_ef),
+        valor_fee: rest.valor_fee === "" || rest.valor_fee == null ? null : Number(rest.valor_fee),
+      };
+
       if (payload.id) {
         const { error } = await supabase.from("crm_oportunidades" as any).update(payload).eq("id", payload.id);
         if (error) throw error;
