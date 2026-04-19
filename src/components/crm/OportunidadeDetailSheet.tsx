@@ -663,7 +663,7 @@ export const OportunidadeDetailSheet = ({
                     {[
                       { id: "gemini" as const, label: "Gemini Flash" },
                       { id: "claude" as const, label: "Claude Sonnet 4.5" },
-                      { id: "claude-opus" as const, label: "Claude Opus 4.5" },
+                      { id: "claude-opus" as const, label: "Claude Opus 4" },
                     ].map((p) => (
                       <button
                         key={p.id}

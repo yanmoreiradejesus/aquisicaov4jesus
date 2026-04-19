@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
     const { action, transcricao, contexto, provider } = await req.json();
     const useClaude = provider === "claude" || provider === "claude-opus";
     const claudeModel =
-      provider === "claude-opus" ? "claude-opus-4-5-20250929" : "claude-sonnet-4-5-20250929";
+      provider === "claude-opus" ? "claude-opus-4-20250514" : "claude-sonnet-4-5-20250929";
 
     if (!transcricao || typeof transcricao !== "string" || transcricao.trim().length < 20) {
       return new Response(
