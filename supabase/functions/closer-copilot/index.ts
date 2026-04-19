@@ -19,7 +19,7 @@ const QUICK_ACTION_PROMPTS: Record<string, string> = {
     "Monte um script de fechamento sob medida pra esse lead: abertura, recapitulação de valor com base no que ELE disse, ancoragem de preço, pedido direto, plano B se hesitar.",
 };
 
-function buildContextBlock(opp: any, lead: any, atividades: any[]) {
+function buildContextBlock(opp: any, lead: any, atividades: any[], storedAttachments: any[]) {
   const fmt = (v: any) => (v === null || v === undefined || v === "" ? "—" : v);
   const linhas: string[] = [];
 
@@ -61,7 +61,48 @@ function buildContextBlock(opp: any, lead: any, atividades: any[]) {
     }
   }
 
+  if (storedAttachments?.length) {
+    linhas.push("\n# ANEXOS PRÉVIOS (PDFs com texto extraído)");
+    for (const att of storedAttachments) {
+      if (att.extracted_text) {
+        linhas.push(`\n## 📎 ${att.file_name}`);
+        linhas.push(String(att.extracted_text).slice(0, 8000));
+      }
+    }
+  }
+
   return linhas.join("\n");
+}
+
+async function extractPdfText(url: string): Promise<string> {
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return "";
+    const buf = new Uint8Array(await resp.arrayBuffer());
+    // @ts-ignore
+    const pdfParse = (await import("npm:pdf-parse@1.1.1")).default;
+    const result = await pdfParse(buf);
+    return (result?.text || "").slice(0, 12000);
+  } catch (e) {
+    console.error("pdf parse error", e);
+    return "";
+  }
+}
+
+async function fetchAsBase64(url: string): Promise<string | null> {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const ct = r.headers.get("content-type") || "image/png";
+    const buf = new Uint8Array(await r.arrayBuffer());
+    let bin = "";
+    for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+    const b64 = btoa(bin);
+    return `data:${ct};base64,${b64}`;
+  } catch (e) {
+    console.error("img fetch error", e);
+    return null;
+  }
 }
 
 Deno.serve(async (req) => {
@@ -117,7 +158,36 @@ Deno.serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(80);
 
-    const contextBlock = buildContextBlock(opp, lead, atividades || []);
+    // Anexos persistidos da oportunidade (com texto extraído)
+    const { data: storedAttachments } = await supabase
+      .from("crm_copilot_attachments")
+      .select("*")
+      .eq("oportunidade_id", oportunidade_id)
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    // Processa anexos da última msg do usuário (extrair PDFs novos, salvar texto)
+    const lastUser = [...messages].reverse().find((m: any) => m.role === "user");
+    const newAttachments = lastUser?.attachments || [];
+
+    for (const att of newAttachments) {
+      if (att.type === "application/pdf" && att.url && att.path) {
+        const already = storedAttachments?.find((s) => s.file_path === att.path);
+        if (!already?.extracted_text) {
+          const text = await extractPdfText(att.url);
+          if (text) {
+            await supabase
+              .from("crm_copilot_attachments")
+              .update({ extracted_text: text })
+              .eq("file_path", att.path);
+            // injeta no contexto local também
+            (storedAttachments || []).unshift({ file_name: att.name, extracted_text: text });
+          }
+        }
+      }
+    }
+
+    const contextBlock = buildContextBlock(opp, lead, atividades || [], storedAttachments || []);
 
     const systemPrompt = `Você é um CONSULTOR SÊNIOR DE VENDAS B2B (closer coach) ajudando um closer a fechar essa oportunidade específica. 
 Tom: direto, prático, sem floreio. Sempre em pt-BR.
@@ -127,12 +197,38 @@ Regras:
 - Estruture em bullets curtos com **negrito** nos pontos-chave.
 - Quando der script/mensagem, entregue o texto pronto pra copiar (sem placeholders genéricos).
 - Não invente dados que não estão no contexto.
+- Se o usuário enviar imagens (prints de conversa), leia atentamente e use como evidência.
 
 ${contextBlock}`;
 
-    const userMessages = [...messages];
+    // Monta mensagens para a IA — converte anexos de imagem em multimodal
+    const aiMessages: any[] = [{ role: "system", content: systemPrompt }];
+    for (const m of messages) {
+      const imageAtts = (m.attachments || []).filter((a: any) => a.type?.startsWith("image/"));
+      const pdfAtts = (m.attachments || []).filter((a: any) => a.type === "application/pdf");
+      if (m.role === "user" && imageAtts.length > 0) {
+        const parts: any[] = [];
+        let textPart = m.content || "";
+        if (pdfAtts.length) {
+          textPart += `\n\n[PDFs anexados nesta mensagem: ${pdfAtts.map((p: any) => p.name).join(", ")} — texto disponível no contexto do sistema.]`;
+        }
+        if (textPart) parts.push({ type: "text", text: textPart });
+        for (const img of imageAtts) {
+          const dataUrl = await fetchAsBase64(img.url);
+          if (dataUrl) parts.push({ type: "image_url", image_url: { url: dataUrl } });
+        }
+        aiMessages.push({ role: "user", content: parts });
+      } else {
+        let content = m.content || "";
+        if (m.role === "user" && pdfAtts.length) {
+          content += `\n\n[PDFs anexados: ${pdfAtts.map((p: any) => p.name).join(", ")} — texto disponível no contexto do sistema.]`;
+        }
+        aiMessages.push({ role: m.role, content });
+      }
+    }
+
     if (quick_action && QUICK_ACTION_PROMPTS[quick_action]) {
-      userMessages.push({ role: "user", content: QUICK_ACTION_PROMPTS[quick_action] });
+      aiMessages.push({ role: "user", content: QUICK_ACTION_PROMPTS[quick_action] });
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -152,7 +248,7 @@ ${contextBlock}`;
       body: JSON.stringify({
         model: "openai/gpt-5",
         stream: true,
-        messages: [{ role: "system", content: systemPrompt }, ...userMessages],
+        messages: aiMessages,
       }),
     });
 
