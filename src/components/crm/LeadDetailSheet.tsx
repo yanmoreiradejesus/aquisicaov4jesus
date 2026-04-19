@@ -341,20 +341,20 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
 
         {/* TABS principais */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="grid grid-cols-5 w-full h-auto">
-            <TabsTrigger value="informacoes" className="text-[11px] py-2">
+          <TabsList className="grid grid-cols-5 w-full h-auto rounded-xl bg-surface-2/60 p-1 backdrop-blur-sm">
+            <TabsTrigger value="informacoes" className="text-[11px] py-2 rounded-lg data-[state=active]:bg-surface-elevated data-[state=active]:shadow-ios-sm transition-all duration-200 ease-ios">
               Informações
             </TabsTrigger>
-            <TabsTrigger value="tarefas" className="text-[11px] py-2">
+            <TabsTrigger value="tarefas" className="text-[11px] py-2 rounded-lg data-[state=active]:bg-surface-elevated data-[state=active]:shadow-ios-sm transition-all duration-200 ease-ios">
               Tarefas
             </TabsTrigger>
-            <TabsTrigger value="qualificacao" className="text-[11px] py-2">
+            <TabsTrigger value="qualificacao" className="text-[11px] py-2 rounded-lg data-[state=active]:bg-surface-elevated data-[state=active]:shadow-ios-sm transition-all duration-200 ease-ios">
               Qualificação
             </TabsTrigger>
-            <TabsTrigger value="reuniao" className="text-[11px] py-2">
+            <TabsTrigger value="reuniao" className="text-[11px] py-2 rounded-lg data-[state=active]:bg-surface-elevated data-[state=active]:shadow-ios-sm transition-all duration-200 ease-ios">
               Reunião
             </TabsTrigger>
-            <TabsTrigger value="historico" className="text-[11px] py-2">
+            <TabsTrigger value="historico" className="text-[11px] py-2 rounded-lg data-[state=active]:bg-surface-elevated data-[state=active]:shadow-ios-sm transition-all duration-200 ease-ios">
               Histórico
             </TabsTrigger>
           </TabsList>
