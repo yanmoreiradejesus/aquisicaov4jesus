@@ -242,7 +242,9 @@ export const OportunidadeDetailSheet = ({
   const [aiTarefa, setAiTarefa] = useState<{ titulo: string; descricao: string; prazo_sugerido_dias: number; prioridade: string } | null>(null);
   const [aiLoadingResumo, setAiLoadingResumo] = useState(false);
   const [aiLoadingTarefa, setAiLoadingTarefa] = useState(false);
+  const [transcricaoEditing, setTranscricaoEditing] = useState(false);
   const processedHashRef = useRef<string>("");
+  const autoTaskCreatedRef = useRef<string>("");
   const { toast } = useToast();
   const { data: atividades, addTarefa, addNota, addReuniao } = useOportunidadeAtividades(oportunidade?.id ?? null);
 
@@ -260,7 +262,9 @@ export const OportunidadeDetailSheet = ({
       setAiTarefa(null);
       setAiLoadingResumo(false);
       setAiLoadingTarefa(false);
+      setTranscricaoEditing(!(oportunidade?.transcricao_reuniao ?? "").trim());
       processedHashRef.current = "";
+      autoTaskCreatedRef.current = "";
     }
   }, [open, oportunidade]);
 
@@ -390,9 +394,24 @@ export const OportunidadeDetailSheet = ({
   };
 
   // Conecta o auto-processamento ao callMeetingAI (definido acima)
-  autoProcessRef.current = (txt: string) => {
+  // Resumo via Sonnet + Tarefa via Opus 4.5 (auto-criada como sugestão pendente em Tarefas)
+  autoProcessRef.current = async (txt: string) => {
     callMeetingAI("summarize", { silent: true, transcricaoOverride: txt });
-    callMeetingAI("suggest_task", { silent: true, transcricaoOverride: txt });
+    const tarefa = await callMeetingAI("suggest_task", { silent: true, transcricaoOverride: txt });
+    if (tarefa && form?.id && autoTaskCreatedRef.current !== txt) {
+      autoTaskCreatedRef.current = txt;
+      const dt = new Date();
+      const dias = Number(tarefa.prazo_sugerido_dias) > 0 ? Number(tarefa.prazo_sugerido_dias) : 1;
+      dt.setDate(dt.getDate() + dias);
+      dt.setHours(9, 0, 0, 0);
+      try {
+        await addTarefa.mutateAsync({
+          titulo: `[SUGESTÃO IA · ${tarefa.prioridade?.toUpperCase() ?? "MED"}] ${tarefa.titulo}\n${tarefa.descricao}`,
+          data_agendada: dt.toISOString(),
+        });
+        toast({ title: "Tarefa sugerida criada", description: `${tarefa.titulo} · prazo em ${dias}d` });
+      } catch (_) { /* silencioso */ }
+    }
   };
 
   const aplicarResumoNasNotas = async () => {
@@ -755,23 +774,6 @@ export const OportunidadeDetailSheet = ({
                 </div>
               )}
 
-              {/* TRANSCRIÇÃO ATIVA */}
-              <div className="border-t border-border/40 pt-3">
-                <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-2">
-                  Transcrição da reunião atual
-                </p>
-                <Textarea
-                  rows={10}
-                  value={form.transcricao_reuniao ?? ""}
-                  onChange={(e) => set("transcricao_reuniao", e.target.value)}
-                  placeholder="Cole aqui a transcrição completa da reunião — dores, decisores, objeções, próximos passos..."
-                  className="text-sm resize-none"
-                />
-                <p className="text-[10px] text-muted-foreground/60 mt-1.5">
-                  Salvamento automático após 600ms. Resumo (Sonnet 4.5) e tarefa sugerida (Opus 4.5) são gerados automaticamente.
-                </p>
-              </div>
-
               {/* RESUMO IA — primeira coisa que aparece após transcrição */}
               {(aiLoadingResumo || aiResumo) && (
                 <div className="rounded-lg border border-border/40 bg-surface-2/40 p-4">
@@ -820,56 +822,58 @@ export const OportunidadeDetailSheet = ({
                 </div>
               )}
 
-              {/* TAREFA SUGERIDA */}
-              {(aiLoadingTarefa || aiTarefa) && (
-                <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-semibold tracking-widest uppercase text-primary flex items-center gap-1.5">
-                      <ListTodo className="h-3 w-3" />
-                      Tarefa sugerida <span className="text-muted-foreground/60 font-medium">· Opus 4.5</span>
-                      {aiTarefa && <span className="ml-1">({aiTarefa.prioridade})</span>}
-                    </p>
-                    <div className="flex items-center gap-1">
-                      {aiTarefa && (
-                        <>
-                          <span className="text-[10px] text-muted-foreground mr-1">
-                            em {aiTarefa.prazo_sugerido_dias}d
-                          </span>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 px-2 text-[10px]"
-                            onClick={() => callMeetingAI("suggest_task")}
-                            disabled={aiLoadingTarefa}
-                          >
-                            {aiLoadingTarefa ? <Loader2 className="h-3 w-3 animate-spin" /> : "Reprocessar"}
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  {aiLoadingTarefa && !aiTarefa ? (
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Sugerindo próxima tarefa…
-                    </div>
-                  ) : aiTarefa ? (
-                    <>
-                      <p className="text-sm font-medium text-foreground">{aiTarefa.titulo}</p>
-                      <p className="text-xs text-muted-foreground whitespace-pre-wrap">{aiTarefa.descricao}</p>
-                      <div className="flex items-center gap-2 pt-1">
-                        <Button size="sm" className="h-7 text-[11px]" onClick={criarTarefaSugerida}>
-                          <Plus className="h-3 w-3 mr-1" />
-                          Criar tarefa
-                        </Button>
-                        <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => setAiTarefa(null)}>
-                          Descartar
-                        </Button>
-                      </div>
-                    </>
-                  ) : null}
+              {/* INDICADOR de tarefa sendo gerada (será criada automaticamente em Tarefas) */}
+              {aiLoadingTarefa && !aiTarefa && (
+                <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                  <ListTodo className="h-3.5 w-3.5 text-primary" />
+                  Sugerindo próxima tarefa (Opus 4.5) — será criada automaticamente na aba Tarefas…
                 </div>
               )}
+
+              {/* TRANSCRIÇÃO ATIVA — readonly por padrão, edita ao clicar */}
+              <div className="border-t border-border/40 pt-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                    Transcrição da reunião atual
+                  </p>
+                  {!transcricaoEditing && (form.transcricao_reuniao ?? "").trim().length > 0 && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-2 text-[10px]"
+                      onClick={() => setTranscricaoEditing(true)}
+                    >
+                      <Pencil className="h-3 w-3 mr-1" />
+                      Editar
+                    </Button>
+                  )}
+                </div>
+                {transcricaoEditing || !((form.transcricao_reuniao ?? "").trim().length > 0) ? (
+                  <Textarea
+                    autoFocus={transcricaoEditing}
+                    rows={10}
+                    value={form.transcricao_reuniao ?? ""}
+                    onChange={(e) => set("transcricao_reuniao", e.target.value)}
+                    onBlur={() => {
+                      if ((form.transcricao_reuniao ?? "").trim().length > 0) setTranscricaoEditing(false);
+                    }}
+                    placeholder="Cole aqui a transcrição completa da reunião — dores, decisores, objeções, próximos passos..."
+                    className="text-sm resize-none"
+                  />
+                ) : (
+                  <div
+                    onClick={() => setTranscricaoEditing(true)}
+                    className="cursor-text rounded-md border border-border/40 bg-background/40 p-3 text-sm text-foreground/85 whitespace-pre-wrap max-h-64 overflow-y-auto hover:border-border/70 transition-colors"
+                    title="Clique para editar"
+                  >
+                    {form.transcricao_reuniao}
+                  </div>
+                )}
+                <p className="text-[10px] text-muted-foreground/60 mt-1.5">
+                  Salvamento automático após 600ms. Resumo (Sonnet 4.5) e tarefa (Opus 4.5) gerados automaticamente — tarefa aparece na aba Tarefas com prazo sugerido.
+                </p>
+              </div>
             </div>
           </TabsContent>
 
