@@ -255,7 +255,7 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-4xl lg:max-w-5xl overflow-y-auto">
+      <SheetContent side="right" className="w-screen sm:max-w-[min(96vw,1400px)] overflow-y-auto">
         <SheetHeader>
           <div className="flex items-start justify-between gap-3">
             <SheetTitle className="font-heading text-2xl tracking-wider uppercase">
