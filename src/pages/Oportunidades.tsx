@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, Search } from "lucide-react";
 import { useCrmOportunidades, OPORTUNIDADE_ETAPAS } from "@/hooks/useCrmOportunidades";
 import { OportunidadeColumn } from "@/components/crm/OportunidadeColumn";
-import { OportunidadeDialog } from "@/components/crm/OportunidadeDialog";
+import { OportunidadeDetailSheet } from "@/components/crm/OportunidadeDetailSheet";
 import { MotivoPerdaDialog } from "@/components/crm/MotivoPerdaDialog";
 import { OportunidadeAvancarDialog } from "@/components/crm/OportunidadeAvancarDialog";
 import { useToast } from "@/hooks/use-toast";
@@ -15,7 +15,7 @@ const WORKFLOW_ETAPAS = new Set(["negociacao", "contrato", "follow_infinito"]);
 const Oportunidades = () => {
   const { data: oportunidades = [], isLoading, upsert, updateEtapa, remove } = useCrmOportunidades();
   const [search, setSearch] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [perdaOpen, setPerdaOpen] = useState(false);
   const [pendingPerda, setPendingPerda] = useState<any | null>(null);
@@ -69,26 +69,27 @@ const Oportunidades = () => {
     );
   };
 
-  const handleDragEnd = (e: DragEndEvent) => {
-    const { active, over } = e;
-    if (!over) return;
-    const op = oportunidades.find((o: any) => o.id === active.id);
-    if (!op || op.etapa === over.id) return;
-    const destino = String(over.id);
-
+  const dispatchEtapa = (op: any, destino: string) => {
+    if (op.etapa === destino) return;
     if (destino === "fechado_perdido") {
       setPendingPerda(op);
       setPerdaOpen(true);
       return;
     }
-
     if ((op.etapa === "proposta" && destino === "negociacao") || WORKFLOW_ETAPAS.has(destino)) {
       setPendingAvanco({ op, etapa: destino });
       setAvancarOpen(true);
       return;
     }
-
     moveOp(op.id, destino);
+  };
+
+  const handleDragEnd = (e: DragEndEvent) => {
+    const { active, over } = e;
+    if (!over) return;
+    const op = oportunidades.find((o: any) => o.id === active.id);
+    if (!op) return;
+    dispatchEtapa(op, String(over.id));
   };
 
   const handleConfirmPerda = async (motivo: string) => {
@@ -129,7 +130,6 @@ const Oportunidades = () => {
 
   const handleSave = async (op: any) => {
     await upsert.mutateAsync(op);
-    toast({ title: op.id ? "Oportunidade atualizada" : "Oportunidade criada" });
   };
 
   const handleDelete = async (id: string) => {
@@ -160,7 +160,7 @@ const Oportunidades = () => {
               />
             </div>
             <Button
-              onClick={() => { setEditing(null); setDialogOpen(true); }}
+              onClick={() => { setEditing(null); setSheetOpen(true); }}
               className="h-9 rounded-xl bg-gradient-to-b from-primary to-primary/85 shadow-ios-md hover:shadow-ios-glow active:scale-[0.98] transition-all"
             >
               <Plus className="h-4 w-4 mr-1.5" /> Nova oportunidade
@@ -188,7 +188,7 @@ const Oportunidades = () => {
                   label={etapa.label}
                   color={etapa.color}
                   oportunidades={grouped[etapa.id] ?? []}
-                  onEdit={(op) => { setEditing(op); setDialogOpen(true); }}
+                  onEdit={(op) => { setEditing(op); setSheetOpen(true); }}
                   defaultCollapsed={etapa.id === "fechado_perdido"}
                 />
               ))}
@@ -197,12 +197,13 @@ const Oportunidades = () => {
         )}
       </main>
 
-      <OportunidadeDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
+      <OportunidadeDetailSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
         oportunidade={editing}
         onSave={handleSave}
         onDelete={handleDelete}
+        onChangeEtapa={(_id, destino, op) => dispatchEtapa(op, destino)}
       />
 
       <MotivoPerdaDialog
