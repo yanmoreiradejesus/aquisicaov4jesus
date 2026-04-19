@@ -82,15 +82,6 @@ const V4Header = () => {
 
               {/* Desktop nav */}
               <nav className="hidden md:flex items-center gap-1">
-                <Link
-                  to="/"
-                  className={`${navLinkBase} px-3 rounded-md hover:bg-foreground/5 ${isActive("/") ? navLinkActive : ""}`}
-                  title="Hub"
-                >
-                  <Home className="h-3.5 w-3.5" />
-                  <span>Hub</span>
-                </Link>
-
                 {visibleAquisicaoItems.length > 0 && (
                   <div className="relative" ref={dropdownRef}>
                     <button
