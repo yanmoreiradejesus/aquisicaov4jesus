@@ -24,6 +24,12 @@ export const LeadCard = ({ lead, onClick, showAge }: Props) => {
   const phoneFmt = formatPhone(phone);
   const wa = whatsappNumber(phone);
   const since = lead.data_criacao_origem || lead.data_aquisicao || lead.created_at;
+  const tempMeta: Record<string, { label: string; emoji: string; cls: string }> = {
+    Quente: { label: "Quente", emoji: "🔥", cls: "bg-red-500/15 text-red-300 border-red-500/40" },
+    Morno: { label: "Morno", emoji: "🌤️", cls: "bg-amber-500/15 text-amber-300 border-amber-500/40" },
+    Frio: { label: "Frio", emoji: "❄️", cls: "bg-sky-500/15 text-sky-300 border-sky-500/40" },
+  };
+  const temp = lead.temperatura ? tempMeta[lead.temperatura] : null;
 
   const stop = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -59,12 +65,19 @@ export const LeadCard = ({ lead, onClick, showAge }: Props) => {
             {lead.nome}
           </p>
 
-          {showAge && since && (
-            <div className="flex items-center gap-1 text-[11px] text-amber-400 pt-0.5">
-              <Clock className="h-3 w-3" />
-              <span>{timeAgo(since)}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+            {temp && (
+              <span className={`text-[10px] px-1.5 py-0.5 rounded border font-semibold ${temp.cls}`}>
+                {temp.emoji} {temp.label}
+              </span>
+            )}
+            {showAge && since && (
+              <div className="flex items-center gap-1 text-[11px] text-amber-400">
+                <Clock className="h-3 w-3" />
+                <span>{timeAgo(since)}</span>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Ações de telefone (fora do listener para não disparar drag) */}
