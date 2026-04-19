@@ -216,6 +216,7 @@ const CrmLeads = () => {
         onSave={handleSave}
         onChangeEtapa={(id, etapa) => updateEtapa.mutateAsync({ id, etapa })}
         onDelete={handleDelete}
+        onDisqualify={(l) => { setSheetOpen(false); setDesqualLead(l); setDesqualOpen(true); }}
       />
 
       <LeadImportDialog
