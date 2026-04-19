@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurada");
+    if (!useClaude && !LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurada");
 
     const ctxStr = contexto
       ? `\n\nContexto da oportunidade:\n${JSON.stringify(contexto).slice(0, 1500)}`
