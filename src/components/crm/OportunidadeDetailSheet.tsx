@@ -156,6 +156,67 @@ const SalesforceStepper = ({
   );
 };
 
+/** Linha somente-leitura para exibir um campo do lead */
+const ReadOnlyRow = ({ label, value }: { label: string; value?: string | number | null }) => {
+  const v = value == null || value === "" ? null : String(value);
+  return (
+    <div className="flex items-start justify-between gap-3 py-2 border-b border-border/30 last:border-0">
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1">{label}</p>
+        <p className="text-sm text-foreground break-words whitespace-pre-wrap">
+          {v ?? <span className="text-muted-foreground/60">—</span>}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+/** Renderiza TODOS os campos do lead vinculado (espelha CRM Lead) */
+const LeadReadOnlyFields = ({ lead }: { lead: any }) => {
+  const tier = tierFromFaturamento(lead?.faturamento);
+  const fmtDate = (d?: string | null) => {
+    if (!d) return null;
+    try { return new Date(d).toLocaleString("pt-BR"); } catch { return d; }
+  };
+  return (
+    <div>
+      <ReadOnlyRow label="Nome" value={lead.nome} />
+      <ReadOnlyRow label="Empresa" value={lead.empresa} />
+      <ReadOnlyRow label="Telefone" value={lead.telefone} />
+      <ReadOnlyRow label="WhatsApp" value={lead.telefone} />
+      <ReadOnlyRow label="E-mail" value={lead.email} />
+      <ReadOnlyRow label="Instagram" value={lead.instagram} />
+      <ReadOnlyRow label="Site" value={lead.site} />
+      <ReadOnlyRow label="Cargo" value={lead.cargo} />
+      <ReadOnlyRow label="Documento empresa" value={lead.documento_empresa} />
+      <ReadOnlyRow label="Faturamento" value={lead.faturamento} />
+      <ReadOnlyRow label="Tier (auto)" value={tier} />
+      <ReadOnlyRow label="Segmento" value={lead.segmento} />
+      <ReadOnlyRow label="Canal" value={lead.canal} />
+      <ReadOnlyRow label="Origem" value={lead.origem} />
+      <ReadOnlyRow label="Urgência" value={lead.urgencia} />
+      <ReadOnlyRow label="Temperatura" value={lead.temperatura} />
+      <ReadOnlyRow label="Qualificação" value={lead.qualificacao} />
+      <ReadOnlyRow label="Cidade" value={lead.cidade} />
+      <ReadOnlyRow label="Estado" value={lead.estado} />
+      <ReadOnlyRow label="País" value={lead.pais} />
+      <ReadOnlyRow label="Etapa atual do lead" value={lead.etapa} />
+      <ReadOnlyRow label="Nome do produto" value={lead.nome_produto} />
+      <ReadOnlyRow label="Tipo de produto" value={lead.tipo_produto} />
+      <ReadOnlyRow label="Valor pago (R$)" value={lead.valor_pago} />
+      <ReadOnlyRow label="Arrematador" value={lead.arrematador} />
+      <ReadOnlyRow label="Data de aquisição" value={fmtDate(lead.data_aquisicao)} />
+      <ReadOnlyRow label="Data de criação na origem" value={fmtDate(lead.data_criacao_origem)} />
+      <ReadOnlyRow label="Reunião agendada" value={fmtDate(lead.data_reuniao_agendada)} />
+      <ReadOnlyRow label="Reunião realizada" value={fmtDate(lead.data_reuniao_realizada)} />
+      <ReadOnlyRow label="Motivo da desqualificação" value={lead.motivo_desqualificacao} />
+      <ReadOnlyRow label="Descrição" value={lead.descricao} />
+      <ReadOnlyRow label="Notas do lead" value={lead.notas} />
+      <ReadOnlyRow label="Lead criado em" value={fmtDate(lead.created_at)} />
+    </div>
+  );
+};
+
 export const OportunidadeDetailSheet = ({
   open,
   onOpenChange,
