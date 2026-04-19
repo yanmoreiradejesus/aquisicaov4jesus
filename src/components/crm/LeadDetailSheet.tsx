@@ -3,9 +3,21 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { LEAD_ETAPAS } from "@/hooks/useCrmLeads";
-import { Check, ChevronRight, ChevronDown, Copy, MessageCircle, Pencil, Trash2, AlertCircle, Calendar, ExternalLink, Loader2 } from "lucide-react";
+import {
+  Check,
+  Copy,
+  MessageCircle,
+  Pencil,
+  Trash2,
+  AlertCircle,
+  Calendar,
+  ExternalLink,
+  Loader2,
+  Plus,
+  CalendarClock,
+} from "lucide-react";
 import { formatPhone, whatsappNumber, locationFromPhone, timeAgo } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
 import { LeadTimeline } from "./LeadTimeline";
@@ -21,11 +33,10 @@ interface Props {
   onDelete?: (id: string) => Promise<void> | void;
 }
 
-/** Deriva o Tier a partir do faturamento (texto livre, ex.: "R$ 350.000", "1.5 mi", "2 milhões") */
+/** Deriva o Tier a partir do faturamento */
 function tierFromFaturamento(fat?: string | null): string {
   if (!fat) return "—";
   const raw = String(fat).toLowerCase().trim();
-  // captura primeiro número (aceita vírgula ou ponto como decimal)
   const m = raw.match(/([\d]+(?:[.,]\d+)?)/);
   if (!m) return "—";
   let n = parseFloat(m[1].replace(/\./g, "").replace(",", "."));
@@ -33,7 +44,6 @@ function tierFromFaturamento(fat?: string | null): string {
     n = parseFloat(m[1].replace(",", "."));
     if (isNaN(n)) return "—";
   }
-  // multiplicadores
   if (/(milhão|milhões|mi\b|mm\b)/.test(raw)) n *= 1_000_000;
   else if (/(mil\b|k\b)/.test(raw)) n *= 1_000;
   else if (/bilh/.test(raw)) n *= 1_000_000_000;
@@ -45,7 +55,6 @@ function tierFromFaturamento(fat?: string | null): string {
   return "Enterprise";
 }
 
-/** Campo com edição hover: mostra valor; ícone de lápis aparece no hover; clicar habilita input */
 const HoverEditField = ({
   label,
   value,
@@ -103,22 +112,82 @@ const HoverEditField = ({
   );
 };
 
+/** Stepper estilo Salesforce: chevrons conectados com barra preenchida até a etapa atual */
+const SalesforceStepper = ({
+  currentIdx,
+  onStep,
+}: {
+  currentIdx: number;
+  onStep: (id: string) => void;
+}) => {
+  return (
+    <div className="flex w-full overflow-hidden rounded-md border border-border/40 bg-muted/10">
+      {LEAD_ETAPAS.map((e, i) => {
+        const isCurrent = i === currentIdx;
+        const isPast = i < currentIdx;
+        const isDone = isPast || isCurrent;
+        const isLast = i === LEAD_ETAPAS.length - 1;
+
+        return (
+          <button
+            key={e.id}
+            onClick={() => onStep(e.id)}
+            className={`relative flex-1 min-w-0 h-10 flex items-center justify-center text-[10px] font-semibold uppercase tracking-wider transition-colors px-3
+              ${
+                isCurrent
+                  ? "bg-primary text-primary-foreground"
+                  : isPast
+                  ? "bg-primary/70 text-primary-foreground hover:bg-primary/80"
+                  : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
+              }
+            `}
+            style={{
+              clipPath: isLast
+                ? "polygon(0 0, 100% 0, 100% 100%, 0 100%, 12px 50%)"
+                : i === 0
+                ? "polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%)"
+                : "polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%, 12px 50%)",
+              marginLeft: i === 0 ? 0 : -8,
+              zIndex: LEAD_ETAPAS.length - i,
+            }}
+            title={e.label}
+          >
+            <span className="flex items-center gap-1.5 truncate">
+              {isPast && <Check className="h-3 w-3 shrink-0" />}
+              <span className="truncate">{e.label}</span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
 export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtapa, onDelete }: Props) => {
   const [form, setForm] = useState<any>(null);
   const [qualOpen, setQualOpen] = useState(false);
   const [pendingEtapa, setPendingEtapa] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("informacoes");
+  const [tarefaDialogOpen, setTarefaDialogOpen] = useState(false);
   const { toast } = useToast();
-  const { isConnected: googleConnected, emailGoogle, loading: googleLoading, connect: connectGoogle, createEvent: createGoogleEvent, disconnect: disconnectGoogle } = useGoogleCalendar();
+  const {
+    isConnected: googleConnected,
+    emailGoogle,
+    loading: googleLoading,
+    connect: connectGoogle,
+    createEvent: createGoogleEvent,
+    disconnect: disconnectGoogle,
+  } = useGoogleCalendar();
 
   useEffect(() => {
     if (open) {
       setForm(lead);
+      setActiveTab("informacoes");
     }
   }, [open, lead]);
 
   const tier = useMemo(() => tierFromFaturamento(form?.faturamento), [form?.faturamento]);
 
-  // Autosave com debounce
   const initialIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (!open) {
@@ -126,7 +195,6 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
       return;
     }
     if (!form?.id) return;
-    // pula o primeiro render após abrir (evita salvar sem mudança)
     if (initialIdRef.current !== form.id) {
       initialIdRef.current = form.id;
       return;
@@ -169,6 +237,7 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
     }
     await onChangeEtapa(form.id, etapaId);
     setForm((p: any) => ({ ...p, etapa: etapaId }));
+    if (etapaId === "reuniao_agendada") setActiveTab("reuniao");
   };
 
   const handleConfirmQualificacao = async (qualificacao: string) => {
@@ -177,6 +246,7 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
     if (pendingEtapa) {
       await onChangeEtapa(form.id, pendingEtapa);
       setForm({ ...updated, etapa: pendingEtapa });
+      if (pendingEtapa === "reuniao_agendada") setActiveTab("reuniao");
       setPendingEtapa(null);
     } else {
       setForm(updated);
@@ -187,56 +257,28 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader>
-          <SheetTitle className="font-heading text-2xl tracking-wider uppercase">
-            {form.empresa || form.nome}
-          </SheetTitle>
+          <div className="flex items-start justify-between gap-3">
+            <SheetTitle className="font-heading text-2xl tracking-wider uppercase">
+              {form.empresa || form.nome}
+            </SheetTitle>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setTarefaDialogOpen(true)}
+              className="shrink-0"
+            >
+              <CalendarClock className="h-3.5 w-3.5 mr-1.5" />
+              Nova tarefa
+            </Button>
+          </div>
         </SheetHeader>
 
-        {/* STEPPER de etapas */}
-        <div className="mt-6 mb-8">
-          <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-3">
+        {/* STEPPER estilo Salesforce */}
+        <div className="mt-6 mb-6">
+          <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-2">
             Etapa do funil
           </p>
-          <div className="flex items-center gap-1 overflow-x-auto pb-2">
-            {LEAD_ETAPAS.map((e, i) => {
-              const isCurrent = i === currentIdx;
-              const isPast = i < currentIdx;
-              return (
-                <div key={e.id} className="flex items-center gap-1 shrink-0">
-                  <button
-                    onClick={() => handleStep(e.id)}
-                    className={`group flex flex-col items-center gap-1.5 px-2 py-1.5 rounded-md transition-all ${
-                      isCurrent
-                        ? "bg-primary/15 ring-1 ring-primary/40"
-                        : "hover:bg-muted/50"
-                    }`}
-                  >
-                    <div
-                      className={`flex items-center justify-center h-7 w-7 rounded-full text-[11px] font-bold transition-colors ${
-                        isCurrent
-                          ? "bg-primary text-primary-foreground"
-                          : isPast
-                          ? "bg-emerald-500/20 text-emerald-400"
-                          : "bg-muted text-muted-foreground group-hover:bg-muted/80"
-                      }`}
-                    >
-                      {isPast ? <Check className="h-3.5 w-3.5" /> : i + 1}
-                    </div>
-                    <span
-                      className={`text-[10px] font-medium uppercase tracking-wider whitespace-nowrap ${
-                        isCurrent ? "text-foreground" : "text-muted-foreground"
-                      }`}
-                    >
-                      {e.label}
-                    </span>
-                  </button>
-                  {i < LEAD_ETAPAS.length - 1 && (
-                    <ChevronRight className="h-3 w-3 text-muted-foreground/40 shrink-0" />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <SalesforceStepper currentIdx={currentIdx} onStep={handleStep} />
         </div>
 
         {/* CONTATO RÁPIDO */}
@@ -286,229 +328,244 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
           )}
         </div>
 
-        {/* INFORMAÇÕES DO LEAD (collapsible) */}
-        <Collapsible className="mb-3">
-          <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-3 bg-muted/10 hover:bg-muted/20 border border-border/40 rounded-lg transition-colors group">
-            <span className="text-xs font-semibold tracking-widest uppercase text-foreground">
-              Informações do lead
-            </span>
-            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="px-4 pt-2 pb-1 border border-t-0 border-border/40 rounded-b-lg -mt-px bg-background/30">
-            <HoverEditField label="Nome" value={form.nome ?? ""} onChange={(v) => set("nome", v)} />
-            <HoverEditField label="Empresa" value={form.empresa ?? ""} onChange={(v) => set("empresa", v)} />
-            <HoverEditField label="Telefone" value={form.telefone ?? ""} onChange={(v) => set("telefone", v)} />
-            <HoverEditField label="E-mail" value={form.email ?? ""} onChange={(v) => set("email", v)} />
-            <HoverEditField label="Cargo" value={form.cargo ?? ""} onChange={(v) => set("cargo", v)} />
-            <HoverEditField label="Faturamento" value={form.faturamento ?? ""} onChange={(v) => set("faturamento", v)} />
-
-            {/* Tier — derivado, não editável */}
-            <div className="flex items-start justify-between gap-3 py-2 border-b border-border/30">
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1">
-                  Tier <span className="text-muted-foreground/60 normal-case tracking-normal">(auto)</span>
-                </p>
-                <p className="text-sm text-foreground">{tier}</p>
-              </div>
-            </div>
-
-            <HoverEditField label="Segmento" value={form.segmento ?? ""} onChange={(v) => set("segmento", v)} />
-            <HoverEditField label="Canal" value={form.canal ?? ""} onChange={(v) => set("canal", v)} />
-            <HoverEditField
-              label="Valor pago (R$)"
-              value={form.valor_pago != null ? String(form.valor_pago) : ""}
-              onChange={(v) => set("valor_pago", v)}
-            />
-            {form.etapa === "desqualificado" && (
-              <HoverEditField
-                label="Motivo da desqualificação"
-                value={form.motivo_desqualificacao ?? ""}
-                onChange={(v) => set("motivo_desqualificacao", v)}
-              />
-            )}
-            <HoverEditField label="Descrição" value={form.descricao ?? ""} onChange={(v) => set("descricao", v)} multiline />
-            <HoverEditField label="Notas internas" value={form.notas ?? ""} onChange={(v) => set("notas", v)} multiline />
-          </CollapsibleContent>
-        </Collapsible>
-
-        {/* QUALIFICAÇÃO (collapsible) */}
-        <Collapsible className="mb-6">
-          <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-3 bg-muted/10 hover:bg-muted/20 border border-border/40 rounded-lg transition-colors group">
-            <span className="text-xs font-semibold tracking-widest uppercase text-foreground">
+        {/* TABS principais */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+          <TabsList className="grid grid-cols-4 w-full h-auto">
+            <TabsTrigger value="informacoes" className="text-[11px] py-2">
+              Informações
+            </TabsTrigger>
+            <TabsTrigger value="qualificacao" className="text-[11px] py-2">
               Qualificação
-            </span>
-            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-          </CollapsibleTrigger>
-          <CollapsibleContent className="px-4 pt-3 pb-3 border border-t-0 border-border/40 rounded-b-lg -mt-px bg-background/30">
-            <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-2">
-              Detalhes da qualificação
-            </p>
-            <Textarea
-              rows={6}
-              value={form.qualificacao ?? ""}
-              onChange={(e) => set("qualificacao", e.target.value)}
-              placeholder="Ex.: Dor principal — gerar leads B2B. Faturamento ~R$ 800k/mês. Já testou Meta Ads sem ROI. Decisor: CEO. Urgência alta, quer começar em 30 dias."
-              className="text-sm resize-none"
-            />
-          </CollapsibleContent>
-        </Collapsible>
+            </TabsTrigger>
+            <TabsTrigger value="reuniao" className="text-[11px] py-2">
+              Informações da Reunião
+            </TabsTrigger>
+            <TabsTrigger value="historico" className="text-[11px] py-2">
+              Histórico
+            </TabsTrigger>
+          </TabsList>
 
-        {/* GOOGLE CALENDAR — sempre visível em Reunião agendada */}
-        {form.etapa === "reuniao_agendada" && (
-          <div className="mb-6 px-4 py-4 border border-border/40 rounded-lg bg-muted/10 space-y-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-primary" />
-              <span className="text-xs font-semibold tracking-widest uppercase text-foreground">
-                Reunião + Google Calendar
-              </span>
-            </div>
+          {/* TAB: Informações */}
+          <TabsContent value="informacoes" className="mt-4">
+            <div className="px-4 py-2 border border-border/40 rounded-lg bg-background/30">
+              <HoverEditField label="Nome" value={form.nome ?? ""} onChange={(v) => set("nome", v)} />
+              <HoverEditField label="Empresa" value={form.empresa ?? ""} onChange={(v) => set("empresa", v)} />
+              <HoverEditField label="Telefone" value={form.telefone ?? ""} onChange={(v) => set("telefone", v)} />
+              <HoverEditField label="E-mail" value={form.email ?? ""} onChange={(v) => set("email", v)} />
+              <HoverEditField label="Cargo" value={form.cargo ?? ""} onChange={(v) => set("cargo", v)} />
+              <HoverEditField label="Faturamento" value={form.faturamento ?? ""} onChange={(v) => set("faturamento", v)} />
 
-            {/* Data + Hora */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1 block">
-                  Data da reunião
-                </label>
-                <Input
-                  type="date"
-                  value={
-                    form.data_reuniao_agendada
-                      ? new Date(form.data_reuniao_agendada).toISOString().slice(0, 10)
-                      : ""
-                  }
-                  onChange={(e) => {
-                    const dateStr = e.target.value; // YYYY-MM-DD
-                    if (!dateStr) {
-                      set("data_reuniao_agendada", null);
-                      return;
-                    }
-                    const existing = form.data_reuniao_agendada
-                      ? new Date(form.data_reuniao_agendada)
-                      : null;
-                    const hh = existing ? existing.getHours() : 10;
-                    const mm = existing ? existing.getMinutes() : 0;
-                    const [y, m, d] = dateStr.split("-").map(Number);
-                    const newDate = new Date(y, m - 1, d, hh, mm);
-                    set("data_reuniao_agendada", newDate.toISOString());
-                  }}
-                  className="h-9 text-sm"
-                />
+              <div className="flex items-start justify-between gap-3 py-2 border-b border-border/30">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1">
+                    Tier <span className="text-muted-foreground/60 normal-case tracking-normal">(auto)</span>
+                  </p>
+                  <p className="text-sm text-foreground">{tier}</p>
+                </div>
               </div>
-              <div>
-                <label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1 block">
-                  Hora
-                </label>
-                <Input
-                  type="time"
-                  value={
-                    form.data_reuniao_agendada
-                      ? (() => {
-                          const dt = new Date(form.data_reuniao_agendada);
-                          return `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`;
-                        })()
-                      : ""
-                  }
-                  onChange={(e) => {
-                    const timeStr = e.target.value; // HH:MM
-                    if (!timeStr) return;
-                    const [hh, mm] = timeStr.split(":").map(Number);
-                    const base = form.data_reuniao_agendada
-                      ? new Date(form.data_reuniao_agendada)
-                      : new Date();
-                    base.setHours(hh, mm, 0, 0);
-                    set("data_reuniao_agendada", base.toISOString());
-                  }}
-                  className="h-9 text-sm"
-                />
-              </div>
-            </div>
 
-            {/* Avisos / Estado do Google */}
-            {(!form.data_reuniao_agendada || !form.email) ? (
-              <div className="flex items-start gap-2 text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-md px-3 py-2">
-                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                <span>
-                  Preencha {!form.email && "e-mail do lead"}
-                  {!form.email && !form.data_reuniao_agendada && " e "}
-                  {!form.data_reuniao_agendada && "data da reunião"} para criar o invite no Google Calendar.
+              <HoverEditField label="Segmento" value={form.segmento ?? ""} onChange={(v) => set("segmento", v)} />
+              <HoverEditField label="Canal" value={form.canal ?? ""} onChange={(v) => set("canal", v)} />
+              <HoverEditField
+                label="Valor pago (R$)"
+                value={form.valor_pago != null ? String(form.valor_pago) : ""}
+                onChange={(v) => set("valor_pago", v)}
+              />
+              {form.etapa === "desqualificado" && (
+                <HoverEditField
+                  label="Motivo da desqualificação"
+                  value={form.motivo_desqualificacao ?? ""}
+                  onChange={(v) => set("motivo_desqualificacao", v)}
+                />
+              )}
+              <HoverEditField label="Descrição" value={form.descricao ?? ""} onChange={(v) => set("descricao", v)} multiline />
+              <HoverEditField label="Notas internas" value={form.notas ?? ""} onChange={(v) => set("notas", v)} multiline />
+            </div>
+          </TabsContent>
+
+          {/* TAB: Qualificação */}
+          <TabsContent value="qualificacao" className="mt-4">
+            <div className="px-4 py-3 border border-border/40 rounded-lg bg-background/30">
+              <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-2">
+                Detalhes da qualificação
+              </p>
+              <Textarea
+                rows={8}
+                value={form.qualificacao ?? ""}
+                onChange={(e) => set("qualificacao", e.target.value)}
+                placeholder="Ex.: Dor principal — gerar leads B2B. Faturamento ~R$ 800k/mês. Já testou Meta Ads sem ROI. Decisor: CEO. Urgência alta, quer começar em 30 dias."
+                className="text-sm resize-none"
+              />
+            </div>
+          </TabsContent>
+
+          {/* TAB: Informações da Reunião */}
+          <TabsContent value="reuniao" className="mt-4">
+            <div className="px-4 py-4 border border-border/40 rounded-lg bg-muted/10 space-y-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-primary" />
+                <span className="text-xs font-semibold tracking-widest uppercase text-foreground">
+                  Reunião + Google Calendar
                 </span>
               </div>
-            ) : form.google_event_id ? (
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <Check className="h-4 w-4 text-emerald-400" />
-                  <span className="text-foreground">Evento criado e convite enviado para {form.email}</span>
-                </div>
-                {form.google_event_link && (
-                  <a
-                    href={form.google_event_link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-sm text-primary hover:underline shrink-0"
-                  >
-                    Abrir <ExternalLink className="h-3 w-3" />
-                  </a>
-                )}
-              </div>
-            ) : googleConnected === null ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Verificando conexão…
-              </div>
-            ) : !googleConnected ? (
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Conecte seu Google Calendar para criar o evento e enviar o convite automaticamente para o lead.
-                </p>
-                <Button size="sm" variant="outline" onClick={connectGoogle} disabled={googleLoading}>
-                  {googleLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Calendar className="h-4 w-4 mr-1" />}
-                  Conectar Google Calendar
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Conectado como <span className="text-foreground">{emailGoogle}</span>. O lead receberá um convite com link do Google Meet.
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    onClick={async () => {
-                      try {
-                        const res = await createGoogleEvent(form.id, 30);
-                        setForm((p: any) => ({
-                          ...p,
-                          google_event_id: res.event_id,
-                          google_event_link: res.event_link,
-                        }));
-                        toast({ title: "Evento criado!", description: `Convite enviado para ${form.email}` });
-                      } catch (e: any) {
-                        toast({
-                          title: "Falha ao criar evento",
-                          description: e?.message ?? String(e),
-                          variant: "destructive",
-                        });
-                      }
-                    }}
-                    disabled={googleLoading}
-                  >
-                    {googleLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Calendar className="h-4 w-4 mr-1" />}
-                    Criar evento no Google Calendar
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={disconnectGoogle} disabled={googleLoading}>
-                    Desconectar
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
-        {/* TIMELINE: notas, tarefas e histórico */}
-        {form.id && (
-          <div className="mb-6">
-            <LeadTimeline leadId={form.id} />
-          </div>
-        )}
+              {/* Data + Hora */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1 block">
+                    Data da reunião
+                  </label>
+                  <Input
+                    type="date"
+                    value={
+                      form.data_reuniao_agendada
+                        ? new Date(form.data_reuniao_agendada).toISOString().slice(0, 10)
+                        : ""
+                    }
+                    onChange={(e) => {
+                      const dateStr = e.target.value;
+                      if (!dateStr) {
+                        set("data_reuniao_agendada", null);
+                        return;
+                      }
+                      const existing = form.data_reuniao_agendada
+                        ? new Date(form.data_reuniao_agendada)
+                        : null;
+                      const hh = existing ? existing.getHours() : 10;
+                      const mm = existing ? existing.getMinutes() : 0;
+                      const [y, m, d] = dateStr.split("-").map(Number);
+                      const newDate = new Date(y, m - 1, d, hh, mm);
+                      set("data_reuniao_agendada", newDate.toISOString());
+                    }}
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1 block">
+                    Hora
+                  </label>
+                  <Input
+                    type="time"
+                    value={
+                      form.data_reuniao_agendada
+                        ? (() => {
+                            const dt = new Date(form.data_reuniao_agendada);
+                            return `${String(dt.getHours()).padStart(2, "0")}:${String(dt.getMinutes()).padStart(2, "0")}`;
+                          })()
+                        : ""
+                    }
+                    onChange={(e) => {
+                      const timeStr = e.target.value;
+                      if (!timeStr) return;
+                      const [hh, mm] = timeStr.split(":").map(Number);
+                      const base = form.data_reuniao_agendada
+                        ? new Date(form.data_reuniao_agendada)
+                        : new Date();
+                      base.setHours(hh, mm, 0, 0);
+                      set("data_reuniao_agendada", base.toISOString());
+                    }}
+                    className="h-9 text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Avisos / Estado do Google */}
+              {(!form.data_reuniao_agendada || !form.email) ? (
+                <div className="flex items-start gap-2 text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 rounded-md px-3 py-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>
+                    Preencha {!form.email && "e-mail do lead"}
+                    {!form.email && !form.data_reuniao_agendada && " e "}
+                    {!form.data_reuniao_agendada && "data da reunião"} para criar o invite no Google Calendar.
+                  </span>
+                </div>
+              ) : form.google_event_id ? (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Check className="h-4 w-4 text-emerald-400" />
+                    <span className="text-foreground">Evento criado e convite enviado para {form.email}</span>
+                  </div>
+                  {form.google_event_link && (
+                    <a
+                      href={form.google_event_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-sm text-primary hover:underline shrink-0"
+                    >
+                      Abrir <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                </div>
+              ) : googleConnected === null ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Verificando conexão…
+                </div>
+              ) : !googleConnected ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Conecte seu Google Calendar para criar o evento e enviar o convite automaticamente para o lead.
+                  </p>
+                  <Button size="sm" variant="outline" onClick={connectGoogle} disabled={googleLoading}>
+                    {googleLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Calendar className="h-4 w-4 mr-1" />}
+                    Conectar Google Calendar
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Conectado como <span className="text-foreground">{emailGoogle}</span>. O lead receberá um convite com link do Google Meet.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          const res = await createGoogleEvent(form.id, 30);
+                          setForm((p: any) => ({
+                            ...p,
+                            google_event_id: res.event_id,
+                            google_event_link: res.event_link,
+                          }));
+                          toast({ title: "Evento criado!", description: `Convite enviado para ${form.email}` });
+                        } catch (e: any) {
+                          toast({
+                            title: "Falha ao criar evento",
+                            description: e?.message ?? String(e),
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                      disabled={googleLoading}
+                    >
+                      {googleLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Calendar className="h-4 w-4 mr-1" />}
+                      Criar evento no Google Calendar
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={disconnectGoogle} disabled={googleLoading}>
+                      Desconectar
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {form.etapa !== "reuniao_agendada" && (
+                <p className="text-[11px] text-muted-foreground/70 italic">
+                  Mova o lead para "Reunião agendada" para ativar a criação do evento.
+                </p>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* TAB: Histórico (notas + tarefas + log) */}
+          <TabsContent value="historico" className="mt-4">
+            {form.id && (
+              <LeadTimeline
+                leadId={form.id}
+                tarefaDialogOpen={tarefaDialogOpen}
+                onTarefaDialogOpenChange={setTarefaDialogOpen}
+              />
+            )}
+          </TabsContent>
+        </Tabs>
 
         {form.id && onDelete && (
           <div className="flex mt-6 pt-4 border-t border-border">
