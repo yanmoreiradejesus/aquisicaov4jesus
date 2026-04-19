@@ -417,10 +417,10 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
         {/* Typing indicator */}
         {loading && messages[messages.length - 1]?.role !== "assistant" && (
           <div className="flex justify-start">
-            <div className="bg-muted rounded-[18px] rounded-bl-[6px] px-4 py-3 flex gap-1">
-              <span className="h-2 w-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "0ms" }} />
-              <span className="h-2 w-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "150ms" }} />
-              <span className="h-2 w-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+            <div className="bg-[#1C1C1E] rounded-[18px] rounded-bl-[6px] px-4 py-3 flex gap-1">
+              <span className="h-2 w-2 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="h-2 w-2 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: "150ms" }} />
+              <span className="h-2 w-2 rounded-full bg-white/50 animate-bounce" style={{ animationDelay: "300ms" }} />
             </div>
           </div>
         )}
