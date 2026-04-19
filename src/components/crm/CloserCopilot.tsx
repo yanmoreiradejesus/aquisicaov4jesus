@@ -284,16 +284,15 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
 
   return (
     <div
-      className="flex flex-col h-[640px] rounded-2xl overflow-hidden border border-border/40"
+      className="flex flex-col h-[640px] rounded-2xl overflow-hidden border border-white/5"
       style={{
-        background:
-          "linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--surface-2)/0.4) 100%)",
+        background: "#000000",
         fontFamily:
           '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
       }}
     >
-      {/* Header iMessage-style */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/40 bg-background/60 backdrop-blur-md">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/5 bg-black/80 backdrop-blur-md">
         <div className="flex items-center gap-2.5">
           <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#007AFF] to-[#5856D6] flex items-center justify-center text-white text-[13px] font-semibold">
             🧠
