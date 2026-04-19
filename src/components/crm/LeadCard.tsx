@@ -76,11 +76,11 @@ export const LeadCard = ({ lead, onClick, showAge }: Props) => {
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
-              <div className="font-display font-semibold text-[14px] leading-tight text-foreground line-clamp-1 tracking-[-0.01em] normal-case">
+              <div className="font-display font-semibold text-[13px] leading-snug text-foreground truncate tracking-[-0.01em] normal-case">
                 {lead.empresa || lead.nome}
               </div>
               {lead.empresa && (
-                <p className="font-display text-[11px] text-muted-foreground line-clamp-1 mt-0.5 tracking-[-0.005em]">
+                <p className="font-display font-normal text-[11px] text-muted-foreground truncate mt-0.5 tracking-[-0.005em] normal-case">
                   {lead.nome}
                 </p>
               )}
