@@ -691,15 +691,23 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                     </div>
                   )}
                   <p className="text-sm text-muted-foreground">
-                    Conectado como <span className="text-foreground">{emailGoogle}</span>.
                     {form.google_event_id
-                      ? " Adicione novos convidados acima e clique em Atualizar invite para reenviar."
-                      : " O lead receberá um convite com link do Google Meet."}
+                      ? "Adicione novos convidados acima e clique em Atualizar invite para reenviar."
+                      : "O lead receberá um convite com link do Google Meet."}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
                       size="sm"
                       onClick={async () => {
+                        if (!form.qualificacao?.trim() || !form.temperatura) {
+                          toast({
+                            title: "Qualificação obrigatória",
+                            description: "Preencha qualificação e temperatura na aba Qualificação.",
+                            variant: "destructive",
+                          });
+                          setActiveTab("qualificacao");
+                          return;
+                        }
                         try {
                           const validExtras = extraAttendees.filter(
                             (a) => a.email.trim() && /\S+@\S+\.\S+/.test(a.email)
@@ -726,7 +734,7 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                           });
                         }
                       }}
-                      disabled={googleLoading}
+                      disabled={googleLoading || !form.qualificacao?.trim() || !form.temperatura}
                     >
                       {googleLoading ? (
                         <Loader2 className="h-4 w-4 mr-1 animate-spin" />
