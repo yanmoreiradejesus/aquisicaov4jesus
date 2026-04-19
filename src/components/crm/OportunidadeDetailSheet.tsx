@@ -244,6 +244,7 @@ export const OportunidadeDetailSheet = ({
   const [aiLoadingResumo, setAiLoadingResumo] = useState(false);
   const [aiLoadingTarefa, setAiLoadingTarefa] = useState(false);
   const [transcricaoEditing, setTranscricaoEditing] = useState(false);
+  const [transcricaoExpanded, setTranscricaoExpanded] = useState(false);
   const processedHashRef = useRef<string>("");
   const autoTaskCreatedRef = useRef<string>("");
   const { toast } = useToast();
