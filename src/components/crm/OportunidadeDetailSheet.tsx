@@ -296,6 +296,7 @@ export const OportunidadeDetailSheet = ({
       payload.motivo_perda = payload.motivo_perda?.trim() || null;
       payload.notas = payload.notas?.trim() || null;
       payload.transcricao_reuniao = payload.transcricao_reuniao?.trim() || null;
+      payload.resumo_reuniao = payload.resumo_reuniao?.trim() || null;
       payload.temperatura = payload.temperatura || null;
       delete payload.lead;
       delete payload.valor_total;
