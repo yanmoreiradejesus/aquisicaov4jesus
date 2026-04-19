@@ -13,11 +13,16 @@ import {
   Pencil,
   Trash2,
   Plus,
+  Sparkles,
+  Loader2,
+  ListTodo,
 } from "lucide-react";
 import { formatPhone, whatsappNumber, locationFromPhone, timeAgo } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
 import { OportunidadeTimeline } from "./OportunidadeTimeline";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useOportunidadeAtividades } from "@/hooks/useOportunidadeAtividades";
 
 interface Props {
   open: boolean;
@@ -228,12 +233,19 @@ export const OportunidadeDetailSheet = ({
   const [form, setForm] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<string>("informacoes");
   const [tarefaDialogOpen, setTarefaDialogOpen] = useState(false);
+  const [aiResumo, setAiResumo] = useState<string>("");
+  const [aiTarefa, setAiTarefa] = useState<{ titulo: string; descricao: string; prazo_sugerido_dias: number; prioridade: string } | null>(null);
+  const [aiLoading, setAiLoading] = useState<null | "resumo" | "tarefa">(null);
   const { toast } = useToast();
+  const { addTarefa } = useOportunidadeAtividades(oportunidade?.id ?? null);
 
   useEffect(() => {
     if (open) {
       setForm(oportunidade);
       setActiveTab("informacoes");
+      setAiResumo("");
+      setAiTarefa(null);
+      setAiLoading(null);
     }
   }, [open, oportunidade]);
 
@@ -297,6 +309,68 @@ export const OportunidadeDetailSheet = ({
     await onDelete(form.id);
     onOpenChange(false);
   };
+
+  const callMeetingAI = async (action: "summarize" | "suggest_task") => {
+    const transcricao = (form.transcricao_reuniao ?? "").trim();
+    if (transcricao.length < 20) {
+      toast({ title: "Transcrição vazia", description: "Cole a transcrição da reunião antes de usar a IA.", variant: "destructive" });
+      return;
+    }
+    setAiLoading(action === "summarize" ? "resumo" : "tarefa");
+    try {
+      const contexto = {
+        nome_oportunidade: form.nome_oportunidade,
+        etapa: form.etapa,
+        valor_ef: form.valor_ef,
+        valor_fee: form.valor_fee,
+        temperatura: form.temperatura,
+        lead: lead ? {
+          nome: lead.nome, empresa: lead.empresa, segmento: lead.segmento,
+          faturamento: lead.faturamento, qualificacao: lead.qualificacao,
+        } : null,
+      };
+      const { data, error } = await supabase.functions.invoke("meeting-ai", {
+        body: { action, transcricao, contexto },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      if (action === "summarize") {
+        setAiResumo((data as any).resumo ?? "");
+      } else {
+        setAiTarefa((data as any).tarefa ?? null);
+      }
+    } catch (e: any) {
+      toast({ title: "Erro na IA", description: e?.message ?? "Falha ao chamar IA", variant: "destructive" });
+    } finally {
+      setAiLoading(null);
+    }
+  };
+
+  const aplicarResumoNasNotas = () => {
+    if (!aiResumo) return;
+    const atual = (form.notas ?? "").trim();
+    const bloco = `\n\n---\n📝 Resumo IA da reunião:\n${aiResumo}`;
+    set("notas", atual ? atual + bloco : aiResumo);
+    toast({ title: "Resumo adicionado às notas" });
+  };
+
+  const criarTarefaSugerida = async () => {
+    if (!aiTarefa || !form.id) return;
+    const dt = new Date();
+    dt.setDate(dt.getDate() + (aiTarefa.prazo_sugerido_dias ?? 1));
+    dt.setHours(9, 0, 0, 0);
+    try {
+      await addTarefa.mutateAsync({
+        titulo: `[${aiTarefa.prioridade?.toUpperCase() ?? "MED"}] ${aiTarefa.titulo}\n${aiTarefa.descricao}`,
+        data_agendada: dt.toISOString(),
+      });
+      toast({ title: "Tarefa criada", description: aiTarefa.titulo });
+      setAiTarefa(null);
+    } catch (e: any) {
+      toast({ title: "Erro ao criar tarefa", description: e?.message, variant: "destructive" });
+    }
+  };
+
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -568,6 +642,83 @@ export const OportunidadeDetailSheet = ({
                 <p className="text-[10px] text-muted-foreground/60 mt-1.5">
                   Salvamento automático após 600ms.
                 </p>
+              </div>
+
+              {/* IA — Resumo e próxima tarefa */}
+              <div className="border-t border-border/40 pt-4 space-y-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => callMeetingAI("summarize")}
+                    disabled={aiLoading !== null}
+                    className="h-8 text-[11px]"
+                  >
+                    {aiLoading === "resumo" ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                    )}
+                    Resumir reunião
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => callMeetingAI("suggest_task")}
+                    disabled={aiLoading !== null}
+                    className="h-8 text-[11px]"
+                  >
+                    {aiLoading === "tarefa" ? (
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    ) : (
+                      <ListTodo className="h-3.5 w-3.5 mr-1.5" />
+                    )}
+                    Sugerir próxima tarefa
+                  </Button>
+                </div>
+
+                {aiResumo && (
+                  <div className="rounded-lg border border-border/40 bg-surface-2/40 p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                        Resumo IA
+                      </p>
+                      <div className="flex items-center gap-1">
+                        <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px]" onClick={aplicarResumoNasNotas}>
+                          Adicionar às notas
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px]" onClick={() => setAiResumo("")}>
+                          Descartar
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-sm whitespace-pre-wrap text-foreground">{aiResumo}</p>
+                  </div>
+                )}
+
+                {aiTarefa && (
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-semibold tracking-widest uppercase text-primary">
+                        Tarefa sugerida ({aiTarefa.prioridade})
+                      </p>
+                      <span className="text-[10px] text-muted-foreground">
+                        em {aiTarefa.prazo_sugerido_dias}d
+                      </span>
+                    </div>
+                    <p className="text-sm font-medium text-foreground">{aiTarefa.titulo}</p>
+                    <p className="text-xs text-muted-foreground whitespace-pre-wrap">{aiTarefa.descricao}</p>
+                    <div className="flex items-center gap-2 pt-1">
+                      <Button size="sm" className="h-7 text-[11px]" onClick={criarTarefaSugerida}>
+                        <Plus className="h-3 w-3 mr-1" />
+                        Criar tarefa
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 text-[11px]" onClick={() => setAiTarefa(null)}>
+                        Descartar
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </TabsContent>
