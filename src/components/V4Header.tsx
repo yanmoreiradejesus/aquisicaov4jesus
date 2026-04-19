@@ -82,15 +82,6 @@ const V4Header = () => {
 
               {/* Desktop nav */}
               <nav className="hidden md:flex items-center gap-1">
-                <Link
-                  to="/"
-                  className={`${navLinkBase} px-3 rounded-md hover:bg-foreground/5 ${isActive("/") ? navLinkActive : ""}`}
-                  title="Hub"
-                >
-                  <Home className="h-3.5 w-3.5" />
-                  <span>Hub</span>
-                </Link>
-
                 {visibleAquisicaoItems.length > 0 && (
                   <div className="relative" ref={dropdownRef}>
                     <button
@@ -262,20 +253,6 @@ const V4Header = () => {
                   </div>
                 </div>
               )}
-
-              <div className="px-3 py-2">
-                <Link
-                  to="/"
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-[13px] font-medium transition-colors ${
-                    isActive("/")
-                      ? "bg-foreground/10 text-foreground"
-                      : "text-foreground/75 hover:bg-foreground/5 hover:text-foreground"
-                  }`}
-                >
-                  <Home className="h-3.5 w-3.5" />
-                  Hub
-                </Link>
-              </div>
 
               {isAdmin && (
                 <div className="px-3 py-2">
