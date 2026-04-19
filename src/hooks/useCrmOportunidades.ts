@@ -5,9 +5,10 @@ import { supabase } from "@/integrations/supabase/client";
 export const OPORTUNIDADE_ETAPAS: { id: string; label: string; color: string }[] = [
   { id: "proposta", label: "Proposta", color: "bg-blue-500/10 text-blue-400 border-blue-500/30" },
   { id: "negociacao", label: "Negociação", color: "bg-amber-500/10 text-amber-400 border-amber-500/30" },
-  { id: "contrato", label: "Contrato", color: "bg-violet-500/10 text-violet-400 border-violet-500/30" },
-  { id: "fechado_ganho", label: "Fechado/Ganho", color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" },
-  { id: "fechado_perdido", label: "Fechado/Perdido", color: "bg-red-500/10 text-red-400 border-red-500/30" },
+  { id: "contrato", label: "Dúvidas e Fechamento", color: "bg-violet-500/10 text-violet-400 border-violet-500/30" },
+  { id: "fechado_ganho", label: "Ganho", color: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" },
+  { id: "follow_infinito", label: "Follow Infinito", color: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30" },
+  { id: "fechado_perdido", label: "Perdido", color: "bg-red-500/10 text-red-400 border-red-500/30" },
 ];
 
 export function useCrmOportunidades() {
@@ -52,12 +53,43 @@ export function useCrmOportunidades() {
   });
 
   const updateEtapa = useMutation({
-    mutationFn: async ({ id, etapa, motivo_perda }: { id: string; etapa: string; motivo_perda?: string }) => {
+    mutationFn: async ({
+      id,
+      etapa,
+      motivo_perda,
+      transcricao_reuniao,
+      temperatura,
+      novasTarefas,
+    }: {
+      id: string;
+      etapa: string;
+      motivo_perda?: string;
+      transcricao_reuniao?: string;
+      temperatura?: string;
+      novasTarefas?: { titulo: string; data_agendada: string }[];
+    }) => {
       const patch: any = { etapa };
       if (etapa === "fechado_ganho") patch.data_fechamento_real = new Date().toISOString();
       if (etapa === "fechado_perdido" && motivo_perda) patch.motivo_perda = motivo_perda;
+      if (transcricao_reuniao !== undefined) patch.transcricao_reuniao = transcricao_reuniao;
+      if (temperatura !== undefined) patch.temperatura = temperatura;
+
       const { error } = await supabase.from("crm_oportunidades" as any).update(patch).eq("id", id);
       if (error) throw error;
+
+      if (novasTarefas && novasTarefas.length > 0) {
+        const { data: { user } } = await supabase.auth.getUser();
+        const rows = novasTarefas.map((t) => ({
+          oportunidade_id: id,
+          tipo: "tarefa" as const,
+          titulo: t.titulo,
+          descricao: t.titulo,
+          data_agendada: t.data_agendada,
+          usuario_id: user?.id,
+        }));
+        const { error: errAt } = await supabase.from("crm_atividades" as any).insert(rows);
+        if (errAt) throw errAt;
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["crm_oportunidades"] }),
   });

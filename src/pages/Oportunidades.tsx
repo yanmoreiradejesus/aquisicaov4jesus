@@ -7,7 +7,10 @@ import { useCrmOportunidades, OPORTUNIDADE_ETAPAS } from "@/hooks/useCrmOportuni
 import { OportunidadeColumn } from "@/components/crm/OportunidadeColumn";
 import { OportunidadeDialog } from "@/components/crm/OportunidadeDialog";
 import { MotivoPerdaDialog } from "@/components/crm/MotivoPerdaDialog";
+import { OportunidadeAvancarDialog } from "@/components/crm/OportunidadeAvancarDialog";
 import { useToast } from "@/hooks/use-toast";
+
+const WORKFLOW_ETAPAS = new Set(["negociacao", "contrato", "follow_infinito"]);
 
 const Oportunidades = () => {
   const { data: oportunidades = [], isLoading, upsert, updateEtapa, remove } = useCrmOportunidades();
@@ -16,6 +19,8 @@ const Oportunidades = () => {
   const [editing, setEditing] = useState<any | null>(null);
   const [perdaOpen, setPerdaOpen] = useState(false);
   const [pendingPerda, setPendingPerda] = useState<any | null>(null);
+  const [avancarOpen, setAvancarOpen] = useState(false);
+  const [pendingAvanco, setPendingAvanco] = useState<{ op: any; etapa: string } | null>(null);
   const { toast } = useToast();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -37,15 +42,26 @@ const Oportunidades = () => {
     return map;
   }, [filtered]);
 
-  const moveOp = (id: string, etapa: string, motivo_perda?: string) => {
+  const moveOp = (
+    id: string,
+    etapa: string,
+    extras: {
+      motivo_perda?: string;
+      transcricao_reuniao?: string;
+      temperatura?: string;
+      novasTarefas?: { titulo: string; data_agendada: string }[];
+    } = {}
+  ) => {
     updateEtapa.mutate(
-      { id, etapa, motivo_perda },
+      { id, etapa, ...extras },
       {
         onSuccess: () => {
           if (etapa === "fechado_ganho") {
             toast({ title: "Oportunidade ganha! 🎉", description: "Cliente e cobranças criados automaticamente." });
           } else if (etapa === "fechado_perdido") {
             toast({ title: "Oportunidade marcada como perdida" });
+          } else {
+            toast({ title: "Etapa atualizada" });
           }
         },
         onError: (err: any) => toast({ title: "Erro", description: err.message, variant: "destructive" }),
@@ -58,18 +74,57 @@ const Oportunidades = () => {
     if (!over) return;
     const op = oportunidades.find((o: any) => o.id === active.id);
     if (!op || op.etapa === over.id) return;
-    if (over.id === "fechado_perdido") {
+    const destino = String(over.id);
+
+    if (destino === "fechado_perdido") {
       setPendingPerda(op);
       setPerdaOpen(true);
       return;
     }
-    moveOp(op.id, String(over.id));
+
+    if ((op.etapa === "proposta" && destino === "negociacao") || WORKFLOW_ETAPAS.has(destino)) {
+      setPendingAvanco({ op, etapa: destino });
+      setAvancarOpen(true);
+      return;
+    }
+
+    moveOp(op.id, destino);
   };
 
   const handleConfirmPerda = async (motivo: string) => {
     if (!pendingPerda) return;
-    moveOp(pendingPerda.id, "fechado_perdido", motivo);
+    moveOp(pendingPerda.id, "fechado_perdido", { motivo_perda: motivo });
     setPendingPerda(null);
+  };
+
+  const handleConfirmAvanco = async (payload: {
+    transcricao_reuniao?: string;
+    temperatura?: string;
+    novasTarefas: { titulo: string; data_agendada: string }[];
+  }) => {
+    if (!pendingAvanco) return;
+    await new Promise<void>((resolve, reject) => {
+      updateEtapa.mutate(
+        {
+          id: pendingAvanco.op.id,
+          etapa: pendingAvanco.etapa,
+          transcricao_reuniao: payload.transcricao_reuniao,
+          temperatura: payload.temperatura,
+          novasTarefas: payload.novasTarefas,
+        },
+        {
+          onSuccess: () => {
+            toast({ title: "Etapa atualizada", description: "Tarefas registradas com sucesso." });
+            resolve();
+          },
+          onError: (err: any) => {
+            toast({ title: "Erro", description: err.message, variant: "destructive" });
+            reject(err);
+          },
+        }
+      );
+    });
+    setPendingAvanco(null);
   };
 
   const handleSave = async (op: any) => {
@@ -154,6 +209,14 @@ const Oportunidades = () => {
         open={perdaOpen}
         onOpenChange={(v) => { setPerdaOpen(v); if (!v) setPendingPerda(null); }}
         onConfirm={handleConfirmPerda}
+      />
+
+      <OportunidadeAvancarDialog
+        open={avancarOpen}
+        onOpenChange={(v) => { setAvancarOpen(v); if (!v) setPendingAvanco(null); }}
+        oportunidade={pendingAvanco?.op ?? null}
+        etapaDestino={pendingAvanco?.etapa ?? ""}
+        onConfirm={handleConfirmAvanco}
       />
     </div>
   );
