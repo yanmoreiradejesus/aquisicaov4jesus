@@ -252,7 +252,7 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
 
   const handleStep = async (etapaId: string) => {
     if (etapaId === form.etapa) return;
-    if (etapaId === "reuniao_agendada" && !form.qualificacao?.trim()) {
+    if (etapaId === "reuniao_agendada" && (!form.qualificacao?.trim() || !form.temperatura)) {
       setPendingEtapa(etapaId);
       setQualOpen(true);
       return;
@@ -262,8 +262,8 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
     if (etapaId === "reuniao_agendada") setActiveTab("reuniao");
   };
 
-  const handleConfirmQualificacao = async (qualificacao: string) => {
-    const updated = { ...form, qualificacao };
+  const handleConfirmQualificacao = async (qualificacao: string, temperatura: string) => {
+    const updated = { ...form, qualificacao, temperatura };
     await onSave({ ...updated, tier });
     if (pendingEtapa) {
       await onChangeEtapa(form.id, pendingEtapa);
@@ -279,20 +279,9 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-screen sm:max-w-[min(96vw,1400px)] overflow-y-auto">
         <SheetHeader>
-          <div className="flex items-start justify-between gap-3">
-            <SheetTitle className="font-heading text-2xl tracking-wider uppercase">
-              {form.empresa || form.nome}
-            </SheetTitle>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setTarefaDialogOpen(true)}
-              className="shrink-0"
-            >
-              <CalendarClock className="h-3.5 w-3.5 mr-1.5" />
-              Nova tarefa
-            </Button>
-          </div>
+          <SheetTitle className="font-heading text-2xl tracking-wider uppercase pr-10">
+            {form.empresa || form.nome}
+          </SheetTitle>
         </SheetHeader>
 
         {/* STEPPER estilo Salesforce */}
@@ -352,15 +341,18 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
 
         {/* TABS principais */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="grid grid-cols-4 w-full h-auto">
+          <TabsList className="grid grid-cols-5 w-full h-auto">
             <TabsTrigger value="informacoes" className="text-[11px] py-2">
               Informações
+            </TabsTrigger>
+            <TabsTrigger value="tarefas" className="text-[11px] py-2">
+              Tarefas
             </TabsTrigger>
             <TabsTrigger value="qualificacao" className="text-[11px] py-2">
               Qualificação
             </TabsTrigger>
             <TabsTrigger value="reuniao" className="text-[11px] py-2">
-              Informações da Reunião
+              Reunião
             </TabsTrigger>
             <TabsTrigger value="historico" className="text-[11px] py-2">
               Histórico
