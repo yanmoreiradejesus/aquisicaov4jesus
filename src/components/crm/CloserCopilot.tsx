@@ -310,7 +310,7 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2 text-[10px]"
+                className="h-7 px-2 text-[10px] text-white/70 hover:text-white hover:bg-white/10"
                 onClick={saveToNotes}
                 disabled={savingNotes}
               >
@@ -320,7 +320,7 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2 text-[10px]"
+                className="h-7 px-2 text-[10px] text-white/70 hover:text-white hover:bg-white/10"
                 onClick={() => setMessages([])}
                 disabled={loading}
               >
