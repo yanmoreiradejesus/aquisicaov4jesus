@@ -45,7 +45,7 @@ export const LeadColumn = ({
         <div
           ref={setNodeRef}
           className={cn(
-            "flex-1 min-h-[240px] flex items-start justify-center pt-4 rounded-b-xl border border-t-0 border-border/40 transition-colors duration-300 ease-ios",
+            "flex-1 min-h-[240px] flex items-start justify-center pt-4 rounded-b-xl border border-t-0 border-border/40 transition-colors duration-300 ease-ios overflow-hidden",
             isOver ? "bg-primary/8 ring-1 ring-primary/40 ring-inset" : "bg-surface-1/40"
           )}
         >
@@ -90,7 +90,7 @@ export const LeadColumn = ({
       <div
         ref={setNodeRef}
         className={cn(
-          "relative flex-1 min-h-[240px] p-2 space-y-2 rounded-b-xl border border-t-0 border-border/40 transition-colors duration-300 ease-ios overflow-hidden",
+          "relative flex-1 min-h-[240px] p-2 space-y-2 rounded-b-xl border border-t-0 border-border/40 transition-colors duration-300 ease-ios",
           isOver
             ? "bg-primary/8 ring-1 ring-primary/40 ring-inset"
             : "bg-surface-1/40"

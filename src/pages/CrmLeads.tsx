@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { LeadCard } from "@/components/crm/LeadCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, Upload, ListChecks, LayoutGrid } from "lucide-react";
@@ -30,6 +31,7 @@ const CrmLeads = () => {
   const [desqualOpen, setDesqualOpen] = useState(false);
   const [desqualLead, setDesqualLead] = useState<any | null>(null);
   const [view, setView] = useState<"kanban" | "tarefas">("kanban");
+  const [activeId, setActiveId] = useState<string | null>(null);
   const { toast } = useToast();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -78,7 +80,12 @@ const CrmLeads = () => {
     );
   };
 
+  const handleDragStart = (e: DragStartEvent) => {
+    setActiveId(String(e.active.id));
+  };
+
   const handleDragEnd = (e: DragEndEvent) => {
+    setActiveId(null);
     const { active, over } = e;
     if (!over) return;
     const lead = leads.find((l: any) => l.id === active.id);
@@ -95,6 +102,8 @@ const CrmLeads = () => {
     }
     moveLead(lead.id, String(over.id));
   };
+
+  const activeLead = activeId ? leads.find((l: any) => l.id === activeId) : null;
 
   const handleConfirmQualificacao = async (qualificacao: string, temperatura: string) => {
     if (!pendingMove) return;
@@ -206,7 +215,7 @@ const CrmLeads = () => {
               ))}
             </div>
           ) : (
-            <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+            <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveId(null)}>
               <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4">
                 {LEAD_ETAPAS.map((etapa) => (
                   <LeadColumn
@@ -221,6 +230,19 @@ const CrmLeads = () => {
                   />
                 ))}
               </div>
+              <DragOverlay dropAnimation={{ duration: 220, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }}>
+                {activeLead ? (
+                  <div className="w-72">
+                    <LeadCard
+                      lead={activeLead}
+                      onClick={() => {}}
+                      showAge={activeLead.etapa === "entrada"}
+                      showStageDays={activeLead.etapa === "tentativa_contato"}
+                      overlay
+                    />
+                  </div>
+                ) : null}
+              </DragOverlay>
             </DndContext>
           )
         ) : (
