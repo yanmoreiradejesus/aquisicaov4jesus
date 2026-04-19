@@ -3,7 +3,7 @@ import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "
 import V4Header from "@/components/V4Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Upload, Download } from "lucide-react";
+import { Plus, Search, Upload } from "lucide-react";
 import { useCrmLeads, LEAD_ETAPAS } from "@/hooks/useCrmLeads";
 import { LeadColumn } from "@/components/crm/LeadColumn";
 import { LeadDialog } from "@/components/crm/LeadDialog";
@@ -161,24 +161,12 @@ const CrmLeads = () => {
             >
               <Plus className="h-4 w-4 mr-1.5" /> Novo Lead
             </Button>
-            <div className="flex items-center gap-1">
-              <Button
-                onClick={() => setImportOpen(true)}
-                className="h-9 rounded-xl bg-gradient-to-b from-primary to-primary/85 shadow-ios-md hover:shadow-ios-glow active:scale-[0.98] transition-all"
-              >
-                <Upload className="h-4 w-4 mr-1.5" /> Importar
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setExportOpen(true)}
-                className="h-9 px-2.5 rounded-xl hover:bg-surface-2/80 text-muted-foreground hover:text-foreground"
-                title="Exportar leads em CSV"
-              >
-                <Download className="h-3.5 w-3.5 mr-1" />
-                <span className="text-xs font-medium">Exportar</span>
-              </Button>
-            </div>
+            <Button
+              onClick={() => setImportOpen(true)}
+              className="h-9 rounded-xl bg-gradient-to-b from-primary to-primary/85 shadow-ios-md hover:shadow-ios-glow active:scale-[0.98] transition-all"
+            >
+              <Upload className="h-4 w-4 mr-1.5" /> Importar
+            </Button>
           </div>
         </div>
 
@@ -206,7 +194,6 @@ const CrmLeads = () => {
                   onEdit={(l) => { setEditing(l); setSheetOpen(true); }}
                   defaultCollapsed={etapa.id === "desqualificado"}
                   onPhoneInteract={handlePhoneInteract}
-                  onDisqualify={(l) => { setDesqualLead(l); setDesqualOpen(true); }}
                 />
               ))}
             </div>
