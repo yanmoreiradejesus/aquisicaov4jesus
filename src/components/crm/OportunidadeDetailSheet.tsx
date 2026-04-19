@@ -331,7 +331,7 @@ export const OportunidadeDetailSheet = ({
         } : null,
       };
       const { data, error } = await supabase.functions.invoke("meeting-ai", {
-        body: { action, transcricao, contexto },
+        body: { action, transcricao, contexto, provider: aiProvider },
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
