@@ -2,38 +2,83 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+function fromBase64Url(input: string) {
+  const base64 = input.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64 + "=".repeat((4 - (base64.length % 4 || 4)) % 4);
+  return atob(padded);
+}
+
+async function signState(payload: string) {
+  const secret = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!secret) throw new Error("Missing signing secret");
+
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
+  const bytes = new Uint8Array(signature);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+async function resolveUserId(req: Request, state?: string | null) {
+  if (state) {
+    const [payloadEncoded, signature] = state.split(".");
+    if (!payloadEncoded || !signature) throw new Error("Invalid state");
+
+    const payload = fromBase64Url(payloadEncoded);
+    const expectedSignature = await signState(payload);
+    if (signature !== expectedSignature) throw new Error("Invalid state signature");
+
+    const parsed = JSON.parse(payload) as {
+      uid: string;
+      return_origin?: string | null;
+      exp: number;
+    };
+
+    if (!parsed.uid || !parsed.exp || parsed.exp < Date.now()) {
+      throw new Error("Expired or invalid state");
+    }
+
+    return {
+      userId: parsed.uid,
+      returnOrigin: parsed.return_origin ?? null,
+    };
+  }
+
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) throw new Error("Missing auth or state");
+
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { Authorization: authHeader } } }
+  );
+
+  const { data: userData, error: userErr } = await supabase.auth.getUser();
+  if (userErr || !userData.user) throw new Error("Invalid user");
+
+  return {
+    userId: userData.user.id,
+    returnOrigin: null,
+  };
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing auth" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
-
-    const { data: userData, error: userErr } = await supabase.auth.getUser();
-    if (userErr || !userData.user) {
-      return new Response(JSON.stringify({ error: "Invalid user" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const body = await req.json();
-    const { code, redirect_uri } = body ?? {};
+    const { code, redirect_uri, state } = body ?? {};
     if (!code || !redirect_uri) {
       return new Response(JSON.stringify({ error: "Missing code or redirect_uri" }), {
         status: 400,
@@ -41,10 +86,11 @@ Deno.serve(async (req) => {
       });
     }
 
+    const { userId, returnOrigin } = await resolveUserId(req, state);
+
     const clientId = Deno.env.get("GOOGLE_OAUTH_CLIENT_ID")!;
     const clientSecret = Deno.env.get("GOOGLE_OAUTH_CLIENT_SECRET")!;
 
-    // Exchange code for tokens
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -77,7 +123,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Get user email from Google
     let emailGoogle: string | null = null;
     try {
       const uRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
@@ -89,14 +134,13 @@ Deno.serve(async (req) => {
 
     const expiresAt = new Date(Date.now() + (expires_in ?? 3600) * 1000).toISOString();
 
-    // Use service role to upsert (bypasses RLS but we set user_id from validated JWT)
     const admin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
     const { error: upErr } = await admin.from("user_google_tokens").upsert({
-      user_id: userData.user.id,
+      user_id: userId,
       refresh_token,
       access_token,
       expires_at: expiresAt,
@@ -113,12 +157,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ ok: true, email_google: emailGoogle }), {
+    return new Response(JSON.stringify({ ok: true, email_google: emailGoogle, return_origin: returnOrigin }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
     console.error(e);
-    return new Response(JSON.stringify({ error: String(e) }), {
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : String(e) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
