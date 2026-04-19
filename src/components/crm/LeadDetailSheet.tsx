@@ -108,6 +108,7 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
   const [qualOpen, setQualOpen] = useState(false);
   const [pendingEtapa, setPendingEtapa] = useState<string | null>(null);
   const { toast } = useToast();
+  const { isConnected: googleConnected, emailGoogle, loading: googleLoading, connect: connectGoogle, createEvent: createGoogleEvent, disconnect: disconnectGoogle } = useGoogleCalendar();
 
   useEffect(() => {
     if (open) {
