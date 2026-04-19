@@ -1,62 +1,42 @@
 
+Objetivo: deixar a barra realmente fluida e impedir que a logo “apareça depois”.
 
-## Fix: animação fluida (sem travadas)
+1. Reestruturar o header para um layout compartilhado
+- Hoje o `V4Header` está dentro de cada página (`Hub`, `CrmLeads`, `Oportunidades`, `Index` etc.), então ele desmonta/remonta junto com a página inteira.
+- Vou mover o header para um layout global de páginas protegidas no `App.tsx`, deixando o conteúdo das rotas trocar por baixo dele.
+- Isso reduz remounts, evita recarregar a logo a cada rota e deixa a animação mais estável.
 
-Causas das travadas hoje:
-1. Animar `width` em px/% força reflow do header inteiro (e do `<header>` pai com `flex justify-center`) — o navegador recalcula layout em todo frame.
-2. `boxShadow` keyframed também é caro (não é GPU-accelerated).
-3. `staggerChildren` começa exatamente em `delayChildren: 0.7` — itens entram enquanto a barra ainda está expandindo, competindo por CPU.
-4. `ease: "easeOut"` em sequência de 4 keyframes não dá curva suave entre fases.
+2. Separar a animação do header da transição da página
+- Hoje a barra anima ao mesmo tempo que o `PageTransition` faz fade do conteúdo, o que piora a sensação de travamento.
+- Vou manter a animação da barra independente e ajustar o fluxo para que o conteúdo da rota não “compita” visualmente com ela.
+- Se necessário, simplifico/removo o fade global da página nas rotas que usam esse header.
 
-### Estratégia: animar `transform: scaleX` (GPU) em vez de `width`
+3. Corrigir a logo carregando tarde
+- A causa provável é dupla: remount do header + asset não pré-carregado.
+- Vou:
+  - manter o header vivo entre rotas;
+  - pré-carregar a logo no bootstrap do app;
+  - reservar o espaço da logo desde o primeiro frame para não parecer que ela “entra atrasada”.
 
-A barra ocupa **largura final desde o mount** (`width: 100%`, ou `auto` real). O efeito de "ponto que estica" é feito com `scaleX`:
+4. Refinar a animação para máxima fluidez
+- Manter a expansão via `transform: scaleX` (GPU), mas simplificar ainda mais:
+  - sem animar propriedades de layout;
+  - sem trabalho extra nos itens internos durante a expansão;
+  - conteúdo só aparece quando a barra já estiver pronta.
+- Também vou revisar qualquer sombra/blur/transição concorrente que esteja pesando no pill vermelho.
 
-- Fase 1 (0→25%): `scaleX: 0.04` (vira o ponto), `scaleY: 1`, `borderRadius: 9999px`, opacity 0→1.
-- Fase 2 (25→65%): `scaleX: 0.04 → 1` (estica horizontal). 
-- Fase 3 (65→100%): `scaleX: 1`, conteúdo fade-in.
+5. Preservar interação dos menus
+- Manter o controle de `overflow` apenas durante a expansão.
+- Garantir que os dropdowns de “Revenue” e “Data Analytics” continuem clicáveis após a animação.
 
-Como `scaleX` é puramente GPU (compositor), roda 60fps mesmo em mobile. Sem reflow.
+Arquivos principais
+- `src/App.tsx` — criar shell/layout compartilhado com o header fixo fora das páginas.
+- `src/components/V4Header.tsx` — simplificar a animação, desacoplar do conteúdo e estabilizar a logo.
+- `src/components/PageTransition.tsx` — reduzir/remover competição visual com a animação do topo.
+- Páginas que hoje renderizam `V4Header` (`Hub`, `Index`, `CrmLeads`, `Oportunidades` etc.) — remover header duplicado.
 
-Para o "ponto" parecer realmente um ponto (e não uma barra fininha esticada), usar `transform-origin: center` e largura real fixa. O conteúdo interno fica com `opacity: 0` durante fases 1-2 (não escala junto — usar contra-escala? não precisa, basta esconder).
-
-### Mudanças concretas
-
-```tsx
-// Container fica com largura real desde o início
-<motion.div
-  key={location.pathname}
-  initial={prefersReducedMotion ? false : { scaleX: 0.04, opacity: 0 }}
-  animate={{ scaleX: 1, opacity: 1 }}
-  transition={{
-    scaleX: { duration: 0.7, ease: [0.22, 1, 0.36, 1] }, // cubic-bezier suave (out-expo-ish)
-    opacity: { duration: 0.25, ease: "easeOut" },
-  }}
-  onAnimationComplete={() => setBarReady(true)}
-  style={{ transformOrigin: "center", willChange: "transform" }}
-  className="... bg-red-600 rounded-full ..."
->
-  <motion.div
-    initial={{ opacity: 0 }}
-    animate={{ opacity: 1 }}
-    transition={{ delay: 0.55, duration: 0.3, ease: "easeOut" }}
-    style={{ willChange: "opacity" }}
-  >
-    {/* conteúdo — sem stagger por item, fade único do bloco */}
-  </motion.div>
-</motion.div>
-```
-
-### Decisões para máxima fluidez
-
-1. **Remover `boxShadow` keyframed** — manter shadow estático no className. (Glow inicial pode ser feito com um `::before` pseudo, ou simplesmente omitido — a animação fica mais limpa sem ele.)
-2. **Remover `staggerChildren`** — substituir por um único fade do wrapper interno (delay 0.55s, duration 0.3s). Stagger de 6 itens × 60ms adiciona 360ms de paint work; o efeito visual é praticamente idêntico ao fade único e roda muito mais leve.
-3. **`borderRadius` constante 9999px** — já está, manter.
-4. **`willChange: transform` / `willChange: opacity`** — promove para layer GPU.
-5. **Curva de easing**: `cubic-bezier(0.22, 1, 0.36, 1)` (ease-out-expo suave) em vez de `easeOut` linear — dá aquela sensação "lisa" de Apple/Linear.
-6. **Duração total 700ms** (em vez de 1000ms) — animações de UI fluidas raramente passam de 600-700ms; 1s começa a parecer lenta.
-7. **Manter `barReady` toggle do `overflow`** para os dropdowns continuarem clicáveis.
-
-### Arquivos
-- `src/components/V4Header.tsx` — substituir keyframes width/height/scale/boxShadow por `scaleX` puro + fade único do conteúdo. Remover variants de stagger.
-
+Detalhes técnicos
+- Problema principal identificado: o header está sendo montado dentro de cada página, então cada troca de rota recria a barra inteira.
+- Problema secundário: a logo PNG pode carregar depois do primeiro frame, o que fica muito perceptível porque a barra já abriu.
+- Solução técnica: usar um app shell persistente + animar apenas o pill interno por mudança de rota + preload da imagem.
+- Resultado esperado: barra abrindo lisa, sem sensação de “engasgo”, e logo presente desde o início da animação.
