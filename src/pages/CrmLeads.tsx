@@ -10,11 +10,13 @@ import { LeadDialog } from "@/components/crm/LeadDialog";
 import { LeadDetailSheet } from "@/components/crm/LeadDetailSheet";
 import { LeadImportDialog } from "@/components/crm/LeadImportDialog";
 import { QualificacaoDialog } from "@/components/crm/QualificacaoDialog";
+import { LeadsFilterPopover, EMPTY_FILTERS, type LeadFilters } from "@/components/crm/LeadsFilterPopover";
 import { useToast } from "@/hooks/use-toast";
 
 const CrmLeads = () => {
   const { data: leads = [], isLoading, upsert, updateEtapa, remove } = useCrmLeads();
   const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<LeadFilters>(EMPTY_FILTERS);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -26,12 +28,25 @@ const CrmLeads = () => {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return leads;
-    const q = search.toLowerCase();
-    return leads.filter((l: any) =>
-      [l.nome, l.email, l.empresa, l.telefone].some((v) => v?.toLowerCase().includes(q))
-    );
-  }, [leads, search]);
+    const q = search.trim().toLowerCase();
+    return leads.filter((l: any) => {
+      if (q && ![l.nome, l.email, l.empresa, l.telefone].some((v) => v?.toLowerCase().includes(q))) return false;
+      if (filters.dateFrom && new Date(l.created_at) < new Date(filters.dateFrom)) return false;
+      if (filters.dateTo) {
+        const end = new Date(filters.dateTo); end.setHours(23, 59, 59, 999);
+        if (new Date(l.created_at) > end) return false;
+      }
+      if (filters.etapa !== "all" && l.etapa !== filters.etapa) return false;
+      if (filters.origem !== "all" && l.origem !== filters.origem) return false;
+      if (filters.canal !== "all" && l.canal !== filters.canal) return false;
+      if (filters.tier !== "all" && l.tier !== filters.tier) return false;
+      if (filters.temperatura !== "all" && l.temperatura !== filters.temperatura) return false;
+      if (filters.segmento !== "all" && l.segmento !== filters.segmento) return false;
+      if (filters.estado !== "all" && l.estado !== filters.estado) return false;
+      if (filters.responsavel !== "all" && l.responsavel_id !== filters.responsavel) return false;
+      return true;
+    });
+  }, [leads, search, filters]);
 
   const grouped = useMemo(() => {
     const map: Record<string, any[]> = {};
@@ -94,13 +109,13 @@ const CrmLeads = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div>
             <p className="text-[10px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-1">
-              Comercial
+              Aquisição
             </p>
             <h1 className="font-display text-[28px] lg:text-[34px] font-semibold text-foreground tracking-[-0.02em] normal-case">
               CRM Leads
             </h1>
           </div>
-          <div className="flex items-center gap-2 glass rounded-2xl p-1.5 shadow-ios-sm">
+          <div className="flex flex-wrap items-center gap-2 glass rounded-2xl p-1.5 shadow-ios-sm">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
@@ -110,14 +125,19 @@ const CrmLeads = () => {
                 className="pl-9 w-full md:w-64 h-9 rounded-xl border-transparent bg-surface-2/60 focus-visible:ring-2 focus-visible:ring-primary/40"
               />
             </div>
-            <Button variant="ghost" onClick={() => setImportOpen(true)} className="h-9 rounded-xl hover:bg-surface-2/80">
-              <Upload className="h-4 w-4 mr-1.5" /> Importar
-            </Button>
+            <LeadsFilterPopover filters={filters} onChange={setFilters} leads={leads} />
             <Button
+              variant="ghost"
               onClick={() => { setEditing(null); setDialogOpen(true); }}
-              className="h-9 rounded-xl bg-gradient-to-b from-primary to-primary/85 shadow-ios-md hover:shadow-ios-glow active:scale-[0.98] transition-all"
+              className="h-9 rounded-xl hover:bg-surface-2/80"
             >
               <Plus className="h-4 w-4 mr-1.5" /> Novo Lead
+            </Button>
+            <Button
+              onClick={() => setImportOpen(true)}
+              className="h-9 rounded-xl bg-gradient-to-b from-primary to-primary/85 shadow-ios-md hover:shadow-ios-glow active:scale-[0.98] transition-all"
+            >
+              <Upload className="h-4 w-4 mr-1.5" /> Importar
             </Button>
           </div>
         </div>
