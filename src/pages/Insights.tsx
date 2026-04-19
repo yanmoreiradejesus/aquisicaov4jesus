@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 import { format, startOfYear, subYears } from "date-fns";
-import V4Header from "@/components/V4Header";
 import InsightsDateFilter from "@/components/InsightsDateFilter";
 import PerformanceBarChart from "@/components/PerformanceBarChart";
 import CrossPerformanceMatrix from "@/components/CrossPerformanceMatrix";
@@ -102,7 +101,6 @@ const Insights = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <V4Header />
         <main className="mx-auto max-w-7xl p-4 lg:p-8">
           <div className="mb-8">
             <Skeleton className="h-10 w-64 mb-2" />
@@ -123,7 +121,6 @@ const Insights = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-background">
-        <V4Header />
         <main className="mx-auto max-w-7xl p-4 lg:p-8">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
@@ -143,7 +140,6 @@ const Insights = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <V4Header />
 
       <main className="mx-auto max-w-7xl space-y-8 p-4 lg:p-8">
         {/* Page Header */}

@@ -1,4 +1,3 @@
-import V4Header from "@/components/V4Header";
 import { Card } from "@/components/ui/card";
 import { Construction } from "lucide-react";
 
@@ -9,7 +8,6 @@ interface Props {
 
 const ComercialPlaceholder = ({ titulo, descricao }: Props) => (
   <div className="min-h-screen bg-background">
-    <V4Header />
     <main className="container mx-auto max-w-3xl px-4 lg:px-8 py-12 lg:py-20">
       <p className="text-xs font-medium text-muted-foreground tracking-widest uppercase mb-2">
         Comercial

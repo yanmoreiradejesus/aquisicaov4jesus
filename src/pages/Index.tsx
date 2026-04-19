@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect } from "react";
-import V4Header from "@/components/V4Header";
 import FilterBar from "@/components/FilterBar";
 import ConversionFunnel from "@/components/ConversionFunnel";
 import FunnelSkeleton from "@/components/FunnelSkeleton";
@@ -125,7 +124,6 @@ const Index = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background animate-fade-in">
-        <V4Header />
         <div className="mx-auto max-w-7xl p-4 lg:p-8 space-y-8">
           {/* Filter Bar Skeleton */}
           <div className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6">
@@ -160,7 +158,6 @@ const Index = () => {
       </div>;
   }
   return <div className="min-h-screen bg-background">
-      <V4Header />
       
       <main className="container mx-auto max-w-7xl space-y-6 lg:space-y-8 px-3 sm:px-4 lg:px-8 py-4 lg:py-8">
         <FilterBar filters={filters} onFilterChange={handleFilterChange} uniqueValues={uniqueValues} />

@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import V4Header from "@/components/V4Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -153,7 +152,6 @@ const Admin = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <V4Header />
       <div className="container mx-auto px-4 lg:px-8 py-8 space-y-8">
         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
           <Shield className="h-6 w-6" /> Painel Administrativo

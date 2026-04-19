@@ -1,5 +1,4 @@
 import { useState, useMemo, useCallback } from "react";
-import V4Header from "@/components/V4Header";
 import { useGoogleSheetsData, Lead } from "@/hooks/useGoogleSheetsData";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -247,7 +246,6 @@ const DashboardComercial = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <V4Header />
         <div className="container mx-auto px-4 lg:px-8 py-6 space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             {Array.from({ length: 5 }).map((_, i) => (
@@ -267,7 +265,6 @@ const DashboardComercial = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <V4Header />
       <div className="container mx-auto px-4 lg:px-8 py-6 space-y-6">
 
         {/* ── FILTERS ── */}

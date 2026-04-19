@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import V4Header from "@/components/V4Header";
 import { Card } from "@/components/ui/card";
 import { TrendingUp, ArrowRight, LayoutGrid, Briefcase } from "lucide-react";
 
@@ -63,7 +62,6 @@ const Hub = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <V4Header />
       <main className="container mx-auto max-w-5xl px-4 lg:px-8 py-12 lg:py-20">
         <header className="mb-10 lg:mb-16 space-y-3">
           <p className="text-xs lg:text-sm font-medium text-muted-foreground tracking-widest uppercase">
