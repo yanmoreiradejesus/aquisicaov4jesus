@@ -58,7 +58,7 @@ export const LeadDialog = ({ open, onOpenChange, lead, onSave, onDelete }: Props
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-2xl border-border/60 shadow-ios-xl glass-strong animate-scale-in">
         <DialogHeader>
           <DialogTitle className="font-heading text-2xl tracking-wider uppercase">
             {lead?.id ? "Editar Lead" : "Novo Lead"}
@@ -219,8 +219,12 @@ export const LeadDialog = ({ open, onOpenChange, lead, onSave, onDelete }: Props
               <Trash2 className="h-4 w-4 mr-1" /> Excluir
             </Button>
           )}
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={saving || !form.nome?.trim()}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">Cancelar</Button>
+          <Button
+            onClick={handleSave}
+            disabled={saving || !form.nome?.trim()}
+            className="rounded-xl bg-gradient-to-b from-primary to-primary/85 shadow-ios-md hover:shadow-ios-glow active:scale-[0.98] transition-all"
+          >
             {saving ? "Salvando..." : "Salvar"}
           </Button>
         </DialogFooter>

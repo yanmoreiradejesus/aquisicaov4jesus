@@ -48,18 +48,38 @@ All colors MUST be HSL.
 
     --radius: 0.75rem; /* Rounded corners */
 
+    /* Layered surfaces (Apple-like depth) */
+    --surface-1: 240 10% 5.5%;
+    --surface-2: 240 9% 8%;
+    --surface-elevated: 240 8% 11%;
+
+    /* Temperature semantic tokens */
+    --temp-hot: 0 84% 60%;
+    --temp-warm: 38 92% 55%;
+    --temp-cold: 200 90% 60%;
+
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(217 91% 45%));
     --gradient-success: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 28%));
     --gradient-card: linear-gradient(145deg, hsl(240 10% 5%), hsl(240 8% 8%));
     --gradient-warning: linear-gradient(135deg, hsl(38 92% 50%), hsl(38 92% 40%));
-    
-    /* Shadows */
-    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.3);
+    --gradient-primary-glow: linear-gradient(135deg, hsl(217 91% 65%), hsl(217 91% 50%));
+
+    /* Shadows — two-layer Apple style (ambient + key light) */
+    --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.18), 0 1px 1px hsl(0 0% 0% / 0.12);
+    --shadow-md: 0 4px 8px -2px hsl(0 0% 0% / 0.25), 0 2px 4px -2px hsl(0 0% 0% / 0.15);
+    --shadow-lg: 0 16px 32px -8px hsl(0 0% 0% / 0.45), 0 4px 8px -4px hsl(0 0% 0% / 0.25);
+    --shadow-xl: 0 24px 48px -12px hsl(0 0% 0% / 0.55), 0 8px 16px -8px hsl(0 0% 0% / 0.3);
+    --shadow-glow: 0 0 0 1px hsl(217 91% 60% / 0.25), 0 8px 24px -4px hsl(217 91% 60% / 0.35);
     --shadow-card: 0 4px 6px -1px hsl(0 0% 0% / 0.2);
-    
+
+    /* Easing curves */
+    --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
     /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-ios: all 0.25s cubic-bezier(0.32, 0.72, 0, 1);
   }
 }
 
@@ -68,11 +88,72 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-background text-foreground font-body antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading tracking-wider uppercase;
+  }
+
+  button, a, [role="button"] {
+    transition: var(--transition-ios);
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: hsl(var(--surface-1) / 0.65);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border: 1px solid hsl(var(--border) / 0.6);
+  }
+  .glass-strong {
+    background: hsl(var(--surface-2) / 0.85);
+    backdrop-filter: saturate(180%) blur(28px);
+    -webkit-backdrop-filter: saturate(180%) blur(28px);
+  }
+  .shadow-ios-sm { box-shadow: var(--shadow-sm); }
+  .shadow-ios-md { box-shadow: var(--shadow-md); }
+  .shadow-ios-lg { box-shadow: var(--shadow-lg); }
+  .shadow-ios-xl { box-shadow: var(--shadow-xl); }
+  .shadow-ios-glow { box-shadow: var(--shadow-glow); }
+  .ease-ios { transition-timing-function: var(--ease-ios); }
+
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      hsl(0 0% 100% / 0.06),
+      transparent
+    );
+    animation: shimmer 1.8s infinite;
+  }
+
+  .focus-glow:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.35), 0 0 0 1px hsl(var(--primary) / 0.6);
+  }
+
+  .card-lift {
+    transition: transform 0.25s var(--ease-ios), box-shadow 0.25s var(--ease-ios);
+  }
+  .card-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
   }
 }
