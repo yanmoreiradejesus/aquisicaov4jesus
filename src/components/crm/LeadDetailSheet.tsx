@@ -279,7 +279,7 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-screen sm:max-w-[min(96vw,1400px)] overflow-y-auto glass-strong border-l-border/60">
         <SheetHeader>
-          <SheetTitle className="!font-display !tracking-[-0.02em] !normal-case text-[22px] font-semibold pr-10">
+          <SheetTitle className="tracking-tight text-[22px] font-semibold pr-10">
             {form.empresa || form.nome}
           </SheetTitle>
         </SheetHeader>
