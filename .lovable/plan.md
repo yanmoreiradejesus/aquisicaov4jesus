@@ -1,42 +1,50 @@
 
-Objetivo: deixar a barra realmente fluida e impedir que a logo “apareça depois”.
 
-1. Reestruturar o header para um layout compartilhado
-- Hoje o `V4Header` está dentro de cada página (`Hub`, `CrmLeads`, `Oportunidades`, `Index` etc.), então ele desmonta/remonta junto com a página inteira.
-- Vou mover o header para um layout global de páginas protegidas no `App.tsx`, deixando o conteúdo das rotas trocar por baixo dele.
-- Isso reduz remounts, evita recarregar a logo a cada rota e deixa a animação mais estável.
+## Plan: Renomear etapas + nova coluna "Follow Infinito" + workflow de cards
 
-2. Separar a animação do header da transição da página
-- Hoje a barra anima ao mesmo tempo que o `PageTransition` faz fade do conteúdo, o que piora a sensação de travamento.
-- Vou manter a animação da barra independente e ajustar o fluxo para que o conteúdo da rota não “compita” visualmente com ela.
-- Se necessário, simplifico/removo o fade global da página nas rotas que usam esse header.
+### 1. Banco de dados (migração)
+Adicionar `follow_infinito` ao enum `oportunidade_etapa`. Os valores `contrato`, `fechado_ganho`, `fechado_perdido` continuam existindo no banco — só mudamos os **labels** na UI (evita migração de dados destrutiva).
 
-3. Corrigir a logo carregando tarde
-- A causa provável é dupla: remount do header + asset não pré-carregado.
-- Vou:
-  - manter o header vivo entre rotas;
-  - pré-carregar a logo no bootstrap do app;
-  - reservar o espaço da logo desde o primeiro frame para não parecer que ela “entra atrasada”.
+Adicionar colunas na `crm_oportunidades`:
+- `transcricao_reuniao` (text) — texto colado/upload da transcrição
+- `temperatura` (text) — quente/morno/frio
+- (atividades já existem em `crm_atividades` via `oportunidade_id`)
 
-4. Refinar a animação para máxima fluidez
-- Manter a expansão via `transform: scaleX` (GPU), mas simplificar ainda mais:
-  - sem animar propriedades de layout;
-  - sem trabalho extra nos itens internos durante a expansão;
-  - conteúdo só aparece quando a barra já estiver pronta.
-- Também vou revisar qualquer sombra/blur/transição concorrente que esteja pesando no pill vermelho.
+### 2. Etapas (`useCrmOportunidades.ts`)
+Atualizar `OPORTUNIDADE_ETAPAS`:
+```
+proposta → "Proposta"
+negociacao → "Negociação"
+contrato → "Dúvidas e Fechamento"   (id mantido)
+fechado_ganho → "Ganho"              (id mantido)
+follow_infinito → "Follow Infinito"  (NOVO, entre Ganho e Perdido)
+fechado_perdido → "Perdido"          (id mantido)
+```
 
-5. Preservar interação dos menus
-- Manter o controle de `overflow` apenas durante a expansão.
-- Garantir que os dropdowns de “Revenue” e “Data Analytics” continuem clicáveis após a animação.
+### 3. Card de Oportunidade — workflow obrigatório
+Quando o usuário arrasta/move um card OU clica em "avançar etapa", abrir um diálogo (`OportunidadeAvancarDialog`) com regras por etapa de **destino**:
 
-Arquivos principais
-- `src/App.tsx` — criar shell/layout compartilhado com o header fixo fora das páginas.
-- `src/components/V4Header.tsx` — simplificar a animação, desacoplar do conteúdo e estabilizar a logo.
-- `src/components/PageTransition.tsx` — reduzir/remover competição visual com a animação do topo.
-- Páginas que hoje renderizam `V4Header` (`Hub`, `Index`, `CrmLeads`, `Oportunidades` etc.) — remover header duplicado.
+| Etapa destino | Campos obrigatórios |
+|---|---|
+| Proposta → Negociação | Transcrição da reunião, Temperatura (quente/morno/frio), Próxima atividade (vira tarefa em `crm_atividades`) |
+| Negociação | Pelo menos 1 tarefa criada |
+| Dúvidas e Fechamento | Pelo menos 1 tarefa criada |
+| Follow Infinito | Pelo menos 1 tarefa criada |
+| Ganho / Perdido | Comportamento atual (motivo de perda etc.) |
 
-Detalhes técnicos
-- Problema principal identificado: o header está sendo montado dentro de cada página, então cada troca de rota recria a barra inteira.
-- Problema secundário: a logo PNG pode carregar depois do primeiro frame, o que fica muito perceptível porque a barra já abriu.
-- Solução técnica: usar um app shell persistente + animar apenas o pill interno por mudança de rota + preload da imagem.
-- Resultado esperado: barra abrindo lisa, sem sensação de “engasgo”, e logo presente desde o início da animação.
+Validação Zod no diálogo. Bloqueia o `updateEtapa` se faltar dado.
+
+### 4. Drag-and-drop
+Em `Oportunidades.tsx`, no `onDragEnd`, em vez de chamar `updateEtapa` direto, abrir o `OportunidadeAvancarDialog` com a etapa destino preenchida. Só persiste após validação.
+
+### 5. Exibição no card (`OportunidadeCard.tsx`)
+Mostrar badge de temperatura (🔥 quente / 🌡️ morno / ❄️ frio) e contador de tarefas pendentes.
+
+### Arquivos
+- `supabase/migrations/` — novo enum value + colunas
+- `src/hooks/useCrmOportunidades.ts` — labels e nova etapa
+- `src/components/crm/OportunidadeAvancarDialog.tsx` — **NOVO** diálogo de validação
+- `src/pages/Oportunidades.tsx` — interceptar drag/drop e cliques de avanço
+- `src/components/crm/OportunidadeCard.tsx` — badges visuais
+- `src/components/crm/OportunidadeColumn.tsx` — renderizar nova coluna
+
