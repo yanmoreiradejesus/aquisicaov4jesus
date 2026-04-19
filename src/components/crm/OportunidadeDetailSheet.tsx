@@ -10,6 +10,7 @@ import { OPORTUNIDADE_ETAPAS } from "@/hooks/useCrmOportunidades";
 import {
   Check,
   ChevronDown,
+  ChevronUp,
   Copy,
   MessageCircle,
   Pencil,
@@ -243,6 +244,7 @@ export const OportunidadeDetailSheet = ({
   const [aiLoadingResumo, setAiLoadingResumo] = useState(false);
   const [aiLoadingTarefa, setAiLoadingTarefa] = useState(false);
   const [transcricaoEditing, setTranscricaoEditing] = useState(false);
+  const [transcricaoExpanded, setTranscricaoExpanded] = useState(false);
   const processedHashRef = useRef<string>("");
   const autoTaskCreatedRef = useRef<string>("");
   const { toast } = useToast();
@@ -258,12 +260,17 @@ export const OportunidadeDetailSheet = ({
     if (open) {
       setForm(oportunidade);
       setActiveTab("informacoes");
-      setAiResumo("");
+      setAiResumo(oportunidade?.resumo_reuniao ?? "");
       setAiTarefa(null);
       setAiLoadingResumo(false);
       setAiLoadingTarefa(false);
       setTranscricaoEditing(!(oportunidade?.transcricao_reuniao ?? "").trim());
-      processedHashRef.current = "";
+      setTranscricaoExpanded(false);
+      // Se já existe resumo salvo, marca o hash da transcrição como já processado
+      // (evita reprocessar automaticamente ao abrir)
+      processedHashRef.current = oportunidade?.resumo_reuniao
+        ? (oportunidade?.transcricao_reuniao ?? "").trim()
+        : "";
       autoTaskCreatedRef.current = "";
     }
   }, [open, oportunidade]);
@@ -289,6 +296,7 @@ export const OportunidadeDetailSheet = ({
       payload.motivo_perda = payload.motivo_perda?.trim() || null;
       payload.notas = payload.notas?.trim() || null;
       payload.transcricao_reuniao = payload.transcricao_reuniao?.trim() || null;
+      payload.resumo_reuniao = payload.resumo_reuniao?.trim() || null;
       payload.temperatura = payload.temperatura || null;
       delete payload.lead;
       delete payload.valor_total;
@@ -345,7 +353,7 @@ export const OportunidadeDetailSheet = ({
 
   const callMeetingAI = async (
     action: "summarize" | "suggest_task",
-    opts?: { silent?: boolean; transcricaoOverride?: string },
+    opts?: { silent?: boolean; transcricaoOverride?: string; providerOverride?: "sonnet" | "opus45" | "haiku45" },
   ): Promise<any> => {
     const transcricao = (opts?.transcricaoOverride ?? form.transcricao_reuniao ?? "").trim();
     if (transcricao.length < 20) {
@@ -354,8 +362,8 @@ export const OportunidadeDetailSheet = ({
       }
       return null;
     }
-    // Sonnet para resumo, Opus 4.5 para sugestão de tarefa
-    const provider = action === "summarize" ? "sonnet" : "opus45";
+    // Sonnet para resumo (auto), Opus 4.5 para sugestão de tarefa e reprocessamento manual
+    const provider = opts?.providerOverride ?? (action === "summarize" ? "sonnet" : "opus45");
     if (action === "summarize") setAiLoadingResumo(true);
     else setAiLoadingTarefa(true);
     try {
@@ -376,8 +384,18 @@ export const OportunidadeDetailSheet = ({
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
       if (action === "summarize") {
-        setAiResumo((data as any).resumo ?? "");
-        return (data as any).resumo ?? "";
+        const resumo = (data as any).resumo ?? "";
+        setAiResumo(resumo);
+        // Persiste o resumo no banco (descarta o antigo)
+        if (form.id && resumo) {
+          setForm((p: any) => ({ ...p, resumo_reuniao: resumo }));
+          supabase
+            .from("crm_oportunidades")
+            .update({ resumo_reuniao: resumo })
+            .eq("id", form.id)
+            .then(() => {});
+        }
+        return resumo;
       } else {
         setAiTarefa((data as any).tarefa ?? null);
         return (data as any).tarefa ?? null;
@@ -391,6 +409,11 @@ export const OportunidadeDetailSheet = ({
       if (action === "summarize") setAiLoadingResumo(false);
       else setAiLoadingTarefa(false);
     }
+  };
+
+  // Reprocessar resumo sob demanda — sempre Opus 4.5, NÃO gera nova tarefa
+  const handleReprocessSummary = () => {
+    callMeetingAI("summarize", { providerOverride: "opus45" });
   };
 
   // Conecta o auto-processamento ao callMeetingAI (definido acima)
@@ -457,11 +480,16 @@ export const OportunidadeDetailSheet = ({
       : `**Transcrição:**\n\n${txt}`;
     try {
       await addReuniao.mutateAsync({ titulo, descricao });
-      // Limpa transcrição ativa e estados de IA
+      // Limpa transcrição ativa, resumo persistido e estados de IA
       set("transcricao_reuniao", "");
+      setForm((p: any) => ({ ...p, resumo_reuniao: null }));
+      if (form.id) {
+        supabase.from("crm_oportunidades").update({ resumo_reuniao: null }).eq("id", form.id).then(() => {});
+      }
       setAiResumo("");
       setAiTarefa(null);
       processedHashRef.current = "";
+      autoTaskCreatedRef.current = "";
       toast({ title: "Reunião arquivada", description: "Comece uma nova transcrição." });
     } catch (e: any) {
       toast({ title: "Erro ao arquivar", description: e?.message, variant: "destructive" });
@@ -792,10 +820,11 @@ export const OportunidadeDetailSheet = ({
                             size="sm"
                             variant="ghost"
                             className="h-6 px-2 text-[10px]"
-                            onClick={() => callMeetingAI("summarize")}
+                            onClick={handleReprocessSummary}
                             disabled={aiLoadingResumo}
+                            title="Reprocessar com Opus 4.5 (não cria nova tarefa)"
                           >
-                            {aiLoadingResumo ? <Loader2 className="h-3 w-3 animate-spin" /> : "Reprocessar"}
+                            {aiLoadingResumo ? <Loader2 className="h-3 w-3 animate-spin" /> : "Reprocessar (Opus)"}
                           </Button>
                         </>
                       )}
@@ -862,12 +891,31 @@ export const OportunidadeDetailSheet = ({
                     className="text-sm resize-none"
                   />
                 ) : (
-                  <div
-                    onClick={() => setTranscricaoEditing(true)}
-                    className="cursor-text rounded-md border border-border/40 bg-background/40 p-3 text-sm text-foreground/85 whitespace-pre-wrap max-h-64 overflow-y-auto hover:border-border/70 transition-colors"
-                    title="Clique para editar"
-                  >
-                    {form.transcricao_reuniao}
+                  <div className="relative">
+                    <div
+                      onClick={() => setTranscricaoEditing(true)}
+                      className={cn(
+                        "cursor-text rounded-md border border-border/40 bg-background/40 p-3 text-sm text-foreground/85 whitespace-pre-wrap hover:border-border/70 transition-all overflow-hidden",
+                        transcricaoExpanded ? "max-h-none" : "max-h-[200px]",
+                      )}
+                      title="Clique para editar"
+                    >
+                      {form.transcricao_reuniao}
+                    </div>
+                    {!transcricaoExpanded && (
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 rounded-b-md bg-gradient-to-t from-background/95 to-transparent" />
+                    )}
+                    <div className="flex justify-center -mt-2 relative z-10">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 w-6 p-0 rounded-full"
+                        onClick={() => setTranscricaoExpanded((v) => !v)}
+                        title={transcricaoExpanded ? "Recolher" : "Expandir"}
+                      >
+                        {transcricaoExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                      </Button>
+                    </div>
                   </div>
                 )}
                 <p className="text-[10px] text-muted-foreground/60 mt-1.5">
