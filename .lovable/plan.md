@@ -1,35 +1,62 @@
 
 
-## Fix: dropdown clipping + altura do ponto inicial
+## Fix: animação fluida (sem travadas)
 
-Dois problemas no `V4Header.tsx`:
+Causas das travadas hoje:
+1. Animar `width` em px/% força reflow do header inteiro (e do `<header>` pai com `flex justify-center`) — o navegador recalcula layout em todo frame.
+2. `boxShadow` keyframed também é caro (não é GPU-accelerated).
+3. `staggerChildren` começa exatamente em `delayChildren: 0.7` — itens entram enquanto a barra ainda está expandindo, competindo por CPU.
+4. `ease: "easeOut"` em sequência de 4 keyframes não dá curva suave entre fases.
 
-### 1. Dropdowns não abrem visivelmente (Revenue, Data Analytics)
-A `motion.div` da barra tem `overflow-hidden` (necessário durante a animação de expansão para esconder o conteúdo enquanto a barra é só um ponto/linha). Mas isso permanece após a animação, fazendo com que os menus dropdown (`absolute top-full`) sejam **cortados** — eles abrem mas ficam invisíveis fora da barra.
+### Estratégia: animar `transform: scaleX` (GPU) em vez de `width`
 
-**Fix:** remover `overflow-hidden` ao final da animação. Usar `onAnimationComplete` para alternar a classe, OU mais simples: aplicar `overflow-hidden` apenas via estado (`barReady`), começando `true` e virando `false` após 1s.
+A barra ocupa **largura final desde o mount** (`width: 100%`, ou `auto` real). O efeito de "ponto que estica" é feito com `scaleX`:
 
-### 2. Altura do ponto inicial deve ser 44px (igual barra final)
-Hoje o ponto começa 12×12 e a altura cresce de 12→44 na fase 3, o que causa o "salto" não fluido.
+- Fase 1 (0→25%): `scaleX: 0.04` (vira o ponto), `scaleY: 1`, `borderRadius: 9999px`, opacity 0→1.
+- Fase 2 (25→65%): `scaleX: 0.04 → 1` (estica horizontal). 
+- Fase 3 (65→100%): `scaleX: 1`, conteúdo fade-in.
 
-**Fix:** manter altura fixa em **44px** durante todas as fases. O ponto fica como um círculo de 44×44 (border-radius 9999px), expande horizontalmente até 100% mantendo 44px de altura, e na fase final só ajusta o border-radius para o pill final. Sem mudança vertical = animação fluida.
+Como `scaleX` é puramente GPU (compositor), roda 60fps mesmo em mobile. Sem reflow.
 
-Novo keyframe:
+Para o "ponto" parecer realmente um ponto (e não uma barra fininha esticada), usar `transform-origin: center` e largura real fixa. O conteúdo interno fica com `opacity: 0` durante fases 1-2 (não escala junto — usar contra-escala? não precisa, basta esconder).
+
+### Mudanças concretas
+
+```tsx
+// Container fica com largura real desde o início
+<motion.div
+  key={location.pathname}
+  initial={prefersReducedMotion ? false : { scaleX: 0.04, opacity: 0 }}
+  animate={{ scaleX: 1, opacity: 1 }}
+  transition={{
+    scaleX: { duration: 0.7, ease: [0.22, 1, 0.36, 1] }, // cubic-bezier suave (out-expo-ish)
+    opacity: { duration: 0.25, ease: "easeOut" },
+  }}
+  onAnimationComplete={() => setBarReady(true)}
+  style={{ transformOrigin: "center", willChange: "transform" }}
+  className="... bg-red-600 rounded-full ..."
+>
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    transition={{ delay: 0.55, duration: 0.3, ease: "easeOut" }}
+    style={{ willChange: "opacity" }}
+  >
+    {/* conteúdo — sem stagger por item, fade único do bloco */}
+  </motion.div>
+</motion.div>
 ```
-width:        ["44px", "44px",  "100%", "100%"]
-height:       ["44px", "44px",  "44px", "44px"]   // constante
-borderRadius: ["9999px","9999px","9999px","9999px"] // sempre pill
-opacity:      [0, 1, 1, 1]
-scale:        [0, 1, 1, 1]
-```
-Isso simplifica: vira um círculo que pulsa → estica horizontalmente → conteúdo aparece. Sem reflow vertical.
 
-`initial`: `{ width: 44, height: 44, borderRadius: 9999, opacity: 0, scale: 0 }`.
+### Decisões para máxima fluidez
 
-### 3. Garantir clicabilidade dos dropdowns
-- Trocar `overflow-hidden` por estado: `const [barReady, setBarReady] = useState(false)` + `onAnimationComplete={() => setBarReady(true)}`. Aplicar `overflow-hidden` apenas quando `!barReady`.
-- Resetar `barReady` para `false` quando `location.pathname` mudar (via `useEffect`), para que a próxima animação esconda o conteúdo novamente durante a expansão.
+1. **Remover `boxShadow` keyframed** — manter shadow estático no className. (Glow inicial pode ser feito com um `::before` pseudo, ou simplesmente omitido — a animação fica mais limpa sem ele.)
+2. **Remover `staggerChildren`** — substituir por um único fade do wrapper interno (delay 0.55s, duration 0.3s). Stagger de 6 itens × 60ms adiciona 360ms de paint work; o efeito visual é praticamente idêntico ao fade único e roda muito mais leve.
+3. **`borderRadius` constante 9999px** — já está, manter.
+4. **`willChange: transform` / `willChange: opacity`** — promove para layer GPU.
+5. **Curva de easing**: `cubic-bezier(0.22, 1, 0.36, 1)` (ease-out-expo suave) em vez de `easeOut` linear — dá aquela sensação "lisa" de Apple/Linear.
+6. **Duração total 700ms** (em vez de 1000ms) — animações de UI fluidas raramente passam de 600-700ms; 1s começa a parecer lenta.
+7. **Manter `barReady` toggle do `overflow`** para os dropdowns continuarem clicáveis.
 
 ### Arquivos
-- `src/components/V4Header.tsx` — ajustar keyframes da barra (altura constante 44px), adicionar estado `barReady` para liberar `overflow` após a animação.
+- `src/components/V4Header.tsx` — substituir keyframes width/height/scale/boxShadow por `scaleX` puro + fade único do conteúdo. Remover variants de stagger.
 
