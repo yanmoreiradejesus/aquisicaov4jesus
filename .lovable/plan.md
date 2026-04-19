@@ -1,21 +1,36 @@
 
 
-## Ajustes nos cards do Kanban
+## Trocar Bebas Neue → Inter como padrão global
 
-Dois problemas a resolver no `LeadCard.tsx`:
+O usuário aprovou: tornar Inter o padrão tipográfico do app inteiro (estética Apple/Salesforce), removendo Bebas Neue como default.
 
-### 1. Nome cortado
-A fonte do nome ficou muito grande para a largura disponível da coluna do Kanban (viewport 946px → colunas estreitas). Praticamente todos os nomes estão truncando.
+### Mudanças
 
-**Solução:** reduzir o tamanho do nome do lead de `text-base` (16px) para `text-sm` (14px), mantendo `font-semibold` para preservar hierarquia. Garantir `truncate` + `min-w-0` no container flex pai para o ellipsis funcionar corretamente.
+**1. `src/index.css`** — remover a regra global que força Bebas Neue em todo h1-h6:
+```css
+/* REMOVER */
+h1, h2, h3, h4, h5, h6 {
+  @apply font-heading tracking-wider uppercase;
+}
+```
+Sem essa regra, headings herdam Inter (via `font-body` no `body`), o que é o comportamento Apple/Salesforce esperado.
 
-### 2. Título "empresa do cliente" ainda em Bebas Neue
-Provavelmente o nome do contato (linha secundária abaixo do nome principal) ou o badge de empresa ainda está herdando o estilo global de heading. Vou auditar o `LeadCard.tsx` inteiro e forçar `font-display normal-case` em **todos** os textos do card (nome, empresa, valor, badges, labels) para garantir consistência total com Inter.
+**2. `tailwind.config.ts`** — opcional: redefinir `font-heading` para também apontar para Inter, garantindo que qualquer componente legado que ainda use `font-heading` não quebre o visual novo. Bebas Neue deixa de ser usado em qualquer lugar do app.
 
-### Arquivo a alterar
-- `src/components/crm/LeadCard.tsx` — reduzir tamanho do nome, garantir truncate, aplicar `font-display normal-case` em todos os elementos textuais (incluindo qualquer `<h_>`, `<p>`, `<span>` que esteja pegando Bebas Neue por herança).
+**3. Limpar overrides `!important`** em `src/components/crm/LeadDetailSheet.tsx` (`!font-display !normal-case`) — não são mais necessários após a remoção da regra global.
 
-### Resultado esperado
-- Nomes cabem na coluna sem cortar (ou cortam com ellipsis limpo quando muito longos).
-- Tipografia 100% Inter no card, sem nenhum resquício de Bebas Neue.
+**4. Auditoria visual** das páginas principais para confirmar que nada fica visualmente quebrado:
+- `src/components/V4Header.tsx`
+- `src/pages/Insights.tsx`, `Financeiro.tsx`, `DashboardComercial.tsx`, `Metas.tsx`, `MixCompra.tsx`, `Hub.tsx`, `Admin.tsx`
+- `src/components/KPICardSkeleton.tsx`, `FunnelCard.tsx`, `ConversionFunnel.tsx`
+
+Onde houver headings de destaque (KPIs grandes, números) que pareçam "fracos" só com Inter, aplicar `font-semibold tracking-tight` para manter peso visual — sem voltar pra Bebas Neue.
+
+### Resultado
+- Tipografia 100% Inter em todo o app — pegada Apple/Salesforce consistente.
+- Bebas Neue removido como default (continua disponível via `font-heading` se um dia quisermos resgatar pontualmente, mas não será usado).
+- Sem mais overrides locais com `!important`.
+
+### Risco
+Páginas com identidade V4 forte (Insights, Metas) podem parecer "menos marcantes" no primeiro impacto. Compensamos com peso de fonte (`font-bold`, `font-semibold`) e tracking apertado (`tracking-tight`, `tracking-[-0.02em]`) — receita Apple para hierarquia sem fontes display.
 
