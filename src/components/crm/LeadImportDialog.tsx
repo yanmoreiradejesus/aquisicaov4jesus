@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, History } from "lucide-react";
 import { parseLeadsCsv, importLeads, type ImportResult, type CsvLeadRow } from "@/lib/leadCsvImport";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   open: boolean;
@@ -19,6 +20,19 @@ export const LeadImportDialog = ({ open, onOpenChange }: Props) => {
   const [result, setResult] = useState<ImportResult | null>(null);
   const { toast } = useToast();
   const qc = useQueryClient();
+  const [lastImport, setLastImport] = useState<{ created_at: string; nome: string; empresa: string | null } | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      const { data } = await supabase
+        .from("crm_leads" as any)
+        .select("created_at, nome, empresa")
+        .order("created_at", { ascending: false })
+        .limit(1);
+      if (data && data.length) setLastImport(data[0] as any);
+    })();
+  }, [open]);
 
   const reset = () => {
     setFile(null);
@@ -72,6 +86,22 @@ export const LeadImportDialog = ({ open, onOpenChange }: Props) => {
         </DialogHeader>
 
         <div className="space-y-4 py-2">
+          {lastImport && !result && (
+            <div className="rounded-lg border border-border/50 bg-surface-2/40 p-3 flex items-start gap-3">
+              <History className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+              <div className="text-xs space-y-0.5 flex-1 min-w-0">
+                <div className="text-muted-foreground">Última importação</div>
+                <div className="text-foreground font-medium">
+                  {new Date(lastImport.created_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                </div>
+                <div className="text-muted-foreground truncate">
+                  Último lead: <span className="text-foreground">{lastImport.nome}</span>
+                  {lastImport.empresa && <span> · {lastImport.empresa}</span>}
+                </div>
+              </div>
+            </div>
+          )}
+
           {!result && (
             <>
               <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/40 transition-colors">
