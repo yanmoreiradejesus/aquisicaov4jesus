@@ -1,50 +1,57 @@
 
+Vou implementar a integração Google Calendar com fluxo lazy/just-in-time. Pré-requisito: você precisa criar credenciais OAuth no Google Cloud Console antes de testar (te passo o passo a passo logo após aprovar este plano).
 
-O usuário quer que o evento seja criado **direto no Google Calendar** como se ele tivesse criado manualmente — com convite automático sendo enviado pelo próprio Google pro lead. Isso requer integração real com Google Calendar API via OAuth do usuário.
+## O que será construído
 
-Não dá pra fazer isso só com .ics. Precisa do conector Google Calendar (OAuth) pra criar o evento na agenda do usuário logado, e o Google se encarrega de mandar o email pro convidado automaticamente.
+### 1. Banco de dados (migration)
+- Nova tabela `user_google_tokens`: `user_id` (PK), `refresh_token`, `access_token`, `expires_at`, `email_google`, `scope`, `created_at`, `updated_at`
+- RLS: cada user só lê/escreve o próprio token
+- Adicionar 2 colunas em `crm_leads`: `google_event_id text`, `google_event_link text`
 
-## Como vai funcionar
+### 2. Secrets (você fornece após criar no Google Cloud)
+- `GOOGLE_OAUTH_CLIENT_ID`
+- `GOOGLE_OAUTH_CLIENT_SECRET`
 
-1. Você conecta sua conta Google uma vez (OAuth — autoriza acesso à sua agenda)
-2. Quando move um lead pra **Reunião agendada** com data/hora preenchida, aparece botão **"Criar evento no Google Calendar"** dentro da sheet
-3. Ao clicar, uma edge function cria o evento na sua agenda Google com:
-   - Título: `Reunião — {empresa ou nome do lead}`
-   - Data/hora: `data_reuniao_agendada` (1h de duração)
-   - Convidado: email do lead (Google envia o convite automaticamente)
-   - Descrição: telefone, qualificação, link pro CRM
-   - Google Meet incluído automaticamente
-4. Depois de criado, o `event_id` e o link do evento ficam salvos no lead pra referência/edição futura
+### 3. Edge functions
+- **`google-oauth-callback`** (verify_jwt = true): recebe o `code`, troca por tokens no Google, salva refresh_token na `user_google_tokens` do user logado
+- **`create-google-calendar-event`** (verify_jwt = true): recebe `lead_id`, busca refresh_token do user, gera access_token novo, cria evento via `POST calendar/v3/calendars/primary/events?sendUpdates=all&conferenceDataVersion=1` com attendee = email do lead, Meet incluído. Salva `event_id` + `htmlLink` no lead.
+- **`disconnect-google`** (verify_jwt = true): remove o token do user (pra botão "desconectar")
 
-## Implementação
+### 4. Frontend
 
-**1. Conector Google Calendar** — usar `standard_connectors--connect` com `google_calendar` (precisa verificar disponibilidade na lista de connectors; se não estiver, cair no fluxo de OAuth manual via Google Cloud Console com client ID/secret nos secrets)
+**Nova página `/auth/google-callback`** (rota em `App.tsx`)
+- Lê `?code=...` da URL, chama `google-oauth-callback`, fecha popup ou redireciona pro CRM com toast
 
-**2. Migration** — adicionar 2 colunas em `crm_leads`:
-- `google_event_id text` — pra evitar duplicar e permitir update
-- `google_event_link text` — pra mostrar link "Abrir no Calendar"
+**Hook `useGoogleCalendar`**
+- `isConnected` (query na `user_google_tokens` do user)
+- `connect()`: abre popup com URL do Google OAuth (escopo `calendar.events`, `access_type=offline`, `prompt=consent`, redirect pro `/auth/google-callback`)
+- `createEvent(leadId)`: invoca edge function
+- `disconnect()`
 
-**3. Edge function `create-google-calendar-event`** (`verify_jwt = true`):
-- Recebe `lead_id`
-- Valida usuário autenticado
-- Busca lead no DB
-- Chama gateway do Google Calendar: `POST /calendar/v3/calendars/primary/events?sendUpdates=all&conferenceDataVersion=1`
-- Body inclui `attendees: [{ email: lead.email }]` e `conferenceData` pra Google Meet
-- Salva `event_id` + `htmlLink` de volta no lead
-- `sendUpdates=all` é o que dispara o email automático do Google pro convidado
+**`LeadDetailSheet.tsx`** — bloco condicional novo
+- Visível quando `etapa === 'reuniao_agendada'` E `data_reuniao_agendada` preenchida E `email` preenchido
+- Caso 1 — user **não conectou** Google: card "Conecte seu Google Calendar pra criar invites automáticos" + botão "Conectar Google"
+- Caso 2 — user **conectado**, evento ainda não criado: botão "Criar evento no Google Calendar"
+- Caso 3 — evento já criado: badge "✓ Evento criado" + link "Abrir no Calendar" (usa `google_event_link`)
+- Toasts de sucesso/erro
 
-**4. UI no `LeadDetailSheet.tsx`**:
-- Bloco condicional quando `etapa === "reuniao_agendada"` E `data_reuniao_agendada` preenchida E email do lead preenchido
-- Se ainda não tem `google_event_id`: botão "Criar evento no Google Calendar"
-- Se já tem: mostra "✓ Evento criado" + link "Abrir no Calendar"
-- Toast de sucesso/erro
+**Indicador no header (`V4Header.tsx`)** — pequeno, opcional mas recomendado
+- Ícone Google Calendar com tooltip: "Conectado como xxx@gmail.com" / "Não conectado"
+- Menu com "Desconectar"
 
-## Pré-requisitos do usuário
-- Aprovar a conexão Google quando o conector pedir (escopo `https://www.googleapis.com/auth/calendar.events`)
-- Lead precisa ter email preenchido pra receber o convite
+## Fluxo do João (resumo)
+1. João move lead pra "Reunião agendada" + preenche data + email
+2. Clica em "Criar evento no Google Calendar"
+3. Primeira vez → popup Google → autoriza → token salvo
+4. Evento aparece na agenda do João + Maria (lead) recebe email do Google automaticamente
+5. Próximas vezes → 1 clique, sem popup
 
-## Fora de escopo
-- Sincronização bidirecional (alterações no Calendar não voltam pro CRM)
+## Fora de escopo (posso adicionar depois se quiser)
+- Botão "Atualizar evento" quando muda `data_reuniao_agendada`
 - Múltiplos convidados além do lead
-- Reagendamento automático ao mudar `data_reuniao_agendada` (será manual via botão "Atualizar evento" — posso incluir se quiser)
+- Sync bidirecional Calendar → CRM
 
+## Próximo passo
+Após aprovar, vou:
+1. Te passar o passo a passo do Google Cloud Console
+2. Quando você me der `GOOGLE_OAUTH_CLIENT_ID` e `GOOGLE_OAUTH_CLIENT_SECRET`, salvo como secrets e implemento tudo de uma vez
