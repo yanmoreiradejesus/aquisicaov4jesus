@@ -394,9 +394,24 @@ export const OportunidadeDetailSheet = ({
   };
 
   // Conecta o auto-processamento ao callMeetingAI (definido acima)
-  autoProcessRef.current = (txt: string) => {
+  // Resumo via Sonnet + Tarefa via Opus 4.5 (auto-criada como sugestão pendente em Tarefas)
+  autoProcessRef.current = async (txt: string) => {
     callMeetingAI("summarize", { silent: true, transcricaoOverride: txt });
-    callMeetingAI("suggest_task", { silent: true, transcricaoOverride: txt });
+    const tarefa = await callMeetingAI("suggest_task", { silent: true, transcricaoOverride: txt });
+    if (tarefa && form?.id && autoTaskCreatedRef.current !== txt) {
+      autoTaskCreatedRef.current = txt;
+      const dt = new Date();
+      const dias = Number(tarefa.prazo_sugerido_dias) > 0 ? Number(tarefa.prazo_sugerido_dias) : 1;
+      dt.setDate(dt.getDate() + dias);
+      dt.setHours(9, 0, 0, 0);
+      try {
+        await addTarefa.mutateAsync({
+          titulo: `[SUGESTÃO IA · ${tarefa.prioridade?.toUpperCase() ?? "MED"}] ${tarefa.titulo}\n${tarefa.descricao}`,
+          data_agendada: dt.toISOString(),
+        });
+        toast({ title: "Tarefa sugerida criada", description: `${tarefa.titulo} · prazo em ${dias}d` });
+      } catch (_) { /* silencioso */ }
+    }
   };
 
   const aplicarResumoNasNotas = async () => {
