@@ -229,6 +229,8 @@ export type Database = {
           estado: string | null
           etapa: Database["public"]["Enums"]["lead_etapa"]
           faturamento: string | null
+          google_event_id: string | null
+          google_event_link: string | null
           id: string
           motivo_desqualificacao: string | null
           nome: string
@@ -264,6 +266,8 @@ export type Database = {
           estado?: string | null
           etapa?: Database["public"]["Enums"]["lead_etapa"]
           faturamento?: string | null
+          google_event_id?: string | null
+          google_event_link?: string | null
           id?: string
           motivo_desqualificacao?: string | null
           nome: string
@@ -299,6 +303,8 @@ export type Database = {
           estado?: string | null
           etapa?: Database["public"]["Enums"]["lead_etapa"]
           faturamento?: string | null
+          google_event_id?: string | null
+          google_event_link?: string | null
           id?: string
           motivo_desqualificacao?: string | null
           nome?: string
@@ -540,6 +546,39 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+        }
+        Relationships: []
+      }
+      user_google_tokens: {
+        Row: {
+          access_token: string | null
+          created_at: string
+          email_google: string | null
+          expires_at: string | null
+          refresh_token: string
+          scope: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          created_at?: string
+          email_google?: string | null
+          expires_at?: string | null
+          refresh_token: string
+          scope?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          created_at?: string
+          email_google?: string | null
+          expires_at?: string | null
+          refresh_token?: string
+          scope?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
