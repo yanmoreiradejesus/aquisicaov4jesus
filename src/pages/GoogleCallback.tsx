@@ -68,7 +68,7 @@ export default function GoogleCallback() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="max-w-md w-full bg-card border border-border rounded-lg p-8 text-center space-y-4">
         {status === "loading" && <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />}
-        {status === "success" && <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto" />}
+        {status === "success" && <CheckCircle2 className="h-12 w-12 text-primary mx-auto" />}
         {status === "error" && <AlertCircle className="h-12 w-12 text-destructive mx-auto" />}
         <p className="text-foreground">{message}</p>
         {status === "error" && (
