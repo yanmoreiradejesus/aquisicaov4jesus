@@ -260,12 +260,17 @@ export const OportunidadeDetailSheet = ({
     if (open) {
       setForm(oportunidade);
       setActiveTab("informacoes");
-      setAiResumo("");
+      setAiResumo(oportunidade?.resumo_reuniao ?? "");
       setAiTarefa(null);
       setAiLoadingResumo(false);
       setAiLoadingTarefa(false);
       setTranscricaoEditing(!(oportunidade?.transcricao_reuniao ?? "").trim());
-      processedHashRef.current = "";
+      setTranscricaoExpanded(false);
+      // Se já existe resumo salvo, marca o hash da transcrição como já processado
+      // (evita reprocessar automaticamente ao abrir)
+      processedHashRef.current = oportunidade?.resumo_reuniao
+        ? (oportunidade?.transcricao_reuniao ?? "").trim()
+        : "";
       autoTaskCreatedRef.current = "";
     }
   }, [open, oportunidade]);
