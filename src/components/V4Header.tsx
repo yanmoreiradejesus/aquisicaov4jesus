@@ -87,40 +87,23 @@ const V4Header = () => {
     setBarReady(false);
   }, [location.pathname, prefersReducedMotion]);
 
-  // Phase 1: 0→300ms pulsing dot (44x44 circle). Phase 2: 300→700ms horizontal expansion. Phase 3: 700→1000ms materialize content.
+  // Smooth GPU-only animation: scaleX from a "dot" to full bar. Single content fade after.
+  const barInitial = prefersReducedMotion ? false : { scaleX: 0.04, opacity: 0 };
   const barAnimate = prefersReducedMotion
-    ? { width: "100%", height: 44, borderRadius: 9999, opacity: 1, scale: 1 }
-    : {
-        width: ["44px", "44px", "100%", "100%"],
-        height: ["44px", "44px", "44px", "44px"],
-        borderRadius: ["9999px", "9999px", "9999px", "9999px"],
-        opacity: [0, 1, 1, 1],
-        scale: [0, 1, 1, 1],
-        boxShadow: [
-          "0 0 40px rgba(220,38,38,0.8)",
-          "0 0 40px rgba(220,38,38,0.8)",
-          "0 0 32px rgba(220,38,38,0.55)",
-          "0 8px 32px -8px rgba(220,38,38,0.45), 0 2px 8px -2px rgba(0,0,0,0.4)",
-        ],
-      };
-
+    ? { scaleX: 1, opacity: 1 }
+    : { scaleX: 1, opacity: 1 };
   const barTransition = prefersReducedMotion
     ? { duration: 0 }
-    : { duration: 1, times: [0, 0.3, 0.7, 1], ease: "easeOut" as const };
-
-  const contentVariants: Variants = prefersReducedMotion
-    ? { hidden: { opacity: 1 }, show: { opacity: 1 } }
     : {
-        hidden: { opacity: 1 },
-        show: { opacity: 1, transition: { delayChildren: 0.7, staggerChildren: 0.06 } },
+        scaleX: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as const },
+        opacity: { duration: 0.25, ease: "easeOut" as const },
       };
 
-  const itemVariants: Variants = prefersReducedMotion
-    ? { hidden: { opacity: 1, y: 0 }, show: { opacity: 1, y: 0 } }
-    : {
-        hidden: { opacity: 0, y: 8 },
-        show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
-      };
+  const contentInitial = prefersReducedMotion ? false : { opacity: 0 };
+  const contentAnimate = { opacity: 1 };
+  const contentTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : { delay: 0.55, duration: 0.3, ease: "easeOut" as const };
 
   return (
     <TooltipProvider delayDuration={200}>
