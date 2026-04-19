@@ -10,6 +10,7 @@ import { OPORTUNIDADE_ETAPAS } from "@/hooks/useCrmOportunidades";
 import {
   Check,
   ChevronDown,
+  ChevronUp,
   Copy,
   MessageCircle,
   Pencil,
