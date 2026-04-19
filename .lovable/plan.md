@@ -1,35 +1,68 @@
 
 
-## Tarefas como visão alternativa ao Kanban
+## Página Oportunidades (Kanban) + criação automática
 
-Trocar o modal `TasksOverviewDialog` por uma **visão de tela cheia alternativa**, com toggle no topo da página `/comercial/leads`.
+### 1. Ajuste do enum `oportunidade_etapa` (migração)
+Atual: `proposta, negociacao, fechado, follow_up_longo, perdido`.
+Novo conjunto desejado: `proposta, negociacao, contrato, fechado_ganho, fechado_perdido`.
 
-### UX
-No header de `CrmLeads.tsx`, ao lado de "Leads", trocar o botão "Tarefas" por um **toggle de duas opções** (estilo Tabs/SegmentedControl):
+Migração:
+- `ALTER TYPE oportunidade_etapa ADD VALUE 'contrato'`
+- `ALTER TYPE oportunidade_etapa ADD VALUE 'fechado_ganho'`
+- `ALTER TYPE oportunidade_etapa ADD VALUE 'fechado_perdido'`
+- `UPDATE crm_oportunidades SET etapa='fechado_ganho' WHERE etapa='fechado'`
+- `UPDATE crm_oportunidades SET etapa='fechado_perdido' WHERE etapa='perdido'`
+- Atualizar função `auto_create_account_and_cobrancas` para disparar quando `etapa='fechado_ganho'` (hoje checa `'fechado'`).
+- Manter valores antigos no enum (Postgres não permite remover) — só não usamos mais.
 
+### 2. Anexar trigger de criação automática (migração)
+A função `auto_create_oportunidade` já existe, mas **não há trigger anexado**. Criar:
 ```
-[ Kanban ] [ Tarefas ]
+CREATE TRIGGER trg_auto_create_oportunidade
+AFTER UPDATE OF etapa ON crm_leads
+FOR EACH ROW EXECUTE FUNCTION auto_create_oportunidade();
 ```
+Também anexar os outros triggers que estão soltos (`log_lead_etapa_change`, `log_lead_creation`, `auto_create_account_and_cobrancas`, `update_updated_at_column` nas tabelas relevantes) para garantir que tudo funcione.
 
-- Default: Kanban (comportamento atual).
-- Ao clicar em "Tarefas": esconde todo o board (colunas, filtros do kanban) e mostra a visão de tarefas ocupando a área inteira da página.
-- Ao clicar em "Kanban": volta o board.
+Resultado: todo lead que entra em `reuniao_realizada` cria automaticamente uma oportunidade na coluna **Proposta**.
 
-Estado local em `CrmLeads.tsx`: `const [view, setView] = useState<'kanban' | 'tarefas'>('kanban')`.
+### 3. Hook `useCrmOportunidades`
+Novo arquivo `src/hooks/useCrmOportunidades.ts`, espelho de `useCrmLeads.ts`:
+- Query da tabela `crm_oportunidades` com join leve dos dados do lead (nome/empresa/telefone via segundo fetch agrupado, ou select com `lead:crm_leads(nome,empresa,telefone)`).
+- Realtime na tabela `crm_oportunidades`.
+- Mutations: `upsert`, `updateEtapa`, `remove`.
+- Constante `OPORTUNIDADE_ETAPAS`:
+  - proposta — azul
+  - negociacao — âmbar
+  - contrato — violeta
+  - fechado_ganho — emerald (verde)
+  - fechado_perdido — vermelho
 
-### Nova página/componente
-Renomear/refatorar `TasksOverviewDialog.tsx` → `TasksOverviewView.tsx`:
-- Remove o wrapper `<Dialog>`, vira componente de página (div com padding).
-- Mantém toda a lógica de fetch, agrupamento (Atrasadas / Hoje / Amanhã / Próximos dias) e mutation de concluir.
-- Layout aproveitando tela cheia: 4 colunas em desktop (≥lg) — uma por categoria — e empilha em mobile. Cards maiores, mais respiro.
-- Header da view: título "Tarefas", contador total de pendentes, e atalhos (filtro por status já existente).
-- Ao clicar numa tarefa → abre o `LeadDetailSheet` do lead correspondente (mesmo callback `onOpenLead` atual).
+### 4. Página `Oportunidades.tsx`
+Novo `src/pages/Oportunidades.tsx`, baseado no layout do CrmLeads:
+- Header: título "Oportunidades", botão "Nova oportunidade".
+- Kanban com 5 colunas (mesma estrutura visual do `LeadColumn`/`LeadCard`, adaptado).
+- Componentes novos em `src/components/crm/`:
+  - `OportunidadeColumn.tsx` (drag-drop entre etapas via dnd-kit, igual ao kanban de leads).
+  - `OportunidadeCard.tsx` (mostra nome_oportunidade, empresa do lead, valor_total/fee/ef, data_fechamento_previsto).
+  - `OportunidadeDialog.tsx` (form para editar: nome, valores ef/fee, datas, motivo_perda quando `fechado_perdido`, notas, responsavel).
+- Ao mover para `fechado_perdido` → abrir dialog pedindo `motivo_perda` (similar ao `DesqualificacaoDialog`).
+- Ao mover para `fechado_ganho` → o trigger `auto_create_account_and_cobrancas` (após ajuste no item 1) cria account + cobranças automaticamente.
 
-### Filtros mantidos
-A FilterBar de leads (busca, etapa, etc.) some quando view = "tarefas" (não faz sentido). A nova view pode ter seu próprio filtro simples (por responsável / busca por nome do lead) — opcional, posso adicionar se quiser.
+### 5. Roteamento
+`src/App.tsx`: trocar o placeholder de `/comercial/oportunidades` para renderizar a nova página `Oportunidades`.
 
 ### Arquivos
-- `src/pages/CrmLeads.tsx` — adicionar toggle Kanban/Tarefas, renderização condicional.
-- `src/components/crm/TasksOverviewView.tsx` — novo (extraído do Dialog), layout 4 colunas full-width.
-- `src/components/crm/TasksOverviewDialog.tsx` — remover (substituído).
+- Migração SQL (enum + triggers + ajuste função account/cobrancas)
+- `src/hooks/useCrmOportunidades.ts` (novo)
+- `src/pages/Oportunidades.tsx` (novo)
+- `src/components/crm/OportunidadeColumn.tsx` (novo)
+- `src/components/crm/OportunidadeCard.tsx` (novo)
+- `src/components/crm/OportunidadeDialog.tsx` (novo)
+- `src/App.tsx` (rota)
+
+### Fora de escopo (confirme se quiser incluir)
+- Filtros/busca na página (posso adicionar simples por responsável + busca por nome).
+- Drag-drop entre colunas (incluído).
+- Renomear visualmente "negociacao" → "Negociação", "fechado_ganho" → "Fechado/Ganho", etc. (incluído via labels).
 
