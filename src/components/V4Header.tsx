@@ -4,7 +4,7 @@ import logo from "@/assets/v4-logo.png";
 import { LogOut, Shield, ChevronDown, Menu, X } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { motion, useReducedMotion, type Variants } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 
 const V4Header = () => {
   const location = useLocation();
