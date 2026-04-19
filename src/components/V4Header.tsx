@@ -4,6 +4,7 @@ import logo from "@/assets/v4-logo.png";
 import { LogOut, Shield, ChevronDown, Menu, X } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { motion, useReducedMotion, type Variants } from "framer-motion";
 
 const V4Header = () => {
   const location = useLocation();
@@ -75,145 +76,202 @@ const V4Header = () => {
     <span className="absolute -bottom-[6px] left-1/2 -translate-x-1/2 h-[3px] w-[3px] rounded-full bg-white/90" />
   );
 
+  const prefersReducedMotion = useReducedMotion();
+
+  // Phase 1: 0→300ms pulsing dot. Phase 2: 300→700ms horizontal expansion. Phase 3: 700→1000ms materialize.
+  const barAnimate = prefersReducedMotion
+    ? { width: "100%", height: 44, borderRadius: 9999, opacity: 1, scale: 1 }
+    : {
+        width: ["12px", "12px", "100%", "100%"],
+        height: ["12px", "12px", "12px", "44px"],
+        borderRadius: ["9999px", "9999px", "6px", "9999px"],
+        opacity: [0, 1, 1, 1],
+        scale: [0, 1, 1, 1],
+        boxShadow: [
+          "0 0 40px rgba(220,38,38,0.8)",
+          "0 0 40px rgba(220,38,38,0.8)",
+          "0 0 32px rgba(220,38,38,0.55)",
+          "0 8px 32px -8px rgba(220,38,38,0.45), 0 2px 8px -2px rgba(0,0,0,0.4)",
+        ],
+      };
+
+  const barTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : { duration: 1, times: [0, 0.3, 0.7, 1], ease: "easeOut" as const };
+
+  const contentVariants: Variants = prefersReducedMotion
+    ? { hidden: { opacity: 1 }, show: { opacity: 1 } }
+    : {
+        hidden: { opacity: 1 },
+        show: { opacity: 1, transition: { delayChildren: 0.7, staggerChildren: 0.06 } },
+      };
+
+  const itemVariants: Variants = prefersReducedMotion
+    ? { hidden: { opacity: 1, y: 0 }, show: { opacity: 1, y: 0 } }
+    : {
+        hidden: { opacity: 0, y: 8 },
+        show: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" } },
+      };
+
   return (
     <TooltipProvider delayDuration={200}>
       {/* Floating pill header */}
       <header
-        className={`fixed top-3 left-1/2 -translate-x-1/2 z-40 transition-all duration-300 ease-out px-3 sm:px-0 w-[calc(100%-1.5rem)] sm:w-auto max-w-[min(100%-1.5rem,1100px)] ${
+        className={`fixed top-3 left-1/2 -translate-x-1/2 z-40 transition-all duration-300 ease-out px-3 sm:px-0 w-[calc(100%-1.5rem)] sm:w-auto max-w-[min(100%-1.5rem,1100px)] flex justify-center ${
           scrolled ? "scale-[0.98]" : ""
         }`}
       >
-        <div
+        <motion.div
           key={location.pathname}
-          className={`${glassPill} flex items-center gap-1 h-11 px-2 transition-all duration-300 animate-in fade-in-0 slide-in-from-top-4 zoom-in-95 duration-500 ease-out ${
+          initial={prefersReducedMotion ? false : { width: 12, height: 12, borderRadius: 9999, opacity: 0, scale: 0 }}
+          animate={barAnimate}
+          transition={barTransition}
+          className={`border border-red-700/60 bg-red-600 flex items-center gap-1 px-2 overflow-hidden ${
             scrolled ? "bg-red-700" : ""
           }`}
+          style={{ minWidth: 12 }}
         >
-          {/* Logo */}
-          <Link
-            to="/"
-            className="flex items-center pl-2 pr-2 h-8 rounded-full hover:bg-white/[0.04] transition-colors"
-            title="Hub"
+          <motion.div
+            variants={contentVariants}
+            initial="hidden"
+            animate="show"
+            className="flex items-center gap-1 w-full whitespace-nowrap"
           >
-            <img src={logo} alt="V4 Company" className="h-4 w-auto opacity-90" />
-          </Link>
+            {/* Logo */}
+            <motion.div variants={itemVariants}>
+              <Link
+                to="/"
+                className="flex items-center pl-2 pr-2 h-8 rounded-full hover:bg-white/[0.04] transition-colors"
+                title="Hub"
+              >
+                <img src={logo} alt="V4 Company" className="h-4 w-auto opacity-90" />
+              </Link>
+            </motion.div>
 
-          {/* Divider */}
-          <div className="hidden md:block w-px h-4 bg-white/10 mx-1" />
+            {/* Divider */}
+            <motion.div variants={itemVariants} className="hidden md:block w-px h-4 bg-white/10 mx-1" />
 
-          {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-0.5">
-            {visibleAquisicaoItems.length > 0 && (
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  onClick={() => setAquisicaoOpen(!aquisicaoOpen)}
-                  className={`${navItemBase} ${isAquisicaoActive ? navItemActive : navItemIdle}`}
-                >
-                  <span>Data Analytics</span>
-                  <ChevronDown
-                    className={`h-3 w-3 opacity-60 transition-transform duration-200 ${aquisicaoOpen ? "rotate-180" : ""}`}
-                  />
-                  {isAquisicaoActive && <ActiveDot />}
-                </button>
-                {aquisicaoOpen && (
-                  <div className="absolute top-full left-0 mt-2.5 min-w-[220px] z-50 rounded-2xl border border-white/[0.08] bg-popover/80 backdrop-blur-2xl backdrop-saturate-200 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.08)] p-1.5 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150">
-                    {visibleAquisicaoItems.map((item) => (
-                      <Link
-                        key={item.path}
-                        to={item.path}
-                        onClick={() => setAquisicaoOpen(false)}
-                        className={`block px-3 py-2 rounded-xl font-body text-[13px] font-medium tracking-tight transition-all duration-150 ${
-                          isActive(item.path)
-                            ? "bg-white/[0.08] text-foreground"
-                            : "text-foreground/75 hover:bg-white/[0.05] hover:text-foreground"
-                        }`}
-                      >
-                        {item.label}
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {visibleComercialItems.length > 0 && (
-              <div className="relative" ref={comercialRef}>
-                <button
-                  onClick={() => setComercialOpen(!comercialOpen)}
-                  className={`${navItemBase} ${isComercialActive ? navItemActive : navItemIdle}`}
-                >
-                  <span>Revenue</span>
-                  <ChevronDown
-                    className={`h-3 w-3 opacity-60 transition-transform duration-200 ${comercialOpen ? "rotate-180" : ""}`}
-                  />
-                  {isComercialActive && <ActiveDot />}
-                </button>
-                {comercialOpen && (
-                  <div className="absolute top-full left-0 mt-2.5 min-w-[220px] z-50 rounded-2xl border border-white/[0.08] bg-popover/80 backdrop-blur-2xl backdrop-saturate-200 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.08)] p-1.5 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150">
-                    {visibleComercialItems.map((item) => (
-                      <Link
-                        key={item.path}
-                        to={item.path}
-                        onClick={() => setComercialOpen(false)}
-                        className={`block px-3 py-2 rounded-xl font-body text-[13px] font-medium tracking-tight transition-all duration-150 ${
-                          isActive(item.path)
-                            ? "bg-white/[0.08] text-foreground"
-                            : "text-foreground/75 hover:bg-white/[0.05] hover:text-foreground"
-                        }`}
-                      >
-                        {item.label}
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </nav>
-
-          {/* Right side: divider + admin + signout */}
-          <div className="hidden md:flex items-center gap-0.5 ml-1">
-            {(isAdmin || user) && <div className="w-px h-4 bg-white/10 mx-1" />}
-            {isAdmin && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Link
-                    to="/admin"
-                    className={`relative flex items-center justify-center h-8 w-8 rounded-full transition-all duration-200 ${
-                      isActive("/admin")
-                        ? "bg-white/[0.08] text-foreground"
-                        : "text-foreground/65 hover:text-foreground hover:bg-white/[0.06] hover:scale-[1.05]"
-                    }`}
-                  >
-                    <Shield className="h-3.5 w-3.5" />
-                    {isActive("/admin") && <ActiveDot />}
-                  </Link>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" sideOffset={8} className="rounded-lg text-xs">Admin</TooltipContent>
-              </Tooltip>
-            )}
-            {user && (
-              <Tooltip>
-                <TooltipTrigger asChild>
+            {/* Desktop nav */}
+            <nav className="hidden md:flex items-center gap-0.5">
+              {visibleAquisicaoItems.length > 0 && (
+                <motion.div variants={itemVariants} className="relative" ref={dropdownRef}>
                   <button
-                    onClick={signOut}
-                    className="flex items-center justify-center h-8 w-8 rounded-full text-foreground/65 hover:text-foreground hover:bg-white/[0.06] hover:scale-[1.05] transition-all duration-200"
+                    onClick={() => setAquisicaoOpen(!aquisicaoOpen)}
+                    className={`${navItemBase} ${isAquisicaoActive ? navItemActive : navItemIdle}`}
                   >
-                    <LogOut className="h-3.5 w-3.5" />
+                    <span>Data Analytics</span>
+                    <ChevronDown
+                      className={`h-3 w-3 opacity-60 transition-transform duration-200 ${aquisicaoOpen ? "rotate-180" : ""}`}
+                    />
+                    {isAquisicaoActive && <ActiveDot />}
                   </button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom" sideOffset={8} className="rounded-lg text-xs">Sair</TooltipContent>
-              </Tooltip>
-            )}
-          </div>
+                  {aquisicaoOpen && (
+                    <div className="absolute top-full left-0 mt-2.5 min-w-[220px] z-50 rounded-2xl border border-white/[0.08] bg-popover/80 backdrop-blur-2xl backdrop-saturate-200 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.08)] p-1.5 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150">
+                      {visibleAquisicaoItems.map((item) => (
+                        <Link
+                          key={item.path}
+                          to={item.path}
+                          onClick={() => setAquisicaoOpen(false)}
+                          className={`block px-3 py-2 rounded-xl font-body text-[13px] font-medium tracking-tight transition-all duration-150 ${
+                            isActive(item.path)
+                              ? "bg-white/[0.08] text-foreground"
+                              : "text-foreground/75 hover:bg-white/[0.05] hover:text-foreground"
+                          }`}
+                        >
+                          {item.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
 
-          {/* Mobile hamburger */}
-          <button
-            onClick={() => setMobileMenuOpen(true)}
-            className="md:hidden ml-auto flex items-center justify-center h-8 w-8 rounded-full text-foreground/70 hover:text-foreground hover:bg-white/[0.06] transition-colors"
-          >
-            <Menu className="h-4 w-4" />
-          </button>
-        </div>
+              {visibleComercialItems.length > 0 && (
+                <motion.div variants={itemVariants} className="relative" ref={comercialRef}>
+                  <button
+                    onClick={() => setComercialOpen(!comercialOpen)}
+                    className={`${navItemBase} ${isComercialActive ? navItemActive : navItemIdle}`}
+                  >
+                    <span>Revenue</span>
+                    <ChevronDown
+                      className={`h-3 w-3 opacity-60 transition-transform duration-200 ${comercialOpen ? "rotate-180" : ""}`}
+                    />
+                    {isComercialActive && <ActiveDot />}
+                  </button>
+                  {comercialOpen && (
+                    <div className="absolute top-full left-0 mt-2.5 min-w-[220px] z-50 rounded-2xl border border-white/[0.08] bg-popover/80 backdrop-blur-2xl backdrop-saturate-200 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.08)] p-1.5 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150">
+                      {visibleComercialItems.map((item) => (
+                        <Link
+                          key={item.path}
+                          to={item.path}
+                          onClick={() => setComercialOpen(false)}
+                          className={`block px-3 py-2 rounded-xl font-body text-[13px] font-medium tracking-tight transition-all duration-150 ${
+                            isActive(item.path)
+                              ? "bg-white/[0.08] text-foreground"
+                              : "text-foreground/75 hover:bg-white/[0.05] hover:text-foreground"
+                          }`}
+                        >
+                          {item.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </nav>
+
+            {/* Right side: divider + admin + signout */}
+            <div className="hidden md:flex items-center gap-0.5 ml-1">
+              {(isAdmin || user) && (
+                <motion.div variants={itemVariants} className="w-px h-4 bg-white/10 mx-1" />
+              )}
+              {isAdmin && (
+                <motion.div variants={itemVariants}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link
+                        to="/admin"
+                        className={`relative flex items-center justify-center h-8 w-8 rounded-full transition-all duration-200 ${
+                          isActive("/admin")
+                            ? "bg-white/[0.08] text-foreground"
+                            : "text-foreground/65 hover:text-foreground hover:bg-white/[0.06] hover:scale-[1.05]"
+                        }`}
+                      >
+                        <Shield className="h-3.5 w-3.5" />
+                        {isActive("/admin") && <ActiveDot />}
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" sideOffset={8} className="rounded-lg text-xs">Admin</TooltipContent>
+                  </Tooltip>
+                </motion.div>
+              )}
+              {user && (
+                <motion.div variants={itemVariants}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={signOut}
+                        className="flex items-center justify-center h-8 w-8 rounded-full text-foreground/65 hover:text-foreground hover:bg-white/[0.06] hover:scale-[1.05] transition-all duration-200"
+                      >
+                        <LogOut className="h-3.5 w-3.5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" sideOffset={8} className="rounded-lg text-xs">Sair</TooltipContent>
+                  </Tooltip>
+                </motion.div>
+              )}
+            </div>
+
+            {/* Mobile hamburger */}
+            <motion.button
+              variants={itemVariants}
+              onClick={() => setMobileMenuOpen(true)}
+              className="md:hidden ml-auto flex items-center justify-center h-8 w-8 rounded-full text-foreground/70 hover:text-foreground hover:bg-white/[0.06] transition-colors"
+            >
+              <Menu className="h-4 w-4" />
+            </motion.button>
+          </motion.div>
+        </motion.div>
       </header>
 
       {/* Spacer to offset fixed header */}
