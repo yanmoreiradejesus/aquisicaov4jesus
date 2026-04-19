@@ -132,13 +132,14 @@ const V4Header = () => {
       >
         <motion.div
           key={location.pathname}
-          initial={prefersReducedMotion ? false : { width: 12, height: 12, borderRadius: 9999, opacity: 0, scale: 0 }}
+          initial={prefersReducedMotion ? false : { width: 44, height: 44, borderRadius: 9999, opacity: 0, scale: 0 }}
           animate={barAnimate}
           transition={barTransition}
-          className={`border border-red-700/60 bg-red-600 flex items-center gap-1 px-2 overflow-hidden ${
-            scrolled ? "bg-red-700" : ""
-          }`}
-          style={{ minWidth: 12 }}
+          onAnimationComplete={() => setBarReady(true)}
+          className={`border border-red-700/60 bg-red-600 flex items-center gap-1 px-2 ${
+            barReady ? "" : "overflow-hidden"
+          } ${scrolled ? "bg-red-700" : ""}`}
+          style={{ minWidth: 44 }}
         >
           <motion.div
             variants={contentVariants}
