@@ -3,7 +3,8 @@ import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "
 import V4Header from "@/components/V4Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Upload } from "lucide-react";
+import { Plus, Search, Upload, ListChecks } from "lucide-react";
+import { TasksOverviewDialog } from "@/components/crm/TasksOverviewDialog";
 import { useCrmLeads, LEAD_ETAPAS } from "@/hooks/useCrmLeads";
 import { LeadColumn } from "@/components/crm/LeadColumn";
 import { LeadDialog } from "@/components/crm/LeadDialog";
