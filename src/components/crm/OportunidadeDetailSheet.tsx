@@ -480,11 +480,16 @@ export const OportunidadeDetailSheet = ({
       : `**Transcrição:**\n\n${txt}`;
     try {
       await addReuniao.mutateAsync({ titulo, descricao });
-      // Limpa transcrição ativa e estados de IA
+      // Limpa transcrição ativa, resumo persistido e estados de IA
       set("transcricao_reuniao", "");
+      setForm((p: any) => ({ ...p, resumo_reuniao: null }));
+      if (form.id) {
+        supabase.from("crm_oportunidades").update({ resumo_reuniao: null }).eq("id", form.id).then(() => {});
+      }
       setAiResumo("");
       setAiTarefa(null);
       processedHashRef.current = "";
+      autoTaskCreatedRef.current = "";
       toast({ title: "Reunião arquivada", description: "Comece uma nova transcrição." });
     } catch (e: any) {
       toast({ title: "Erro ao arquivar", description: e?.message, variant: "destructive" });
