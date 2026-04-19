@@ -85,7 +85,7 @@ const V4Header = () => {
       >
         <div
           className={`${glassPill} flex items-center gap-1 h-11 px-2 transition-all duration-300 ${
-            scrolled ? "from-red-600/35 via-red-700/20 to-red-900/15" : ""
+            scrolled ? "bg-red-700" : ""
           }`}
         >
           {/* Logo */}
