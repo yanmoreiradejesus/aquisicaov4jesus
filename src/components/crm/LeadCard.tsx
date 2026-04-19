@@ -1,5 +1,6 @@
 import { useDraggable } from "@dnd-kit/core";
 import { Copy, MessageCircle, Clock } from "lucide-react";
+import { CSS } from "@dnd-kit/utilities";
 import { formatPhone, whatsappNumber, timeAgo } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -36,20 +37,21 @@ export const LeadCard = ({
   showAge,
   showStageDays,
   onPhoneInteract,
-}: Props) => {
+  overlay = false,
+}: Props & { overlay?: boolean }) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: lead.id,
+    disabled: overlay,
   });
   const { toast } = useToast();
 
-  const style = transform
-    ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0) rotate(${
-          isDragging ? "1.5deg" : "0deg"
-        })`,
-        zIndex: 50,
-      }
-    : undefined;
+  // Hide the original card while dragging — the DragOverlay clone is what the user sees
+  const style: React.CSSProperties | undefined = overlay
+    ? undefined
+    : {
+        transform: CSS.Translate.toString(transform),
+        opacity: isDragging ? 0 : 1,
+      };
 
   const phone = lead.telefone as string | undefined;
   const phoneFmt = formatPhone(phone);
@@ -78,22 +80,22 @@ export const LeadCard = ({
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
+    <div ref={overlay ? undefined : setNodeRef} style={style} {...(overlay ? {} : attributes)}>
       <div
         className={cn(
-          "group relative overflow-hidden rounded-xl border border-border/50 bg-surface-1/80 backdrop-blur-sm card-lift",
-          isDragging
-            ? "opacity-60 shadow-ios-xl scale-[1.02]"
-            : "shadow-ios-sm hover:border-primary/40 hover:bg-surface-2/80"
+          "group relative overflow-hidden rounded-xl border bg-surface-1/80 backdrop-blur-sm",
+          overlay
+            ? "border-primary/50 shadow-ios-xl ring-1 ring-primary/30 rotate-[1.5deg] scale-[1.04] cursor-grabbing"
+            : "border-border/50 card-lift shadow-ios-sm hover:border-primary/40 hover:bg-surface-2/80"
         )}
       >
         {/* Accent strip */}
         <span className={cn("absolute left-0 top-0 bottom-0 w-[3px]", accent)} />
 
         <div
-          {...listeners}
-          onClick={onClick}
-          className="pl-3.5 pr-3 py-3 cursor-grab active:cursor-grabbing"
+          {...(overlay ? {} : listeners)}
+          onClick={overlay ? undefined : onClick}
+          className={cn("pl-3.5 pr-3 py-3", overlay ? "" : "cursor-grab active:cursor-grabbing")}
         >
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
