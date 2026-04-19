@@ -41,6 +41,7 @@ interface Props {
   onSave: (lead: any) => Promise<void> | void;
   onChangeEtapa: (id: string, etapa: string) => Promise<void> | void;
   onDelete?: (id: string) => Promise<void> | void;
+  onDisqualify?: (lead: any) => void;
 }
 
 /** Deriva o Tier a partir do faturamento */
@@ -173,7 +174,7 @@ const SalesforceStepper = ({
   );
 };
 
-export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtapa, onDelete }: Props) => {
+export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtapa, onDelete, onDisqualify }: Props) => {
   const [form, setForm] = useState<any>(null);
   const [qualOpen, setQualOpen] = useState(false);
   const [pendingEtapa, setPendingEtapa] = useState<string | null>(null);
@@ -286,19 +287,36 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
 
         {/* STEPPER estilo Salesforce */}
         <div className="mt-6 mb-6">
-          <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-2">
-            Etapa do funil
-          </p>
+          <div className="flex items-center justify-end mb-2 min-h-[24px]">
+            {onDisqualify && form.etapa !== "desqualificado" && (
+              <button
+                onClick={() => onDisqualify(form)}
+                className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-red-400 px-2 py-1 rounded-md hover:bg-red-500/10 transition-colors"
+                title="Desqualificar lead"
+              >
+                <X className="h-3 w-3" />
+                Desqualificar
+              </button>
+            )}
+          </div>
           <SalesforceStepper currentIdx={currentIdx} onStep={handleStep} />
+          <div className="flex items-center justify-end mt-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => { setActiveTab("tarefas"); setTarefaDialogOpen(true); }}
+              className="h-7 px-2.5 text-[11px] text-muted-foreground hover:text-foreground"
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              Criar tarefa
+            </Button>
+          </div>
         </div>
 
         {/* CONTATO RÁPIDO */}
         <div className="bg-muted/20 border border-border/40 rounded-lg p-4 mb-4 space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-                Lead
-              </p>
               <p className="text-base font-medium text-foreground">{form.nome}</p>
               {form.empresa && form.empresa !== form.nome && (
                 <p className="text-xs text-muted-foreground mt-0.5">{form.empresa}</p>

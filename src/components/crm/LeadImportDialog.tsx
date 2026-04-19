@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, History } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, History, Download } from "lucide-react";
 import { parseLeadsCsv, importLeads, type ImportResult, type CsvLeadRow } from "@/lib/leadCsvImport";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
@@ -11,9 +11,10 @@ import { supabase } from "@/integrations/supabase/client";
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  onOpenExport?: () => void;
 }
 
-export const LeadImportDialog = ({ open, onOpenChange }: Props) => {
+export const LeadImportDialog = ({ open, onOpenChange, onOpenExport }: Props) => {
   const [file, setFile] = useState<File | null>(null);
   const [parsed, setParsed] = useState<CsvLeadRow[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -80,9 +81,21 @@ export const LeadImportDialog = ({ open, onOpenChange }: Props) => {
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle className="font-heading text-2xl tracking-wider uppercase">
-            Importar leads do Lead Broker
-          </DialogTitle>
+          <div className="flex items-start justify-between gap-3">
+            <DialogTitle className="font-heading text-2xl tracking-wider uppercase">
+              Importar leads do Lead Broker
+            </DialogTitle>
+            {onOpenExport && (
+              <button
+                onClick={onOpenExport}
+                className="shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground px-2 py-1 rounded-md hover:bg-muted/40 transition-colors"
+                title="Exportar leads em CSV"
+              >
+                <Download className="h-3 w-3" />
+                Exportar
+              </button>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
