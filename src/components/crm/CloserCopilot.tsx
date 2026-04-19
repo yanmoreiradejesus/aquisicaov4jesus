@@ -298,8 +298,8 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
             🧠
           </div>
           <div>
-            <p className="text-[13px] font-semibold leading-tight">Copilot Closer</p>
-            <p className="text-[10px] text-muted-foreground leading-tight">
+            <p className="text-[13px] font-semibold leading-tight text-white">Copilot Closer</p>
+            <p className="text-[10px] text-white/50 leading-tight">
               consultor de vendas · online
             </p>
           </div>
