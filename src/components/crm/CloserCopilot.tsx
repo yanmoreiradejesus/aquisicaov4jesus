@@ -434,7 +434,7 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
               key={qa.key}
               onClick={() => !loading && send({ quickAction: qa.key })}
               disabled={loading}
-              className="text-[11px] px-3 py-1.5 rounded-full bg-muted hover:bg-muted/70 transition-colors disabled:opacity-50"
+              className="text-[11px] px-3 py-1.5 rounded-full bg-[#1C1C1E] text-white/85 hover:bg-[#2C2C2E] transition-colors disabled:opacity-50"
             >
               {qa.label}
             </button>
