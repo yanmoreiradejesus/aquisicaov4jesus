@@ -243,6 +243,9 @@ export const OportunidadeDetailSheet = ({
     if (open) {
       setForm(oportunidade);
       setActiveTab("informacoes");
+      setAiResumo("");
+      setAiTarefa(null);
+      setAiLoading(null);
     }
   }, [open, oportunidade]);
 
