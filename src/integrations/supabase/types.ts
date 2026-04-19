@@ -361,6 +361,7 @@ export type Database = {
           nome_oportunidade: string
           notas: string | null
           responsavel_id: string | null
+          resumo_reuniao: string | null
           temperatura: string | null
           transcricao_reuniao: string | null
           updated_at: string
@@ -380,6 +381,7 @@ export type Database = {
           nome_oportunidade: string
           notas?: string | null
           responsavel_id?: string | null
+          resumo_reuniao?: string | null
           temperatura?: string | null
           transcricao_reuniao?: string | null
           updated_at?: string
@@ -399,6 +401,7 @@ export type Database = {
           nome_oportunidade?: string
           notas?: string | null
           responsavel_id?: string | null
+          resumo_reuniao?: string | null
           temperatura?: string | null
           transcricao_reuniao?: string | null
           updated_at?: string
