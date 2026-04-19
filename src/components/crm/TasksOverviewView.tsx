@@ -1,8 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { format, isToday, isTomorrow, isPast, endOfDay, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarClock, CheckCircle2, Circle, AlertTriangle, Calendar as CalendarIcon, ArrowRight } from "lucide-react";
+import { CalendarClock, CheckCircle2, Circle, AlertTriangle, Calendar as CalendarIcon, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +14,7 @@ interface TaskRow {
   titulo: string | null;
   descricao: string | null;
   data_agendada: string | null;
+  data_conclusao: string | null;
   concluida: boolean;
   lead_nome?: string | null;
   lead_empresa?: string | null;
@@ -23,18 +24,26 @@ interface Props {
   onOpenLead?: (leadId: string) => void;
 }
 
+type ColKey = "atrasadas" | "hoje" | "amanha" | "proximos" | "concluidas";
+
 export function TasksOverviewView({ onOpenLead }: Props) {
   const qc = useQueryClient();
   const { toast } = useToast();
+  const [hidden, setHidden] = useState<Record<ColKey, boolean>>({
+    atrasadas: false,
+    hoje: false,
+    amanha: false,
+    proximos: false,
+    concluidas: false,
+  });
 
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ["crm_atividades_overview"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("crm_atividades" as any)
-        .select("id, lead_id, titulo, descricao, data_agendada, concluida, crm_leads!inner(nome, empresa)")
+        .select("id, lead_id, titulo, descricao, data_agendada, data_conclusao, concluida, crm_leads!inner(nome, empresa)")
         .eq("tipo", "tarefa")
-        .eq("concluida", false)
         .not("data_agendada", "is", null)
         .order("data_agendada", { ascending: true });
       if (error) throw error;
@@ -44,6 +53,7 @@ export function TasksOverviewView({ onOpenLead }: Props) {
         titulo: r.titulo,
         descricao: r.descricao,
         data_agendada: r.data_agendada,
+        data_conclusao: r.data_conclusao,
         concluida: r.concluida,
         lead_nome: r.crm_leads?.nome,
         lead_empresa: r.crm_leads?.empresa,
@@ -52,17 +62,20 @@ export function TasksOverviewView({ onOpenLead }: Props) {
   });
 
   const toggle = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ id, concluida }: { id: string; concluida: boolean }) => {
       const { error } = await supabase
         .from("crm_atividades" as any)
-        .update({ concluida: true, data_conclusao: new Date().toISOString() })
+        .update({
+          concluida,
+          data_conclusao: concluida ? new Date().toISOString() : null,
+        })
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["crm_atividades_overview"] });
       qc.invalidateQueries({ queryKey: ["crm_atividades"] });
-      toast({ title: "Tarefa concluída" });
+      toast({ title: vars.concluida ? "Tarefa concluída" : "Tarefa reaberta" });
     },
   });
 
@@ -71,9 +84,14 @@ export function TasksOverviewView({ onOpenLead }: Props) {
     const hoje: TaskRow[] = [];
     const amanha: TaskRow[] = [];
     const proximos: TaskRow[] = [];
+    const concluidas: TaskRow[] = [];
     const limiteProx = endOfDay(addDays(new Date(), 7));
 
     tasks.forEach((t) => {
+      if (t.concluida) {
+        concluidas.push(t);
+        return;
+      }
       if (!t.data_agendada) return;
       const d = new Date(t.data_agendada);
       if (isPast(d) && !isToday(d)) atrasadas.push(t);
@@ -82,28 +100,39 @@ export function TasksOverviewView({ onOpenLead }: Props) {
       else if (d <= limiteProx) proximos.push(t);
       else proximos.push(t);
     });
-    return { atrasadas, hoje, amanha, proximos };
+    // Concluídas mais recentes primeiro
+    concluidas.sort((a, b) => {
+      const ad = a.data_conclusao ? new Date(a.data_conclusao).getTime() : 0;
+      const bd = b.data_conclusao ? new Date(b.data_conclusao).getTime() : 0;
+      return bd - ad;
+    });
+    return { atrasadas, hoje, amanha, proximos, concluidas };
   }, [tasks]);
 
   const total = tasks.length;
 
   const Column = ({
+    colKey,
     title,
     icon: Icon,
     items,
     tone,
   }: {
+    colKey: ColKey;
     title: string;
     icon: any;
     items: TaskRow[];
-    tone: "danger" | "primary" | "warning" | "muted";
+    tone: "danger" | "primary" | "warning" | "muted" | "success";
   }) => {
     const toneClasses = {
       danger: "text-red-400 border-red-500/30 bg-red-500/10",
       primary: "text-primary border-primary/30 bg-primary/10",
       warning: "text-amber-400 border-amber-500/30 bg-amber-500/10",
       muted: "text-muted-foreground border-border bg-surface-2/50",
+      success: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10",
     }[tone];
+
+    const isHidden = hidden[colKey];
 
     return (
       <div className="flex flex-col min-w-0 glass rounded-2xl p-3 shadow-ios-sm">
@@ -113,8 +142,17 @@ export function TasksOverviewView({ onOpenLead }: Props) {
           </div>
           <h3 className="text-sm font-semibold text-foreground flex-1">{title}</h3>
           <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">{items.length}</Badge>
+          <button
+            onClick={() => setHidden((h) => ({ ...h, [colKey]: !h[colKey] }))}
+            className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-md hover:bg-surface-2"
+            title={isHidden ? "Mostrar tarefas" : "Ocultar tarefas"}
+          >
+            {isHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+          </button>
         </div>
-        {items.length === 0 ? (
+        {isHidden ? (
+          <p className="text-xs text-muted-foreground px-1 py-6 text-center italic">Tarefas ocultas</p>
+        ) : items.length === 0 ? (
           <p className="text-xs text-muted-foreground px-1 py-6 text-center">Nenhuma tarefa</p>
         ) : (
           <ul className="space-y-2 overflow-y-auto pr-1">
@@ -123,17 +161,28 @@ export function TasksOverviewView({ onOpenLead }: Props) {
               return (
                 <li
                   key={t.id}
-                  className="group flex items-start gap-2 rounded-xl border border-border bg-surface-1/60 hover:bg-surface-2/70 p-3 transition-colors"
+                  className={cn(
+                    "group flex items-start gap-2 rounded-xl border border-border bg-surface-1/60 hover:bg-surface-2/70 p-3 transition-colors",
+                    t.concluida && "opacity-70"
+                  )}
                 >
                   <button
-                    onClick={() => toggle.mutate(t.id)}
-                    className="mt-0.5 text-muted-foreground hover:text-emerald-400 transition-colors shrink-0"
-                    title="Marcar como concluída"
+                    onClick={() => toggle.mutate({ id: t.id, concluida: !t.concluida })}
+                    className={cn(
+                      "mt-0.5 transition-colors shrink-0",
+                      t.concluida
+                        ? "text-emerald-400 hover:text-muted-foreground"
+                        : "text-muted-foreground hover:text-emerald-400"
+                    )}
+                    title={t.concluida ? "Reabrir tarefa" : "Marcar como concluída"}
                   >
-                    <Circle className="h-4 w-4" />
+                    {t.concluida ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
                   </button>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-foreground leading-snug break-words">
+                    <p className={cn(
+                      "text-sm text-foreground leading-snug break-words",
+                      t.concluida && "line-through text-muted-foreground"
+                    )}>
                       {t.titulo || t.descricao || "Tarefa"}
                     </p>
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap text-[11px] text-muted-foreground">
@@ -174,14 +223,15 @@ export function TasksOverviewView({ onOpenLead }: Props) {
       ) : total === 0 ? (
         <div className="text-center py-20 glass rounded-2xl">
           <CheckCircle2 className="h-12 w-12 text-emerald-400 mx-auto mb-3 opacity-60" />
-          <p className="text-base text-muted-foreground">Nenhuma tarefa pendente. Bom trabalho!</p>
+          <p className="text-base text-muted-foreground">Nenhuma tarefa. Bom trabalho!</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Column title="Atrasadas" icon={AlertTriangle} items={groups.atrasadas} tone="danger" />
-          <Column title="De hoje" icon={CalendarClock} items={groups.hoje} tone="primary" />
-          <Column title="De amanhã" icon={CalendarIcon} items={groups.amanha} tone="warning" />
-          <Column title="Próximos dias" icon={CalendarIcon} items={groups.proximos} tone="muted" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <Column colKey="atrasadas" title="Atrasadas" icon={AlertTriangle} items={groups.atrasadas} tone="danger" />
+          <Column colKey="hoje" title="De hoje" icon={CalendarClock} items={groups.hoje} tone="primary" />
+          <Column colKey="amanha" title="De amanhã" icon={CalendarIcon} items={groups.amanha} tone="warning" />
+          <Column colKey="proximos" title="Próximos dias" icon={CalendarIcon} items={groups.proximos} tone="muted" />
+          <Column colKey="concluidas" title="Concluídas" icon={CheckCircle2} items={groups.concluidas} tone="success" />
         </div>
       )}
     </div>
