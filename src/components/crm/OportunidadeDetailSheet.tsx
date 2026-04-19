@@ -488,32 +488,13 @@ export const OportunidadeDetailSheet = ({
                   ) : (
                     <div>
                       <ReadOnlyRow label="Qualificação" value={lead.qualificacao} />
-                      <ReadOnlyRow label="Tier (auto)" value={tierFromFaturamento(lead.faturamento)} />
-                      <ReadOnlyRow label="Urgência" value={lead.urgencia} />
+                      <ReadOnlyRow label="Site" value={lead.site} />
+                      <ReadOnlyRow label="Instagram" value={lead.instagram} />
                       <ReadOnlyRow label="Temperatura" value={lead.temperatura} />
-                      <ReadOnlyRow label="Faturamento" value={lead.faturamento} />
-                      <ReadOnlyRow label="Segmento" value={lead.segmento} />
-                      <ReadOnlyRow label="Cargo" value={lead.cargo} />
-                      <ReadOnlyRow label="Nome do produto" value={lead.nome_produto} />
-                      <ReadOnlyRow label="Tipo de produto" value={lead.tipo_produto} />
-                      <ReadOnlyRow label="Canal" value={lead.canal} />
-                      <ReadOnlyRow label="Origem" value={lead.origem} />
-                      <ReadOnlyRow label="Arrematador" value={lead.arrematador} />
-                      <ReadOnlyRow
-                        label="Data de aquisição"
-                        value={lead.data_aquisicao ? new Date(lead.data_aquisicao).toLocaleDateString("pt-BR") : null}
-                      />
                       <ReadOnlyRow
                         label="Reunião agendada"
                         value={lead.data_reuniao_agendada ? new Date(lead.data_reuniao_agendada).toLocaleString("pt-BR") : null}
                       />
-                      <ReadOnlyRow
-                        label="Reunião realizada"
-                        value={lead.data_reuniao_realizada ? new Date(lead.data_reuniao_realizada).toLocaleString("pt-BR") : null}
-                      />
-                      <ReadOnlyRow label="Descrição" value={lead.descricao} />
-                      <ReadOnlyRow label="Motivo da desqualificação" value={lead.motivo_desqualificacao} />
-                      <ReadOnlyRow label="Notas do lead" value={lead.notas} />
                     </div>
                   )}
                 </AccordionContent>
