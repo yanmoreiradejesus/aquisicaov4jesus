@@ -669,6 +669,9 @@ export type Database = {
         | "fechado"
         | "follow_up_longo"
         | "perdido"
+        | "contrato"
+        | "fechado_ganho"
+        | "fechado_perdido"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -825,6 +828,9 @@ export const Constants = {
         "fechado",
         "follow_up_longo",
         "perdido",
+        "contrato",
+        "fechado_ganho",
+        "fechado_perdido",
       ],
     },
   },

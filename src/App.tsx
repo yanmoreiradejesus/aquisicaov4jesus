@@ -15,6 +15,7 @@ import MixCompra from "./pages/MixCompra";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import CrmLeads from "./pages/CrmLeads";
+import Oportunidades from "./pages/Oportunidades";
 import ComercialPlaceholder from "./pages/ComercialPlaceholder";
 import GoogleCallback from "./pages/GoogleCallback";
 
@@ -77,7 +78,7 @@ const AppRoutes = () => {
       } />
       <Route path="/comercial/oportunidades" element={
         <ProtectedRoute requiredPath="/comercial/oportunidades">
-          <PageTransition><ComercialPlaceholder titulo="CRM Oportunidades" descricao="Pipeline de oportunidades (proposta, negociação, fechado, follow-up, perdido). Em breve." /></PageTransition>
+          <PageTransition><Oportunidades /></PageTransition>
         </ProtectedRoute>
       } />
       <Route path="/comercial/accounts" element={
