@@ -830,6 +830,7 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
         onOpenChange={(v) => { setQualOpen(v); if (!v) setPendingEtapa(null); }}
         initialValue={form.qualificacao}
         initialTemperatura={form.temperatura}
+        initialDataReuniao={form.data_reuniao_agendada}
         onConfirm={handleConfirmQualificacao}
       />
     </Sheet>
