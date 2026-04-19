@@ -5,11 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { LEAD_ETAPAS } from "@/hooks/useCrmLeads";
-import { Check, ChevronRight, ChevronDown, Copy, MessageCircle, Pencil, Trash2, AlertCircle } from "lucide-react";
+import { Check, ChevronRight, ChevronDown, Copy, MessageCircle, Pencil, Trash2, AlertCircle, Calendar, ExternalLink, Loader2 } from "lucide-react";
 import { formatPhone, whatsappNumber, locationFromPhone, timeAgo } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
 import { LeadTimeline } from "./LeadTimeline";
 import { QualificacaoDialog } from "./QualificacaoDialog";
+import { useGoogleCalendar } from "@/hooks/useGoogleCalendar";
 
 interface Props {
   open: boolean;

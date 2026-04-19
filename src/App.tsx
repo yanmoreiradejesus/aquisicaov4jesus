@@ -16,6 +16,7 @@ import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import CrmLeads from "./pages/CrmLeads";
 import ComercialPlaceholder from "./pages/ComercialPlaceholder";
+import GoogleCallback from "./pages/GoogleCallback";
 
 const AppRoutes = () => {
   const location = useLocation();
@@ -23,6 +24,7 @@ const AppRoutes = () => {
   return (
     <Routes location={location} key={location.pathname}>
       <Route path="/login" element={<PageTransition><Login /></PageTransition>} />
+      <Route path="/auth/google-callback" element={<GoogleCallback />} />
 
       {/* Hub (home) */}
       <Route path="/" element={
