@@ -182,40 +182,86 @@ Deno.serve(async (req) => {
     }
     const attendees = Array.from(attendeesMap.values());
 
-    const event = {
-      summary,
-      description,
-      start: { dateTime: start.toISOString(), timeZone: "America/Sao_Paulo" },
-      end: { dateTime: end.toISOString(), timeZone: "America/Sao_Paulo" },
-      attendees,
-      conferenceData: {
-        createRequest: {
-          requestId: `lead-${lead.id}-${Date.now()}`,
-          conferenceSolutionKey: { type: "hangoutsMeet" },
-        },
-      },
-      reminders: { useDefault: true },
-    };
+    const existingEventId: string | null = lead.google_event_id ?? null;
+    let calJson: any;
 
-    const calRes = await fetch(
-      "https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=all&conferenceDataVersion=1",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(event),
+    if (existingEventId) {
+      // Buscar evento existente para mesclar attendees (preservar quem já está)
+      const getRes = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(existingEventId)}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      const existing = await getRes.json();
+      if (getRes.ok && Array.isArray(existing.attendees)) {
+        for (const a of existing.attendees) {
+          addAttendee(a.email, a.displayName);
+        }
       }
-    );
+      const mergedAttendees = Array.from(attendeesMap.values());
 
-    const calJson = await calRes.json();
-    if (!calRes.ok) {
-      console.error("Calendar create error", calJson);
-      return new Response(JSON.stringify({ error: "Calendar error", details: calJson }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      const patchBody = {
+        summary,
+        description,
+        start: { dateTime: start.toISOString(), timeZone: "America/Sao_Paulo" },
+        end: { dateTime: end.toISOString(), timeZone: "America/Sao_Paulo" },
+        attendees: mergedAttendees,
+      };
+
+      const patchRes = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(existingEventId)}?sendUpdates=all`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(patchBody),
+        }
+      );
+      calJson = await patchRes.json();
+      if (!patchRes.ok) {
+        console.error("Calendar patch error", calJson);
+        return new Response(JSON.stringify({ error: "Calendar error", details: calJson }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else {
+      const event = {
+        summary,
+        description,
+        start: { dateTime: start.toISOString(), timeZone: "America/Sao_Paulo" },
+        end: { dateTime: end.toISOString(), timeZone: "America/Sao_Paulo" },
+        attendees,
+        conferenceData: {
+          createRequest: {
+            requestId: `lead-${lead.id}-${Date.now()}`,
+            conferenceSolutionKey: { type: "hangoutsMeet" },
+          },
+        },
+        reminders: { useDefault: true },
+      };
+
+      const calRes = await fetch(
+        "https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=all&conferenceDataVersion=1",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(event),
+        }
+      );
+
+      calJson = await calRes.json();
+      if (!calRes.ok) {
+        console.error("Calendar create error", calJson);
+        return new Response(JSON.stringify({ error: "Calendar error", details: calJson }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // Notas: anexar convidados extras às notas existentes

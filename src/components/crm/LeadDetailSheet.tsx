@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { LEAD_ETAPAS } from "@/hooks/useCrmLeads";
 import {
   Check,
@@ -13,10 +17,12 @@ import {
   Trash2,
   AlertCircle,
   Calendar,
+  CalendarIcon,
   ExternalLink,
   Loader2,
   Plus,
   CalendarClock,
+  RefreshCw,
 } from "lucide-react";
 import { formatPhone, whatsappNumber, locationFromPhone, timeAgo } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
@@ -26,6 +32,7 @@ import { useGoogleCalendar } from "@/hooks/useGoogleCalendar";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X, UserPlus } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Props {
   open: boolean;
@@ -430,30 +437,47 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                   <label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1 block">
                     Data da reunião
                   </label>
-                  <Input
-                    type="date"
-                    value={
-                      form.data_reuniao_agendada
-                        ? new Date(form.data_reuniao_agendada).toISOString().slice(0, 10)
-                        : ""
-                    }
-                    onChange={(e) => {
-                      const dateStr = e.target.value;
-                      if (!dateStr) {
-                        set("data_reuniao_agendada", null);
-                        return;
-                      }
-                      const existing = form.data_reuniao_agendada
-                        ? new Date(form.data_reuniao_agendada)
-                        : null;
-                      const hh = existing ? existing.getHours() : 10;
-                      const mm = existing ? existing.getMinutes() : 0;
-                      const [y, m, d] = dateStr.split("-").map(Number);
-                      const newDate = new Date(y, m - 1, d, hh, mm);
-                      set("data_reuniao_agendada", newDate.toISOString());
-                    }}
-                    className="h-9 text-sm"
-                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "h-9 w-full justify-start text-left font-normal text-sm",
+                          !form.data_reuniao_agendada && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {form.data_reuniao_agendada
+                          ? format(new Date(form.data_reuniao_agendada), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+                          : "Selecione a data"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarPicker
+                        mode="single"
+                        selected={form.data_reuniao_agendada ? new Date(form.data_reuniao_agendada) : undefined}
+                        onSelect={(d) => {
+                          if (!d) {
+                            set("data_reuniao_agendada", null);
+                            return;
+                          }
+                          const existing = form.data_reuniao_agendada
+                            ? new Date(form.data_reuniao_agendada)
+                            : null;
+                          const hh = existing ? existing.getHours() : 10;
+                          const mm = existing ? existing.getMinutes() : 0;
+                          const newDate = new Date(d.getFullYear(), d.getMonth(), d.getDate(), hh, mm);
+                          set("data_reuniao_agendada", newDate.toISOString());
+                        }}
+                        initialFocus
+                        locale={ptBR}
+                        defaultMonth={form.data_reuniao_agendada ? new Date(form.data_reuniao_agendada) : new Date()}
+                        fromYear={new Date().getFullYear() - 1}
+                        toYear={new Date().getFullYear() + 3}
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div>
                   <label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1 block">
@@ -581,23 +605,6 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                     {!form.data_reuniao_agendada && "data da reunião"} para criar o invite no Google Calendar.
                   </span>
                 </div>
-              ) : form.google_event_id ? (
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-emerald-400" />
-                    <span className="text-foreground">Evento criado e convite enviado para {form.email}</span>
-                  </div>
-                  {form.google_event_link && (
-                    <a
-                      href={form.google_event_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-sm text-primary hover:underline shrink-0"
-                    >
-                      Abrir <ExternalLink className="h-3 w-3" />
-                    </a>
-                  )}
-                </div>
               ) : googleConnected === null ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" /> Verificando conexão…
@@ -614,8 +621,29 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                 </div>
               ) : (
                 <div className="space-y-2">
+                  {form.google_event_id && (
+                    <div className="flex items-center justify-between gap-3 px-3 py-2 rounded-md border border-emerald-500/30 bg-emerald-500/10">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Check className="h-4 w-4 text-emerald-400" />
+                        <span className="text-foreground">Evento criado · convite enviado para {form.email}</span>
+                      </div>
+                      {form.google_event_link && (
+                        <a
+                          href={form.google_event_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 text-sm text-primary hover:underline shrink-0"
+                        >
+                          Abrir <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
+                    </div>
+                  )}
                   <p className="text-sm text-muted-foreground">
-                    Conectado como <span className="text-foreground">{emailGoogle}</span>. O lead receberá um convite com link do Google Meet.
+                    Conectado como <span className="text-foreground">{emailGoogle}</span>.
+                    {form.google_event_id
+                      ? " Adicione novos convidados acima e clique em Atualizar invite para reenviar."
+                      : " O lead receberá um convite com link do Google Meet."}
                   </p>
                   <div className="flex items-center gap-2">
                     <Button
@@ -634,10 +662,14 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                             google_event_id: res.event_id,
                             google_event_link: res.event_link,
                           }));
-                          toast({ title: "Evento criado!", description: `Convite enviado para ${form.email}` });
+                          setExtraAttendees([]);
+                          toast({
+                            title: form.google_event_id ? "Invite atualizado!" : "Evento criado!",
+                            description: `Convite enviado para ${form.email}`,
+                          });
                         } catch (e: any) {
                           toast({
-                            title: "Falha ao criar evento",
+                            title: "Falha ao processar invite",
                             description: e?.message ?? String(e),
                             variant: "destructive",
                           });
@@ -645,8 +677,14 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                       }}
                       disabled={googleLoading}
                     >
-                      {googleLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Calendar className="h-4 w-4 mr-1" />}
-                      Criar evento no Google Calendar
+                      {googleLoading ? (
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      ) : form.google_event_id ? (
+                        <RefreshCw className="h-4 w-4 mr-1" />
+                      ) : (
+                        <Calendar className="h-4 w-4 mr-1" />
+                      )}
+                      {form.google_event_id ? "Atualizar invite" : "Criar evento no Google Calendar"}
                     </Button>
                     <Button size="sm" variant="ghost" onClick={disconnectGoogle} disabled={googleLoading}>
                       Desconectar
