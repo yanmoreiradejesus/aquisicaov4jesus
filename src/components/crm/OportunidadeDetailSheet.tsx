@@ -891,12 +891,31 @@ export const OportunidadeDetailSheet = ({
                     className="text-sm resize-none"
                   />
                 ) : (
-                  <div
-                    onClick={() => setTranscricaoEditing(true)}
-                    className="cursor-text rounded-md border border-border/40 bg-background/40 p-3 text-sm text-foreground/85 whitespace-pre-wrap max-h-64 overflow-y-auto hover:border-border/70 transition-colors"
-                    title="Clique para editar"
-                  >
-                    {form.transcricao_reuniao}
+                  <div className="relative">
+                    <div
+                      onClick={() => setTranscricaoEditing(true)}
+                      className={cn(
+                        "cursor-text rounded-md border border-border/40 bg-background/40 p-3 text-sm text-foreground/85 whitespace-pre-wrap hover:border-border/70 transition-all overflow-hidden",
+                        transcricaoExpanded ? "max-h-none" : "max-h-[200px]",
+                      )}
+                      title="Clique para editar"
+                    >
+                      {form.transcricao_reuniao}
+                    </div>
+                    {!transcricaoExpanded && (
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 rounded-b-md bg-gradient-to-t from-background/95 to-transparent" />
+                    )}
+                    <div className="flex justify-center -mt-2 relative z-10">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 w-6 p-0 rounded-full"
+                        onClick={() => setTranscricaoExpanded((v) => !v)}
+                        title={transcricaoExpanded ? "Recolher" : "Expandir"}
+                      >
+                        {transcricaoExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                      </Button>
+                    </div>
                   </div>
                 )}
                 <p className="text-[10px] text-muted-foreground/60 mt-1.5">
