@@ -310,6 +310,68 @@ export const OportunidadeDetailSheet = ({
     onOpenChange(false);
   };
 
+  const callMeetingAI = async (action: "summarize" | "suggest_task") => {
+    const transcricao = (form.transcricao_reuniao ?? "").trim();
+    if (transcricao.length < 20) {
+      toast({ title: "Transcrição vazia", description: "Cole a transcrição da reunião antes de usar a IA.", variant: "destructive" });
+      return;
+    }
+    setAiLoading(action === "summarize" ? "resumo" : "tarefa");
+    try {
+      const contexto = {
+        nome_oportunidade: form.nome_oportunidade,
+        etapa: form.etapa,
+        valor_ef: form.valor_ef,
+        valor_fee: form.valor_fee,
+        temperatura: form.temperatura,
+        lead: lead ? {
+          nome: lead.nome, empresa: lead.empresa, segmento: lead.segmento,
+          faturamento: lead.faturamento, qualificacao: lead.qualificacao,
+        } : null,
+      };
+      const { data, error } = await supabase.functions.invoke("meeting-ai", {
+        body: { action, transcricao, contexto },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      if (action === "summarize") {
+        setAiResumo((data as any).resumo ?? "");
+      } else {
+        setAiTarefa((data as any).tarefa ?? null);
+      }
+    } catch (e: any) {
+      toast({ title: "Erro na IA", description: e?.message ?? "Falha ao chamar IA", variant: "destructive" });
+    } finally {
+      setAiLoading(null);
+    }
+  };
+
+  const aplicarResumoNasNotas = () => {
+    if (!aiResumo) return;
+    const atual = (form.notas ?? "").trim();
+    const bloco = `\n\n---\n📝 Resumo IA da reunião:\n${aiResumo}`;
+    set("notas", atual ? atual + bloco : aiResumo);
+    toast({ title: "Resumo adicionado às notas" });
+  };
+
+  const criarTarefaSugerida = async () => {
+    if (!aiTarefa || !form.id) return;
+    const dt = new Date();
+    dt.setDate(dt.getDate() + (aiTarefa.prazo_sugerido_dias ?? 1));
+    dt.setHours(9, 0, 0, 0);
+    try {
+      await addTarefa.mutateAsync({
+        titulo: `[${aiTarefa.prioridade?.toUpperCase() ?? "MED"}] ${aiTarefa.titulo}\n${aiTarefa.descricao}`,
+        data_agendada: dt.toISOString(),
+      });
+      toast({ title: "Tarefa criada", description: aiTarefa.titulo });
+      setAiTarefa(null);
+    } catch (e: any) {
+      toast({ title: "Erro ao criar tarefa", description: e?.message, variant: "destructive" });
+    }
+  };
+
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
