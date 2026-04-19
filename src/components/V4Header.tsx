@@ -72,7 +72,7 @@ const V4Header = () => {
   const navItemActive = "text-white bg-white/20";
 
   const ActiveDot = () => (
-    <span className="absolute -bottom-[6px] left-1/2 -translate-x-1/2 h-[3px] w-[3px] rounded-full bg-foreground/80" />
+    <span className="absolute -bottom-[6px] left-1/2 -translate-x-1/2 h-[3px] w-[3px] rounded-full bg-white/90" />
   );
 
   return (
