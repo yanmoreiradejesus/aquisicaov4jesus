@@ -1,49 +1,144 @@
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { Brain, Send, Sparkles, Trash2, Loader2 } from "lucide-react";
+import { Plus, ArrowUp, FileText, X, Save, Trash2, Loader2, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-type Msg = { role: "user" | "assistant"; content: string };
+type Attachment = {
+  id: string;
+  name: string;
+  type: string; // mime
+  size: number;
+  path: string; // storage path
+  signedUrl: string;
+  isImage: boolean;
+};
+
+type Msg = {
+  role: "user" | "assistant";
+  content: string;
+  attachments?: Attachment[];
+  ts?: number;
+};
 
 interface CloserCopilotProps {
   oportunidadeId: string;
 }
 
 const QUICK_ACTIONS: { key: string; label: string }[] = [
-  { key: "quebrar_objecao", label: "🛡️ Quebrar objeção" },
-  { key: "follow_up", label: "📨 Sugerir follow-up" },
-  { key: "proximo_passo", label: "➡️ Próximo passo" },
-  { key: "analise_perfil", label: "🧠 Análise de perfil" },
-  { key: "script_fechamento", label: "🤝 Script de fechamento" },
+  { key: "quebrar_objecao", label: "Quebrar objeção" },
+  { key: "follow_up", label: "Sugerir follow-up" },
+  { key: "proximo_passo", label: "Próximo passo" },
+  { key: "analise_perfil", label: "Análise de perfil" },
+  { key: "script_fechamento", label: "Script de fechamento" },
 ];
+
+const ACCEPTED = "image/png,image/jpeg,image/jpg,image/webp,image/gif,application/pdf";
 
 export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pending, setPending] = useState<Attachment[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [savingNotes, setSavingNotes] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, loading]);
 
+  // ---------- Upload ----------
+  const handleFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setUploading(true);
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      const userId = u?.user?.id;
+      if (!userId) throw new Error("Sessão expirada");
+
+      const uploaded: Attachment[] = [];
+      for (const file of Array.from(files)) {
+        if (file.size > 20 * 1024 * 1024) {
+          toast.error(`${file.name}: máximo 20MB`);
+          continue;
+        }
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const path = `${userId}/${oportunidadeId}/${Date.now()}-${safeName}`;
+        const { error: upErr } = await supabase.storage
+          .from("copilot-attachments")
+          .upload(path, file, { contentType: file.type, upsert: false });
+        if (upErr) {
+          toast.error(`Falha ao enviar ${file.name}`);
+          continue;
+        }
+        const { data: signed } = await supabase.storage
+          .from("copilot-attachments")
+          .createSignedUrl(path, 60 * 60 * 24 * 7);
+
+        const att: Attachment = {
+          id: crypto.randomUUID(),
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          path,
+          signedUrl: signed?.signedUrl || "",
+          isImage: file.type.startsWith("image/"),
+        };
+
+        // Registra na tabela
+        await supabase.from("crm_copilot_attachments").insert({
+          oportunidade_id: oportunidadeId,
+          user_id: userId,
+          file_name: file.name,
+          file_path: path,
+          file_type: file.type,
+          file_size: file.size,
+        });
+
+        // Atividade no histórico
+        await supabase.from("crm_atividades").insert({
+          oportunidade_id: oportunidadeId,
+          tipo: "nota",
+          titulo: "Anexo Copilot",
+          descricao: `📎 ${file.name}\n${att.signedUrl}`,
+          usuario_id: userId,
+        });
+
+        uploaded.push(att);
+      }
+      setPending((p) => [...p, ...uploaded]);
+      if (uploaded.length) toast.success(`${uploaded.length} anexo(s) prontos`);
+    } catch (e: any) {
+      toast.error(e.message || "Erro no upload");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const removePending = (id: string) => setPending((p) => p.filter((a) => a.id !== id));
+
+  // ---------- Send ----------
   const send = async (opts: { text?: string; quickAction?: string }) => {
     if (loading) return;
     const text = opts.text?.trim();
-    if (!text && !opts.quickAction) return;
+    const atts = pending;
+    if (!text && !opts.quickAction && atts.length === 0) return;
 
-    const newMessages: Msg[] = text ? [...messages, { role: "user", content: text }] : [...messages];
-    if (opts.quickAction) {
-      const qa = QUICK_ACTIONS.find((q) => q.key === opts.quickAction);
-      newMessages.push({ role: "user", content: qa ? qa.label : opts.quickAction });
-    }
+    const userMsg: Msg = {
+      role: "user",
+      content: text || (opts.quickAction ? QUICK_ACTIONS.find((q) => q.key === opts.quickAction)?.label || "" : ""),
+      attachments: atts.length ? atts : undefined,
+      ts: Date.now(),
+    };
+    const newMessages: Msg[] = [...messages, userMsg];
     setMessages(newMessages);
     setInput("");
+    setPending([]);
     setLoading(true);
 
     let assistantSoFar = "";
@@ -54,7 +149,7 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
         if (last?.role === "assistant") {
           return prev.map((m, i) => (i === prev.length - 1 ? { ...m, content: assistantSoFar } : m));
         }
-        return [...prev, { role: "assistant", content: assistantSoFar }];
+        return [...prev, { role: "assistant", content: assistantSoFar, ts: Date.now() }];
       });
     };
 
@@ -69,7 +164,16 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           oportunidade_id: oportunidadeId,
-          messages: text ? newMessages.slice(0, -1) : newMessages,
+          messages: newMessages.map((m) => ({
+            role: m.role,
+            content: m.content,
+            attachments: m.attachments?.map((a) => ({
+              name: a.name,
+              type: a.type,
+              path: a.path,
+              url: a.signedUrl,
+            })),
+          })),
           quick_action: opts.quickAction,
         }),
         signal: abortRef.current.signal,
@@ -80,7 +184,6 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
         if (resp.status === 429) toast.error("Muitas requisições. Aguarde alguns segundos.");
         else if (resp.status === 402) toast.error("Créditos de IA esgotados.");
         else toast.error(errBody.error || "Falha ao chamar o Copilot");
-        setMessages((prev) => prev.filter((m, i) => !(i === prev.length - 1 && m.role === "assistant" && !m.content)));
         setLoading(false);
         return;
       }
@@ -126,106 +229,297 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
     }
   };
 
+  // ---------- Save conversation to notes ----------
+  const saveToNotes = async () => {
+    if (!messages.length) {
+      toast.error("Sem conversa para salvar");
+      return;
+    }
+    setSavingNotes(true);
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      const userId = u?.user?.id;
+
+      const dateStr = new Date().toLocaleString("pt-BR");
+      const body = messages
+        .map((m) => {
+          const who = m.role === "user" ? "👤 Closer" : "🧠 Copilot";
+          const atts = m.attachments?.length
+            ? `\n\n_Anexos: ${m.attachments.map((a) => a.name).join(", ")}_`
+            : "";
+          return `**${who}:**\n${m.content}${atts}`;
+        })
+        .join("\n\n");
+
+      const block = `\n\n--- Conversa Copilot [${dateStr}] ---\n${body}\n--- fim ---\n`;
+
+      const { data: opp } = await supabase
+        .from("crm_oportunidades")
+        .select("notas")
+        .eq("id", oportunidadeId)
+        .maybeSingle();
+
+      const novasNotas = (opp?.notas || "") + block;
+
+      await supabase.from("crm_oportunidades").update({ notas: novasNotas }).eq("id", oportunidadeId);
+
+      await supabase.from("crm_atividades").insert({
+        oportunidade_id: oportunidadeId,
+        tipo: "nota",
+        titulo: "Conversa Copilot salva",
+        descricao: body.slice(0, 4000),
+        usuario_id: userId,
+      });
+
+      toast.success("Conversa salva nas notas");
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao salvar");
+    } finally {
+      setSavingNotes(false);
+    }
+  };
+
+  const formatTime = (ts?: number) =>
+    ts ? new Date(ts).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "";
+
   return (
-    <div className="flex flex-col h-[600px] border border-border/40 rounded-xl bg-background/30 overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border/40 bg-surface-2/40">
-        <div className="flex items-center gap-2">
-          <Brain className="h-4 w-4 text-primary" />
+    <div
+      className="flex flex-col h-[640px] rounded-2xl overflow-hidden border border-border/40"
+      style={{
+        background:
+          "linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--surface-2)/0.4) 100%)",
+        fontFamily:
+          '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
+      }}
+    >
+      {/* Header iMessage-style */}
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/40 bg-background/60 backdrop-blur-md">
+        <div className="flex items-center gap-2.5">
+          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-[#007AFF] to-[#5856D6] flex items-center justify-center text-white text-[13px] font-semibold">
+            🧠
+          </div>
           <div>
-            <p className="text-[12px] font-semibold">Copilot Closer</p>
-            <p className="text-[10px] text-muted-foreground">IA avançada · consultor de vendas</p>
+            <p className="text-[13px] font-semibold leading-tight">Copilot Closer</p>
+            <p className="text-[10px] text-muted-foreground leading-tight">
+              consultor de vendas · online
+            </p>
           </div>
         </div>
-        {messages.length > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-[10px]"
-            onClick={() => setMessages([])}
-            disabled={loading}
-          >
-            <Trash2 className="h-3 w-3 mr-1" /> Limpar
-          </Button>
-        )}
+        <div className="flex items-center gap-1">
+          {messages.length > 0 && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-[10px]"
+                onClick={saveToNotes}
+                disabled={savingNotes}
+              >
+                {savingNotes ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3 mr-1" />}
+                Salvar nas notas
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-[10px]"
+                onClick={() => setMessages([])}
+                disabled={loading}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-2">
         {messages.length === 0 && (
-          <div className="text-center py-8 space-y-3">
-            <Sparkles className="h-8 w-8 text-primary/60 mx-auto" />
-            <p className="text-[12px] text-muted-foreground max-w-xs mx-auto">
-              Pergunte qualquer coisa sobre essa oportunidade ou use uma ação rápida abaixo.
+          <div className="text-center py-12 space-y-2">
+            <div className="text-4xl">💬</div>
+            <p className="text-[13px] text-muted-foreground max-w-xs mx-auto">
+              Mande uma mensagem, anexe prints/PDFs ou use uma sugestão abaixo.
             </p>
           </div>
         )}
-        {messages.map((m, i) => (
-          <div
-            key={i}
-            className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={`max-w-[85%] rounded-xl px-3 py-2 text-[12px] ${
-                m.role === "user"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-surface-2/70 text-foreground"
-              }`}
-            >
-              {m.role === "assistant" ? (
-                <div className="prose prose-sm prose-invert max-w-none [&>*]:my-1 [&_ul]:my-1 [&_li]:my-0">
-                  <ReactMarkdown>{m.content || "..."}</ReactMarkdown>
+
+        {messages.map((m, i) => {
+          const isUser = m.role === "user";
+          const prev = messages[i - 1];
+          const showTime = !prev || (m.ts && prev.ts && m.ts - (prev.ts || 0) > 5 * 60 * 1000);
+          return (
+            <div key={i}>
+              {showTime && m.ts && (
+                <div className="text-center text-[10px] text-muted-foreground/70 my-2">
+                  {formatTime(m.ts)}
                 </div>
-              ) : (
-                <p className="whitespace-pre-wrap">{m.content}</p>
               )}
+              <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+                <div className="flex flex-col gap-1 max-w-[78%]">
+                  {/* Attachments */}
+                  {m.attachments?.map((a) => (
+                    <div
+                      key={a.id}
+                      className={`rounded-2xl overflow-hidden ${
+                        isUser ? "self-end" : "self-start"
+                      }`}
+                    >
+                      {a.isImage ? (
+                        <a href={a.signedUrl} target="_blank" rel="noreferrer">
+                          <img
+                            src={a.signedUrl}
+                            alt={a.name}
+                            className="max-w-[240px] max-h-[240px] object-cover rounded-2xl"
+                          />
+                        </a>
+                      ) : (
+                        <a
+                          href={a.signedUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={`flex items-center gap-2 px-3 py-2.5 rounded-2xl ${
+                            isUser
+                              ? "bg-[#007AFF] text-white"
+                              : "bg-muted text-foreground"
+                          }`}
+                        >
+                          <FileText className="h-4 w-4 shrink-0" />
+                          <span className="text-[12px] truncate max-w-[180px]">{a.name}</span>
+                        </a>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* Text bubble */}
+                  {m.content && (
+                    <div
+                      className={`px-3.5 py-2 text-[14px] leading-snug ${
+                        isUser
+                          ? "bg-[#007AFF] text-white rounded-[18px] rounded-br-[6px] self-end"
+                          : "bg-muted text-foreground rounded-[18px] rounded-bl-[6px] self-start"
+                      }`}
+                      style={{ wordBreak: "break-word" }}
+                    >
+                      {m.role === "assistant" ? (
+                        <div className="prose prose-sm max-w-none [&>*]:my-1 [&_ul]:my-1 [&_li]:my-0 [&_p]:text-[14px] [&_strong]:font-semibold dark:prose-invert">
+                          <ReactMarkdown>{m.content}</ReactMarkdown>
+                        </div>
+                      ) : (
+                        <p className="whitespace-pre-wrap">{m.content}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
+
+        {/* Typing indicator */}
         {loading && messages[messages.length - 1]?.role !== "assistant" && (
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-            <Loader2 className="h-3 w-3 animate-spin" /> Copilot está pensando...
+          <div className="flex justify-start">
+            <div className="bg-muted rounded-[18px] rounded-bl-[6px] px-4 py-3 flex gap-1">
+              <span className="h-2 w-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="h-2 w-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "150ms" }} />
+              <span className="h-2 w-2 rounded-full bg-muted-foreground/60 animate-bounce" style={{ animationDelay: "300ms" }} />
+            </div>
           </div>
         )}
       </div>
 
-      {/* Quick actions */}
-      <div className="px-3 py-2 border-t border-border/40 flex flex-wrap gap-1.5 bg-surface-2/30">
-        {QUICK_ACTIONS.map((qa) => (
-          <Badge
-            key={qa.key}
-            variant="outline"
-            className="cursor-pointer hover:bg-primary/10 text-[10px] py-1 px-2"
-            onClick={() => !loading && send({ quickAction: qa.key })}
-          >
-            {qa.label}
-          </Badge>
-        ))}
-      </div>
+      {/* Quick actions (only when empty) */}
+      {messages.length === 0 && (
+        <div className="px-4 pb-2 flex flex-wrap gap-1.5 justify-center">
+          {QUICK_ACTIONS.map((qa) => (
+            <button
+              key={qa.key}
+              onClick={() => !loading && send({ quickAction: qa.key })}
+              disabled={loading}
+              className="text-[11px] px-3 py-1.5 rounded-full bg-muted hover:bg-muted/70 transition-colors disabled:opacity-50"
+            >
+              {qa.label}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {/* Input */}
-      <div className="p-3 border-t border-border/40 flex gap-2 items-end">
-        <Textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              send({ text: input });
-            }
-          }}
-          placeholder="Pergunte ao Copilot... (Enter envia, Shift+Enter quebra linha)"
-          className="min-h-[40px] max-h-[120px] text-[12px] resize-none"
-          disabled={loading}
-        />
-        <Button
-          size="icon"
-          onClick={() => send({ text: input })}
-          disabled={loading || !input.trim()}
-          className="h-10 w-10 shrink-0"
-        >
-          <Send className="h-4 w-4" />
-        </Button>
+      {/* Pending attachments preview */}
+      {pending.length > 0 && (
+        <div className="px-3 pt-2 flex flex-wrap gap-2 border-t border-border/30">
+          {pending.map((a) => (
+            <div
+              key={a.id}
+              className="relative group flex items-center gap-1.5 bg-muted rounded-xl pl-2 pr-7 py-1.5 max-w-[200px]"
+            >
+              {a.isImage ? <ImageIcon className="h-3.5 w-3.5 shrink-0" /> : <FileText className="h-3.5 w-3.5 shrink-0" />}
+              <span className="text-[11px] truncate">{a.name}</span>
+              <button
+                onClick={() => removePending(a.id)}
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-4 w-4 rounded-full bg-foreground/20 hover:bg-foreground/40 flex items-center justify-center"
+              >
+                <X className="h-2.5 w-2.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Input bar iMessage-style */}
+      <div className="p-2.5 border-t border-border/40 bg-background/60 backdrop-blur-md">
+        <div className="flex items-end gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ACCEPTED}
+            multiple
+            className="hidden"
+            onChange={(e) => handleFiles(e.target.files)}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading || loading}
+            className="h-8 w-8 rounded-full bg-muted hover:bg-muted/70 flex items-center justify-center shrink-0 transition-colors disabled:opacity-50"
+            title="Anexar imagem ou PDF"
+          >
+            {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          </button>
+
+          <div className="flex-1 flex items-end bg-muted rounded-[20px] border border-border/50 min-h-[34px] px-3 py-1.5">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  send({ text: input });
+                }
+              }}
+              placeholder="iMessage"
+              rows={1}
+              className="flex-1 bg-transparent outline-none resize-none text-[14px] leading-snug max-h-[120px] py-0.5"
+              disabled={loading}
+              style={{
+                fontFamily: 'inherit',
+                height: 'auto',
+              }}
+              onInput={(e) => {
+                const t = e.currentTarget;
+                t.style.height = 'auto';
+                t.style.height = Math.min(t.scrollHeight, 120) + 'px';
+              }}
+            />
+          </div>
+
+          {(input.trim() || pending.length > 0) && (
+            <button
+              onClick={() => send({ text: input })}
+              disabled={loading}
+              className="h-8 w-8 rounded-full bg-[#007AFF] hover:bg-[#0066DD] flex items-center justify-center shrink-0 transition-colors disabled:opacity-50"
+            >
+              <ArrowUp className="h-4 w-4 text-white" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
