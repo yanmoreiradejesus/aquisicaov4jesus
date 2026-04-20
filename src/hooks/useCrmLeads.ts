@@ -64,6 +64,22 @@ export function useCrmLeads() {
       if (etapa === "reuniao_realizada") patch.data_reuniao_realizada = new Date().toISOString();
       const { error } = await supabase.from("crm_leads" as any).update(patch).eq("id", id);
       if (error) throw error;
+
+      // Trigger briefing de mercado quando agenda reunião (fire-and-forget)
+      if (etapa === "reuniao_agendada") {
+        const { data: leadRow } = await supabase
+          .from("crm_leads" as any)
+          .select("briefing_mercado")
+          .eq("id", id)
+          .maybeSingle();
+        const existing = (leadRow as any)?.briefing_mercado;
+        const alreadyReady = existing && (existing.status === "ready" || existing.status === "generating");
+        if (!alreadyReady) {
+          supabase.functions
+            .invoke("generate-market-briefing", { body: { lead_id: id } })
+            .catch((e) => console.error("market briefing trigger failed", e));
+        }
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["crm_leads"] }),
   });

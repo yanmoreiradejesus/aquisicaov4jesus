@@ -249,6 +249,7 @@ export type Database = {
       crm_leads: {
         Row: {
           arrematador: string | null
+          briefing_mercado: Json | null
           canal: string | null
           cargo: string | null
           cidade: string | null
@@ -289,6 +290,7 @@ export type Database = {
         }
         Insert: {
           arrematador?: string | null
+          briefing_mercado?: Json | null
           canal?: string | null
           cargo?: string | null
           cidade?: string | null
@@ -329,6 +331,7 @@ export type Database = {
         }
         Update: {
           arrematador?: string | null
+          briefing_mercado?: Json | null
           canal?: string | null
           cargo?: string | null
           cidade?: string | null

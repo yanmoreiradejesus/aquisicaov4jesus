@@ -28,6 +28,7 @@ import { formatPhone, whatsappNumber, locationFromPhone, timeAgo } from "@/lib/d
 import { useToast } from "@/hooks/use-toast";
 import { LeadTimeline } from "./LeadTimeline";
 import { QualificacaoDialog } from "./QualificacaoDialog";
+import { MarketBriefingPanel } from "./MarketBriefingPanel";
 import { useGoogleCalendar } from "@/hooks/useGoogleCalendar";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -492,6 +493,13 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                 />
               </div>
             </div>
+
+            {/* Briefing de Mercado · IA — visível após reunião agendada */}
+            {form.id && ["reuniao_agendada", "reuniao_realizada", "no_show"].includes(form.etapa) && (
+              <div className="mt-4">
+                <MarketBriefingPanel leadId={form.id} briefing={form.briefing_mercado} />
+              </div>
+            )}
           </TabsContent>
 
           {/* TAB: Informações da Reunião */}
