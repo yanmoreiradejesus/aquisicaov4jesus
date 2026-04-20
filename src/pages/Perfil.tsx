@@ -139,8 +139,16 @@ const Perfil = () => {
               <div>
                 <p className="font-medium text-foreground">{profile.email}</p>
                 <div className="flex flex-wrap gap-2 mt-1">
-                  {profile.cargo && <Badge variant="secondary">{profile.cargo}</Badge>}
-                  {profile.departamento && <Badge variant="outline">{profile.departamento}</Badge>}
+                  {profile.cargo && (
+                    <Badge variant="secondary" className="text-xs">
+                      {profile.cargo}
+                    </Badge>
+                  )}
+                  {profile.departamento && (
+                    <Badge variant="outline" className="text-xs">
+                      {profile.departamento}
+                    </Badge>
+                  )}
                 </div>
               </div>
             </div>
