@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,18 @@ const Oportunidades = () => {
   const { toast } = useToast();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isLoading) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    const propostaIdx = OPORTUNIDADE_ETAPAS.findIndex((e) => e.id === "proposta");
+    const child = el.children[propostaIdx] as HTMLElement | undefined;
+    if (child) {
+      el.scrollTo({ left: Math.max(0, child.offsetLeft - 16), behavior: "auto" });
+    }
+  }, [isLoading]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -180,7 +192,7 @@ const Oportunidades = () => {
           </div>
         ) : (
           <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-            <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4">
+            <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4">
               {OPORTUNIDADE_ETAPAS.map((etapa) => (
                 <OportunidadeColumn
                   key={etapa.id}
@@ -189,7 +201,7 @@ const Oportunidades = () => {
                   color={etapa.color}
                   oportunidades={grouped[etapa.id] ?? []}
                   onEdit={(op) => { setEditing(op); setSheetOpen(true); }}
-                  defaultCollapsed={etapa.id === "fechado_perdido"}
+                  defaultCollapsed={etapa.id === "fechado_perdido" || etapa.id === "follow_infinito"}
                 />
               ))}
             </div>
