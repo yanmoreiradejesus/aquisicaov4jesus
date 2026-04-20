@@ -225,6 +225,9 @@ export type Database = {
           status: string | null
           telefone: string | null
           telefone_normalizado: string | null
+          transcricao: string | null
+          transcricao_error: string | null
+          transcricao_status: string | null
         }
         Insert: {
           call_id?: string | null
@@ -240,6 +243,9 @@ export type Database = {
           status?: string | null
           telefone?: string | null
           telefone_normalizado?: string | null
+          transcricao?: string | null
+          transcricao_error?: string | null
+          transcricao_status?: string | null
         }
         Update: {
           call_id?: string | null
@@ -255,6 +261,9 @@ export type Database = {
           status?: string | null
           telefone?: string | null
           telefone_normalizado?: string | null
+          transcricao?: string | null
+          transcricao_error?: string | null
+          transcricao_status?: string | null
         }
         Relationships: [
           {
