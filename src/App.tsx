@@ -10,6 +10,7 @@ import Hub from "./pages/Hub";
 import Index from "./pages/Index";
 import Insights from "./pages/Insights";
 import Admin from "./pages/Admin";
+import Perfil from "./pages/Perfil";
 import Financeiro from "./pages/Financeiro";
 import DashboardComercial from "./pages/DashboardComercial";
 import MixCompra from "./pages/MixCompra";
@@ -106,6 +107,13 @@ const AppRoutes = () => {
         <Route path="/admin" element={
           <ProtectedRoute>
             <PageTransition><Admin /></PageTransition>
+          </ProtectedRoute>
+        } />
+
+        {/* Perfil (auto-edição) */}
+        <Route path="/perfil" element={
+          <ProtectedRoute>
+            <PageTransition><Perfil /></PageTransition>
           </ProtectedRoute>
         } />
 

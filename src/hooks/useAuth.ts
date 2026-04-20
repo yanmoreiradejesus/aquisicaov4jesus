@@ -8,6 +8,10 @@ interface Profile {
   full_name: string | null;
   approved: boolean;
   created_at: string;
+  cargo: string | null;
+  departamento: string | null;
+  telefone: string | null;
+  avatar_url: string | null;
 }
 
 interface AuthState {

@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import logo from "@/assets/v4-logo.png";
-import { LogOut, Shield, ChevronDown, Menu, X } from "lucide-react";
+import { LogOut, Shield, ChevronDown, Menu, X, User as UserIcon } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { motion, useReducedMotion } from "framer-motion";
@@ -240,6 +240,24 @@ const V4Header = () => {
               {user && (
                 <Tooltip>
                   <TooltipTrigger asChild>
+                    <Link
+                      to="/perfil"
+                      className={`relative flex items-center justify-center h-8 w-8 rounded-full transition-all duration-200 ${
+                        isActive("/perfil")
+                          ? "bg-white/[0.08] text-foreground"
+                          : "text-foreground/65 hover:text-foreground hover:bg-white/[0.06] hover:scale-[1.05]"
+                      }`}
+                    >
+                      <UserIcon className="h-3.5 w-3.5" />
+                      {isActive("/perfil") && <ActiveDot />}
+                    </Link>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" sideOffset={8} className="rounded-lg text-xs">Meu perfil</TooltipContent>
+                </Tooltip>
+              )}
+              {user && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
                     <button
                       onClick={signOut}
                       className="flex items-center justify-center h-8 w-8 rounded-full text-foreground/65 hover:text-foreground hover:bg-white/[0.06] hover:scale-[1.05] transition-all duration-200"
@@ -349,7 +367,14 @@ const V4Header = () => {
             </nav>
 
             {user && (
-              <div className="border-t border-white/[0.06] p-3">
+              <div className="border-t border-white/[0.06] p-3 space-y-1">
+                <Link
+                  to="/perfil"
+                  className="flex items-center gap-2 text-foreground/70 hover:text-foreground hover:bg-white/[0.05] transition-colors text-[13px] font-medium w-full px-3 py-2 rounded-xl"
+                >
+                  <UserIcon className="h-4 w-4" />
+                  Meu perfil
+                </Link>
                 <button
                   onClick={signOut}
                   className="flex items-center gap-2 text-foreground/70 hover:text-foreground hover:bg-white/[0.05] transition-colors text-[13px] font-medium w-full px-3 py-2 rounded-xl"
