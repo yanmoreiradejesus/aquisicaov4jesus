@@ -65,8 +65,8 @@ export function useCrmLeads() {
       const { error } = await supabase.from("crm_leads" as any).update(patch).eq("id", id);
       if (error) throw error;
 
-      // Trigger briefing de mercado quando agenda reunião (fire-and-forget)
-      if (etapa === "reuniao_agendada") {
+      // Trigger briefing de mercado quando agenda OU realiza reunião (fire-and-forget)
+      if (etapa === "reuniao_agendada" || etapa === "reuniao_realizada") {
         const { data: leadRow } = await supabase
           .from("crm_leads" as any)
           .select("briefing_mercado")
