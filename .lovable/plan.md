@@ -1,53 +1,83 @@
 
 
-## Plano — Zerar dados de Leads e Oportunidades
+## Plano — Reestruturar tela de Admin (`/admin`)
 
-Apaga todos os registros das tabelas do CRM, mantendo a estrutura (schema, triggers, policies) e os usuários intactos.
+A tela atual mistura tudo numa página só (lista de usuários expandida + edição inline + templates de cargo + permissões em massa), ficando poluída em 1088px. Vou reorganizar em **lista compacta + drawer de edição**.
 
-### O que será apagado
+### Nova estrutura visual
 
-Em ordem (por causa das referências entre tabelas):
-
-1. **`cobrancas`** — todas as cobranças geradas
-2. **`accounts`** — todas as contas de clientes ativos
-3. **`crm_copilot_attachments`** — anexos do copilot vinculados a oportunidades
-4. **`crm_call_events`** — histórico de chamadas VOIP + transcrições
-5. **`crm_atividades`** — notas, tarefas, mudanças de etapa
-6. **`crm_oportunidades`** — todas as oportunidades
-7. **`crm_leads`** — todos os leads
-
-Arquivos no Storage (`copilot-attachments`, `contratos-assinados`) **não** serão apagados nesta operação — me avise se quiser limpar também.
-
-### O que NÃO será afetado
-
-- Estrutura das tabelas, triggers, RLS policies
-- Usuários (`profiles`, `user_roles`, `user_page_access`)
-- Tokens do Google (`user_google_tokens`)
-- Metas (`monthly_goals`, `mix_goals`)
-- Edge functions e secrets
-
-### Como vou executar
-
-Um único comando `TRUNCATE ... RESTART IDENTITY CASCADE` na ordem correta, via tool de inserção de dados (não é mudança de schema).
-
-```sql
-TRUNCATE TABLE 
-  public.cobrancas,
-  public.accounts,
-  public.crm_copilot_attachments,
-  public.crm_call_events,
-  public.crm_atividades,
-  public.crm_oportunidades,
-  public.crm_leads
-RESTART IDENTITY CASCADE;
+```text
+┌─ /admin ──────────────────────────────────────────────────┐
+│  [Tab: Usuários]  [Tab: Templates de Cargo]               │
+│                                                            │
+│  Usuários:                                                 │
+│  ┌──────────────────────────────────────────────────────┐ │
+│  │ [Buscar...]   [Filtro Cargo ▾] [Filtro Depto ▾]      │ │
+│  └──────────────────────────────────────────────────────┘ │
+│                                                            │
+│  ┌──────────────────────────────────────────────────────┐ │
+│  │ Avatar │ Nome / email      │ Cargo │ Status │  ⚙   │ │
+│  ├──────────────────────────────────────────────────────┤ │
+│  │  JS    │ João Silva        │ SDR   │ ✓ ativo│ Editar│ │
+│  │        │ joao@v4.com       │       │        │       │ │
+│  │  MA    │ Maria Alves       │ -     │ ⏳ pend │ Editar│ │
+│  └──────────────────────────────────────────────────────┘ │
+└────────────────────────────────────────────────────────────┘
 ```
 
-### ⚠ Aviso
+Ao clicar **Editar**, abre um **Sheet (drawer lateral)** à direita com:
 
-Operação **irreversível**. Não tem soft delete nessas tabelas — depois de rodar, a única forma de voltar é restaurar backup do banco. Confirma que pode prosseguir e que não precisa de export antes.
+```text
+┌─ Editar usuário: João Silva ─────────────────────┐
+│  Avatar + nome + email                            │
+│                                                   │
+│  ▸ Status                                         │
+│     [✓ Aprovado]   [Tornar admin]                 │
+│                                                   │
+│  ▸ Cargo & Departamento                           │
+│     Cargo:        [SDR ▾]                         │
+│     Departamento: [Receitas ▾] (auto pelo cargo)  │
+│     [↻ Aplicar template do cargo]                 │
+│                                                   │
+│  ▸ Acessos individuais                            │
+│     Aquisição:                                    │
+│       ☑ Dashboard                                 │
+│       ☐ Funil                                     │
+│       ☑ Insights                                  │
+│       ...                                         │
+│     Comercial:                                    │
+│       ☑ Leads                                     │
+│       ...                                         │
+│                                                   │
+│            [Cancelar]   [Salvar alterações]       │
+└───────────────────────────────────────────────────┘
+```
 
-### Opcional (me avise)
+A aba **Templates de Cargo** vira um espaço dedicado, separado da lista, agrupado por área (Receitas / PE&G / ADM), com checkboxes pra cada página.
 
-- Quer que eu **exporte** os dados atuais pra CSV em `/mnt/documents/` antes de limpar?
-- Quer limpar também os **arquivos no Storage** (anexos do copilot e contratos)?
+### Mudanças no código
+
+Arquivo único: `src/pages/Admin.tsx` reescrito.
+
+- Header: título + tabs (`Usuários` / `Templates de Cargo`).
+- **Tab Usuários**:
+  - Filtros em cima (busca por nome/email, filtro por cargo, por departamento).
+  - Tabela enxuta: avatar, nome+email, cargo (badge), departamento (badge), status (aprovado/pendente/admin), botão **Editar**.
+  - Estado `editingUser` controla abertura de `<Sheet>`.
+- **Sheet de edição** (componente interno `UserEditSheet`):
+  - Seções colapsáveis ou separadas por `<Separator />`: Status, Cargo/Departamento, Acessos.
+  - Ao mudar cargo, sugere aplicar template (botão).
+  - Acessos agrupados por área (Aquisição / Comercial / Admin), checkboxes.
+  - Salva tudo num único clique (batch: profile update + roles diff + page_access diff).
+- **Tab Templates**:
+  - Lista de cargos agrupada por área com card por cargo, mostrando páginas como checkboxes editáveis.
+  - Botão "Salvar template" por cargo.
+
+### Componentes shadcn usados
+`Tabs`, `Sheet`, `Table`, `Avatar`, `Badge`, `Input`, `Select`, `Checkbox`, `Separator`, `Button`, `Card`. Todos já no projeto.
+
+### Fora de escopo (não vou mexer)
+- Schema do banco — está OK.
+- RLS policies — sem alteração.
+- Outras páginas.
 
