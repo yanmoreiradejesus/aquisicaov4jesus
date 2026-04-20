@@ -127,6 +127,7 @@ export const OportunidadeAvancarDialog = ({
   etapaDestino,
   onConfirm,
 }: Props) => {
+  const { toast } = useToast();
   const etapaInfo = OPORTUNIDADE_ETAPAS.find((e) => e.id === etapaDestino);
   const etapaOrigem = oportunidade?.etapa;
   const isPropostaParaNegociacao = etapaOrigem === "proposta" && etapaDestino === "negociacao";
