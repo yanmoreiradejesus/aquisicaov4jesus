@@ -30,11 +30,10 @@ const Oportunidades = () => {
     if (isLoading) return;
     const el = scrollRef.current;
     if (!el) return;
-    // Scroll to start of "proposta" column (after Perdido + Follow Infinito collapsed)
-    const target = el.querySelector<HTMLElement>('[data-etapa="proposta"]');
-    if (target) {
-      const offset = target.offsetLeft - 16;
-      el.scrollTo({ left: Math.max(0, offset), behavior: "auto" });
+    const propostaIdx = OPORTUNIDADE_ETAPAS.findIndex((e) => e.id === "proposta");
+    const child = el.children[propostaIdx] as HTMLElement | undefined;
+    if (child) {
+      el.scrollTo({ left: Math.max(0, child.offsetLeft - 16), behavior: "auto" });
     }
   }, [isLoading]);
 
