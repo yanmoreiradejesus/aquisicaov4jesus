@@ -179,8 +179,8 @@ export const OportunidadeCard = ({ oportunidade, onClick }: Props) => {
   // ===== DEMAIS COLUNAS: visual atual com a etiqueta de temperatura definida na aba Reunião =====
   const titulo = oportunidade.nome_oportunidade;
   const subtitulo = lead?.empresa || lead?.nome;
-  const valorEf = fmtBRL(oportunidade.valor_ef);
-  const valorFee = fmtBRL(oportunidade.valor_fee);
+  const valorTotalNum = (Number(oportunidade.valor_ef) || 0) + (Number(oportunidade.valor_fee) || 0);
+  const valorTotal = valorTotalNum > 0 ? fmtBRL(valorTotalNum) : null;
   const dataPrev = fmtDate(oportunidade.data_fechamento_previsto);
   const tempMeta = oportunidade.temperatura ? TEMP_META[oportunidade.temperatura] : null;
   const TempIcon = tempMeta?.icon;
