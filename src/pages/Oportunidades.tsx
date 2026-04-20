@@ -97,7 +97,15 @@ const Oportunidades = () => {
     moveOp(op.id, destino);
   };
 
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const activeOp = useMemo(() => oportunidades.find((o: any) => o.id === activeId), [oportunidades, activeId]);
+
+  const handleDragStart = (e: DragStartEvent) => {
+    setActiveId(String(e.active.id));
+  };
+
   const handleDragEnd = (e: DragEndEvent) => {
+    setActiveId(null);
     const { active, over } = e;
     if (!over) return;
     const op = oportunidades.find((o: any) => o.id === active.id);
