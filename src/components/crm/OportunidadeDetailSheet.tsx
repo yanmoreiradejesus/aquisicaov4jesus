@@ -28,6 +28,7 @@ import { CloserCopilot } from "./CloserCopilot";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useOportunidadeAtividades } from "@/hooks/useOportunidadeAtividades";
+import { MarketBriefingPanel } from "./MarketBriefingPanel";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 

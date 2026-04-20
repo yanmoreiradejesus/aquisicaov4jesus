@@ -490,9 +490,15 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                   onChange={(e) => set("qualificacao", e.target.value)}
                   placeholder="Ex.: Dor principal — gerar leads B2B. Faturamento ~R$ 800k/mês. Já testou Meta Ads sem ROI. Decisor: CEO. Urgência alta, quer começar em 30 dias."
                   className="text-sm resize-none"
-                />
               </div>
             </div>
+
+            {/* Briefing de Mercado · IA — visível após reunião agendada */}
+            {form.id && ["reuniao_agendada", "reuniao_realizada", "no_show"].includes(form.etapa) && (
+              <div className="mt-4">
+                <MarketBriefingPanel leadId={form.id} briefing={form.briefing_mercado} />
+              </div>
+            )}
           </TabsContent>
 
           {/* TAB: Informações da Reunião */}
