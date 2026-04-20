@@ -29,7 +29,9 @@ import {
   AlertCircle,
   Calendar as CalendarIcon,
   ListTodo,
+  Sparkles,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 interface NovaTarefa {
