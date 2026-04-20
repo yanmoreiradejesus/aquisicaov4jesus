@@ -81,7 +81,8 @@ const TEMPERATURAS = [
   },
 ];
 
-const REQUIRES_TASK = new Set(["negociacao", "contrato", "follow_infinito"]);
+const REQUIRES_TASK = new Set(["negociacao", "follow_infinito"]);
+const REQUIRES_MEETING = new Set(["negociacao", "contrato", "fechado_ganho", "follow_infinito"]);
 
 const formatLocalDateTime = (d: Date) => {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -132,7 +133,7 @@ export const OportunidadeAvancarDialog = ({
   const etapaOrigem = oportunidade?.etapa;
   const isPropostaParaNegociacao = etapaOrigem === "proposta" && etapaDestino === "negociacao";
   const requiresTask = REQUIRES_TASK.has(etapaDestino);
-  const hasMeetingStep = isPropostaParaNegociacao;
+  const hasMeetingStep = REQUIRES_MEETING.has(etapaDestino);
   const hasTaskStep = requiresTask;
   const totalSteps = (hasMeetingStep ? 1 : 0) + (hasTaskStep ? 1 : 0) || 1;
 
