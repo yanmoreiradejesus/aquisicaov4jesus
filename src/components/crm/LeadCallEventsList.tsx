@@ -1,8 +1,13 @@
-import { Phone, PhoneOff, PhoneIncoming, Play } from "lucide-react";
+import { Phone, PhoneOff, PhoneIncoming, Play, FileText, Loader2, RefreshCw, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useLeadCallEvents, type CallEvent } from "@/hooks/useLeadCallEvents";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Props {
   leadId: string;
@@ -108,6 +113,9 @@ export function LeadCallEventsList({ leadId }: Props) {
                   className="mt-2 h-7 w-full max-w-xs"
                 />
               )}
+              {e.gravacao_url && (
+                <TranscricaoBlock event={e} />
+              )}
             </div>
             {e.gravacao_url && !navigator.userAgent.includes("Mobi") && (
               <a
@@ -123,5 +131,86 @@ export function LeadCallEventsList({ leadId }: Props) {
         );
       })}
     </div>
+  );
+}
+
+function TranscricaoBlock({ event }: { event: CallEvent }) {
+  const [open, setOpen] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const status = event.transcricao_status;
+
+  const retry = async () => {
+    setRetrying(true);
+    try {
+      const { error } = await supabase.functions.invoke("transcribe-call-recording", {
+        body: { event_id: event.id },
+      });
+      if (error) throw error;
+      toast.success("Transcrição iniciada");
+    } catch (e) {
+      toast.error("Falha ao iniciar transcrição");
+    } finally {
+      setRetrying(false);
+    }
+  };
+
+  if (status === "pendente" || status === "processando") {
+    return (
+      <div className="mt-2 inline-flex items-center gap-1.5 text-[10px] text-muted-foreground">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        Transcrevendo gravação…
+      </div>
+    );
+  }
+
+  if (status === "erro") {
+    return (
+      <div className="mt-2 flex items-center gap-2">
+        <span className="inline-flex items-center gap-1 text-[10px] text-destructive">
+          <AlertCircle className="h-3 w-3" /> Erro na transcrição
+        </span>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-5 px-1.5 text-[10px]"
+          onClick={retry}
+          disabled={retrying}
+        >
+          <RefreshCw className={`h-3 w-3 mr-1 ${retrying ? "animate-spin" : ""}`} /> Tentar de novo
+        </Button>
+      </div>
+    );
+  }
+
+  if (event.transcricao) {
+    return (
+      <Collapsible open={open} onOpenChange={setOpen} className="mt-2">
+        <CollapsibleTrigger asChild>
+          <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px]">
+            <FileText className="h-3 w-3 mr-1" />
+            {open ? "Ocultar transcrição" : "Ver transcrição"}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="mt-1.5 p-2 rounded-md bg-muted/30 border border-border/40 text-[11px] whitespace-pre-wrap leading-relaxed max-h-64 overflow-y-auto">
+            {event.transcricao}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    );
+  }
+
+  // sem status e sem transcrição — oferece gerar manualmente
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      className="mt-2 h-6 px-2 text-[10px]"
+      onClick={retry}
+      disabled={retrying}
+    >
+      <FileText className="h-3 w-3 mr-1" />
+      {retrying ? "Iniciando…" : "Transcrever"}
+    </Button>
   );
 }
