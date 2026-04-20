@@ -43,11 +43,12 @@ function statusVariant(status: string | null): { label: string; className: strin
 export function LeadCallEventsList({ leadId }: Props) {
   const { data: events = [], isLoading } = useLeadCallEvents(leadId);
 
-  // Show only history events in the main feed (deduplicate by call_id keeping latest)
+  // Show only "final" history events in the main feed (one per call_id)
+  const FINAL_EVENTS = new Set(["call-history-was-created", "ended"]);
   const history: CallEvent[] = [];
   const seen = new Set<string>();
   for (const e of events) {
-    if (e.event_type !== "call-history-was-created") continue;
+    if (!FINAL_EVENTS.has(e.event_type)) continue;
     const k = e.call_id ?? e.id;
     if (seen.has(k)) continue;
     seen.add(k);
@@ -87,6 +88,9 @@ export function LeadCallEventsList({ leadId }: Props) {
                   {format(new Date(e.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                 </span>
                 <Badge variant="outline" className={`text-[10px] ${v.className}`}>{v.label}</Badge>
+                <Badge variant="outline" className={`text-[10px] ${providerLabel(e.provider).className}`}>
+                  {providerLabel(e.provider).label}
+                </Badge>
                 <span className="text-[10px] text-muted-foreground">
                   Duração: {formatDuration(e.duracao_seg)}
                 </span>
