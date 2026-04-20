@@ -39,6 +39,13 @@ interface NovaTarefa {
   data_agendada: string;
 }
 
+interface GanhoPayload {
+  contrato_url: string;
+  oportunidades_monetizacao: string;
+  grau_exigencia: string;
+  info_deal: string;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -48,8 +55,16 @@ interface Props {
     transcricao_reuniao?: string;
     temperatura?: string;
     novasTarefas: NovaTarefa[];
+    ganho?: GanhoPayload;
   }) => Promise<void> | void;
 }
+
+const GRAUS_EXIGENCIA = [
+  { value: "baixo", label: "Baixo", color: "text-emerald-400 bg-emerald-400/10 ring-emerald-400/40" },
+  { value: "medio", label: "Médio", color: "text-amber-400 bg-amber-400/10 ring-amber-400/40" },
+  { value: "alto", label: "Alto", color: "text-orange-400 bg-orange-400/10 ring-orange-400/40" },
+  { value: "critico", label: "Crítico", color: "text-red-400 bg-red-400/10 ring-red-400/40" },
+];
 
 const TEMPERATURAS = [
   {
