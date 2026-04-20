@@ -16,6 +16,13 @@ function formatDuration(sec: number | null): string {
   return `${m}m ${s.toString().padStart(2, "0")}s`;
 }
 
+function providerLabel(provider: string | null | undefined): { label: string; className: string } {
+  const p = (provider ?? "").toLowerCase();
+  if (p === "api4com") return { label: "API4COM", className: "bg-violet-500/10 text-violet-400 border-violet-500/30" };
+  if (p === "3cplus") return { label: "3CPlus", className: "bg-sky-500/10 text-sky-400 border-sky-500/30" };
+  return { label: provider ?? "VoIP", className: "bg-muted/30 text-muted-foreground border-border/40" };
+}
+
 function statusVariant(status: string | null): { label: string; className: string; Icon: typeof Phone } {
   const s = (status ?? "").toLowerCase();
   if (s.includes("answer") || s.includes("atend") || s.includes("connected") || s === "ok") {
