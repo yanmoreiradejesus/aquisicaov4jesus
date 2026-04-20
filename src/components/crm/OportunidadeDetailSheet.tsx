@@ -701,8 +701,27 @@ export const OportunidadeDetailSheet = ({
                           value={lead.data_reuniao_agendada ? new Date(lead.data_reuniao_agendada).toLocaleString("pt-BR") : null}
                         />
                       </div>
-                      <MarketBriefingPanel leadId={lead.id} briefing={lead.briefing_mercado} readOnly />
                     </div>
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Briefing de Mercado (IA) — seção própria, somente leitura (herdada do lead) */}
+              <AccordionItem
+                value="briefing-ai"
+                className="border border-border/40 rounded-lg bg-background/30 px-4"
+              >
+                <AccordionTrigger className="text-[11px] font-semibold tracking-widest uppercase text-foreground hover:no-underline py-3">
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="h-3.5 w-3.5 text-primary" />
+                    Briefing de Mercado (IA)
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent className="pb-2">
+                  {!lead ? (
+                    <p className="text-sm text-muted-foreground py-2">Nenhum lead vinculado a esta oportunidade.</p>
+                  ) : (
+                    <MarketBriefingPanel leadId={lead.id} briefing={lead.briefing_mercado} readOnly />
                   )}
                 </AccordionContent>
               </AccordionItem>
