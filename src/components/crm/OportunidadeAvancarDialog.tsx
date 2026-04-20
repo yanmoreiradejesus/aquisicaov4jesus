@@ -133,7 +133,7 @@ export const OportunidadeAvancarDialog = ({
   const etapaOrigem = oportunidade?.etapa;
   const isPropostaParaNegociacao = etapaOrigem === "proposta" && etapaDestino === "negociacao";
   const requiresTask = REQUIRES_TASK.has(etapaDestino);
-  const hasMeetingStep = isPropostaParaNegociacao;
+  const hasMeetingStep = REQUIRES_MEETING.has(etapaDestino);
   const hasTaskStep = requiresTask;
   const totalSteps = (hasMeetingStep ? 1 : 0) + (hasTaskStep ? 1 : 0) || 1;
 
