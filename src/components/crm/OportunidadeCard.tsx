@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 interface Props {
   oportunidade: any;
   onClick: () => void;
+  overlay?: boolean;
 }
 
 const fmtBRL = (v?: number | null) => {
@@ -39,9 +40,10 @@ const LEAD_TEMP_PILL: Record<string, { emoji: string; cls: string; accent: strin
   Frio: { emoji: "❄️", cls: "bg-temp-cold/15 text-temp-cold border-temp-cold/40", accent: "bg-temp-cold" },
 };
 
-export const OportunidadeCard = ({ oportunidade, onClick }: Props) => {
+export const OportunidadeCard = ({ oportunidade, onClick, overlay = false }: Props) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: oportunidade.id,
+    disabled: overlay,
   });
   const { toast } = useToast();
 
@@ -63,14 +65,14 @@ export const OportunidadeCard = ({ oportunidade, onClick }: Props) => {
     };
   }, [oportunidade.id, oportunidade.updated_at]);
 
-  const style = transform
+  const style: React.CSSProperties | undefined = overlay
+    ? undefined
+    : transform
     ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0) rotate(${
-          isDragging ? "1.5deg" : "0deg"
-        })`,
-        zIndex: 50,
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        opacity: isDragging ? 0 : 1,
       }
-    : undefined;
+    : { opacity: isDragging ? 0 : 1 };
 
   const lead = oportunidade.lead;
   const isProposta = oportunidade.etapa === "proposta";
@@ -95,12 +97,12 @@ export const OportunidadeCard = ({ oportunidade, onClick }: Props) => {
     };
 
     return (
-      <div ref={setNodeRef} style={style} {...attributes}>
+      <div ref={overlay ? undefined : setNodeRef} style={style} {...(overlay ? {} : attributes)}>
         <div
           className={cn(
             "group relative overflow-hidden rounded-xl border bg-surface-1/80 backdrop-blur-sm",
-            isDragging
-              ? "border-primary/50 shadow-ios-xl ring-1 ring-primary/30 opacity-60 scale-[1.02]"
+            overlay
+              ? "border-primary/50 shadow-ios-xl ring-1 ring-primary/30 rotate-[1.5deg] scale-[1.04] cursor-grabbing"
               : "border-border/50 card-lift shadow-ios-sm hover:border-primary/40 hover:bg-surface-2/80",
           )}
         >
@@ -108,9 +110,9 @@ export const OportunidadeCard = ({ oportunidade, onClick }: Props) => {
           <span className={cn("absolute left-0 top-0 bottom-0 w-[3px]", accent)} />
 
           <div
-            {...listeners}
-            onClick={onClick}
-            className="pl-3.5 pr-3 py-3 cursor-grab active:cursor-grabbing"
+            {...(overlay ? {} : listeners)}
+            onClick={overlay ? undefined : onClick}
+            className={cn("pl-3.5 pr-3 py-3", overlay ? "cursor-grabbing" : "cursor-grab active:cursor-grabbing")}
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
@@ -186,15 +188,15 @@ export const OportunidadeCard = ({ oportunidade, onClick }: Props) => {
   const TempIcon = tempMeta?.icon;
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
+    <div ref={overlay ? undefined : setNodeRef} style={style} {...(overlay ? {} : attributes)}>
       <div
-        {...listeners}
-        onClick={onClick}
+        {...(overlay ? {} : listeners)}
+        onClick={overlay ? undefined : onClick}
         className={cn(
-          "group relative overflow-hidden rounded-xl border border-border/50 bg-surface-1/80 backdrop-blur-sm card-lift cursor-grab active:cursor-grabbing px-3 py-3",
-          isDragging
-            ? "opacity-60 shadow-ios-xl scale-[1.02]"
-            : "shadow-ios-sm hover:border-primary/40 hover:bg-surface-2/80"
+          "group relative overflow-hidden rounded-xl border border-border/50 bg-surface-1/80 backdrop-blur-sm px-3 py-3",
+          overlay
+            ? "shadow-ios-xl ring-1 ring-primary/30 border-primary/50 rotate-[1.5deg] scale-[1.04] cursor-grabbing"
+            : "card-lift cursor-grab active:cursor-grabbing shadow-ios-sm hover:border-primary/40 hover:bg-surface-2/80"
         )}
       >
         <div className="flex items-start justify-between gap-2">

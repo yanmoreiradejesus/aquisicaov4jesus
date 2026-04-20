@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search } from "lucide-react";
 import { useCrmOportunidades, OPORTUNIDADE_ETAPAS } from "@/hooks/useCrmOportunidades";
 import { OportunidadeColumn } from "@/components/crm/OportunidadeColumn";
+import { OportunidadeCard } from "@/components/crm/OportunidadeCard";
 import { OportunidadeDetailSheet } from "@/components/crm/OportunidadeDetailSheet";
 import { MotivoPerdaDialog } from "@/components/crm/MotivoPerdaDialog";
 import { OportunidadeAvancarDialog } from "@/components/crm/OportunidadeAvancarDialog";
@@ -96,7 +97,15 @@ const Oportunidades = () => {
     moveOp(op.id, destino);
   };
 
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const activeOp = useMemo(() => oportunidades.find((o: any) => o.id === activeId), [oportunidades, activeId]);
+
+  const handleDragStart = (e: DragStartEvent) => {
+    setActiveId(String(e.active.id));
+  };
+
   const handleDragEnd = (e: DragEndEvent) => {
+    setActiveId(null);
     const { active, over } = e;
     if (!over) return;
     const op = oportunidades.find((o: any) => o.id === active.id);
@@ -155,7 +164,7 @@ const Oportunidades = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div>
             <p className="text-[10px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-1">
-              Comercial
+              Aquisição
             </p>
             <h1 className="font-display text-[28px] lg:text-[34px] font-semibold text-foreground tracking-[-0.02em] normal-case">
               Oportunidades
@@ -191,7 +200,7 @@ const Oportunidades = () => {
             ))}
           </div>
         ) : (
-          <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+          <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveId(null)}>
             <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4">
               {OPORTUNIDADE_ETAPAS.map((etapa) => (
                 <OportunidadeColumn
@@ -205,6 +214,13 @@ const Oportunidades = () => {
                 />
               ))}
             </div>
+            <DragOverlay dropAnimation={{ duration: 220, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }}>
+              {activeOp ? (
+                <div className="w-72">
+                  <OportunidadeCard oportunidade={activeOp} onClick={() => {}} overlay />
+                </div>
+              ) : null}
+            </DragOverlay>
           </DndContext>
         )}
       </main>
