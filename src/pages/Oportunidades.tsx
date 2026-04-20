@@ -2,14 +2,16 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, LayoutGrid, ListChecks } from "lucide-react";
 import { useCrmOportunidades, OPORTUNIDADE_ETAPAS } from "@/hooks/useCrmOportunidades";
 import { OportunidadeColumn } from "@/components/crm/OportunidadeColumn";
 import { OportunidadeCard } from "@/components/crm/OportunidadeCard";
 import { OportunidadeDetailSheet } from "@/components/crm/OportunidadeDetailSheet";
 import { MotivoPerdaDialog } from "@/components/crm/MotivoPerdaDialog";
 import { OportunidadeAvancarDialog } from "@/components/crm/OportunidadeAvancarDialog";
+import { OportunidadeTasksOverview } from "@/components/crm/OportunidadeTasksOverview";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 const WORKFLOW_ETAPAS = new Set(["negociacao", "contrato", "follow_infinito"]);
 
