@@ -311,6 +311,8 @@ const DealFechadoPanel = ({
     </div>
   );
 };
+
+export const OportunidadeDetailSheet = ({
   open,
   onOpenChange,
   oportunidade,
