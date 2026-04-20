@@ -389,16 +389,20 @@ export type Database = {
       }
       crm_oportunidades: {
         Row: {
+          contrato_url: string | null
           created_at: string
           data_fechamento_previsto: string | null
           data_fechamento_real: string | null
           data_proposta: string | null
           etapa: Database["public"]["Enums"]["oportunidade_etapa"]
+          grau_exigencia: string | null
           id: string
+          info_deal: string | null
           lead_id: string | null
           motivo_perda: string | null
           nome_oportunidade: string
           notas: string | null
+          oportunidades_monetizacao: string | null
           responsavel_id: string | null
           resumo_reuniao: string | null
           temperatura: string | null
@@ -409,16 +413,20 @@ export type Database = {
           valor_total: number | null
         }
         Insert: {
+          contrato_url?: string | null
           created_at?: string
           data_fechamento_previsto?: string | null
           data_fechamento_real?: string | null
           data_proposta?: string | null
           etapa?: Database["public"]["Enums"]["oportunidade_etapa"]
+          grau_exigencia?: string | null
           id?: string
+          info_deal?: string | null
           lead_id?: string | null
           motivo_perda?: string | null
           nome_oportunidade: string
           notas?: string | null
+          oportunidades_monetizacao?: string | null
           responsavel_id?: string | null
           resumo_reuniao?: string | null
           temperatura?: string | null
@@ -429,16 +437,20 @@ export type Database = {
           valor_total?: number | null
         }
         Update: {
+          contrato_url?: string | null
           created_at?: string
           data_fechamento_previsto?: string | null
           data_fechamento_real?: string | null
           data_proposta?: string | null
           etapa?: Database["public"]["Enums"]["oportunidade_etapa"]
+          grau_exigencia?: string | null
           id?: string
+          info_deal?: string | null
           lead_id?: string | null
           motivo_perda?: string | null
           nome_oportunidade?: string
           notas?: string | null
+          oportunidades_monetizacao?: string | null
           responsavel_id?: string | null
           resumo_reuniao?: string | null
           temperatura?: string | null

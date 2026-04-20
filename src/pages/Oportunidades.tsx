@@ -13,7 +13,7 @@ import { OportunidadeTasksOverview } from "@/components/crm/OportunidadeTasksOve
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
-const WORKFLOW_ETAPAS = new Set(["negociacao", "contrato", "follow_infinito"]);
+const WORKFLOW_ETAPAS = new Set(["negociacao", "contrato", "follow_infinito", "fechado_ganho"]);
 
 const Oportunidades = () => {
   const { data: oportunidades = [], isLoading, upsert, updateEtapa, remove } = useCrmOportunidades();
@@ -126,6 +126,12 @@ const Oportunidades = () => {
     transcricao_reuniao?: string;
     temperatura?: string;
     novasTarefas: { titulo: string; data_agendada: string }[];
+    ganho?: {
+      contrato_url: string;
+      oportunidades_monetizacao: string;
+      grau_exigencia: string;
+      info_deal: string;
+    };
   }) => {
     if (!pendingAvanco) return;
     await new Promise<void>((resolve, reject) => {
@@ -136,10 +142,15 @@ const Oportunidades = () => {
           transcricao_reuniao: payload.transcricao_reuniao,
           temperatura: payload.temperatura,
           novasTarefas: payload.novasTarefas,
+          ...(payload.ganho ?? {}),
         },
         {
           onSuccess: () => {
-            toast({ title: "Etapa atualizada", description: "Tarefas registradas com sucesso." });
+            if (pendingAvanco.etapa === "fechado_ganho") {
+              toast({ title: "Oportunidade ganha! 🎉", description: "Cliente e cobranças criados automaticamente." });
+            } else {
+              toast({ title: "Etapa atualizada", description: "Tarefas registradas com sucesso." });
+            }
             resolve();
           },
           onError: (err: any) => {

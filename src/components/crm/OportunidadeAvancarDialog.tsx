@@ -39,6 +39,13 @@ interface NovaTarefa {
   data_agendada: string;
 }
 
+interface GanhoPayload {
+  contrato_url: string;
+  oportunidades_monetizacao: string;
+  grau_exigencia: string;
+  info_deal: string;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -48,8 +55,16 @@ interface Props {
     transcricao_reuniao?: string;
     temperatura?: string;
     novasTarefas: NovaTarefa[];
+    ganho?: GanhoPayload;
   }) => Promise<void> | void;
 }
+
+const GRAUS_EXIGENCIA = [
+  { value: "baixo", label: "Baixo", color: "text-emerald-400 bg-emerald-400/10 ring-emerald-400/40" },
+  { value: "medio", label: "Médio", color: "text-amber-400 bg-amber-400/10 ring-amber-400/40" },
+  { value: "alto", label: "Alto", color: "text-orange-400 bg-orange-400/10 ring-orange-400/40" },
+  { value: "critico", label: "Crítico", color: "text-red-400 bg-red-400/10 ring-red-400/40" },
+];
 
 const TEMPERATURAS = [
   {
@@ -83,6 +98,9 @@ const TEMPERATURAS = [
 
 const REQUIRES_TASK = new Set(["negociacao", "follow_infinito"]);
 const REQUIRES_MEETING = new Set(["negociacao", "contrato", "fechado_ganho", "follow_infinito"]);
+const REQUIRES_GANHO_FORM = new Set(["fechado_ganho"]);
+const CONTRATO_BUCKET = "contratos-assinados";
+const CONTRATO_MAX_BYTES = 20 * 1024 * 1024;
 
 const formatLocalDateTime = (d: Date) => {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -135,7 +153,9 @@ export const OportunidadeAvancarDialog = ({
   const requiresTask = REQUIRES_TASK.has(etapaDestino);
   const hasMeetingStep = REQUIRES_MEETING.has(etapaDestino);
   const hasTaskStep = requiresTask;
-  const totalSteps = (hasMeetingStep ? 1 : 0) + (hasTaskStep ? 1 : 0) || 1;
+  const hasGanhoStep = REQUIRES_GANHO_FORM.has(etapaDestino);
+  const totalSteps =
+    (hasMeetingStep ? 1 : 0) + (hasTaskStep ? 1 : 0) + (hasGanhoStep ? 1 : 0) || 1;
 
   const [step, setStep] = useState(1);
   const [transcricao, setTranscricao] = useState("");
@@ -147,6 +167,13 @@ export const OportunidadeAvancarDialog = ({
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
+
+  // Ganho step state
+  const [contratoFile, setContratoFile] = useState<File | null>(null);
+  const [contratoUploading, setContratoUploading] = useState(false);
+  const [oportunidadesMonetizacao, setOportunidadesMonetizacao] = useState("");
+  const [grauExigencia, setGrauExigencia] = useState<string>("");
+  const [infoDeal, setInfoDeal] = useState("");
 
   const transcricaoRef = useRef<HTMLTextAreaElement>(null);
   const tarefaTituloRef = useRef<HTMLInputElement>(null);
@@ -162,6 +189,11 @@ export const OportunidadeAvancarDialog = ({
       setNovaTarefaTitulo("");
       setNovaTarefaData(formatLocalDateTime(PRESETS[0].build()));
       setErrors({});
+      setContratoFile(null);
+      setContratoUploading(false);
+      setOportunidadesMonetizacao(oportunidade.oportunidades_monetizacao || "");
+      setGrauExigencia(oportunidade.grau_exigencia || "");
+      setInfoDeal(oportunidade.info_deal || "");
 
       supabase
         .from("crm_atividades" as any)
@@ -182,12 +214,17 @@ export const OportunidadeAvancarDialog = ({
     }, 80);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, step, hasMeetingStep, hasTaskStep]);
+  }, [open, step, hasMeetingStep, hasTaskStep, hasGanhoStep]);
 
-  const currentStepKey = (): "meeting" | "task" | "none" => {
-    if (hasMeetingStep && step === 1) return "meeting";
-    if (hasTaskStep) return "task";
-    return "none";
+  // Ordem dos steps: meeting → task → ganho
+  const stepOrder: Array<"meeting" | "task" | "ganho"> = [
+    ...(hasMeetingStep ? (["meeting"] as const) : []),
+    ...(hasTaskStep ? (["task"] as const) : []),
+    ...(hasGanhoStep ? (["ganho"] as const) : []),
+  ];
+
+  const currentStepKey = (): "meeting" | "task" | "ganho" | "none" => {
+    return stepOrder[step - 1] ?? "none";
   };
 
   const tarefasPendentes = useMemo(
@@ -228,21 +265,37 @@ export const OportunidadeAvancarDialog = ({
     if (hasTaskStep && requiresTask && tarefasPendentes === 0) {
       e.tarefas = "Mantenha a sugestão da IA ou adicione ao menos 1 tarefa";
     }
+    if (hasGanhoStep) {
+      if (!contratoFile && !oportunidade?.contrato_url) e.contrato = "Anexe o contrato assinado (PDF)";
+      if (!grauExigencia) e.grau = "Selecione o grau de exigência do cliente";
+      if (oportunidadesMonetizacao.trim().length < 5) e.monetizacao = "Descreva oportunidades de monetização";
+      if (infoDeal.trim().length < 5) e.info = "Descreva informações gerais do deal";
+    }
     return e;
   }, [
     hasMeetingStep,
     hasTaskStep,
+    hasGanhoStep,
     transcricao,
     temperatura,
     tarefas,
     tarefasPendentes,
     isPropostaParaNegociacao,
     requiresTask,
+    contratoFile,
+    grauExigencia,
+    oportunidadesMonetizacao,
+    infoDeal,
+    oportunidade?.contrato_url,
   ]);
 
   const isStepValid = (s: number): boolean => {
-    if (s === 1 && hasMeetingStep) return !liveErrors.transcricao && !liveErrors.temperatura;
-    return !liveErrors.tarefas;
+    const key = stepOrder[s - 1];
+    if (key === "meeting") return !liveErrors.transcricao && !liveErrors.temperatura;
+    if (key === "task") return !liveErrors.tarefas;
+    if (key === "ganho")
+      return !liveErrors.contrato && !liveErrors.grau && !liveErrors.monetizacao && !liveErrors.info;
+    return true;
   };
 
   const isAllValid = Object.keys(liveErrors).length === 0;
@@ -258,6 +311,23 @@ export const OportunidadeAvancarDialog = ({
     setStep((s) => s + 1);
   };
 
+  const uploadContrato = async (): Promise<string | undefined> => {
+    if (!contratoFile) return oportunidade?.contrato_url || undefined;
+    setContratoUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const ext = contratoFile.name.split(".").pop() || "pdf";
+      const path = `${user?.id ?? "anon"}/${oportunidade?.id ?? "new"}/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from(CONTRATO_BUCKET)
+        .upload(path, contratoFile, { contentType: contratoFile.type, upsert: false });
+      if (upErr) throw upErr;
+      return path;
+    } finally {
+      setContratoUploading(false);
+    }
+  };
+
   const submit = async () => {
     setSubmitted(true);
     if (!isAllValid) {
@@ -266,24 +336,39 @@ export const OportunidadeAvancarDialog = ({
     }
     setSaving(true);
     try {
+      let ganho: GanhoPayload | undefined;
+      if (hasGanhoStep) {
+        const contrato_url = await uploadContrato();
+        ganho = {
+          contrato_url: contrato_url || "",
+          oportunidades_monetizacao: oportunidadesMonetizacao.trim(),
+          grau_exigencia: grauExigencia,
+          info_deal: infoDeal.trim(),
+        };
+      }
       await onConfirm({
         transcricao_reuniao: hasMeetingStep ? transcricao.trim() : undefined,
         temperatura: hasMeetingStep ? temperatura : undefined,
         novasTarefas: tarefas,
+        ganho,
       });
       onOpenChange(false);
+    } catch (e: any) {
+      toast({ title: "Erro ao salvar", description: e?.message || "Falha ao confirmar", variant: "destructive" });
     } finally {
       setSaving(false);
     }
   };
 
   const showStep = currentStepKey();
-  const stepNumber = hasMeetingStep && step === 1 ? 1 : hasMeetingStep ? 2 : 1;
+  const stepNumber = step;
   const stepLabel =
     showStep === "meeting"
       ? "Resultado da reunião"
       : showStep === "task"
       ? "Próxima atividade"
+      : showStep === "ganho"
+      ? "Fechamento do deal"
       : "Confirmar";
 
   const isLastStep = stepNumber === totalSteps;
@@ -605,6 +690,123 @@ export const OportunidadeAvancarDialog = ({
                   </p>
                 )}
               </div>
+            </div>
+          )}
+
+          {showStep === "ganho" && (
+            <div className="space-y-5">
+              {/* Contrato assinado */}
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                  Contrato assinado * <span className="normal-case text-muted-foreground/70 font-normal">(PDF, máx. 20MB)</span>
+                </Label>
+                <Input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    if (f && f.size > CONTRATO_MAX_BYTES) {
+                      toast({ title: "Arquivo grande demais", description: "Limite: 20MB", variant: "destructive" });
+                      e.target.value = "";
+                      return;
+                    }
+                    if (f && f.type !== "application/pdf") {
+                      toast({ title: "Formato inválido", description: "Envie um PDF", variant: "destructive" });
+                      e.target.value = "";
+                      return;
+                    }
+                    setContratoFile(f);
+                  }}
+                  className={cn(submitted && liveErrors.contrato && "border-destructive")}
+                />
+                {contratoFile && (
+                  <p className="text-[11px] text-muted-foreground">
+                    📎 {contratoFile.name} · {(contratoFile.size / 1024).toFixed(0)} KB
+                  </p>
+                )}
+                {!contratoFile && oportunidade?.contrato_url && (
+                  <p className="text-[11px] text-emerald-400">✓ Contrato já anexado anteriormente (substitua se necessário)</p>
+                )}
+                {submitted && liveErrors.contrato && (
+                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
+                    <AlertCircle className="h-3 w-3" /> {liveErrors.contrato}
+                  </p>
+                )}
+              </div>
+
+              {/* Grau de exigência */}
+              <div className="space-y-2.5">
+                <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                  Grau de exigência do cliente *
+                </Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {GRAUS_EXIGENCIA.map((g) => {
+                    const active = grauExigencia === g.value;
+                    return (
+                      <button
+                        key={g.value}
+                        type="button"
+                        onClick={() => setGrauExigencia(g.value)}
+                        className={cn(
+                          "py-2.5 px-2 rounded-lg border text-[12px] font-semibold transition-all",
+                          active
+                            ? cn("border-transparent ring-2 shadow-ios-sm", g.color)
+                            : "border-border/40 hover:border-border bg-surface-1/50 text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {g.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {submitted && liveErrors.grau && (
+                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
+                    <AlertCircle className="h-3 w-3" /> {liveErrors.grau}
+                  </p>
+                )}
+              </div>
+
+              {/* Oportunidades de monetização */}
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                  Oportunidades de monetização *
+                </Label>
+                <Textarea
+                  rows={4}
+                  value={oportunidadesMonetizacao}
+                  onChange={(e) => setOportunidadesMonetizacao(e.target.value)}
+                  placeholder="Upsell, cross-sell, expansão futura, novos produtos que o cliente pode contratar..."
+                  className={cn("resize-none text-sm", submitted && liveErrors.monetizacao && "border-destructive")}
+                />
+                {submitted && liveErrors.monetizacao && (
+                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
+                    <AlertCircle className="h-3 w-3" /> {liveErrors.monetizacao}
+                  </p>
+                )}
+              </div>
+
+              {/* Info deal */}
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                  Informações gerais do deal *
+                </Label>
+                <Textarea
+                  rows={4}
+                  value={infoDeal}
+                  onChange={(e) => setInfoDeal(e.target.value)}
+                  placeholder="Decisores envolvidos, contexto do fechamento, prazos, expectativas, observações para o Account Manager..."
+                  className={cn("resize-none text-sm", submitted && liveErrors.info && "border-destructive")}
+                />
+                {submitted && liveErrors.info && (
+                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
+                    <AlertCircle className="h-3 w-3" /> {liveErrors.info}
+                  </p>
+                )}
+              </div>
+
+              {contratoUploading && (
+                <p className="text-[11px] text-muted-foreground">Enviando contrato...</p>
+              )}
             </div>
           )}
         </div>
