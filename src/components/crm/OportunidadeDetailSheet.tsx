@@ -29,6 +29,8 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useOportunidadeAtividades } from "@/hooks/useOportunidadeAtividades";
 import { MarketBriefingPanel } from "./MarketBriefingPanel";
+import { PreQualificationPanel } from "./PreQualificationPanel";
+import { LeadCallEventsList } from "./LeadCallEventsList";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -783,6 +785,13 @@ export const OportunidadeDetailSheet = ({
                           value={lead.data_reuniao_agendada ? new Date(lead.data_reuniao_agendada).toLocaleString("pt-BR") : null}
                         />
                       </div>
+
+                      <div>
+                        <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-2">
+                          Ligações VoIP & Transcrições
+                        </p>
+                        <LeadCallEventsList leadId={lead.id} />
+                      </div>
                     </div>
                   )}
                 </AccordionContent>
@@ -803,7 +812,27 @@ export const OportunidadeDetailSheet = ({
                   {!lead ? (
                     <p className="text-sm text-muted-foreground py-2">Nenhum lead vinculado a esta oportunidade.</p>
                   ) : (
-                    <MarketBriefingPanel leadId={lead.id} briefing={lead.briefing_mercado} readOnly />
+                    <MarketBriefingPanel leadId={lead.id} briefing={lead.briefing_mercado} />
+                  )}
+                </AccordionContent>
+              </AccordionItem>
+
+              {/* Pesquisa Pré-Qualificação (IA) — abaixo do briefing */}
+              <AccordionItem
+                value="prequal-ai"
+                className="border border-border/40 rounded-lg bg-background/30 px-4"
+              >
+                <AccordionTrigger className="text-[11px] font-semibold tracking-widest uppercase text-foreground hover:no-underline py-3">
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="h-3.5 w-3.5 text-primary" />
+                    Pesquisa Pré-Qualificação (IA)
+                  </span>
+                </AccordionTrigger>
+                <AccordionContent className="pb-2">
+                  {!lead ? (
+                    <p className="text-sm text-muted-foreground py-2">Nenhum lead vinculado a esta oportunidade.</p>
+                  ) : (
+                    <PreQualificationPanel leadId={lead.id} pesquisa={lead.pesquisa_pre_qualificacao} />
                   )}
                 </AccordionContent>
               </AccordionItem>
