@@ -13,7 +13,7 @@ import { OportunidadeTasksOverview } from "@/components/crm/OportunidadeTasksOve
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
-const WORKFLOW_ETAPAS = new Set(["negociacao", "contrato", "follow_infinito"]);
+const WORKFLOW_ETAPAS = new Set(["negociacao", "contrato", "follow_infinito", "fechado_ganho"]);
 
 const Oportunidades = () => {
   const { data: oportunidades = [], isLoading, upsert, updateEtapa, remove } = useCrmOportunidades();
