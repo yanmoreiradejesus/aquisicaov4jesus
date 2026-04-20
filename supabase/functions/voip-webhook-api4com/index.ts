@@ -110,13 +110,12 @@ Deno.serve(async (req) => {
     ])?.toString() ?? null;
 
     const telefoneRaw = pick<string>(data, [
-      "phone", "telephone", "to", "destination", "called_number",
-      "number", "contact_phone", "lead_phone", "called", "dst",
-      "callee", "destino",
+      "called", "callee", "phone", "telephone", "to", "destination",
+      "called_number", "number", "contact_phone", "lead_phone", "dst", "destino",
     ])?.toString() ?? null;
 
     const operador = pick<string>(data, [
-      "agent", "agent_name", "operator", "user", "user_name",
+      "caller", "agent", "agent_name", "operator", "user", "user_name",
       "extension", "ramal", "atendente",
     ])?.toString() ?? null;
 
@@ -125,12 +124,12 @@ Deno.serve(async (req) => {
     );
 
     const status = pick<string>(data, [
-      "status", "call_status", "disposition", "result", "hangup_cause",
+      "hangupCause", "hangup_cause", "status", "call_status", "disposition", "result",
     ])?.toString() ?? null;
 
     const gravacaoUrl = pick<string>(data, [
-      "recording_url", "record_url", "recording", "audio_url", "url",
-      "gravacao", "gravacao_url",
+      "recordUrl", "recording_url", "record_url", "recording", "audio_url",
+      "gravacao", "gravacao_url", "url",
     ])?.toString() ?? null;
 
     const telefoneNorm = normalizePhone(telefoneRaw);
