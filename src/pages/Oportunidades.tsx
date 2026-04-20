@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Plus, Search } from "lucide-react";
 import { useCrmOportunidades, OPORTUNIDADE_ETAPAS } from "@/hooks/useCrmOportunidades";
 import { OportunidadeColumn } from "@/components/crm/OportunidadeColumn";
+import { OportunidadeCard } from "@/components/crm/OportunidadeCard";
 import { OportunidadeDetailSheet } from "@/components/crm/OportunidadeDetailSheet";
 import { MotivoPerdaDialog } from "@/components/crm/MotivoPerdaDialog";
 import { OportunidadeAvancarDialog } from "@/components/crm/OportunidadeAvancarDialog";
