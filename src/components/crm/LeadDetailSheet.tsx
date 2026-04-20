@@ -28,6 +28,7 @@ import { formatPhone, whatsappNumber, locationFromPhone, timeAgo } from "@/lib/d
 import { useToast } from "@/hooks/use-toast";
 import { LeadTimeline } from "./LeadTimeline";
 import { QualificacaoDialog } from "./QualificacaoDialog";
+import { MarketBriefingPanel } from "./MarketBriefingPanel";
 import { useGoogleCalendar } from "@/hooks/useGoogleCalendar";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
