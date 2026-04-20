@@ -68,28 +68,50 @@ export function parseLeadsCsv(file: File): Promise<CsvLeadRow[]> {
       transformHeader: (h) => h.replace(/^\ufeff/, "").trim(),
       complete: (res) => {
         try {
+          // Acesso case/acento-insensitive aos campos do CSV
+          const norm = (s: string) =>
+            s
+              .toLowerCase()
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "")
+              .replace(/\s+/g, " ")
+              .trim();
+          const pick = (row: Record<string, string>, ...keys: string[]) => {
+            const map = new Map<string, string>();
+            for (const k of Object.keys(row)) map.set(norm(k), row[k]);
+            for (const k of keys) {
+              const v = map.get(norm(k));
+              if (v !== undefined && v !== "") return v;
+            }
+            return undefined;
+          };
           const rows: CsvLeadRow[] = res.data
             .map((r) => ({
-              nome_produto: clean(r["Nome do Produto"]),
-              valor_pago: parseValor(r["Valor"]),
-              arrematador: clean(r["Arrematador"]),
-              data_aquisicao: parseDateBR(r["Data de aquisição"]) ?? parseDateBR(r["Data"]),
-              faturamento: clean(r["Faturamento"]),
-              segmento: clean(r["Segmento"]),
-              canal: clean(r["Canal"]),
-              nome: clean(r["Nome do responsável"]) ?? clean(r["Nome da empresa"]) ?? "",
-              email: clean(r["E-mail"]),
-              cargo: clean(r["Cargo"]),
-              telefone: clean(r["Telefone"]),
-              empresa: clean(r["Nome da empresa"]),
-              pais: clean(r["País"]),
-              documento_empresa: clean(r["Documento da empresa"]),
-              tipo_produto: clean(r["Tipo de produto"]),
-              urgencia: clean(r["Urgência"]),
-              data_criacao_origem: parseDateTimeBR(r["Data de criação"]),
-              descricao: clean(r["Descrição"]),
-              cidade: clean(r["Cidade"]),
-              estado: clean(r["Estado"]),
+              nome_produto: clean(pick(r, "Nome do Produto", "Produto")),
+              valor_pago: parseValor(pick(r, "Valor")),
+              arrematador: clean(pick(r, "Arrematador")),
+              data_aquisicao:
+                parseDateBR(pick(r, "Data de aquisição", "Data de aquisicao")) ??
+                parseDateBR(pick(r, "Data")),
+              faturamento: clean(pick(r, "Faturamento")),
+              segmento: clean(pick(r, "Segmento")),
+              canal: clean(pick(r, "Canal")),
+              nome:
+                clean(pick(r, "Nome do responsável", "Nome do responsavel")) ??
+                clean(pick(r, "Nome da empresa")) ??
+                "",
+              email: clean(pick(r, "E-mail", "Email")),
+              cargo: clean(pick(r, "Cargo")),
+              telefone: clean(pick(r, "Telefone")),
+              empresa: clean(pick(r, "Nome da empresa", "Empresa")),
+              pais: clean(pick(r, "País", "Pais")),
+              documento_empresa: clean(pick(r, "Documento da empresa", "CNPJ", "Documento")),
+              tipo_produto: clean(pick(r, "Tipo de produto", "Tipo produto", "Produto tipo")),
+              urgencia: clean(pick(r, "Urgência", "Urgencia", "Prioridade")),
+              data_criacao_origem: parseDateTimeBR(pick(r, "Data de criação", "Data de criacao")),
+              descricao: clean(pick(r, "Descrição", "Descricao")),
+              cidade: clean(pick(r, "Cidade")),
+              estado: clean(pick(r, "Estado", "UF")),
               etapa: "entrada" as const,
             }))
             .filter((r) => r.nome);
