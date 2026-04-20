@@ -40,9 +40,10 @@ const LEAD_TEMP_PILL: Record<string, { emoji: string; cls: string; accent: strin
   Frio: { emoji: "❄️", cls: "bg-temp-cold/15 text-temp-cold border-temp-cold/40", accent: "bg-temp-cold" },
 };
 
-export const OportunidadeCard = ({ oportunidade, onClick }: Props) => {
+export const OportunidadeCard = ({ oportunidade, onClick, overlay = false }: Props) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: oportunidade.id,
+    disabled: overlay,
   });
   const { toast } = useToast();
 
@@ -64,14 +65,14 @@ export const OportunidadeCard = ({ oportunidade, onClick }: Props) => {
     };
   }, [oportunidade.id, oportunidade.updated_at]);
 
-  const style = transform
+  const style: React.CSSProperties | undefined = overlay
+    ? undefined
+    : transform
     ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0) rotate(${
-          isDragging ? "1.5deg" : "0deg"
-        })`,
-        zIndex: 50,
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        opacity: isDragging ? 0 : 1,
       }
-    : undefined;
+    : { opacity: isDragging ? 0 : 1 };
 
   const lead = oportunidade.lead;
   const isProposta = oportunidade.etapa === "proposta";
