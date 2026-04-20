@@ -93,10 +93,9 @@ export const OportunidadeColumn = ({
         </span>
       </div>
 
-      {(totalEf > 0 || totalFee > 0) && (
-        <div className={cn("px-3 py-1.5 border-x border-border/40 bg-surface-1/40 flex items-center justify-between text-[10px] tabular-nums")}>
-          {totalEf > 0 && <span className="text-emerald-400/90">EF {fmtBRL(totalEf)}</span>}
-          {totalFee > 0 && <span className="text-blue-400/90">Fee {fmtBRL(totalFee)}</span>}
+      {(totalEf + totalFee) > 0 && (
+        <div className={cn("px-3 py-1.5 border-x border-border/40 bg-surface-1/40 flex items-center justify-end text-[10px] tabular-nums")}>
+          <span className="text-foreground/80 font-semibold">{fmtBRL(totalEf + totalFee)}</span>
         </div>
       )}
 
