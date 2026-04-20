@@ -221,11 +221,8 @@ export const OportunidadeAvancarDialog = ({
       if (transcricao.trim().length < 20) e.transcricao = "Cole a transcrição (mín. 20 caracteres)";
       if (!temperatura) e.temperatura = "Selecione a temperatura";
     }
-    if (hasTaskStep) {
-      if (isPropostaParaNegociacao && tarefas.length === 0)
-        e.tarefas = "Crie a próxima atividade";
-      else if (requiresTask && tarefasPendentes === 0)
-        e.tarefas = "Adicione ao menos 1 tarefa pendente";
+    if (hasTaskStep && requiresTask && tarefasPendentes === 0) {
+      e.tarefas = "Mantenha a sugestão da IA ou adicione ao menos 1 tarefa";
     }
     return e;
   }, [
