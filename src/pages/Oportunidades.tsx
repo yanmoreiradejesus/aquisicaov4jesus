@@ -24,6 +24,19 @@ const Oportunidades = () => {
   const { toast } = useToast();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isLoading) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    // Scroll to start of "proposta" column (after Perdido + Follow Infinito collapsed)
+    const target = el.querySelector<HTMLElement>('[data-etapa="proposta"]');
+    if (target) {
+      const offset = target.offsetLeft - 16;
+      el.scrollTo({ left: Math.max(0, offset), behavior: "auto" });
+    }
+  }, [isLoading]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
