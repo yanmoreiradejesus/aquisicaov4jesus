@@ -399,6 +399,8 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
               </div>
 
               <HoverEditField label="Segmento" value={form.segmento ?? ""} onChange={(v) => set("segmento", v)} />
+              <HoverEditField label="Tipo de produto" value={form.tipo_produto ?? ""} onChange={(v) => set("tipo_produto", v)} />
+              <HoverEditField label="Urgência" value={form.urgencia ?? ""} onChange={(v) => set("urgencia", v)} />
               <HoverEditField label="Canal" value={form.canal ?? ""} onChange={(v) => set("canal", v)} />
               <HoverEditField
                 label="Valor pago (R$)"

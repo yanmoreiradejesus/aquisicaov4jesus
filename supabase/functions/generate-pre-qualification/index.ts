@@ -129,6 +129,18 @@ Deno.serve(async (req) => {
     const systemPrompt = `Você é um SDR sênior B2B brasileiro produzindo uma PESQUISA RÁPIDA DE PRÉ-QUALIFICAÇÃO para a primeira tentativa de contato com um lead.
 Seja objetivo, prático e acionável. Português do Brasil. Curto (~250 palavras no total).
 Use seu conhecimento sobre o segmento mencionado. Não invente fatos específicos da empresa que não estejam nos dados; quando for inferência, deixe claro pelo tom (ex: "tipicamente", "costuma").
+
+REGRAS CRÍTICAS SOBRE FATURAMENTO E PORTE:
+- O faturamento informado é SEMPRE MENSAL (Brasil, R$/mês). NUNCA trate como anual.
+- Quando mencionar faturamento no contexto, deixe claro que é mensal (ex: "fatura ~R$ 300 mil/mês").
+- Use EXATAMENTE esta tabela de tier (porte) baseada no faturamento MENSAL — não invente outros rótulos:
+  • 0 a 100 mil/mês → tiny
+  • 100 a 200 mil/mês → small
+  • 200 mil a 4 milhões/mês → medium
+  • 4 a 16 milhões/mês → large
+  • acima de 16 milhões/mês → enterprise
+- Se for citar porte, use um desses 5 rótulos (em minúsculo). Não use "PME", "SMB", "mid-market", "scale-up" etc.
+
 SEMPRE chame a função salvar_pesquisa_pre_qualificacao.`;
 
     const userPrompt = `Dados do lead:\n\n${contexto}\n\nGere a pesquisa de pré-qualificação chamando a função.`;
