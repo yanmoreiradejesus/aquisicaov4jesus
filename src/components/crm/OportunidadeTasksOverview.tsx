@@ -2,8 +2,9 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { format, isToday, isTomorrow, isPast, endOfDay, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarClock, CheckCircle2, Circle, AlertTriangle, Calendar as CalendarIcon, ArrowRight, Eye, EyeOff } from "lucide-react";
+import { CalendarClock, CheckCircle2, Circle, AlertTriangle, Calendar as CalendarIcon, ArrowRight, ChevronDown, Eye, EyeOff } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -25,18 +26,28 @@ interface Props {
   onOpenOportunidade?: (oportunidadeId: string) => void;
 }
 
-type ColKey = "atrasadas" | "hoje" | "amanha" | "proximos" | "concluidas";
+type SectionKey = "atrasadas" | "hoje" | "amanha" | "proximos" | "concluidas";
+
+const CONCLUIDAS_LIMIT = 20;
 
 export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
   const qc = useQueryClient();
   const { toast } = useToast();
-  const [hidden, setHidden] = useState<Record<ColKey, boolean>>({
+  const [hidden, setHidden] = useState<Record<SectionKey, boolean>>({
     atrasadas: false,
     hoje: false,
     amanha: false,
     proximos: false,
     concluidas: false,
   });
+  const [open, setOpen] = useState<Record<SectionKey, boolean>>({
+    atrasadas: true,
+    hoje: true,
+    amanha: false,
+    proximos: false,
+    concluidas: false,
+  });
+  const [showAllConcluidas, setShowAllConcluidas] = useState(false);
 
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ["crm_atividades_oport_overview"],
@@ -113,18 +124,69 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
 
   const total = tasks.length;
 
-  const Column = ({
-    colKey,
+  const TaskItem = ({ t }: { t: TaskRow }) => {
+    const d = t.data_agendada ? new Date(t.data_agendada) : null;
+    const ref = t.lead_empresa || t.lead_nome || t.op_nome;
+    return (
+      <li
+        className={cn(
+          "group flex items-center gap-3 rounded-xl border border-border bg-surface-1/60 hover:bg-surface-2/70 px-4 py-3 transition-colors",
+          t.concluida && "opacity-70"
+        )}
+      >
+        <button
+          onClick={() => toggle.mutate({ id: t.id, concluida: !t.concluida })}
+          className={cn(
+            "transition-colors shrink-0",
+            t.concluida
+              ? "text-emerald-400 hover:text-muted-foreground"
+              : "text-muted-foreground hover:text-emerald-400"
+          )}
+          title={t.concluida ? "Reabrir tarefa" : "Marcar como concluída"}
+        >
+          {t.concluida ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
+        </button>
+        <p className={cn(
+          "flex-1 min-w-0 text-sm text-foreground leading-snug break-words",
+          t.concluida && "line-through text-muted-foreground"
+        )}>
+          {t.titulo || t.descricao || "Tarefa"}
+        </p>
+        {d && (
+          <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+            <CalendarClock className="h-3.5 w-3.5" />
+            {format(d, "dd/MM HH'h'mm", { locale: ptBR })}
+          </span>
+        )}
+        {ref && (
+          <button
+            onClick={() => {
+              if (t.oportunidade_id && onOpenOportunidade) onOpenOportunidade(t.oportunidade_id);
+            }}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors shrink-0"
+          >
+            <span className="truncate max-w-[180px]">{ref}</span>
+            <ArrowRight className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </li>
+    );
+  };
+
+  const Section = ({
+    sectionKey,
     title,
     icon: Icon,
     items,
     tone,
+    isConcluidas,
   }: {
-    colKey: ColKey;
+    sectionKey: SectionKey;
     title: string;
     icon: any;
     items: TaskRow[];
     tone: "danger" | "primary" | "warning" | "muted" | "success";
+    isConcluidas?: boolean;
   }) => {
     const toneClasses = {
       danger: "text-red-400 border-red-500/30 bg-red-500/10",
@@ -134,86 +196,61 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
       success: "text-emerald-400 border-emerald-500/30 bg-emerald-500/10",
     }[tone];
 
-    const isHidden = hidden[colKey];
+    const isHidden = hidden[sectionKey];
+    const isOpen = open[sectionKey] && !isHidden;
+    const visibleItems = isConcluidas && !showAllConcluidas ? items.slice(0, CONCLUIDAS_LIMIT) : items;
 
     return (
-      <div className="flex flex-col min-w-0 glass rounded-2xl p-3 shadow-ios-sm">
-        <div className="flex items-center gap-2 px-1 pb-2 mb-2 border-b border-border/60">
-          <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center border", toneClasses)}>
-            <Icon className="h-4 w-4" />
-          </div>
-          <h3 className="text-sm font-semibold text-foreground flex-1">{title}</h3>
-          <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">{items.length}</Badge>
+      <Collapsible
+        open={isOpen}
+        onOpenChange={(v) => setOpen((o) => ({ ...o, [sectionKey]: v }))}
+        className="glass rounded-2xl shadow-ios-sm overflow-hidden"
+      >
+        <div className="flex items-center gap-2 p-3">
+          <CollapsibleTrigger
+            disabled={isHidden}
+            className="flex-1 flex items-center gap-3 text-left disabled:cursor-not-allowed group"
+          >
+            <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center border", toneClasses)}>
+              <Icon className="h-4 w-4" />
+            </div>
+            <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+            <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">{items.length}</Badge>
+            <ChevronDown className={cn(
+              "h-4 w-4 text-muted-foreground transition-transform ml-auto",
+              isOpen && "rotate-180"
+            )} />
+          </CollapsibleTrigger>
           <button
-            onClick={() => setHidden((h) => ({ ...h, [colKey]: !h[colKey] }))}
-            className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-md hover:bg-surface-2"
+            onClick={() => setHidden((h) => ({ ...h, [sectionKey]: !h[sectionKey] }))}
+            className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-md hover:bg-surface-2"
             title={isHidden ? "Mostrar tarefas" : "Ocultar tarefas"}
           >
-            {isHidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {isHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         </div>
-        {isHidden ? (
-          <p className="text-xs text-muted-foreground px-1 py-6 text-center italic">Tarefas ocultas</p>
-        ) : items.length === 0 ? (
-          <p className="text-xs text-muted-foreground px-1 py-6 text-center">Nenhuma tarefa</p>
-        ) : (
-          <ul className="space-y-2 overflow-y-auto pr-1">
-            {items.map((t) => {
-              const d = t.data_agendada ? new Date(t.data_agendada) : null;
-              const ref = t.lead_empresa || t.lead_nome || t.op_nome;
-              return (
-                <li
-                  key={t.id}
-                  className={cn(
-                    "group flex items-start gap-2 rounded-xl border border-border bg-surface-1/60 hover:bg-surface-2/70 p-3 transition-colors",
-                    t.concluida && "opacity-70"
-                  )}
-                >
+        <CollapsibleContent>
+          <div className="px-3 pb-3 pt-0 border-t border-border/60">
+            {items.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-6 text-center">Nenhuma tarefa</p>
+            ) : (
+              <>
+                <ul className="space-y-2 pt-3">
+                  {visibleItems.map((t) => <TaskItem key={t.id} t={t} />)}
+                </ul>
+                {isConcluidas && items.length > CONCLUIDAS_LIMIT && (
                   <button
-                    onClick={() => toggle.mutate({ id: t.id, concluida: !t.concluida })}
-                    className={cn(
-                      "mt-0.5 transition-colors shrink-0",
-                      t.concluida
-                        ? "text-emerald-400 hover:text-muted-foreground"
-                        : "text-muted-foreground hover:text-emerald-400"
-                    )}
-                    title={t.concluida ? "Reabrir tarefa" : "Marcar como concluída"}
+                    onClick={() => setShowAllConcluidas((v) => !v)}
+                    className="w-full mt-3 text-xs text-primary hover:text-primary/80 transition-colors py-2"
                   >
-                    {t.concluida ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
+                    {showAllConcluidas ? "Mostrar menos" : `Ver mais (${items.length - CONCLUIDAS_LIMIT})`}
                   </button>
-                  <div className="flex-1 min-w-0">
-                    <p className={cn(
-                      "text-sm text-foreground leading-snug break-words",
-                      t.concluida && "line-through text-muted-foreground"
-                    )}>
-                      {t.titulo || t.descricao || "Tarefa"}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1.5 flex-wrap text-[11px] text-muted-foreground">
-                      {d && (
-                        <span className="inline-flex items-center gap-1">
-                          <CalendarClock className="h-3 w-3" />
-                          {format(d, "dd/MM HH'h'mm", { locale: ptBR })}
-                        </span>
-                      )}
-                      {ref && (
-                        <button
-                          onClick={() => {
-                            if (t.oportunidade_id && onOpenOportunidade) onOpenOportunidade(t.oportunidade_id);
-                          }}
-                          className="inline-flex items-center gap-1 hover:text-primary transition-colors"
-                        >
-                          <span className="truncate max-w-[160px]">{ref}</span>
-                          <ArrowRight className="h-3 w-3" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
+                )}
+              </>
+            )}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
     );
   };
 
@@ -227,12 +264,12 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
           <p className="text-base text-muted-foreground">Nenhuma tarefa. Bom trabalho!</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <Column colKey="atrasadas" title="Atrasadas" icon={AlertTriangle} items={groups.atrasadas} tone="danger" />
-          <Column colKey="hoje" title="De hoje" icon={CalendarClock} items={groups.hoje} tone="primary" />
-          <Column colKey="amanha" title="De amanhã" icon={CalendarIcon} items={groups.amanha} tone="warning" />
-          <Column colKey="proximos" title="Próximos dias" icon={CalendarIcon} items={groups.proximos} tone="muted" />
-          <Column colKey="concluidas" title="Concluídas" icon={CheckCircle2} items={groups.concluidas} tone="success" />
+        <div className="space-y-3 max-w-4xl mx-auto">
+          <Section sectionKey="atrasadas" title="Atrasadas" icon={AlertTriangle} items={groups.atrasadas} tone="danger" />
+          <Section sectionKey="hoje" title="De hoje" icon={CalendarClock} items={groups.hoje} tone="primary" />
+          <Section sectionKey="amanha" title="De amanhã" icon={CalendarIcon} items={groups.amanha} tone="warning" />
+          <Section sectionKey="proximos" title="Próximos dias" icon={CalendarIcon} items={groups.proximos} tone="muted" />
+          <Section sectionKey="concluidas" title="Concluídas" icon={CheckCircle2} items={groups.concluidas} tone="success" isConcluidas />
         </div>
       )}
     </div>
