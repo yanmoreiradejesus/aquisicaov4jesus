@@ -98,6 +98,9 @@ const TEMPERATURAS = [
 
 const REQUIRES_TASK = new Set(["negociacao", "follow_infinito"]);
 const REQUIRES_MEETING = new Set(["negociacao", "contrato", "fechado_ganho", "follow_infinito"]);
+const REQUIRES_GANHO_FORM = new Set(["fechado_ganho"]);
+const CONTRATO_BUCKET = "contratos-assinados";
+const CONTRATO_MAX_BYTES = 20 * 1024 * 1024;
 
 const formatLocalDateTime = (d: Date) => {
   const pad = (n: number) => String(n).padStart(2, "0");
