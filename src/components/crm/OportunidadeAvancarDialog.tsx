@@ -81,7 +81,8 @@ const TEMPERATURAS = [
   },
 ];
 
-const REQUIRES_TASK = new Set(["negociacao", "contrato", "follow_infinito"]);
+const REQUIRES_TASK = new Set(["negociacao", "follow_infinito"]);
+const REQUIRES_MEETING = new Set(["negociacao", "contrato", "fechado_ganho", "follow_infinito"]);
 
 const formatLocalDateTime = (d: Date) => {
   const pad = (n: number) => String(n).padStart(2, "0");
