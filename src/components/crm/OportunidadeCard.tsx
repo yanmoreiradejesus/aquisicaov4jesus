@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 interface Props {
   oportunidade: any;
   onClick: () => void;
+  overlay?: boolean;
 }
 
 const fmtBRL = (v?: number | null) => {
