@@ -1,57 +1,55 @@
 
 
-## Plano — Adicionar webhook API4COM (paralelo ao 3CPlus)
+## Plano — Tarefas em formato de seções (vertical)
 
-Mesma arquitetura do 3CPlus, novo provider. Reaproveita tabela `crm_call_events` (campo `provider` já existe) e o componente de timeline.
+Trocar o layout de kanban horizontal (5 colunas) por **seções empilhadas verticalmente** com largura total, tanto em Leads quanto em Oportunidades. Mais fácil de escanear, melhor para listas longas e funciona melhor no mobile.
 
-### URL do webhook (configurar no painel API4COM)
+### Como vai ficar
 
+```text
+┌──────────────────────────────────────────────────────┐
+│ ⚠  Atrasadas              [3]   👁  ▼               │
+├──────────────────────────────────────────────────────┤
+│ ○ Ligar pro João          22/04 14h00   iPaint  →   │
+│ ○ Enviar proposta         21/04 09h00   Acme    →   │
+│ ○ Confirmar reunião       20/04 16h00   Beta    →   │
+└──────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│ 🕐 De hoje                [2]   👁  ▼               │
+├──────────────────────────────────────────────────────┤
+│ ...                                                  │
+└──────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│ 📅 De amanhã              [1]   👁  ▶  (recolhida)  │
+└──────────────────────────────────────────────────────┘
+... Próximos dias / Concluídas
 ```
-https://edctpsdcrivpxynfxpef.supabase.co/functions/v1/voip-webhook-api4com
-```
 
-Configure os dois eventos disponíveis apontando pra essa mesma URL:
-- **após atendimento da chamada** → equivalente a `call-was-connected` do 3CPlus
-- **após desligamento da chamada** → equivalente a `call-history-was-created` (evento principal, com duração/gravação)
+### Detalhes do design
 
----
+- **Cada seção** ocupa 100% da largura, empilhada verticalmente com `space-y-3`
+- **Cabeçalho da seção**: ícone colorido por tom + título + contagem + botão recolher/expandir (chevron). Mantém o botão de ocultar atual.
+- **Lista interna**: cada item em uma linha mais larga, com mais espaço pro título da tarefa (sem o limite estreito da coluna kanban). Layout do item:
+  - Checkbox à esquerda
+  - Título da tarefa (ocupa o espaço disponível, sem quebrar prematuro)
+  - Data/hora à direita
+  - Lead/empresa clicável à direita (vai pro detalhe)
+- **Estado padrão**: "Atrasadas" e "Hoje" expandidas; "Amanhã", "Próximos" e "Concluídas" recolhidas (mostrando só o cabeçalho com contagem) — reduz scroll inicial.
+- **Ordem**: Atrasadas → Hoje → Amanhã → Próximos dias → Concluídas
+- **Concluídas**: seção colapsada por padrão, com limite de exibição (últimas 20) + botão "ver mais"
+- **Empty state** por seção: linha discreta "Nenhuma tarefa" só aparece se a seção estiver expandida
+- **Empty state global** (zero tarefas): mantém o card centralizado atual com ícone verde
 
-### O que será criado
+### Arquivos a editar
 
-**1. Edge function `voip-webhook-api4com`** (`supabase/functions/voip-webhook-api4com/index.ts`)
-- Pública (`verify_jwt = false`)
-- Normaliza event_type para padrão interno: `answered` (atendimento) e `ended` (desligamento)
-- Mesma lógica de match por telefone normalizado (reusa abordagem do 3CPlus)
-- Insere em `crm_call_events` com `provider = 'api4com'`
-- Em evento de desligamento: atualiza `crm_leads.ultimo_contato_telefonico`
-- Salva órfãos quando não acha lead
-- Retorna 200 sempre
+- `src/components/crm/TasksOverviewView.tsx` — substituir grid de 5 colunas por seções verticais usando `Collapsible` (já existe em `ui/collapsible.tsx`)
+- `src/components/crm/OportunidadeTasksOverview.tsx` — mesma mudança, espelhada
 
-**2. Config**
-- Adicionar bloco `[functions.voip-webhook-api4com]` com `verify_jwt = false` em `supabase/config.toml`
-
-**3. UI — ajuste mínimo no `LeadCallEventsList.tsx`**
-- Mostrar badge do `provider` (3CPlus / API4COM) ao lado de cada evento
-- Normalizar exibição de `event_type` (mostrar "Atendida" / "Finalizada" independente do provider)
-
----
+Lógica de agrupamento, query, mutation de toggle e navegação para o lead/oportunidade ficam **iguais** — só muda o layout de apresentação.
 
 ### O que NÃO muda
-- Tabela `crm_call_events` continua a mesma (campo `provider` já discrimina)
-- Hook `useLeadCallEvents` continua o mesmo
-- Realtime continua funcionando
-- Webhook do 3CPlus segue intocado
-
----
-
-### Decisões assumidas
-- Mesmo critério de match: últimos 10–11 dígitos do telefone normalizado
-- Sem validação de assinatura no V1
-- Payload bruto da API4COM salvo em `raw_payload` pra inspeção/ajuste posterior
-- Após o primeiro disparo real, eu olho os logs e ajusto o parser de campos (nome do telefone, duração, gravação) ao formato exato da API4COM
-
----
-
-### Próximo passo após aprovação
-Crio a edge function, ajusto o config, atualizo o componente de lista pra mostrar provider. Te entrego a URL pra colar no API4COM e testamos com uma ligação real de cada lado.
+- Schema do banco
+- Hooks de tarefas
+- Comportamento de adicionar/concluir/excluir tarefa
+- Navegação para o lead/oportunidade ao clicar
 
