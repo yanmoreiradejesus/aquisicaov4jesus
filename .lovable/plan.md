@@ -1,44 +1,85 @@
 
 
-## Plano — Redesenhar UX do dialog "Avançar oportunidade"
+## Plano — Briefing AI de mercado (Claude) ao agendar reunião
 
-O dialog atual sobrecarrega o usuário com muitos campos densos e mal hierarquizados. Vou reescrever o `OportunidadeAvancarDialog.tsx` em formato **wizard de etapas** com layout limpo, focado em uma decisão por vez.
+### Visão geral
+Quando um lead muda para `reuniao_agendada`, disparar análise de mercado via Claude (Anthropic — chave já configurada como `ANTHROPIC_API_KEY`). O resultado fica salvo no banco e aparece em duas telas:
+1. **CRM Leads** → seção "Briefing de Mercado (IA)" dentro do `LeadDetailSheet` (na aba/área de qualificação).
+2. **CRM Oportunidades** → seção "Briefing AI" dentro de Informações no `OportunidadeDetailSheet`.
+
+A oportunidade herda o briefing do lead (já ligados por `lead_id`), então salvamos uma vez só, no lead.
+
+### Estrutura do briefing (conteúdo leve)
+- **Resumo do mercado / modelo de negócio do cliente** (3-5 linhas)
+- **Highlights de mercado**: lista de 4-6 itens, cada um com:
+  - Tópico (1 linha)
+  - Resumo (2-3 linhas)
+  - Fonte (URL + nome do veículo)
+- **Gerado em** (timestamp) + botão "Regenerar"
+
+### Arquitetura
+
+```text
+crm_leads.etapa = 'reuniao_agendada'
+        │
+        ▼ (trigger client-side no updateEtapa OU Postgres trigger → pg_net)
+   Edge Function: generate-market-briefing
+        │
+        ▼
+   Claude API (claude-sonnet-4 com web search tool)
+        │
+        ▼
+   UPDATE crm_leads SET briefing_mercado = {jsonb}
+        │
+        ▼
+   Realtime → UI atualiza nas duas telas
+```
 
 ### Mudanças
 
-**1. Layout em wizard (steps numerados)**
-- Header com indicador de progresso (1 de 2 / 2 de 2) e badge da etapa destino.
-- Botão "Voltar" no footer entre passos; "Confirmar" só no último.
-- Largura `sm:max-w-xl`, padding generoso, sem scroll forçado quando possível.
+**1. Banco (migration)**
+- Adicionar coluna `briefing_mercado JSONB` em `crm_leads` (formato: `{ resumo, highlights: [{topico, resumo, fonte_url, fonte_nome}], generated_at, status }`).
+- `status` permite estados: `pending` | `generating` | `ready` | `error`.
 
-**2. Step 1 — Resultado da reunião** (só quando proposta → negociação)
-- Bloco "Temperatura" no topo (decisão rápida e visual): 3 cards grandes lado a lado com ícone + label + descrição curta ("Pronto para fechar" / "Precisa nutrir" / "Esfriou").
-- Bloco "Transcrição" abaixo: Textarea maior (rows 8), placeholder mais útil, contador de caracteres.
+**2. Edge Function nova: `generate-market-briefing`**
+- Recebe `{ lead_id }`.
+- Lê dados do lead (`empresa`, `segmento`, `nome_produto`, `descricao`, `site`, `cidade`, `estado`, `pais`).
+- Chama Claude (`claude-sonnet-4-5`) com web search habilitado, prompt estruturado pedindo JSON com resumo + highlights + fontes reais.
+- Faz upsert em `crm_leads.briefing_mercado`.
+- `verify_jwt = true` (chamada autenticada do front).
 
-**3. Step 2 — Próxima atividade** (sempre que `requiresTask`)
-- Form de criação **vertical e respirado** (não 3 inputs apertados em linha):
-  - Input "O que precisa ser feito?" (full width).
-  - Linha com data/hora + botão "Adicionar tarefa" (azul, primary, não outline).
-- Quick-presets de data: chips "Amanhã 9h", "Em 3 dias", "Próxima semana".
-- Lista de tarefas (existentes + novas) com visual unificado:
-  - Existentes em cinza com badge "já criada".
-  - Novas em azul claro com botão remover.
-- Empty state amigável quando vazio: "Nenhuma tarefa ainda — adicione a próxima ação".
-- Contador visual ("2 tarefas pendentes ✓") em verde quando atinge mínimo.
+**3. Disparo automático**
+- Em `useCrmLeads.updateEtapa`: após sucesso, se nova etapa = `reuniao_agendada` E o lead ainda não tem briefing, chamar `supabase.functions.invoke('generate-market-briefing', { body: { lead_id }})` em fire-and-forget.
+- Marcar `briefing_mercado.status = 'generating'` imediatamente para feedback visual.
 
-**4. Etapas que não exigem reunião** (ex: negociação → contrato)
-- Mostra apenas Step 2 (sem wizard, dialog único). Header explica o porquê.
+**4. UI — componente compartilhado `MarketBriefingPanel.tsx`**
+- Props: `briefing`, `loading`, `onRegenerate`.
+- Estados: vazio (com CTA "Gerar briefing"), gerando (skeleton + "Claude está pesquisando…"), pronto (cards de highlights + resumo), erro (retry).
+- Cada highlight: card compacto com tópico em bold, resumo, link da fonte (ícone external-link).
 
-**5. Microajustes UX**
-- Erros inline com ícone, não texto solto.
-- Botão "Confirmar avanço" desabilitado e com tooltip explicando o que falta quando inválido (em vez de só mostrar erro após click).
-- Tecla Enter no input de tarefa adiciona (não submete o form).
-- Auto-foco no primeiro campo relevante ao abrir/trocar step.
-- Adicionar `DialogDescription` (resolve warning do console).
+**5. Integrações nas telas**
+- `src/components/crm/LeadDetailSheet.tsx`: adicionar `<MarketBriefingPanel>` na seção de qualificação (visível quando etapa ≥ `reuniao_agendada`).
+- `src/components/crm/OportunidadeDetailSheet.tsx`: na seção "Informações da Oportunidade", buscar o lead vinculado e renderizar `<MarketBriefingPanel readOnly>`.
+
+**6. Botão "Regenerar"**
+- Chama a mesma edge function, força `force: true` para sobrescrever.
+- Apenas para admin / responsável (RLS já cobre updates).
+
+### Detalhes técnicos
+- Claude `claude-sonnet-4-5-20250929` com tool `web_search_20250305` (busca real).
+- Prompt em pt-BR pedindo: foco em mercado brasileiro quando cidade/estado preenchidos, fontes recentes (≤12 meses), evitar conteúdo genérico.
+- Tool calling para forçar JSON estruturado (mais confiável que pedir JSON em texto).
+- Realtime já está ligado em `crm_leads` via `useCrmLeads`, então UI atualiza sozinha quando o briefing chega.
+- Custo: ~1 chamada por lead que agenda reunião. Dedupe por checagem de `briefing_mercado IS NULL` antes de invocar.
 
 ### Arquivos
-- **Reescrever**: `src/components/crm/OportunidadeAvancarDialog.tsx` (mantém mesma API/props — `OportunidadeColumn` não muda).
+- **Migration**: adicionar coluna `briefing_mercado` em `crm_leads`.
+- **Nova**: `supabase/functions/generate-market-briefing/index.ts`.
+- **Nova**: `src/components/crm/MarketBriefingPanel.tsx`.
+- **Editar**: `src/hooks/useCrmLeads.ts` (trigger no updateEtapa).
+- **Editar**: `src/components/crm/LeadDetailSheet.tsx` (renderizar painel).
+- **Editar**: `src/components/crm/OportunidadeDetailSheet.tsx` (renderizar painel readonly via lead).
 
 ### Sem mudanças
-- Backend, schema, hook `useCrmOportunidades.updateEtapa`, `OportunidadeColumn.tsx`.
+- Schema de oportunidades, kanban, demais fluxos.
 
