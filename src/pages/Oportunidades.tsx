@@ -200,7 +200,7 @@ const Oportunidades = () => {
             ))}
           </div>
         ) : (
-          <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+          <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveId(null)}>
             <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4">
               {OPORTUNIDADE_ETAPAS.map((etapa) => (
                 <OportunidadeColumn
@@ -214,6 +214,13 @@ const Oportunidades = () => {
                 />
               ))}
             </div>
+            <DragOverlay dropAnimation={{ duration: 220, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }}>
+              {activeOp ? (
+                <div className="w-72">
+                  <OportunidadeCard oportunidade={activeOp} onClick={() => {}} overlay />
+                </div>
+              ) : null}
+            </DragOverlay>
           </DndContext>
         )}
       </main>
