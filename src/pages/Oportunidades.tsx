@@ -31,7 +31,7 @@ const Oportunidades = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || view !== "kanban") return;
     const el = scrollRef.current;
     if (!el) return;
     const propostaIdx = OPORTUNIDADE_ETAPAS.findIndex((e) => e.id === "proposta");
@@ -39,7 +39,7 @@ const Oportunidades = () => {
     if (child) {
       el.scrollTo({ left: Math.max(0, child.offsetLeft - 16), behavior: "auto" });
     }
-  }, [isLoading]);
+  }, [isLoading, view]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
