@@ -16,6 +16,9 @@ export interface CallEvent {
   gravacao_url: string | null;
   raw_payload: any;
   created_at: string;
+  transcricao: string | null;
+  transcricao_status: string | null;
+  transcricao_error: string | null;
 }
 
 export function useLeadCallEvents(leadId?: string | null) {
