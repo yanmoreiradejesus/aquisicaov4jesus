@@ -495,10 +495,16 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
               </div>
             </div>
 
+            {/* Pesquisa Pré-Qualificação · IA — visível a partir de tentativa de contato */}
+            {form.id && form.etapa !== "entrada" && (
+              <div className="mt-4">
+                <PreQualificationPanel leadId={form.id} pesquisa={form.pesquisa_pre_qualificacao} />
+              </div>
+            )}
+
             {/* Briefing de Mercado · IA — visível após reunião agendada */}
             {form.id && ["reuniao_agendada", "reuniao_realizada", "no_show"].includes(form.etapa) && (
               <div className="mt-4">
-                <PreQualificationPanel leadId={form.id} pesquisa={form.pesquisa_pre_qualificacao} />
                 <MarketBriefingPanel leadId={form.id} briefing={form.briefing_mercado} />
               </div>
             )}
