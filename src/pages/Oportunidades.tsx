@@ -18,6 +18,7 @@ const WORKFLOW_ETAPAS = new Set(["negociacao", "contrato", "follow_infinito"]);
 const Oportunidades = () => {
   const { data: oportunidades = [], isLoading, upsert, updateEtapa, remove } = useCrmOportunidades();
   const [search, setSearch] = useState("");
+  const [view, setView] = useState<"kanban" | "tarefas">("kanban");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [perdaOpen, setPerdaOpen] = useState(false);
