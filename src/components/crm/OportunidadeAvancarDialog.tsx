@@ -692,6 +692,123 @@ export const OportunidadeAvancarDialog = ({
               </div>
             </div>
           )}
+
+          {showStep === "ganho" && (
+            <div className="space-y-5">
+              {/* Contrato assinado */}
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                  Contrato assinado * <span className="normal-case text-muted-foreground/70 font-normal">(PDF, máx. 20MB)</span>
+                </Label>
+                <Input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    if (f && f.size > CONTRATO_MAX_BYTES) {
+                      toast({ title: "Arquivo grande demais", description: "Limite: 20MB", variant: "destructive" });
+                      e.target.value = "";
+                      return;
+                    }
+                    if (f && f.type !== "application/pdf") {
+                      toast({ title: "Formato inválido", description: "Envie um PDF", variant: "destructive" });
+                      e.target.value = "";
+                      return;
+                    }
+                    setContratoFile(f);
+                  }}
+                  className={cn(submitted && liveErrors.contrato && "border-destructive")}
+                />
+                {contratoFile && (
+                  <p className="text-[11px] text-muted-foreground">
+                    📎 {contratoFile.name} · {(contratoFile.size / 1024).toFixed(0)} KB
+                  </p>
+                )}
+                {!contratoFile && oportunidade?.contrato_url && (
+                  <p className="text-[11px] text-emerald-400">✓ Contrato já anexado anteriormente (substitua se necessário)</p>
+                )}
+                {submitted && liveErrors.contrato && (
+                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
+                    <AlertCircle className="h-3 w-3" /> {liveErrors.contrato}
+                  </p>
+                )}
+              </div>
+
+              {/* Grau de exigência */}
+              <div className="space-y-2.5">
+                <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                  Grau de exigência do cliente *
+                </Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {GRAUS_EXIGENCIA.map((g) => {
+                    const active = grauExigencia === g.value;
+                    return (
+                      <button
+                        key={g.value}
+                        type="button"
+                        onClick={() => setGrauExigencia(g.value)}
+                        className={cn(
+                          "py-2.5 px-2 rounded-lg border text-[12px] font-semibold transition-all",
+                          active
+                            ? cn("border-transparent ring-2 shadow-ios-sm", g.color)
+                            : "border-border/40 hover:border-border bg-surface-1/50 text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {g.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {submitted && liveErrors.grau && (
+                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
+                    <AlertCircle className="h-3 w-3" /> {liveErrors.grau}
+                  </p>
+                )}
+              </div>
+
+              {/* Oportunidades de monetização */}
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                  Oportunidades de monetização *
+                </Label>
+                <Textarea
+                  rows={4}
+                  value={oportunidadesMonetizacao}
+                  onChange={(e) => setOportunidadesMonetizacao(e.target.value)}
+                  placeholder="Upsell, cross-sell, expansão futura, novos produtos que o cliente pode contratar..."
+                  className={cn("resize-none text-sm", submitted && liveErrors.monetizacao && "border-destructive")}
+                />
+                {submitted && liveErrors.monetizacao && (
+                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
+                    <AlertCircle className="h-3 w-3" /> {liveErrors.monetizacao}
+                  </p>
+                )}
+              </div>
+
+              {/* Info deal */}
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                  Informações gerais do deal *
+                </Label>
+                <Textarea
+                  rows={4}
+                  value={infoDeal}
+                  onChange={(e) => setInfoDeal(e.target.value)}
+                  placeholder="Decisores envolvidos, contexto do fechamento, prazos, expectativas, observações para o Account Manager..."
+                  className={cn("resize-none text-sm", submitted && liveErrors.info && "border-destructive")}
+                />
+                {submitted && liveErrors.info && (
+                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
+                    <AlertCircle className="h-3 w-3" /> {liveErrors.info}
+                  </p>
+                )}
+              </div>
+
+              {contratoUploading && (
+                <p className="text-[11px] text-muted-foreground">Enviando contrato...</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Footer */}
