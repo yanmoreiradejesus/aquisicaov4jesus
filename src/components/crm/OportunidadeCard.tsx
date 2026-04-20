@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import { Calendar, DollarSign, Flame, Thermometer, Snowflake, ListTodo, Copy, MessageCircle } from "lucide-react";
+import { Calendar, ListTodo, Copy, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPhone, whatsappNumber } from "@/lib/ddd";
@@ -26,18 +26,17 @@ const fmtDate = (iso?: string | null) => {
   return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 };
 
-// Tag estilo "etiqueta de reunião" (oportunidade) — usada nas demais colunas
-const TEMP_META: Record<string, { icon: any; color: string; accent: string; label: string }> = {
-  quente: { icon: Flame, color: "bg-red-500/10 text-red-400 border-red-500/30", accent: "bg-temp-hot", label: "Quente" },
-  morno: { icon: Thermometer, color: "bg-amber-500/10 text-amber-400 border-amber-500/30", accent: "bg-temp-warm", label: "Morno" },
-  frio: { icon: Snowflake, color: "bg-cyan-500/10 text-cyan-400 border-cyan-500/30", accent: "bg-temp-cold", label: "Frio" },
+// Pílula única no padrão LeadCard. Aceita rótulos do lead (Quente/Morno/Frio)
+// ou da oportunidade (quente/morno/frio) — normaliza para o mesmo visual.
+const TEMP_PILL: Record<string, { emoji: string; label: string; cls: string; accent: string }> = {
+  quente: { emoji: "🔥", label: "Quente", cls: "bg-temp-hot/15 text-temp-hot border-temp-hot/40", accent: "bg-temp-hot" },
+  morno: { emoji: "🌤️", label: "Morno", cls: "bg-temp-warm/15 text-temp-warm border-temp-warm/40", accent: "bg-temp-warm" },
+  frio: { emoji: "❄️", label: "Frio", cls: "bg-temp-cold/15 text-temp-cold border-temp-cold/40", accent: "bg-temp-cold" },
 };
 
-// Pílula no padrão LeadCard (label vindo do CRM Leads — "Quente", "Morno", "Frio")
-const LEAD_TEMP_PILL: Record<string, { emoji: string; cls: string; accent: string }> = {
-  Quente: { emoji: "🔥", cls: "bg-temp-hot/15 text-temp-hot border-temp-hot/40", accent: "bg-temp-hot" },
-  Morno: { emoji: "🌤️", cls: "bg-temp-warm/15 text-temp-warm border-temp-warm/40", accent: "bg-temp-warm" },
-  Frio: { emoji: "❄️", cls: "bg-temp-cold/15 text-temp-cold border-temp-cold/40", accent: "bg-temp-cold" },
+const resolveTemp = (raw?: string | null) => {
+  if (!raw) return null;
+  return TEMP_PILL[raw.toLowerCase()] ?? null;
 };
 
 export const OportunidadeCard = ({ oportunidade, onClick, overlay = false }: Props) => {
@@ -77,174 +76,127 @@ export const OportunidadeCard = ({ oportunidade, onClick, overlay = false }: Pro
   const lead = oportunidade.lead;
   const isProposta = oportunidade.etapa === "proposta";
 
-  // ===== MODO PROPOSTA: card no estilo do CRM Leads, com a temperatura herdada do lead =====
-  if (isProposta && lead) {
-    const leadTemp = lead.temperatura ? LEAD_TEMP_PILL[lead.temperatura] : null;
-    const accent = leadTemp?.accent ?? "bg-border/60";
-    const phone = lead.telefone as string | undefined;
-    const phoneFmt = formatPhone(phone);
-    const wa = whatsappNumber(phone);
+  // Em "Proposta": temperatura herdada do lead (CRM Leads).
+  // Demais colunas: temperatura definida no avanço da oportunidade.
+  const temp = isProposta
+    ? resolveTemp(lead?.temperatura)
+    : resolveTemp(oportunidade.temperatura);
+  const accent = temp?.accent ?? "bg-border/60";
 
-    const stopHard = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      e.preventDefault();
-    };
-    const copyPhone = (e: React.MouseEvent) => {
-      stopHard(e);
-      if (!phoneFmt) return;
-      navigator.clipboard.writeText(phoneFmt);
-      toast({ title: "Telefone copiado", description: phoneFmt });
-    };
+  const titulo = lead?.empresa || lead?.nome || oportunidade.nome_oportunidade;
+  const subtitulo = lead?.empresa ? lead?.nome : null;
 
-    return (
-      <div ref={overlay ? undefined : setNodeRef} style={style} {...(overlay ? {} : attributes)}>
-        <div
-          className={cn(
-            "group relative overflow-hidden rounded-xl border bg-surface-1/80 backdrop-blur-sm",
-            overlay
-              ? "border-primary/50 shadow-ios-xl ring-1 ring-primary/30 rotate-[1.5deg] scale-[1.04] cursor-grabbing"
-              : "border-border/50 card-lift shadow-ios-sm hover:border-primary/40 hover:bg-surface-2/80",
-          )}
-        >
-          {/* Accent strip (igual LeadCard) */}
-          <span className={cn("absolute left-0 top-0 bottom-0 w-[3px]", accent)} />
+  const phone = lead?.telefone as string | undefined;
+  const phoneFmt = formatPhone(phone);
+  const wa = whatsappNumber(phone);
 
-          <div
-            {...(overlay ? {} : listeners)}
-            onClick={overlay ? undefined : onClick}
-            className={cn("pl-3.5 pr-3 py-3", overlay ? "cursor-grabbing" : "cursor-grab active:cursor-grabbing")}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <div className="font-display font-semibold text-[13px] leading-snug text-foreground truncate tracking-[-0.01em]">
-                  {lead.empresa || lead.nome}
-                </div>
-                {lead.empresa && (
-                  <p className="font-display font-normal text-[11px] text-muted-foreground truncate mt-0.5">
-                    {lead.nome}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-              {leadTemp && (
-                <span
-                  className={cn(
-                    "text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide",
-                    leadTemp.cls,
-                  )}
-                >
-                  {leadTemp.emoji} {lead.temperatura}
-                </span>
-              )}
-              {tarefasPendentes > 0 && (
-                <span className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide bg-primary/10 text-primary border-primary/30 inline-flex items-center gap-1 tabular-nums">
-                  <ListTodo className="h-2.5 w-2.5" />{tarefasPendentes}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {phoneFmt && (
-            <div className="flex items-center gap-1 px-3 pb-2.5 pt-1.5 border-t border-border/30">
-              <button
-                onClick={copyPhone}
-                onPointerDown={(e) => e.stopPropagation()}
-                className="flex-1 flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors px-1.5 py-1 rounded-md hover:bg-muted/40 min-w-0"
-                title="Copiar telefone"
-              >
-                <Copy className="h-3 w-3 shrink-0" />
-                <span className="truncate tabular-nums">{phoneFmt}</span>
-              </button>
-              {wa && (
-                <a
-                  href={`https://wa.me/${wa}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  className="flex items-center justify-center h-7 w-7 rounded-md bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:scale-105 transition-all shrink-0"
-                  title="Abrir WhatsApp"
-                  aria-label="Abrir WhatsApp"
-                >
-                  <MessageCircle className="h-3.5 w-3.5" />
-                </a>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // ===== DEMAIS COLUNAS: visual atual com a etiqueta de temperatura definida na aba Reunião =====
-  const titulo = oportunidade.nome_oportunidade;
-  const subtitulo = lead?.empresa || lead?.nome;
   const valorTotalNum = (Number(oportunidade.valor_ef) || 0) + (Number(oportunidade.valor_fee) || 0);
   const valorTotal = valorTotalNum > 0 ? fmtBRL(valorTotalNum) : null;
-  const dataPrev = fmtDate(oportunidade.data_fechamento_previsto);
-  const tempMeta = oportunidade.temperatura ? TEMP_META[oportunidade.temperatura] : null;
-  const TempIcon = tempMeta?.icon;
+  const dataPrev = !isProposta ? fmtDate(oportunidade.data_fechamento_previsto) : null;
+
+  const stopHard = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+  };
+  const copyPhone = (e: React.MouseEvent) => {
+    stopHard(e);
+    if (!phoneFmt) return;
+    navigator.clipboard.writeText(phoneFmt);
+    toast({ title: "Telefone copiado", description: phoneFmt });
+  };
 
   return (
     <div ref={overlay ? undefined : setNodeRef} style={style} {...(overlay ? {} : attributes)}>
       <div
-        {...(overlay ? {} : listeners)}
-        onClick={overlay ? undefined : onClick}
         className={cn(
-          "group relative overflow-hidden rounded-xl border border-border/50 bg-surface-1/80 backdrop-blur-sm px-3 py-3",
+          "group relative overflow-hidden rounded-xl border bg-surface-1/80 backdrop-blur-sm",
           overlay
-            ? "shadow-ios-xl ring-1 ring-primary/30 border-primary/50 rotate-[1.5deg] scale-[1.04] cursor-grabbing"
-            : "card-lift cursor-grab active:cursor-grabbing shadow-ios-sm hover:border-primary/40 hover:bg-surface-2/80"
+            ? "border-primary/50 shadow-ios-xl ring-1 ring-primary/30 rotate-[1.5deg] scale-[1.04] cursor-grabbing"
+            : "border-border/50 card-lift shadow-ios-sm hover:border-primary/40 hover:bg-surface-2/80"
         )}
       >
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <div className="font-display font-semibold text-[13px] leading-snug text-foreground truncate tracking-[-0.01em]">
-              {titulo}
+        {/* Accent strip */}
+        <span className={cn("absolute left-0 top-0 bottom-0 w-[3px]", accent)} />
+
+        <div
+          {...(overlay ? {} : listeners)}
+          onClick={overlay ? undefined : onClick}
+          className={cn("pl-3.5 pr-3 py-3", overlay ? "cursor-grabbing" : "cursor-grab active:cursor-grabbing")}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="font-display font-semibold text-[13px] leading-snug text-foreground truncate tracking-[-0.01em]">
+                {titulo}
+              </div>
+              {subtitulo && (
+                <p className="font-display font-normal text-[11px] text-muted-foreground truncate mt-0.5">
+                  {subtitulo}
+                </p>
+              )}
             </div>
-            {subtitulo && (
-              <p className="font-display font-normal text-[11px] text-muted-foreground truncate mt-0.5">
-                {subtitulo}
-              </p>
+            {valorTotal && (
+              <span className="shrink-0 text-[11px] font-semibold tabular-nums text-foreground/90">
+                {valorTotal}
+              </span>
             )}
           </div>
-          {tempMeta && TempIcon && (
-            <span
-              className={cn(
-                "shrink-0 inline-flex items-center justify-center h-6 w-6 rounded-md border",
-                tempMeta.color
-              )}
-              title={`Temperatura: ${tempMeta.label}`}
+
+          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+            {temp && (
+              <span
+                className={cn(
+                  "text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide",
+                  temp.cls
+                )}
+              >
+                {temp.emoji} {temp.label}
+              </span>
+            )}
+            {dataPrev && (
+              <span className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide bg-amber-500/10 text-amber-300 border-amber-500/30 inline-flex items-center gap-1 tabular-nums">
+                <Calendar className="h-2.5 w-2.5" />{dataPrev}
+              </span>
+            )}
+            {tarefasPendentes > 0 && (
+              <span className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide bg-primary/10 text-primary border-primary/30 inline-flex items-center gap-1 tabular-nums">
+                <ListTodo className="h-2.5 w-2.5" />{tarefasPendentes}
+              </span>
+            )}
+          </div>
+
+          {oportunidade.etapa === "fechado_perdido" && oportunidade.motivo_perda && (
+            <p className="text-[10px] text-red-400/80 mt-2 truncate" title={oportunidade.motivo_perda}>
+              ✗ {oportunidade.motivo_perda}
+            </p>
+          )}
+        </div>
+
+        {phoneFmt && (
+          <div className="flex items-center gap-1 px-3 pb-2.5 pt-1.5 border-t border-border/30">
+            <button
+              onClick={copyPhone}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="flex-1 flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors px-1.5 py-1 rounded-md hover:bg-muted/40 min-w-0"
+              title="Copiar telefone"
             >
-              <TempIcon className="h-3 w-3" />
-            </span>
-          )}
-        </div>
-
-        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-          {valorTotal && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold tracking-wide text-foreground/90 tabular-nums">
-              {valorTotal}
-            </span>
-          )}
-          {dataPrev && (
-            <span className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide bg-amber-500/10 text-amber-300 border-amber-500/30 inline-flex items-center gap-1 tabular-nums">
-              <Calendar className="h-2.5 w-2.5" />{dataPrev}
-            </span>
-          )}
-          {tarefasPendentes > 0 && (
-            <span className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide bg-primary/10 text-primary border-primary/30 inline-flex items-center gap-1 tabular-nums">
-              <ListTodo className="h-2.5 w-2.5" />{tarefasPendentes}
-            </span>
-          )}
-        </div>
-
-        {oportunidade.etapa === "fechado_perdido" && oportunidade.motivo_perda && (
-          <p className="text-[10px] text-red-400/80 mt-2 truncate" title={oportunidade.motivo_perda}>
-            ✗ {oportunidade.motivo_perda}
-          </p>
+              <Copy className="h-3 w-3 shrink-0" />
+              <span className="truncate tabular-nums">{phoneFmt}</span>
+            </button>
+            {wa && (
+              <a
+                href={`https://wa.me/${wa}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+                className="flex items-center justify-center h-7 w-7 rounded-md bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:scale-105 transition-all shrink-0"
+                title="Abrir WhatsApp"
+                aria-label="Abrir WhatsApp"
+              >
+                <MessageCircle className="h-3.5 w-3.5" />
+              </a>
+            )}
+          </div>
         )}
       </div>
     </div>
