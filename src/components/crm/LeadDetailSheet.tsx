@@ -27,6 +27,7 @@ import {
 import { formatPhone, whatsappNumber, locationFromPhone, timeAgo } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
 import { LeadTimeline } from "./LeadTimeline";
+import { LeadCallEventsList } from "./LeadCallEventsList";
 import { QualificacaoDialog } from "./QualificacaoDialog";
 import { MarketBriefingPanel } from "./MarketBriefingPanel";
 import { PreQualificationPanel } from "./PreQualificationPanel";
@@ -832,13 +833,21 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
           </TabsContent>
 
           {/* TAB: Histórico (notas + tarefas + log) */}
-          <TabsContent value="historico" className="mt-4">
+          <TabsContent value="historico" className="mt-4 space-y-4">
             {form.id && (
-              <LeadTimeline
-                leadId={form.id}
-                tarefaDialogOpen={tarefaDialogOpen}
-                onTarefaDialogOpenChange={setTarefaDialogOpen}
-              />
+              <>
+                <div>
+                  <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-2">
+                    Histórico de ligações
+                  </p>
+                  <LeadCallEventsList leadId={form.id} />
+                </div>
+                <LeadTimeline
+                  leadId={form.id}
+                  tarefaDialogOpen={tarefaDialogOpen}
+                  onTarefaDialogOpenChange={setTarefaDialogOpen}
+                />
+              </>
             )}
           </TabsContent>
         </Tabs>
