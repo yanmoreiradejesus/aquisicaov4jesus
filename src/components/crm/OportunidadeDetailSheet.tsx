@@ -230,7 +230,87 @@ const LeadReadOnlyFields = ({ lead }: { lead: any }) => {
   );
 };
 
-export const OportunidadeDetailSheet = ({
+const GRAU_EXIGENCIA_STYLES: Record<string, { label: string; cls: string }> = {
+  baixo: { label: "Baixo", cls: "bg-emerald-400/10 text-emerald-400 border-emerald-400/40" },
+  medio: { label: "Médio", cls: "bg-amber-400/10 text-amber-400 border-amber-400/40" },
+  alto: { label: "Alto", cls: "bg-orange-400/10 text-orange-400 border-orange-400/40" },
+  critico: { label: "Crítico", cls: "bg-red-400/10 text-red-400 border-red-400/40" },
+};
+
+const DealFechadoPanel = ({
+  contratoUrl,
+  grauExigencia,
+  oportunidadesMonetizacao,
+  infoDeal,
+}: {
+  contratoUrl?: string | null;
+  grauExigencia?: string | null;
+  oportunidadesMonetizacao?: string | null;
+  infoDeal?: string | null;
+}) => {
+  const [contratoSignedUrl, setContratoSignedUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setContratoSignedUrl(null);
+    if (!contratoUrl) return;
+    supabase.storage
+      .from("contratos-assinados")
+      .createSignedUrl(contratoUrl, 60 * 60)
+      .then(({ data }) => {
+        if (!cancelled && data?.signedUrl) setContratoSignedUrl(data.signedUrl);
+      });
+    return () => { cancelled = true; };
+  }, [contratoUrl]);
+
+  const grau = grauExigencia ? GRAU_EXIGENCIA_STYLES[grauExigencia] : null;
+
+  return (
+    <div className="space-y-3 py-1">
+      <div className="flex items-start justify-between gap-3 py-2 border-b border-border/30">
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1">
+            Contrato assinado
+          </p>
+          {contratoUrl ? (
+            contratoSignedUrl ? (
+              <a
+                href={contratoSignedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-primary hover:underline break-all"
+              >
+                📄 Abrir contrato
+              </a>
+            ) : (
+              <p className="text-sm text-muted-foreground">Carregando link...</p>
+            )
+          ) : (
+            <p className="text-sm text-muted-foreground/60">—</p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-start justify-between gap-3 py-2 border-b border-border/30">
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1">
+            Grau de exigência do cliente
+          </p>
+          {grau ? (
+            <span className={cn("inline-block px-2.5 py-1 rounded-md border text-xs font-semibold", grau.cls)}>
+              {grau.label}
+            </span>
+          ) : (
+            <p className="text-sm text-muted-foreground/60">—</p>
+          )}
+        </div>
+      </div>
+
+      <ReadOnlyRow label="Oportunidades de monetização" value={oportunidadesMonetizacao} />
+      <ReadOnlyRow label="Informações gerais do deal" value={infoDeal} />
+    </div>
+  );
+};
   open,
   onOpenChange,
   oportunidade,
