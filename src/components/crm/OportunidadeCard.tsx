@@ -188,15 +188,15 @@ export const OportunidadeCard = ({ oportunidade, onClick, overlay = false }: Pro
   const TempIcon = tempMeta?.icon;
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes}>
+    <div ref={overlay ? undefined : setNodeRef} style={style} {...(overlay ? {} : attributes)}>
       <div
-        {...listeners}
-        onClick={onClick}
+        {...(overlay ? {} : listeners)}
+        onClick={overlay ? undefined : onClick}
         className={cn(
-          "group relative overflow-hidden rounded-xl border border-border/50 bg-surface-1/80 backdrop-blur-sm card-lift cursor-grab active:cursor-grabbing px-3 py-3",
-          isDragging
-            ? "opacity-60 shadow-ios-xl scale-[1.02]"
-            : "shadow-ios-sm hover:border-primary/40 hover:bg-surface-2/80"
+          "group relative overflow-hidden rounded-xl border border-border/50 bg-surface-1/80 backdrop-blur-sm px-3 py-3",
+          overlay
+            ? "shadow-ios-xl ring-1 ring-primary/30 border-primary/50 rotate-[1.5deg] scale-[1.04] cursor-grabbing"
+            : "card-lift cursor-grab active:cursor-grabbing shadow-ios-sm hover:border-primary/40 hover:bg-surface-2/80"
         )}
       >
         <div className="flex items-start justify-between gap-2">
