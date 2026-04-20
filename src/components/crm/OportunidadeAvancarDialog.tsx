@@ -153,7 +153,9 @@ export const OportunidadeAvancarDialog = ({
   const requiresTask = REQUIRES_TASK.has(etapaDestino);
   const hasMeetingStep = REQUIRES_MEETING.has(etapaDestino);
   const hasTaskStep = requiresTask;
-  const totalSteps = (hasMeetingStep ? 1 : 0) + (hasTaskStep ? 1 : 0) || 1;
+  const hasGanhoStep = REQUIRES_GANHO_FORM.has(etapaDestino);
+  const totalSteps =
+    (hasMeetingStep ? 1 : 0) + (hasTaskStep ? 1 : 0) + (hasGanhoStep ? 1 : 0) || 1;
 
   const [step, setStep] = useState(1);
   const [transcricao, setTranscricao] = useState("");
@@ -165,6 +167,13 @@ export const OportunidadeAvancarDialog = ({
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
+
+  // Ganho step state
+  const [contratoFile, setContratoFile] = useState<File | null>(null);
+  const [contratoUploading, setContratoUploading] = useState(false);
+  const [oportunidadesMonetizacao, setOportunidadesMonetizacao] = useState("");
+  const [grauExigencia, setGrauExigencia] = useState<string>("");
+  const [infoDeal, setInfoDeal] = useState("");
 
   const transcricaoRef = useRef<HTMLTextAreaElement>(null);
   const tarefaTituloRef = useRef<HTMLInputElement>(null);
@@ -180,6 +189,11 @@ export const OportunidadeAvancarDialog = ({
       setNovaTarefaTitulo("");
       setNovaTarefaData(formatLocalDateTime(PRESETS[0].build()));
       setErrors({});
+      setContratoFile(null);
+      setContratoUploading(false);
+      setOportunidadesMonetizacao(oportunidade.oportunidades_monetizacao || "");
+      setGrauExigencia(oportunidade.grau_exigencia || "");
+      setInfoDeal(oportunidade.info_deal || "");
 
       supabase
         .from("crm_atividades" as any)
@@ -200,12 +214,17 @@ export const OportunidadeAvancarDialog = ({
     }, 80);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, step, hasMeetingStep, hasTaskStep]);
+  }, [open, step, hasMeetingStep, hasTaskStep, hasGanhoStep]);
 
-  const currentStepKey = (): "meeting" | "task" | "none" => {
-    if (hasMeetingStep && step === 1) return "meeting";
-    if (hasTaskStep) return "task";
-    return "none";
+  // Ordem dos steps: meeting → task → ganho
+  const stepOrder: Array<"meeting" | "task" | "ganho"> = [
+    ...(hasMeetingStep ? (["meeting"] as const) : []),
+    ...(hasTaskStep ? (["task"] as const) : []),
+    ...(hasGanhoStep ? (["ganho"] as const) : []),
+  ];
+
+  const currentStepKey = (): "meeting" | "task" | "ganho" | "none" => {
+    return stepOrder[step - 1] ?? "none";
   };
 
   const tarefasPendentes = useMemo(
@@ -246,21 +265,37 @@ export const OportunidadeAvancarDialog = ({
     if (hasTaskStep && requiresTask && tarefasPendentes === 0) {
       e.tarefas = "Mantenha a sugestão da IA ou adicione ao menos 1 tarefa";
     }
+    if (hasGanhoStep) {
+      if (!contratoFile && !oportunidade?.contrato_url) e.contrato = "Anexe o contrato assinado (PDF)";
+      if (!grauExigencia) e.grau = "Selecione o grau de exigência do cliente";
+      if (oportunidadesMonetizacao.trim().length < 5) e.monetizacao = "Descreva oportunidades de monetização";
+      if (infoDeal.trim().length < 5) e.info = "Descreva informações gerais do deal";
+    }
     return e;
   }, [
     hasMeetingStep,
     hasTaskStep,
+    hasGanhoStep,
     transcricao,
     temperatura,
     tarefas,
     tarefasPendentes,
     isPropostaParaNegociacao,
     requiresTask,
+    contratoFile,
+    grauExigencia,
+    oportunidadesMonetizacao,
+    infoDeal,
+    oportunidade?.contrato_url,
   ]);
 
   const isStepValid = (s: number): boolean => {
-    if (s === 1 && hasMeetingStep) return !liveErrors.transcricao && !liveErrors.temperatura;
-    return !liveErrors.tarefas;
+    const key = stepOrder[s - 1];
+    if (key === "meeting") return !liveErrors.transcricao && !liveErrors.temperatura;
+    if (key === "task") return !liveErrors.tarefas;
+    if (key === "ganho")
+      return !liveErrors.contrato && !liveErrors.grau && !liveErrors.monetizacao && !liveErrors.info;
+    return true;
   };
 
   const isAllValid = Object.keys(liveErrors).length === 0;
@@ -276,6 +311,23 @@ export const OportunidadeAvancarDialog = ({
     setStep((s) => s + 1);
   };
 
+  const uploadContrato = async (): Promise<string | undefined> => {
+    if (!contratoFile) return oportunidade?.contrato_url || undefined;
+    setContratoUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const ext = contratoFile.name.split(".").pop() || "pdf";
+      const path = `${user?.id ?? "anon"}/${oportunidade?.id ?? "new"}/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from(CONTRATO_BUCKET)
+        .upload(path, contratoFile, { contentType: contratoFile.type, upsert: false });
+      if (upErr) throw upErr;
+      return path;
+    } finally {
+      setContratoUploading(false);
+    }
+  };
+
   const submit = async () => {
     setSubmitted(true);
     if (!isAllValid) {
@@ -284,24 +336,39 @@ export const OportunidadeAvancarDialog = ({
     }
     setSaving(true);
     try {
+      let ganho: GanhoPayload | undefined;
+      if (hasGanhoStep) {
+        const contrato_url = await uploadContrato();
+        ganho = {
+          contrato_url: contrato_url || "",
+          oportunidades_monetizacao: oportunidadesMonetizacao.trim(),
+          grau_exigencia: grauExigencia,
+          info_deal: infoDeal.trim(),
+        };
+      }
       await onConfirm({
         transcricao_reuniao: hasMeetingStep ? transcricao.trim() : undefined,
         temperatura: hasMeetingStep ? temperatura : undefined,
         novasTarefas: tarefas,
+        ganho,
       });
       onOpenChange(false);
+    } catch (e: any) {
+      toast({ title: "Erro ao salvar", description: e?.message || "Falha ao confirmar", variant: "destructive" });
     } finally {
       setSaving(false);
     }
   };
 
   const showStep = currentStepKey();
-  const stepNumber = hasMeetingStep && step === 1 ? 1 : hasMeetingStep ? 2 : 1;
+  const stepNumber = step;
   const stepLabel =
     showStep === "meeting"
       ? "Resultado da reunião"
       : showStep === "task"
       ? "Próxima atividade"
+      : showStep === "ganho"
+      ? "Fechamento do deal"
       : "Confirmar";
 
   const isLastStep = stepNumber === totalSteps;
