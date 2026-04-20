@@ -50,8 +50,17 @@ const AVAILABLE_PAGES = [
   { path: "/app-v4", label: "App V4 (app.v4jesus.com)" },
 ];
 
-const CARGO_OPTIONS = ["SDR", "Closer", "CS", "Gestor", "Outro"];
-const DEPARTAMENTO_OPTIONS = ["Comercial", "Aquisição", "Financeiro", "Outro"];
+const CARGO_OPTIONS = [
+  // Receitas
+  "SDR", "Closer", "BDR", "Líder de Expansão",
+  // PE&G
+  "Coordenador de PE&G", "Account Manager", "Gestor de Tráfego", "Designer", "Copywriter", "Social Media", "Consultor", "Analista de Tech",
+  // ADM
+  "Coordenadora ADM", "HRBP", "Analista Financeira",
+  // Outro
+  "Outro"
+];
+const DEPARTAMENTO_OPTIONS = ["Receitas", "PE&G", "ADM", "Outro"];
 
 const Admin = () => {
   const { isAdmin } = useAuth();
