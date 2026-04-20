@@ -66,6 +66,10 @@ export function useCrmOportunidades() {
       transcricao_reuniao,
       temperatura,
       novasTarefas,
+      contrato_url,
+      oportunidades_monetizacao,
+      grau_exigencia,
+      info_deal,
     }: {
       id: string;
       etapa: string;
@@ -73,12 +77,20 @@ export function useCrmOportunidades() {
       transcricao_reuniao?: string;
       temperatura?: string;
       novasTarefas?: { titulo: string; data_agendada: string }[];
+      contrato_url?: string;
+      oportunidades_monetizacao?: string;
+      grau_exigencia?: string;
+      info_deal?: string;
     }) => {
       const patch: any = { etapa };
       if (etapa === "fechado_ganho") patch.data_fechamento_real = new Date().toISOString();
       if (etapa === "fechado_perdido" && motivo_perda) patch.motivo_perda = motivo_perda;
       if (transcricao_reuniao !== undefined) patch.transcricao_reuniao = transcricao_reuniao;
       if (temperatura !== undefined) patch.temperatura = temperatura;
+      if (contrato_url !== undefined) patch.contrato_url = contrato_url;
+      if (oportunidades_monetizacao !== undefined) patch.oportunidades_monetizacao = oportunidades_monetizacao;
+      if (grau_exigencia !== undefined) patch.grau_exigencia = grau_exigencia;
+      if (info_deal !== undefined) patch.info_deal = info_deal;
 
       const { error } = await supabase.from("crm_oportunidades" as any).update(patch).eq("id", id);
       if (error) throw error;
