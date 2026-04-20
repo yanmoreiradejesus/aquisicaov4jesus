@@ -27,6 +27,7 @@ import {
 import { formatPhone, whatsappNumber, locationFromPhone, timeAgo } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
 import { LeadTimeline } from "./LeadTimeline";
+import { LeadCallEventsList } from "./LeadCallEventsList";
 import { QualificacaoDialog } from "./QualificacaoDialog";
 import { MarketBriefingPanel } from "./MarketBriefingPanel";
 import { PreQualificationPanel } from "./PreQualificationPanel";
