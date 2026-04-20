@@ -179,8 +179,8 @@ export const OportunidadeCard = ({ oportunidade, onClick }: Props) => {
   // ===== DEMAIS COLUNAS: visual atual com a etiqueta de temperatura definida na aba Reunião =====
   const titulo = oportunidade.nome_oportunidade;
   const subtitulo = lead?.empresa || lead?.nome;
-  const valorEf = fmtBRL(oportunidade.valor_ef);
-  const valorFee = fmtBRL(oportunidade.valor_fee);
+  const valorTotalNum = (Number(oportunidade.valor_ef) || 0) + (Number(oportunidade.valor_fee) || 0);
+  const valorTotal = valorTotalNum > 0 ? fmtBRL(valorTotalNum) : null;
   const dataPrev = fmtDate(oportunidade.data_fechamento_previsto);
   const tempMeta = oportunidade.temperatura ? TEMP_META[oportunidade.temperatura] : null;
   const TempIcon = tempMeta?.icon;
@@ -222,14 +222,9 @@ export const OportunidadeCard = ({ oportunidade, onClick }: Props) => {
         </div>
 
         <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-          {valorEf && (
-            <span className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide bg-emerald-500/10 text-emerald-400 border-emerald-500/30 inline-flex items-center gap-1">
-              <DollarSign className="h-2.5 w-2.5" />EF {valorEf}
-            </span>
-          )}
-          {valorFee && (
-            <span className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide bg-blue-500/10 text-blue-400 border-blue-500/30 inline-flex items-center gap-1">
-              <DollarSign className="h-2.5 w-2.5" />Fee {valorFee}
+          {valorTotal && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-md font-semibold tracking-wide text-foreground/90 tabular-nums">
+              {valorTotal}
             </span>
           )}
           {dataPrev && (
