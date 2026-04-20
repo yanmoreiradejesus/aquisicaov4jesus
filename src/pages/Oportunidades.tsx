@@ -194,16 +194,15 @@ const Oportunidades = () => {
           <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
             <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4">
               {OPORTUNIDADE_ETAPAS.map((etapa) => (
-                <div key={etapa.id} data-etapa={etapa.id} className="contents">
-                  <OportunidadeColumn
-                    id={etapa.id}
-                    label={etapa.label}
-                    color={etapa.color}
-                    oportunidades={grouped[etapa.id] ?? []}
-                    onEdit={(op) => { setEditing(op); setSheetOpen(true); }}
-                    defaultCollapsed={etapa.id === "fechado_perdido" || etapa.id === "follow_infinito"}
-                  />
-                </div>
+                <OportunidadeColumn
+                  key={etapa.id}
+                  id={etapa.id}
+                  label={etapa.label}
+                  color={etapa.color}
+                  oportunidades={grouped[etapa.id] ?? []}
+                  onEdit={(op) => { setEditing(op); setSheetOpen(true); }}
+                  defaultCollapsed={etapa.id === "fechado_perdido" || etapa.id === "follow_infinito"}
+                />
               ))}
             </div>
           </DndContext>
