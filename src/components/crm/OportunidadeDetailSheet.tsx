@@ -690,15 +690,18 @@ export const OportunidadeDetailSheet = ({
                   {!lead ? (
                     <p className="text-sm text-muted-foreground py-2">Nenhum lead vinculado a esta oportunidade.</p>
                   ) : (
-                    <div>
-                      <ReadOnlyRow label="Qualificação" value={lead.qualificacao} />
-                      <ReadOnlyRow label="Site" value={lead.site} />
-                      <ReadOnlyRow label="Instagram" value={lead.instagram} />
-                      <ReadOnlyRow label="Temperatura" value={lead.temperatura} />
-                      <ReadOnlyRow
-                        label="Reunião agendada"
-                        value={lead.data_reuniao_agendada ? new Date(lead.data_reuniao_agendada).toLocaleString("pt-BR") : null}
-                      />
+                    <div className="space-y-4">
+                      <div>
+                        <ReadOnlyRow label="Qualificação" value={lead.qualificacao} />
+                        <ReadOnlyRow label="Site" value={lead.site} />
+                        <ReadOnlyRow label="Instagram" value={lead.instagram} />
+                        <ReadOnlyRow label="Temperatura" value={lead.temperatura} />
+                        <ReadOnlyRow
+                          label="Reunião agendada"
+                          value={lead.data_reuniao_agendada ? new Date(lead.data_reuniao_agendada).toLocaleString("pt-BR") : null}
+                        />
+                      </div>
+                      <MarketBriefingPanel leadId={lead.id} briefing={lead.briefing_mercado} readOnly />
                     </div>
                   )}
                 </AccordionContent>
