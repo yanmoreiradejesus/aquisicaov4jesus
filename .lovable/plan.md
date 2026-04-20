@@ -1,21 +1,29 @@
 
 
-## Plano — Corrigir visibilidade da "Pesquisa Pré-Qualificação"
+## Plano — 3 correções no CRM de Leads
 
-### Problema
-No `LeadDetailSheet.tsx` (linha 499), o painel `PreQualificationPanel` foi colocado **dentro do mesmo bloco condicional** do `MarketBriefingPanel`, que só renderiza quando a etapa está em `reuniao_agendada`, `reuniao_realizada` ou `no_show`. Por isso, ao mover um lead para `tentativa_contato` (que é quando a IA dispara), a seção não aparece em lugar nenhum.
+### 1. Faturamento é MENSAL (não anual)
+Em `generate-pre-qualification/index.ts`, ajustar prompt para deixar explícito: "O faturamento informado é **MENSAL** (Brasil)." e pedir que contexto/insights/desafios respeitem essa base.
 
-### Correção
-Separar os dois painéis em blocos condicionais distintos, dentro da aba **Informações** (logo após o campo "Detalhes da qualificação"):
+### 2. Classificação de tier por faturamento mensal
+Adicionar tabela explícita ao prompt da edge function (e usar nos campos gerados):
 
-- **PreQualificationPanel**: visível quando `etapa !== 'entrada'` (ou seja, a partir de `tentativa_contato` em diante, incluindo desqualificados que já passaram da entrada).
-- **MarketBriefingPanel**: mantém a regra atual (`reuniao_agendada` / `reuniao_realizada` / `no_show`).
+- 0 a 100 mil/mês → **tiny**
+- 100 a 200 mil/mês → **small**
+- 200 mil a 4 milhões/mês → **medium**
+- 4 a 16 milhões/mês → **large**
+- acima de 16 milhões/mês → **enterprise**
 
-Assim, assim que o lead sai de Entrada, a seção "Pesquisa Pré-Qualificação (IA)" aparece na aba Informações com loading → resultado, e o Briefing de Mercado continua aparecendo só perto da reunião.
+A IA deve usar **exatamente** esses rótulos ao mencionar porte. Sem inferência livre.
 
-### Arquivo
-- **Editar**: `src/components/crm/LeadDetailSheet.tsx` (linhas 498-504) — desmembrar o bloco condicional.
+### 3. `tipo_produto` e `urgencia` no import CSV + visibilidade
+- **`src/lib/leadCsvImport.ts`**: adicionar mapeamento de cabeçalhos (case/acento-insensitive):
+  - `tipo_produto`: "tipo de produto", "tipo produto", "produto"
+  - `urgencia`: "urgência", "urgencia", "prioridade"
+- **`src/components/crm/LeadDetailSheet.tsx`**: confirmar/adicionar exibição dos dois campos na aba Informações (editáveis).
 
-### Onde encontrar depois
-Abra o lead → aba **"Informações"** → role até o final → seção **"Pesquisa Pré-Qualificação (IA)"** logo abaixo de "Detalhes da qualificação".
+### Arquivos
+- `supabase/functions/generate-pre-qualification/index.ts`
+- `src/lib/leadCsvImport.ts`
+- `src/components/crm/LeadDetailSheet.tsx`
 
