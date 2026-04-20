@@ -29,6 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import { LeadTimeline } from "./LeadTimeline";
 import { QualificacaoDialog } from "./QualificacaoDialog";
 import { MarketBriefingPanel } from "./MarketBriefingPanel";
+import { PreQualificationPanel } from "./PreQualificationPanel";
 import { useGoogleCalendar } from "@/hooks/useGoogleCalendar";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -497,6 +498,7 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
             {/* Briefing de Mercado · IA — visível após reunião agendada */}
             {form.id && ["reuniao_agendada", "reuniao_realizada", "no_show"].includes(form.etapa) && (
               <div className="mt-4">
+                <PreQualificationPanel leadId={form.id} pesquisa={form.pesquisa_pre_qualificacao} />
                 <MarketBriefingPanel leadId={form.id} briefing={form.briefing_mercado} />
               </div>
             )}

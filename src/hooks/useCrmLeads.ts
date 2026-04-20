@@ -80,6 +80,22 @@ export function useCrmLeads() {
             .catch((e) => console.error("market briefing trigger failed", e));
         }
       }
+
+      // Trigger pesquisa pré-qualificação quando vai pra tentativa de contato (fire-and-forget)
+      if (etapa === "tentativa_contato") {
+        const { data: leadRow } = await supabase
+          .from("crm_leads" as any)
+          .select("pesquisa_pre_qualificacao")
+          .eq("id", id)
+          .maybeSingle();
+        const existing = (leadRow as any)?.pesquisa_pre_qualificacao;
+        const alreadyReady = existing && (existing.status === "ready" || existing.status === "generating");
+        if (!alreadyReady) {
+          supabase.functions
+            .invoke("generate-pre-qualification", { body: { lead_id: id } })
+            .catch((e) => console.error("pre-qualification trigger failed", e));
+        }
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["crm_leads"] }),
   });
