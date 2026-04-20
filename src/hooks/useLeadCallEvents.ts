@@ -1,0 +1,55 @@
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
+export interface CallEvent {
+  id: string;
+  lead_id: string | null;
+  provider: string;
+  event_type: string;
+  call_id: string | null;
+  telefone: string | null;
+  telefone_normalizado: string | null;
+  operador: string | null;
+  duracao_seg: number | null;
+  status: string | null;
+  gravacao_url: string | null;
+  raw_payload: any;
+  created_at: string;
+}
+
+export function useLeadCallEvents(leadId?: string | null) {
+  const qc = useQueryClient();
+
+  const query = useQuery({
+    queryKey: ["crm_call_events", leadId],
+    queryFn: async () => {
+      if (!leadId) return [] as CallEvent[];
+      const { data, error } = await supabase
+        .from("crm_call_events" as any)
+        .select("*")
+        .eq("lead_id", leadId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as unknown as CallEvent[];
+    },
+    enabled: !!leadId,
+  });
+
+  useEffect(() => {
+    if (!leadId) return;
+    const channel = supabase
+      .channel(`crm_call_events_${leadId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "crm_call_events", filter: `lead_id=eq.${leadId}` },
+        () => qc.invalidateQueries({ queryKey: ["crm_call_events", leadId] }),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [leadId, qc]);
+
+  return query;
+}
