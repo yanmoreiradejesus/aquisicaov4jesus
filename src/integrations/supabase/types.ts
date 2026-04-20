@@ -668,24 +668,54 @@ export type Database = {
       profiles: {
         Row: {
           approved: boolean
+          avatar_url: string | null
+          cargo: string | null
           created_at: string
+          departamento: string | null
           email: string
           full_name: string | null
           id: string
+          telefone: string | null
         }
         Insert: {
           approved?: boolean
+          avatar_url?: string | null
+          cargo?: string | null
           created_at?: string
+          departamento?: string | null
           email: string
           full_name?: string | null
           id: string
+          telefone?: string | null
         }
         Update: {
           approved?: boolean
+          avatar_url?: string | null
+          cargo?: string | null
           created_at?: string
+          departamento?: string | null
           email?: string
           full_name?: string | null
           id?: string
+          telefone?: string | null
+        }
+        Relationships: []
+      }
+      role_access_templates: {
+        Row: {
+          cargo: string
+          pages: string[]
+          updated_at: string
+        }
+        Insert: {
+          cargo: string
+          pages?: string[]
+          updated_at?: string
+        }
+        Update: {
+          cargo?: string
+          pages?: string[]
+          updated_at?: string
         }
         Relationships: []
       }
