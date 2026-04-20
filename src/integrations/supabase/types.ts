@@ -210,6 +210,62 @@ export type Database = {
           },
         ]
       }
+      crm_call_events: {
+        Row: {
+          call_id: string | null
+          created_at: string
+          duracao_seg: number | null
+          event_type: string
+          gravacao_url: string | null
+          id: string
+          lead_id: string | null
+          operador: string | null
+          provider: string
+          raw_payload: Json
+          status: string | null
+          telefone: string | null
+          telefone_normalizado: string | null
+        }
+        Insert: {
+          call_id?: string | null
+          created_at?: string
+          duracao_seg?: number | null
+          event_type: string
+          gravacao_url?: string | null
+          id?: string
+          lead_id?: string | null
+          operador?: string | null
+          provider?: string
+          raw_payload?: Json
+          status?: string | null
+          telefone?: string | null
+          telefone_normalizado?: string | null
+        }
+        Update: {
+          call_id?: string | null
+          created_at?: string
+          duracao_seg?: number | null
+          event_type?: string
+          gravacao_url?: string | null
+          id?: string
+          lead_id?: string | null
+          operador?: string | null
+          provider?: string
+          raw_payload?: Json
+          status?: string | null
+          telefone?: string | null
+          telefone_normalizado?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_call_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_copilot_attachments: {
         Row: {
           created_at: string
@@ -285,6 +341,7 @@ export type Database = {
           temperatura: string | null
           tier: string | null
           tipo_produto: string | null
+          ultimo_contato_telefonico: string | null
           updated_at: string
           urgencia: string | null
           valor_pago: number | null
@@ -327,6 +384,7 @@ export type Database = {
           temperatura?: string | null
           tier?: string | null
           tipo_produto?: string | null
+          ultimo_contato_telefonico?: string | null
           updated_at?: string
           urgencia?: string | null
           valor_pago?: number | null
@@ -369,6 +427,7 @@ export type Database = {
           temperatura?: string | null
           tier?: string | null
           tipo_produto?: string | null
+          ultimo_contato_telefonico?: string | null
           updated_at?: string
           urgencia?: string | null
           valor_pago?: number | null
