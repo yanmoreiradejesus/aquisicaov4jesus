@@ -725,6 +725,29 @@ export const OportunidadeDetailSheet = ({
                   )}
                 </AccordionContent>
               </AccordionItem>
+
+              {/* Deal Fechado — só aparece se ganho ou se já houver dados */}
+              {(form.etapa === "fechado_ganho" || form.contrato_url || form.grau_exigencia || form.oportunidades_monetizacao || form.info_deal) && (
+                <AccordionItem
+                  value="deal-fechado"
+                  className="border border-emerald-500/30 rounded-lg bg-emerald-500/5 px-4"
+                >
+                  <AccordionTrigger className="text-[11px] font-semibold tracking-widest uppercase text-emerald-300 hover:no-underline py-3">
+                    <span className="flex items-center gap-2">
+                      <Check className="h-3.5 w-3.5" />
+                      Deal Fechado
+                    </span>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-2">
+                    <DealFechadoPanel
+                      contratoUrl={form.contrato_url}
+                      grauExigencia={form.grau_exigencia}
+                      oportunidadesMonetizacao={form.oportunidades_monetizacao}
+                      infoDeal={form.info_deal}
+                    />
+                  </AccordionContent>
+                </AccordionItem>
+              )}
             </Accordion>
           </TabsContent>
 
