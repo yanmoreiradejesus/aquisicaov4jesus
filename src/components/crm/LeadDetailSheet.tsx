@@ -490,6 +490,7 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                   onChange={(e) => set("qualificacao", e.target.value)}
                   placeholder="Ex.: Dor principal — gerar leads B2B. Faturamento ~R$ 800k/mês. Já testou Meta Ads sem ROI. Decisor: CEO. Urgência alta, quer começar em 30 dias."
                   className="text-sm resize-none"
+                />
               </div>
             </div>
 
