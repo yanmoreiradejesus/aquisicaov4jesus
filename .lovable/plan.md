@@ -1,83 +1,27 @@
 
 
-## Plano — Reestruturar tela de Admin (`/admin`)
+## Plano — Disparar briefing IA também na transição para "reunião realizada"
 
-A tela atual mistura tudo numa página só (lista de usuários expandida + edição inline + templates de cargo + permissões em massa), ficando poluída em 1088px. Vou reorganizar em **lista compacta + drawer de edição**.
+### Contexto
 
-### Nova estrutura visual
+Hoje o briefing de mercado é gerado automaticamente em apenas um ponto: quando o lead muda para `reuniao_agendada` (em `useCrmLeads.ts`, fire-and-forget pra edge function `generate-market-briefing`).
 
-```text
-┌─ /admin ──────────────────────────────────────────────────┐
-│  [Tab: Usuários]  [Tab: Templates de Cargo]               │
-│                                                            │
-│  Usuários:                                                 │
-│  ┌──────────────────────────────────────────────────────┐ │
-│  │ [Buscar...]   [Filtro Cargo ▾] [Filtro Depto ▾]      │ │
-│  └──────────────────────────────────────────────────────┘ │
-│                                                            │
-│  ┌──────────────────────────────────────────────────────┐ │
-│  │ Avatar │ Nome / email      │ Cargo │ Status │  ⚙   │ │
-│  ├──────────────────────────────────────────────────────┤ │
-│  │  JS    │ João Silva        │ SDR   │ ✓ ativo│ Editar│ │
-│  │        │ joao@v4.com       │       │        │       │ │
-│  │  MA    │ Maria Alves       │ -     │ ⏳ pend │ Editar│ │
-│  └──────────────────────────────────────────────────────┘ │
-└────────────────────────────────────────────────────────────┘
-```
+Quando o lead pula essa etapa e vai **direto pra `reuniao_realizada`** (arrastando o card no Kanban ou via dialog), o briefing nunca é disparado — e o trigger Postgres `auto_create_oportunidade` cria a oportunidade sem briefing no lead vinculado.
 
-Ao clicar **Editar**, abre um **Sheet (drawer lateral)** à direita com:
+### Mudança
 
-```text
-┌─ Editar usuário: João Silva ─────────────────────┐
-│  Avatar + nome + email                            │
-│                                                   │
-│  ▸ Status                                         │
-│     [✓ Aprovado]   [Tornar admin]                 │
-│                                                   │
-│  ▸ Cargo & Departamento                           │
-│     Cargo:        [SDR ▾]                         │
-│     Departamento: [Receitas ▾] (auto pelo cargo)  │
-│     [↻ Aplicar template do cargo]                 │
-│                                                   │
-│  ▸ Acessos individuais                            │
-│     Aquisição:                                    │
-│       ☑ Dashboard                                 │
-│       ☐ Funil                                     │
-│       ☑ Insights                                  │
-│       ...                                         │
-│     Comercial:                                    │
-│       ☑ Leads                                     │
-│       ...                                         │
-│                                                   │
-│            [Cancelar]   [Salvar alterações]       │
-└───────────────────────────────────────────────────┘
-```
+**Arquivo único: `src/hooks/useCrmLeads.ts`**
 
-A aba **Templates de Cargo** vira um espaço dedicado, separado da lista, agrupado por área (Receitas / PE&G / ADM), com checkboxes pra cada página.
+No `mutationFn` de `updateLead` (mesmo bloco que já trata `reuniao_agendada`), adicionar condição irmã para `reuniao_realizada`:
 
-### Mudanças no código
+- Detectar transição: `updates.etapa === 'reuniao_realizada'` E etapa anterior diferente.
+- Buscar lead atualizado (já é feito hoje pra `reuniao_agendada`).
+- Disparar `supabase.functions.invoke('generate-market-briefing', { body: { leadId } })` em fire-and-forget — **só se** `briefing_mercado` ainda estiver vazio (evita gastar chamada Claude se já existe).
+- Mesmo padrão de erro silencioso já usado hoje (não bloqueia o update do lead).
 
-Arquivo único: `src/pages/Admin.tsx` reescrito.
+### Fora de escopo
 
-- Header: título + tabs (`Usuários` / `Templates de Cargo`).
-- **Tab Usuários**:
-  - Filtros em cima (busca por nome/email, filtro por cargo, por departamento).
-  - Tabela enxuta: avatar, nome+email, cargo (badge), departamento (badge), status (aprovado/pendente/admin), botão **Editar**.
-  - Estado `editingUser` controla abertura de `<Sheet>`.
-- **Sheet de edição** (componente interno `UserEditSheet`):
-  - Seções colapsáveis ou separadas por `<Separator />`: Status, Cargo/Departamento, Acessos.
-  - Ao mudar cargo, sugere aplicar template (botão).
-  - Acessos agrupados por área (Aquisição / Comercial / Admin), checkboxes.
-  - Salva tudo num único clique (batch: profile update + roles diff + page_access diff).
-- **Tab Templates**:
-  - Lista de cargos agrupada por área com card por cargo, mostrando páginas como checkboxes editáveis.
-  - Botão "Salvar template" por cargo.
-
-### Componentes shadcn usados
-`Tabs`, `Sheet`, `Table`, `Avatar`, `Badge`, `Input`, `Select`, `Checkbox`, `Separator`, `Button`, `Card`. Todos já no projeto.
-
-### Fora de escopo (não vou mexer)
-- Schema do banco — está OK.
-- RLS policies — sem alteração.
-- Outras páginas.
+- Backfill dos 59 leads sem briefing (decisão pendente do usuário).
+- Mudanças no edge function, schema, RLS ou UI.
+- Botão manual "Gerar briefing" no `OportunidadeDetailSheet` (ficou no plano anterior, não foi pedido aqui).
 
