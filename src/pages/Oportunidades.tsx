@@ -2,20 +2,23 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, LayoutGrid, ListChecks } from "lucide-react";
 import { useCrmOportunidades, OPORTUNIDADE_ETAPAS } from "@/hooks/useCrmOportunidades";
 import { OportunidadeColumn } from "@/components/crm/OportunidadeColumn";
 import { OportunidadeCard } from "@/components/crm/OportunidadeCard";
 import { OportunidadeDetailSheet } from "@/components/crm/OportunidadeDetailSheet";
 import { MotivoPerdaDialog } from "@/components/crm/MotivoPerdaDialog";
 import { OportunidadeAvancarDialog } from "@/components/crm/OportunidadeAvancarDialog";
+import { OportunidadeTasksOverview } from "@/components/crm/OportunidadeTasksOverview";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 const WORKFLOW_ETAPAS = new Set(["negociacao", "contrato", "follow_infinito"]);
 
 const Oportunidades = () => {
   const { data: oportunidades = [], isLoading, upsert, updateEtapa, remove } = useCrmOportunidades();
   const [search, setSearch] = useState("");
+  const [view, setView] = useState<"kanban" | "tarefas">("kanban");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [perdaOpen, setPerdaOpen] = useState(false);
@@ -28,7 +31,7 @@ const Oportunidades = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || view !== "kanban") return;
     const el = scrollRef.current;
     if (!el) return;
     const propostaIdx = OPORTUNIDADE_ETAPAS.findIndex((e) => e.id === "proposta");
@@ -36,7 +39,7 @@ const Oportunidades = () => {
     if (child) {
       el.scrollTo({ left: Math.max(0, child.offsetLeft - 16), behavior: "auto" });
     }
-  }, [isLoading]);
+  }, [isLoading, view]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -158,6 +161,21 @@ const Oportunidades = () => {
     toast({ title: "Oportunidade excluída" });
   };
 
+  const ToggleBtn = ({ value, icon: Icon, label }: { value: "kanban" | "tarefas"; icon: any; label: string }) => (
+    <button
+      onClick={() => setView(value)}
+      className={cn(
+        "h-8 px-3 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 transition-all",
+        view === value
+          ? "bg-primary text-primary-foreground shadow-ios-sm"
+          : "text-muted-foreground hover:text-foreground hover:bg-surface-2/60"
+      )}
+    >
+      <Icon className="h-3.5 w-3.5" />
+      {label}
+    </button>
+  );
+
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 lg:px-8 py-6 lg:py-10 animate-fade-in">
@@ -166,62 +184,79 @@ const Oportunidades = () => {
             <p className="text-[10px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-1">
               Aquisição
             </p>
-            <h1 className="font-display text-[28px] lg:text-[34px] font-semibold text-foreground tracking-[-0.02em] normal-case">
-              Oportunidades
-            </h1>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 glass rounded-2xl p-1.5 shadow-ios-sm">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                placeholder="Buscar oportunidades..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9 w-full md:w-64 h-9 rounded-xl border-transparent bg-surface-2/60 focus-visible:ring-2 focus-visible:ring-primary/40"
-              />
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="font-display text-[28px] lg:text-[34px] font-semibold text-foreground tracking-[-0.02em] normal-case">
+                Oportunidades
+              </h1>
+              <div className="inline-flex items-center gap-1 p-1 rounded-xl glass shadow-ios-sm">
+                <ToggleBtn value="kanban" icon={LayoutGrid} label="CRM" />
+                <ToggleBtn value="tarefas" icon={ListChecks} label="Tarefas" />
+              </div>
             </div>
-            <Button
-              onClick={() => { setEditing(null); setSheetOpen(true); }}
-              className="h-9 rounded-xl bg-gradient-to-b from-primary to-primary/85 shadow-ios-md hover:shadow-ios-glow active:scale-[0.98] transition-all"
-            >
-              <Plus className="h-4 w-4 mr-1.5" /> Nova oportunidade
-            </Button>
           </div>
+          {view === "kanban" && (
+            <div className="flex flex-wrap items-center gap-2 glass rounded-2xl p-1.5 shadow-ios-sm">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar oportunidades..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 w-full md:w-64 h-9 rounded-xl border-transparent bg-surface-2/60 focus-visible:ring-2 focus-visible:ring-primary/40"
+                />
+              </div>
+              <Button
+                onClick={() => { setEditing(null); setSheetOpen(true); }}
+                className="h-9 rounded-xl bg-gradient-to-b from-primary to-primary/85 shadow-ios-md hover:shadow-ios-glow active:scale-[0.98] transition-all"
+              >
+                <Plus className="h-4 w-4 mr-1.5" /> Nova oportunidade
+              </Button>
+            </div>
+          )}
         </div>
 
-        {isLoading ? (
-          <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4">
-            {OPORTUNIDADE_ETAPAS.map((e) => (
-              <div key={e.id} className="w-72 shrink-0 space-y-2">
-                <div className="h-10 rounded-t-xl bg-surface-2/60 shimmer" />
-                <div className="h-20 rounded-xl bg-surface-1/60 shimmer" />
-                <div className="h-20 rounded-xl bg-surface-1/60 shimmer" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveId(null)}>
-            <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4">
-              {OPORTUNIDADE_ETAPAS.map((etapa) => (
-                <OportunidadeColumn
-                  key={etapa.id}
-                  id={etapa.id}
-                  label={etapa.label}
-                  color={etapa.color}
-                  oportunidades={grouped[etapa.id] ?? []}
-                  onEdit={(op) => { setEditing(op); setSheetOpen(true); }}
-                  defaultCollapsed={etapa.id === "fechado_perdido" || etapa.id === "follow_infinito"}
-                />
+        {view === "kanban" ? (
+          isLoading ? (
+            <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4">
+              {OPORTUNIDADE_ETAPAS.map((e) => (
+                <div key={e.id} className="w-72 shrink-0 space-y-2">
+                  <div className="h-10 rounded-t-xl bg-surface-2/60 shimmer" />
+                  <div className="h-20 rounded-xl bg-surface-1/60 shimmer" />
+                  <div className="h-20 rounded-xl bg-surface-1/60 shimmer" />
+                </div>
               ))}
             </div>
-            <DragOverlay dropAnimation={{ duration: 220, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }}>
-              {activeOp ? (
-                <div className="w-72">
-                  <OportunidadeCard oportunidade={activeOp} onClick={() => {}} overlay />
-                </div>
-              ) : null}
-            </DragOverlay>
-          </DndContext>
+          ) : (
+            <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveId(null)}>
+              <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4">
+                {OPORTUNIDADE_ETAPAS.map((etapa) => (
+                  <OportunidadeColumn
+                    key={etapa.id}
+                    id={etapa.id}
+                    label={etapa.label}
+                    color={etapa.color}
+                    oportunidades={grouped[etapa.id] ?? []}
+                    onEdit={(op) => { setEditing(op); setSheetOpen(true); }}
+                    defaultCollapsed={etapa.id === "fechado_perdido" || etapa.id === "follow_infinito"}
+                  />
+                ))}
+              </div>
+              <DragOverlay dropAnimation={{ duration: 220, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }}>
+                {activeOp ? (
+                  <div className="w-72">
+                    <OportunidadeCard oportunidade={activeOp} onClick={() => {}} overlay />
+                  </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+          )
+        ) : (
+          <OportunidadeTasksOverview
+            onOpenOportunidade={(opId) => {
+              const op = oportunidades.find((o: any) => o.id === opId);
+              if (op) { setEditing(op); setSheetOpen(true); }
+            }}
+          />
         )}
       </main>
 
