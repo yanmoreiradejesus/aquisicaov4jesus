@@ -1,67 +1,57 @@
 
 
-## Plano — Webhook 3CPlus (eventos `call-was-connected` e `call-history-was-created`)
+## Plano — Adicionar webhook API4COM (paralelo ao 3CPlus)
 
-### URL do webhook (configurar no painel 3CPlus)
+Mesma arquitetura do 3CPlus, novo provider. Reaproveita tabela `crm_call_events` (campo `provider` já existe) e o componente de timeline.
+
+### URL do webhook (configurar no painel API4COM)
 
 ```
-https://edctpsdcrivpef.supabase.co/functions/v1/voip-webhook-3cplus
+https://edctpsdcrivpxynfxpef.supabase.co/functions/v1/voip-webhook-api4com
 ```
 
-(URL final do projeto Supabase, função pública sem JWT.)
-
-Configure os dois eventos disponíveis apontando pra essa mesma URL — a função identifica qual é pelo payload.
-
----
-
-### Mapeamento dos eventos
-
-**`call-was-connected`** → call atendida em tempo real
-- Cria evento "tentativa em andamento" na timeline
-- Atualiza `ultimo_contato_telefonico` no lead
-- Útil pra mostrar "ligando agora" no card
-
-**`call-history-was-created`** → call finalizada (evento principal)
-- Traz dados completos: duração, status final (atendida/não atendida/caixa postal), gravação, operador
-- Cria evento definitivo na timeline com todos os metadados
-- Se duração > X segundos e lead em `entrada`, sugere mover pra `tentativa_contato`
+Configure os dois eventos disponíveis apontando pra essa mesma URL:
+- **após atendimento da chamada** → equivalente a `call-was-connected` do 3CPlus
+- **após desligamento da chamada** → equivalente a `call-history-was-created` (evento principal, com duração/gravação)
 
 ---
 
 ### O que será criado
 
-**1. Tabela `crm_call_events`** (migration)
-- `id`, `lead_id` (nullable, pra órfãos), `provider` ('3cplus'), `event_type`, `call_id`, `telefone`, `operador`, `duracao_seg`, `status`, `gravacao_url`, `raw_payload` jsonb, `created_at`
-- RLS: leitura autenticada, insert via service role
-- Index em `lead_id` e `telefone`
+**1. Edge function `voip-webhook-api4com`** (`supabase/functions/voip-webhook-api4com/index.ts`)
+- Pública (`verify_jwt = false`)
+- Normaliza event_type para padrão interno: `answered` (atendimento) e `ended` (desligamento)
+- Mesma lógica de match por telefone normalizado (reusa abordagem do 3CPlus)
+- Insere em `crm_call_events` com `provider = 'api4com'`
+- Em evento de desligamento: atualiza `crm_leads.ultimo_contato_telefonico`
+- Salva órfãos quando não acha lead
+- Retorna 200 sempre
 
-**2. Edge function `voip-webhook-3cplus`** (`supabase/functions/voip-webhook-3cplus/index.ts`)
-- Pública (`verify_jwt = false` em `config.toml`)
-- Recebe POST, identifica evento por campo do payload
-- Normaliza telefone (reusa `src/lib/ddd.ts` lógica) → busca lead por match
-- Insere em `crm_call_events`
-- Em `call-history-was-created`: atualiza `crm_leads.ultimo_contato_telefonico` (campo novo opcional)
-- Retorna 200 sempre (não bloqueia 3CPlus mesmo se lead não achado)
+**2. Config**
+- Adicionar bloco `[functions.voip-webhook-api4com]` com `verify_jwt = false` em `supabase/config.toml`
 
-**3. UI — timeline de calls no `LeadDetailSheet`**
-- Aba **Atividades**: nova seção "Histórico de Ligações" acima das atividades manuais
-- Mostra: ícone ☎, data/hora, duração, status (badge), operador, botão ▶ pra gravação
-- Hook novo `useLeadCallEvents(leadId)` em `src/hooks/`
+**3. UI — ajuste mínimo no `LeadCallEventsList.tsx`**
+- Mostrar badge do `provider` (3CPlus / API4COM) ao lado de cada evento
+- Normalizar exibição de `event_type` (mostrar "Atendida" / "Finalizada" independente do provider)
 
-**4. Realtime opcional**
-- `ALTER PUBLICATION supabase_realtime ADD TABLE public.crm_call_events;`
-- Card atualiza ao vivo quando call termina
+---
+
+### O que NÃO muda
+- Tabela `crm_call_events` continua a mesma (campo `provider` já discrimina)
+- Hook `useLeadCallEvents` continua o mesmo
+- Realtime continua funcionando
+- Webhook do 3CPlus segue intocado
 
 ---
 
 ### Decisões assumidas
-- Match de telefone: normaliza (só dígitos, remove DDI 55) e compara últimos 10–11 dígitos com `crm_leads.telefone`
-- Sem validação de assinatura no V1 (3CPlus não documenta HMAC público) — adicionar IP allowlist depois se necessário
-- Eventos órfãos (sem lead) ficam salvos pra debug/associação manual futura
-- Não vamos baixar gravação — apenas guardar URL
+- Mesmo critério de match: últimos 10–11 dígitos do telefone normalizado
+- Sem validação de assinatura no V1
+- Payload bruto da API4COM salvo em `raw_payload` pra inspeção/ajuste posterior
+- Após o primeiro disparo real, eu olho os logs e ajusto o parser de campos (nome do telefone, duração, gravação) ao formato exato da API4COM
 
 ---
 
 ### Próximo passo após aprovação
-Crio a migration, a edge function, o hook e a seção na UI. Te entrego a URL final pra colar no 3CPlus e testamos com uma ligação real.
+Crio a edge function, ajusto o config, atualizo o componente de lista pra mostrar provider. Te entrego a URL pra colar no API4COM e testamos com uma ligação real de cada lado.
 
