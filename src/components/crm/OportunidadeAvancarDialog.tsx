@@ -325,6 +325,9 @@ export const OportunidadeAvancarDialog = ({
       if (!grauExigencia) e.grau = "Selecione o grau de exigência do cliente";
       if (oportunidadesMonetizacao.trim().length < 5) e.monetizacao = "Descreva oportunidades de monetização";
       if (infoDeal.trim().length < 5) e.info = "Descreva informações gerais do deal";
+      const fee = Number(valorFee || 0);
+      const ef = Number(valorEf || 0);
+      if (!(fee > 0) && !(ef > 0)) e.valoresGanho = "Confirme Valor Fee e/ou Valor EF (pelo menos um maior que zero)";
     }
     return e;
   }, [
