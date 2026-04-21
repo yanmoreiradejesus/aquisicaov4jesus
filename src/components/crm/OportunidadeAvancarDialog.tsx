@@ -155,6 +155,10 @@ export const OportunidadeAvancarDialog = ({
   const [grauExigencia, setGrauExigencia] = useState<string>("");
   const [infoDeal, setInfoDeal] = useState("");
 
+  // IA: estado da sugestão automática de tarefa
+  const [aiSuggesting, setAiSuggesting] = useState(false);
+  const aiSuggestedForRef = useRef<string>(""); // hash da transcrição já processada
+
   const transcricaoRef = useRef<HTMLTextAreaElement>(null);
   const tarefaTituloRef = useRef<HTMLInputElement>(null);
 
