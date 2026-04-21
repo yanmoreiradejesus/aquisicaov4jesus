@@ -226,6 +226,62 @@ export const OportunidadeAvancarDialog = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, step, stepOrder.length]);
 
+  // IA: sugerir tarefa automaticamente ao chegar no step "task"
+  // Usa a transcrição (nova ou existente) e pré-preenche título + data.
+  useEffect(() => {
+    if (!open) return;
+    if (currentStepKey() !== "task") return;
+    if (aiSuggesting) return;
+    // Já tem alguma tarefa? não sugere
+    if (tarefasExistentes.length > 0 || tarefas.length > 0) return;
+
+    // Determina texto base p/ IA: prioriza nova transcrição, senão a salva
+    const baseTranscricao =
+      novaTranscricao.trim() ||
+      (oportunidade?.transcricao_reuniao?.toString().trim() ?? "");
+    if (baseTranscricao.length < 20) return;
+
+    // Evita reprocessar o mesmo texto
+    const hash = `${oportunidade?.id ?? ""}::${baseTranscricao.length}::${baseTranscricao.slice(0, 80)}`;
+    if (aiSuggestedForRef.current === hash) return;
+    aiSuggestedForRef.current = hash;
+
+    (async () => {
+      setAiSuggesting(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("meeting-ai", {
+          body: {
+            action: "suggest_task",
+            transcricao: baseTranscricao,
+            oportunidade: {
+              nome: oportunidade?.nome_oportunidade,
+              etapa: oportunidade?.etapa,
+              temperatura: temperatura || oportunidade?.temperatura,
+            },
+          },
+        });
+        if (error) throw error;
+        const tarefa = (data as any)?.tarefa;
+        if (tarefa?.titulo) {
+          setNovaTarefaTitulo(String(tarefa.titulo).slice(0, 200));
+        }
+        if (tarefa?.data_agendada) {
+          const d = new Date(tarefa.data_agendada);
+          if (!isNaN(d.getTime())) setNovaTarefaData(formatLocalDateTime(d));
+        }
+        toast({
+          title: "Sugestão da IA",
+          description: "Revise a tarefa sugerida e clique em Adicionar.",
+        });
+      } catch (e: any) {
+        console.warn("[avancar-dialog] suggest_task falhou", e);
+      } finally {
+        setAiSuggesting(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, step, stepOrder.length, tarefasExistentes.length, tarefas.length]);
+
   const adicionarTarefa = () => {
     const titulo = novaTarefaTitulo.trim();
     const newErrors: Record<string, string> = { ...errors };
