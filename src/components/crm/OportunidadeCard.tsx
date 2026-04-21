@@ -75,13 +75,20 @@ export const OportunidadeCard = ({ oportunidade, onClick, overlay = false }: Pro
 
   const lead = oportunidade.lead;
   const isProposta = oportunidade.etapa === "proposta";
+  const isGanho = oportunidade.etapa === "fechado_ganho";
+  const isPerdido = oportunidade.etapa === "fechado_perdido";
+  const isFollowInfinito = oportunidade.etapa === "follow_infinito";
+  // Etapas terminais não mostram temperatura (lead já fechou ou já saiu do funil ativo).
+  const hideTemp = isGanho || isPerdido || isFollowInfinito;
 
   // Em "Proposta": temperatura herdada do lead (CRM Leads).
   // Demais colunas: temperatura definida no avanço da oportunidade.
-  const temp = isProposta
+  const temp = hideTemp
+    ? null
+    : isProposta
     ? resolveTemp(lead?.temperatura)
     : resolveTemp(oportunidade.temperatura);
-  const accent = temp?.accent ?? "bg-border/60";
+  const accent = temp?.accent ?? (isGanho ? "bg-emerald-500" : "bg-border/60");
 
   // Prioriza o nome_oportunidade (que pode ter sido editado pelo usuário).
   // Fallback para empresa/nome do lead caso esteja vazio.
