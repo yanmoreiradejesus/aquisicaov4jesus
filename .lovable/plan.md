@@ -1,65 +1,81 @@
 
 
-## Plano — Importar oportunidades via CSV
+## Plano — Validações progressivas e sem fricção para avançar oportunidade
 
-Adicionar fluxo de importação na página `/comercial/oportunidades`, espelhando a UX já existente em Leads, mas sem criar registros em `crm_leads` (apenas em `crm_oportunidades`).
+Refatorar `OportunidadeAvancarDialog.tsx` para que cada etapa-destino exija **somente o que ainda falta**, evitando re-perguntar dados já preenchidos. Adicionar requisito de **valores (EF e/ou Fee)** para avançar a "Dúvidas e Fechamento", e permitir adicionar uma **nova transcrição complementar** quando já houver uma salva.
 
-### O que vai ser criado
+### Regras finais por etapa-destino
 
-**1. `src/lib/oportunidadeCsvImport.ts`** (novo)
-Parser + importador, no mesmo padrão de `leadCsvImport.ts`:
-- `parseOportunidadesCsv(file)` — usa PapaParse, delimitador `;`, header case/acento-insensitive.
-- Mapeia colunas suportadas (todos os nomes abaixo são reconhecidos em PT-BR, com variações):
-  - **Identificação**: `Nome da oportunidade` (ou cai no `Empresa`/`Nome` do contato)
-  - **Contato/empresa** (texto livre, fica em `notas` da oportunidade já que não vai criar lead): `Empresa`, `Contato/Nome`, `Telefone`, `E-mail`
-  - **Comercial**: `Etapa` (mapeada para o enum: proposta/negociacao/contrato/follow_infinito/fechado_ganho/fechado_perdido — default `proposta`), `Temperatura` (quente/morno/frio), `Valor Fee`, `Valor EF`
-  - **Datas BR** (`dd/mm/aaaa`): `Data da Proposta`, `Data Fechamento Previsto`
-  - **Responsável**: `Responsável` (nome → resolve para `responsavel_id` consultando `profiles.full_name`, case-insensitive; se não casar, fica nulo)
-  - **Notas**: `Notas` ou `Observações` (anexa ao bloco gerado com dados do contato)
-- `importOportunidades(rows)` — dedupe **por `(lower(nome_oportunidade), lower(empresa_extraída_das_notas))`**:
-  - Pré-checagem em memória (`seenInBatch`) + consulta a `crm_oportunidades` filtrando por `nome_oportunidade in (...)` para identificar conflitos.
-  - Insert em chunks de 100; retorna `{ total, inserted, duplicates, errors }`.
+| Destino | Transcrição | Temperatura | Tarefa pendente | Valor EF e/ou Fee | Bloco Ganho |
+|---|---|---|---|---|---|
+| `negociacao` | obrigatória | obrigatória | ≥1 | — | — |
+| `contrato` (Dúvidas e Fechamento) | obrigatória | obrigatória | ≥1 | **≥1 dos dois > 0** | — |
+| `fechado_ganho` | obrigatória | obrigatória | ≥1 | **≥1 dos dois > 0** | contrato + grau + monetização + info |
 
-**2. `src/components/crm/OportunidadeImportDialog.tsx`** (novo)
-Cópia adaptada do `LeadImportDialog`:
-- Upload de CSV, preview de quantas linhas, botão "Importar N oportunidade(s)".
-- Mostra resultado (inseridas / duplicadas / erros) e invalida `["crm_oportunidades"]`.
-- Mostra última oportunidade criada como referência ("Última importação").
+"Já existe" conta como atendido — o passo só aparece quando o dado está faltando.
 
-**3. `src/pages/Oportunidades.tsx`** (editar)
-- Adicionar botão **Importar** (ícone `Upload`) na barra de ações, ao lado do "Nova oportunidade".
-- Estado `importOpen` controlando o dialog.
+### Mudanças no `OportunidadeAvancarDialog.tsx`
 
-### Como o CSV deve ficar (exemplo aceito)
-
-```text
-Nome da oportunidade;Empresa;Contato;Telefone;E-mail;Etapa;Temperatura;Valor Fee;Valor EF;Data da Proposta;Responsável;Notas
-Acme - Projeto SEO;Acme Ltda;João Silva;(11) 99999-0000;joao@acme.com;proposta;quente;5000;15000;15/04/2026;Maria Santos;Cliente recorrente
+**1. Detecção de dados já existentes**
+```ts
+const hasTranscricaoSalva = !!oportunidade?.transcricao_reuniao?.trim();
+const hasTemperaturaSalva = !!oportunidade?.temperatura;
+const hasValoresSalvos =
+  Number(oportunidade?.valor_ef) > 0 || Number(oportunidade?.valor_fee) > 0;
+const hasTarefaPendente = tarefasExistentes.length > 0; // já carregado do banco
 ```
 
-Variações de header (acento/maiúsculas) são toleradas. Linhas sem `Nome da oportunidade` E sem `Empresa` são descartadas.
+**2. Steps condicionais (renomear/expandir)**
+- `meeting` agora é dividido em dois sub-objetivos com a mesma tela:
+  - **Mostrar step "meeting"** somente se `!hasTranscricaoSalva || !hasTemperaturaSalva`.
+  - Quando `hasTranscricaoSalva` for true mas o step ainda aparece (faltava temperatura), trocar o textarea por um **toggle "Houve nova reunião?"**: fechado por padrão; se aberto, mostra um campo `novaTranscricao` que será **anexado** à transcrição existente (com separador `\n\n--- Reunião em <data> ---\n`) no submit. Se fechado, reaproveita a transcrição salva.
+- **Step "task"** aparece se `!hasTarefaPendente && novasTarefas.length === 0` no momento de validar; basta ter ≥1 tarefa pendente (existente ou nova) — comportamento já parecido, só relaxar a validação para considerar `tarefasExistentes`.
+- **Novo step "valores"** (entre `task` e `ganho`): aparece se destino ∈ {`contrato`,`fechado_ganho`} **e** `!hasValoresSalvos`. Dois inputs numéricos: **Valor Fee (mensal)** e **Valor EF (entrada/setup)**. Validação: pelo menos um > 0. Se já tiver salvo, pula.
+- **Step "ganho"** continua igual, só para `fechado_ganho`.
 
-### Detalhes técnicos
+**3. Sem fricção quando tudo já está OK**
+Se nenhum step for necessário (ex.: oportunidade já tem transcrição, temperatura, tarefa e valores ao mover para `contrato`), o dialog **não abre** — `dispatchEtapa` em `Oportunidades.tsx` chama `moveOp` direto. Lógica:
+```ts
+const precisaWizard = needsMeeting || needsTask || needsValores || needsGanho;
+if (!precisaWizard) { moveOp(op.id, destino); return; }
+```
+Isso elimina o clique extra inútil quando o usuário só está movendo uma op já madura.
 
-- **Etapa default** = `proposta` (igual ao default da tabela). Valores inválidos caem no default.
-- **Temperatura**: aceita `quente`/`morno`/`frio` (case-insensitive); inválido → `null`.
-- **Valores monetários**: reusa o parser `parseValor` (suporta `R$ 1.591,20`).
-- **Responsável**: 1 query `profiles.select("id, full_name")` no início do import; mapa em memória por `lower(full_name)`.
-- **Sem `lead_id`**: os campos de contato/empresa vão pro campo `notas` em formato legível, já que o card lê de `lead` (que será null). Ex.:
-  ```
-  Empresa: Acme Ltda
-  Contato: João Silva
-  Telefone: (11) 99999-0000
-  E-mail: joao@acme.com
-  ---
-  Cliente recorrente
-  ```
-- **Dedupe por nome+empresa**: como não há lead, a "empresa" é extraída do CSV (campo `Empresa`) e guardada na própria linha durante o parsing pra usar na chave de dedupe.
+**4. Persistir valores no submit**
+Estender `onConfirm` para incluir `valor_fee` / `valor_ef`, e propagar em `Oportunidades.handleConfirmAvanco` → `updateEtapa.mutate({...,valor_fee, valor_ef})`.
+
+### Mudanças no `useCrmOportunidades.ts`
+
+Adicionar campos à mutação `updateEtapa`:
+```ts
+valor_fee?: number | null;
+valor_ef?: number | null;
+```
+e copiar para o `patch` quando `!== undefined`.
+
+### Mudanças no `Oportunidades.tsx`
+
+- `dispatchEtapa`: antes de abrir o dialog, calcular `precisaWizard` (mesma função pura exportada do dialog ou inline) e mover direto se não precisar.
+- `WORKFLOW_ETAPAS` continua igual; o pulo do dialog é decidido pelos dados, não pela etapa.
+- `handleConfirmAvanco` repassa `valor_fee` e `valor_ef` ao mutation.
+
+### UX — fluxo típico
+
+- **Op nova movida para Negociação**: abre dialog com 2 steps (Reunião + Tarefa). 30s de fricção.
+- **Mesma op movida depois para Dúvidas e Fechamento**: abre dialog **só com 1 step** (Valores). Transcrição/temp/tarefa já existem.
+- **Op madura movida para Ganho**: abre dialog com 1 step (Bloco Ganho). Sem repetir nada.
+- **Op com tudo preenchido + tarefa pendente** sendo movida para `negociacao`: vai direto, sem dialog.
+
+### Detalhes de implementação
+
+- Sub-toggle "Houve outra reunião?" usa `Collapsible` (já existe no projeto).
+- Inputs de valor formatados em BRL (sem decimais por padrão do projeto), aceitando string e convertendo para `Number` no submit.
+- Mensagens de tooltip e erros de validação em PT-BR, padrão do dialog atual.
+- Testar especialmente: drag-and-drop em op madura não pode "engolir" o evento — se `precisaWizard=false`, mover já.
 
 ### Fora de escopo
 
-- Criar leads junto (decisão do usuário: só oportunidade).
-- Importar atividades/tarefas vinculadas.
-- Atualizar oportunidades existentes (apenas insere; duplicatas são ignoradas).
-- Importação de cobranças/accounts (são geradas automaticamente pelo trigger quando a oportunidade vira `fechado_ganho`).
+- Mudar a lógica para `follow_infinito` (mantém comportamento atual: tarefa obrigatória, sem valores).
+- Refatorar visual do bloco ganho.
+- Auto-cálculo de `valor_total` (já é coluna calculada/exibida).
 
