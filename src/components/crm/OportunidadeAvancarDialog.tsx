@@ -110,6 +110,7 @@ export function computeNeededSteps(
   const hasValores = Number(oportunidade?.valor_ef ?? 0) > 0 || Number(oportunidade?.valor_fee ?? 0) > 0;
 
   const meeting = REQUIRES_MEETING.has(etapaDestino) && (!hasTranscricao || !hasTemperatura);
+  // Tarefa: passo é exibido se não houver nenhuma pendente (para sugerir via IA), mas é OPCIONAL — não bloqueia o avanço.
   const task = REQUIRES_TASK.has(etapaDestino) && tarefasPendentesCount === 0;
   const valores = REQUIRES_VALORES.has(etapaDestino) && !hasValores;
   const ganho = REQUIRES_GANHO_FORM.has(etapaDestino); // bloco ganho sempre obrigatório (contrato + grau + monetização + info)
