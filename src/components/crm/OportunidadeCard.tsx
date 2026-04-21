@@ -83,8 +83,12 @@ export const OportunidadeCard = ({ oportunidade, onClick, overlay = false }: Pro
     : resolveTemp(oportunidade.temperatura);
   const accent = temp?.accent ?? "bg-border/60";
 
-  const titulo = lead?.empresa || lead?.nome || oportunidade.nome_oportunidade;
-  const subtitulo = lead?.empresa ? lead?.nome : null;
+  // Prioriza o nome_oportunidade (que pode ter sido editado pelo usuário).
+  // Fallback para empresa/nome do lead caso esteja vazio.
+  const titulo = oportunidade.nome_oportunidade || lead?.empresa || lead?.nome;
+  // Subtítulo só aparece se for diferente do título (evita repetir).
+  const possiveisSub = [lead?.empresa, lead?.nome].filter(Boolean) as string[];
+  const subtitulo = possiveisSub.find((v) => v !== titulo) ?? null;
 
   const phone = lead?.telefone as string | undefined;
   const phoneFmt = formatPhone(phone);
