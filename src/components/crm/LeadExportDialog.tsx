@@ -94,6 +94,9 @@ export const LeadExportDialog = ({ open, onOpenChange, leads }: Props) => {
   const [cols, setCols] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(COLUMNS.map((c) => [c.key, DEFAULT_SELECTED.has(c.key)])),
   );
+  const [etapas, setEtapas] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(LEAD_ETAPAS.map((e) => [e.id, true])),
+  );
   const [excludePending, setExcludePending] = useState(true);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -114,7 +117,10 @@ export const LeadExportDialog = ({ open, onOpenChange, leads }: Props) => {
     }
     setLoading(true);
     try {
-      let exportable = [...leads];
+      const allowedEtapas = new Set(
+        Object.entries(etapas).filter(([, v]) => v).map(([k]) => k),
+      );
+      let exportable = leads.filter((l) => allowedEtapas.has(l.etapa));
 
       if (excludePending) {
         const { data, error } = await supabase
@@ -196,8 +202,40 @@ export const LeadExportDialog = ({ open, onOpenChange, leads }: Props) => {
           </div>
 
           <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                Etapas do CRM ({Object.values(etapas).filter(Boolean).length}/{LEAD_ETAPAS.length})
+              </Label>
+              <button
+                type="button"
+                onClick={() => {
+                  const allOn = Object.values(etapas).every(Boolean);
+                  setEtapas(Object.fromEntries(LEAD_ETAPAS.map((e) => [e.id, !allOn])));
+                }}
+                className="text-xs text-primary hover:underline"
+              >
+                {Object.values(etapas).every(Boolean) ? "Desmarcar todas" : "Selecionar todas"}
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {LEAD_ETAPAS.map((e) => (
+                <label
+                  key={e.id}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border/60 bg-surface-1/40 hover:bg-surface-2/40 cursor-pointer transition-colors"
+                >
+                  <Checkbox
+                    checked={!!etapas[e.id]}
+                    onCheckedChange={(v) => setEtapas((s) => ({ ...s, [e.id]: !!v }))}
+                  />
+                  <span className="text-sm truncate">{e.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
             <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-              Filtros
+              Filtros adicionais
             </Label>
             <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border/60 bg-surface-1/40 hover:bg-surface-2/40 cursor-pointer transition-colors">
               <Checkbox
