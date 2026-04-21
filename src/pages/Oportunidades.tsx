@@ -13,12 +13,14 @@ import { OportunidadeAvancarDialog } from "@/components/crm/OportunidadeAvancarD
 import { OportunidadeTasksOverview } from "@/components/crm/OportunidadeTasksOverview";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { OportunidadesFilterPopover, EMPTY_OP_FILTERS, type OportunidadeFilters } from "@/components/crm/OportunidadesFilterPopover";
 
 const WORKFLOW_ETAPAS = new Set(["negociacao", "contrato", "follow_infinito", "fechado_ganho"]);
 
 const Oportunidades = () => {
   const { data: oportunidades = [], isLoading, upsert, updateEtapa, remove } = useCrmOportunidades();
   const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<OportunidadeFilters>(EMPTY_OP_FILTERS);
   const [view, setView] = useState<"kanban" | "tarefas">("kanban");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
@@ -45,11 +47,30 @@ const Oportunidades = () => {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return oportunidades;
-    return oportunidades.filter((o: any) =>
-      [o.nome_oportunidade, o.lead?.nome, o.lead?.empresa].some((v) => v?.toLowerCase().includes(q))
-    );
-  }, [oportunidades, search]);
+    const inRange = (val: any, from: string, to: string) => {
+      if (!from && !to) return true;
+      if (!val) return false;
+      const d = new Date(val);
+      if (from && d < new Date(from)) return false;
+      if (to) {
+        const end = new Date(to); end.setHours(23, 59, 59, 999);
+        if (d > end) return false;
+      }
+      return true;
+    };
+    return oportunidades.filter((o: any) => {
+      if (q && ![o.nome_oportunidade, o.lead?.nome, o.lead?.empresa].some((v) => v?.toLowerCase().includes(q))) return false;
+      if (!inRange(o.created_at, filters.opDateFrom, filters.opDateTo)) return false;
+      if (!inRange(o.lead?.created_at, filters.leadDateFrom, filters.leadDateTo)) return false;
+      if (!inRange(o.lead?.data_reuniao_realizada, filters.reuniaoDateFrom, filters.reuniaoDateTo)) return false;
+      if (filters.etapa !== "all" && o.etapa !== filters.etapa) return false;
+      if (filters.responsavel !== "all" && (o.responsavel_id ?? o.responsavel?.id) !== filters.responsavel) return false;
+      if (filters.temperatura !== "all" && o.temperatura !== filters.temperatura) return false;
+      if (filters.canal !== "all" && o.lead?.canal !== filters.canal) return false;
+      if (filters.tier !== "all" && o.lead?.tier !== filters.tier) return false;
+      return true;
+    });
+  }, [oportunidades, search, filters]);
 
   const grouped = useMemo(() => {
     const map: Record<string, any[]> = {};
@@ -227,6 +248,7 @@ const Oportunidades = () => {
                   className="pl-9 w-full md:w-64 h-9 rounded-xl border-transparent bg-surface-2/60 focus-visible:ring-2 focus-visible:ring-primary/40"
                 />
               </div>
+              <OportunidadesFilterPopover filters={filters} onChange={setFilters} oportunidades={oportunidades} />
               <Button
                 onClick={() => { setEditing(null); setSheetOpen(true); }}
                 className="h-9 rounded-xl bg-gradient-to-b from-primary to-primary/85 shadow-ios-md hover:shadow-ios-glow active:scale-[0.98] transition-all"
