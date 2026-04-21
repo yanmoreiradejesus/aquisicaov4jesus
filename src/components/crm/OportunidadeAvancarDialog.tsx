@@ -407,7 +407,7 @@ export const OportunidadeAvancarDialog = ({
         novasTarefas: tarefas,
         ganho,
       };
-      if (needs.valores) {
+      if (needs.valores || needs.ganho) {
         const fee = Number(valorFee || 0);
         const ef = Number(valorEf || 0);
         if (fee > 0) payload.valor_fee = fee;
