@@ -3,7 +3,8 @@ import { useHorizontalWheelScroll } from "@/hooks/useHorizontalWheelScroll";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, LayoutGrid, ListChecks } from "lucide-react";
+import { Plus, Search, LayoutGrid, ListChecks, Upload } from "lucide-react";
+import { OportunidadeImportDialog } from "@/components/crm/OportunidadeImportDialog";
 import { useCrmOportunidades, OPORTUNIDADE_ETAPAS } from "@/hooks/useCrmOportunidades";
 import { OportunidadeColumn } from "@/components/crm/OportunidadeColumn";
 import { OportunidadeCard } from "@/components/crm/OportunidadeCard";
@@ -28,6 +29,7 @@ const Oportunidades = () => {
   const [pendingPerda, setPendingPerda] = useState<any | null>(null);
   const [avancarOpen, setAvancarOpen] = useState(false);
   const [pendingAvanco, setPendingAvanco] = useState<{ op: any; etapa: string } | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
   const { toast } = useToast();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -248,6 +250,13 @@ const Oportunidades = () => {
               </div>
               <OportunidadesFilterPopover filters={filters} onChange={setFilters} oportunidades={oportunidades} />
               <Button
+                variant="outline"
+                onClick={() => setImportOpen(true)}
+                className="h-9 rounded-xl border-border/60 bg-surface-2/40 hover:bg-surface-2/80 transition-all"
+              >
+                <Upload className="h-4 w-4 mr-1.5" /> Importar
+              </Button>
+              <Button
                 onClick={() => { setEditing(null); setSheetOpen(true); }}
                 className="h-9 rounded-xl bg-gradient-to-b from-primary to-primary/85 shadow-ios-md hover:shadow-ios-glow active:scale-[0.98] transition-all"
               >
@@ -324,6 +333,8 @@ const Oportunidades = () => {
         etapaDestino={pendingAvanco?.etapa ?? ""}
         onConfirm={handleConfirmAvanco}
       />
+
+      <OportunidadeImportDialog open={importOpen} onOpenChange={setImportOpen} />
     </div>
   );
 };
