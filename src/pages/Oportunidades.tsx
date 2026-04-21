@@ -10,11 +10,12 @@ import { OportunidadeColumn } from "@/components/crm/OportunidadeColumn";
 import { OportunidadeCard } from "@/components/crm/OportunidadeCard";
 import { OportunidadeDetailSheet } from "@/components/crm/OportunidadeDetailSheet";
 import { MotivoPerdaDialog } from "@/components/crm/MotivoPerdaDialog";
-import { OportunidadeAvancarDialog } from "@/components/crm/OportunidadeAvancarDialog";
+import { OportunidadeAvancarDialog, computeNeededSteps } from "@/components/crm/OportunidadeAvancarDialog";
 import { OportunidadeTasksOverview } from "@/components/crm/OportunidadeTasksOverview";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { OportunidadesFilterPopover, EMPTY_OP_FILTERS, type OportunidadeFilters } from "@/components/crm/OportunidadesFilterPopover";
+import { supabase } from "@/integrations/supabase/client";
 
 const WORKFLOW_ETAPAS = new Set(["negociacao", "contrato", "follow_infinito", "fechado_ganho"]);
 
@@ -89,6 +90,8 @@ const Oportunidades = () => {
       transcricao_reuniao?: string;
       temperatura?: string;
       novasTarefas?: { titulo: string; data_agendada: string }[];
+      valor_fee?: number;
+      valor_ef?: number;
     } = {}
   ) => {
     updateEtapa.mutate(
@@ -108,19 +111,35 @@ const Oportunidades = () => {
     );
   };
 
-  const dispatchEtapa = (op: any, destino: string) => {
+  const dispatchEtapa = async (op: any, destino: string) => {
     if (op.etapa === destino) return;
     if (destino === "fechado_perdido") {
       setPendingPerda(op);
       setPerdaOpen(true);
       return;
     }
-    if ((op.etapa === "proposta" && destino === "negociacao") || WORKFLOW_ETAPAS.has(destino)) {
-      setPendingAvanco({ op, etapa: destino });
-      setAvancarOpen(true);
+    const isWorkflow = (op.etapa === "proposta" && destino === "negociacao") || WORKFLOW_ETAPAS.has(destino);
+    if (!isWorkflow) {
+      moveOp(op.id, destino);
       return;
     }
-    moveOp(op.id, destino);
+
+    // Verifica se há tarefas pendentes para decidir se o wizard é necessário
+    const { data: tarefas } = await supabase
+      .from("crm_atividades" as any)
+      .select("id")
+      .eq("oportunidade_id", op.id)
+      .eq("tipo", "tarefa")
+      .eq("concluida", false);
+    const tarefasCount = (tarefas as any[] | null)?.length ?? 0;
+
+    const needs = computeNeededSteps(op, destino, tarefasCount);
+    if (!needs.any) {
+      moveOp(op.id, destino);
+      return;
+    }
+    setPendingAvanco({ op, etapa: destino });
+    setAvancarOpen(true);
   };
 
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -149,6 +168,8 @@ const Oportunidades = () => {
     transcricao_reuniao?: string;
     temperatura?: string;
     novasTarefas: { titulo: string; data_agendada: string }[];
+    valor_fee?: number;
+    valor_ef?: number;
     ganho?: {
       contrato_url: string;
       oportunidades_monetizacao: string;
@@ -165,6 +186,8 @@ const Oportunidades = () => {
           transcricao_reuniao: payload.transcricao_reuniao,
           temperatura: payload.temperatura,
           novasTarefas: payload.novasTarefas,
+          valor_fee: payload.valor_fee,
+          valor_ef: payload.valor_ef,
           ...(payload.ganho ?? {}),
         },
         {
