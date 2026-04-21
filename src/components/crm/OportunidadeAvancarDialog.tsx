@@ -599,6 +599,15 @@ export const OportunidadeAvancarDialog = ({
                 </p>
               )}
 
+              {aiSuggesting && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-400/5 border border-violet-400/30">
+                  <Sparkles className="h-3.5 w-3.5 text-violet-400 shrink-0 animate-pulse" />
+                  <span className="text-[11px] text-violet-300">
+                    IA analisando a transcrição para sugerir a próxima tarefa…
+                  </span>
+                </div>
+              )}
+
               {tarefasExistentes.length === 0 && tarefas.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-6 px-4 rounded-xl border border-dashed border-border/50 bg-surface-1/30 text-center">
                   <ListTodo className="h-6 w-6 text-muted-foreground/60" />
