@@ -1,0 +1,213 @@
+import { useMemo } from "react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Filter, X } from "lucide-react";
+import { OPORTUNIDADE_ETAPAS } from "@/hooks/useCrmOportunidades";
+
+export interface OportunidadeFilters {
+  opDateFrom: string;
+  opDateTo: string;
+  leadDateFrom: string;
+  leadDateTo: string;
+  reuniaoDateFrom: string;
+  reuniaoDateTo: string;
+  etapa: string;
+  responsavel: string;
+  temperatura: string;
+  canal: string;
+  tier: string;
+}
+
+export const EMPTY_OP_FILTERS: OportunidadeFilters = {
+  opDateFrom: "",
+  opDateTo: "",
+  leadDateFrom: "",
+  leadDateTo: "",
+  reuniaoDateFrom: "",
+  reuniaoDateTo: "",
+  etapa: "all",
+  responsavel: "all",
+  temperatura: "all",
+  canal: "all",
+  tier: "all",
+};
+
+interface Props {
+  filters: OportunidadeFilters;
+  onChange: (f: OportunidadeFilters) => void;
+  oportunidades: any[];
+}
+
+export const OportunidadesFilterPopover = ({ filters, onChange, oportunidades }: Props) => {
+  const uniques = useMemo(() => {
+    const getStr = (fn: (op: any) => any) =>
+      Array.from(new Set(oportunidades.map(fn).filter((v: any) => v && String(v).trim())))
+        .sort()
+        .map((v) => String(v));
+
+    // responsável: valor = id, label = full_name (fallback id)
+    const respMap = new Map<string, string>();
+    oportunidades.forEach((op: any) => {
+      const id = op.responsavel_id || op.responsavel?.id;
+      if (!id) return;
+      const label = op.responsavel?.full_name || op.responsavel?.email || id;
+      if (!respMap.has(id)) respMap.set(id, label);
+    });
+    const responsavel = Array.from(respMap.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+
+    return {
+      temperatura: getStr((op) => op.temperatura),
+      canal: getStr((op) => op.lead?.canal),
+      tier: getStr((op) => op.lead?.tier),
+      responsavel,
+    };
+  }, [oportunidades]);
+
+  const activeCount = Object.entries(filters).filter(([k, v]) => {
+    if (k.endsWith("DateFrom") || k.endsWith("DateTo")) return !!v;
+    return v && v !== "all";
+  }).length;
+
+  const update = (patch: Partial<OportunidadeFilters>) => onChange({ ...filters, ...patch });
+  const clear = () => onChange(EMPTY_OP_FILTERS);
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" className="h-9 rounded-xl hover:bg-surface-2/80 relative">
+          <Filter className="h-4 w-4 mr-1.5" /> Filtros
+          {activeCount > 0 && (
+            <span className="ml-1.5 inline-flex items-center justify-center h-5 min-w-5 px-1.5 rounded-full bg-primary text-primary-foreground text-[10px] font-semibold">
+              {activeCount}
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-[380px] p-4 max-h-[80vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-sm font-semibold">Filtrar oportunidades</h4>
+          {activeCount > 0 && (
+            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={clear}>
+              <X className="h-3 w-3 mr-1" /> Limpar
+            </Button>
+          )}
+        </div>
+
+        <div className="space-y-3">
+          <DateRange
+            label="Criação da oportunidade"
+            from={filters.opDateFrom}
+            to={filters.opDateTo}
+            onFrom={(v) => update({ opDateFrom: v })}
+            onTo={(v) => update({ opDateTo: v })}
+          />
+          <DateRange
+            label="Criação do lead"
+            from={filters.leadDateFrom}
+            to={filters.leadDateTo}
+            onFrom={(v) => update({ leadDateFrom: v })}
+            onTo={(v) => update({ leadDateTo: v })}
+          />
+          <DateRange
+            label="Reunião realizada"
+            from={filters.reuniaoDateFrom}
+            to={filters.reuniaoDateTo}
+            onFrom={(v) => update({ reuniaoDateFrom: v })}
+            onTo={(v) => update({ reuniaoDateTo: v })}
+          />
+
+          <FilterSelect
+            label="Etapa"
+            value={filters.etapa}
+            options={OPORTUNIDADE_ETAPAS.map((e: any) => ({ value: e.id, label: e.label }))}
+            onChange={(v) => update({ etapa: v })}
+          />
+          <FilterSelect
+            label="Responsável"
+            value={filters.responsavel}
+            options={uniques.responsavel}
+            onChange={(v) => update({ responsavel: v })}
+          />
+          <FilterSelect
+            label="Temperatura"
+            value={filters.temperatura}
+            options={uniques.temperatura}
+            onChange={(v) => update({ temperatura: v })}
+          />
+          <FilterSelect
+            label="Canal (lead)"
+            value={filters.canal}
+            options={uniques.canal}
+            onChange={(v) => update({ canal: v })}
+          />
+          <FilterSelect
+            label="Tier (lead)"
+            value={filters.tier}
+            options={uniques.tier}
+            onChange={(v) => update({ tier: v })}
+          />
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
+const DateRange = ({
+  label,
+  from,
+  to,
+  onFrom,
+  onTo,
+}: {
+  label: string;
+  from: string;
+  to: string;
+  onFrom: (v: string) => void;
+  onTo: (v: string) => void;
+}) => (
+  <div>
+    <Label className="text-xs text-muted-foreground">{label}</Label>
+    <div className="grid grid-cols-2 gap-2 mt-1">
+      <Input type="date" value={from} onChange={(e) => onFrom(e.target.value)} className="h-9" />
+      <Input type="date" value={to} onChange={(e) => onTo(e.target.value)} className="h-9" />
+    </div>
+  </div>
+);
+
+const FilterSelect = ({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: Array<string | { value: string; label: string }>;
+  onChange: (v: string) => void;
+}) => {
+  if (options.length === 0) return null;
+  const opts = options.map((o) => (typeof o === "string" ? { value: o, label: o } : o));
+  return (
+    <div>
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="h-9 mt-1">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent className="bg-popover z-50">
+          <SelectItem value="all">Todos</SelectItem>
+          {opts.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+};
