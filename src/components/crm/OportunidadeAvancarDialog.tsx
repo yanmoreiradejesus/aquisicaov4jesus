@@ -110,6 +110,7 @@ export function computeNeededSteps(
   const hasValores = Number(oportunidade?.valor_ef ?? 0) > 0 || Number(oportunidade?.valor_fee ?? 0) > 0;
 
   const meeting = REQUIRES_MEETING.has(etapaDestino) && (!hasTranscricao || !hasTemperatura);
+  // Tarefa: passo é exibido se não houver nenhuma pendente (para sugerir via IA), mas é OPCIONAL — não bloqueia o avanço.
   const task = REQUIRES_TASK.has(etapaDestino) && tarefasPendentesCount === 0;
   const valores = REQUIRES_VALORES.has(etapaDestino) && !hasValores;
   const ganho = REQUIRES_GANHO_FORM.has(etapaDestino); // bloco ganho sempre obrigatório (contrato + grau + monetização + info)
@@ -307,9 +308,7 @@ export const OportunidadeAvancarDialog = ({
       }
       if (!temperatura) e.temperatura = "Selecione a temperatura";
     }
-    if (needs.task && tarefasPendentesCount === 0) {
-      e.tarefas = "Adicione ao menos 1 tarefa pendente";
-    }
+    // Tarefa é opcional — não bloqueia o avanço.
     if (needs.valores) {
       const fee = Number(valorFee || 0);
       const ef = Number(valorEf || 0);
@@ -581,7 +580,7 @@ export const OportunidadeAvancarDialog = ({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-                  Tarefas *
+                  Próxima tarefa <span className="normal-case text-muted-foreground/70 font-normal">(opcional)</span>
                 </Label>
                 <span className={cn(
                   "text-[10px] font-semibold tabular-nums px-2 py-0.5 rounded-full",
