@@ -75,13 +75,20 @@ export const OportunidadeCard = ({ oportunidade, onClick, overlay = false }: Pro
 
   const lead = oportunidade.lead;
   const isProposta = oportunidade.etapa === "proposta";
+  const isGanho = oportunidade.etapa === "fechado_ganho";
+  const isPerdido = oportunidade.etapa === "fechado_perdido";
+  const isFollowInfinito = oportunidade.etapa === "follow_infinito";
+  // Etapas terminais não mostram temperatura (lead já fechou ou já saiu do funil ativo).
+  const hideTemp = isGanho || isPerdido || isFollowInfinito;
 
   // Em "Proposta": temperatura herdada do lead (CRM Leads).
   // Demais colunas: temperatura definida no avanço da oportunidade.
-  const temp = isProposta
+  const temp = hideTemp
+    ? null
+    : isProposta
     ? resolveTemp(lead?.temperatura)
     : resolveTemp(oportunidade.temperatura);
-  const accent = temp?.accent ?? "bg-border/60";
+  const accent = temp?.accent ?? (isGanho ? "bg-emerald-500" : "bg-border/60");
 
   // Prioriza o nome_oportunidade (que pode ter sido editado pelo usuário).
   // Fallback para empresa/nome do lead caso esteja vazio.
@@ -96,7 +103,11 @@ export const OportunidadeCard = ({ oportunidade, onClick, overlay = false }: Pro
 
   const valorTotalNum = (Number(oportunidade.valor_ef) || 0) + (Number(oportunidade.valor_fee) || 0);
   const valorTotal = valorTotalNum > 0 ? fmtBRL(valorTotalNum) : null;
-  const dataPrev = !isProposta ? fmtDate(oportunidade.data_fechamento_previsto) : null;
+  const dataPrev = isGanho
+    ? fmtDate(oportunidade.data_fechamento_real)
+    : !isProposta
+    ? fmtDate(oportunidade.data_fechamento_previsto)
+    : null;
 
   const stopHard = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -157,7 +168,15 @@ export const OportunidadeCard = ({ oportunidade, onClick, overlay = false }: Pro
               </span>
             )}
             {dataPrev && (
-              <span className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide bg-amber-500/10 text-amber-300 border-amber-500/30 inline-flex items-center gap-1 tabular-nums">
+              <span
+                className={cn(
+                  "text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide inline-flex items-center gap-1 tabular-nums",
+                  isGanho
+                    ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+                    : "bg-amber-500/10 text-amber-300 border-amber-500/30",
+                )}
+                title={isGanho ? "Data de assinatura" : "Previsão de fechamento"}
+              >
                 <Calendar className="h-2.5 w-2.5" />{dataPrev}
               </span>
             )}

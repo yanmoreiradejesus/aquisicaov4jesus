@@ -77,9 +77,15 @@ const TEMPERATURAS = [
   { value: "frio", label: "Frio", desc: "Esfriou", icon: Snowflake, color: "text-cyan-400", ring: "ring-cyan-400/40", bg: "bg-cyan-400/10" },
 ];
 
-const REQUIRES_MEETING = new Set(["negociacao", "contrato", "fechado_ganho", "follow_infinito"]);
-const REQUIRES_TASK = new Set(["negociacao", "contrato", "fechado_ganho", "follow_infinito"]);
-const REQUIRES_VALORES = new Set(["contrato", "fechado_ganho"]);
+// Etapas que exigem registro de reunião + temperatura.
+// Ganho NÃO exige (lead já fechou — foco em contrato/valores).
+const REQUIRES_MEETING = new Set(["negociacao", "contrato", "follow_infinito"]);
+// Tarefas: sugeridas em etapas em andamento. Ganho não precisa.
+const REQUIRES_TASK = new Set(["negociacao", "contrato", "follow_infinito"]);
+// Valores obrigatórios em "Dúvidas e Fechamento". Em "Ganho" os valores
+// aparecem dentro do próprio bloco ganho (para revisão/desconto), por isso
+// não precisam ser cobrados como step separado.
+const REQUIRES_VALORES = new Set(["contrato"]);
 const REQUIRES_GANHO_FORM = new Set(["fechado_ganho"]);
 const CONTRATO_BUCKET = "contratos-assinados";
 const CONTRATO_MAX_BYTES = 20 * 1024 * 1024;
@@ -319,6 +325,9 @@ export const OportunidadeAvancarDialog = ({
       if (!grauExigencia) e.grau = "Selecione o grau de exigência do cliente";
       if (oportunidadesMonetizacao.trim().length < 5) e.monetizacao = "Descreva oportunidades de monetização";
       if (infoDeal.trim().length < 5) e.info = "Descreva informações gerais do deal";
+      const fee = Number(valorFee || 0);
+      const ef = Number(valorEf || 0);
+      if (!(fee > 0) && !(ef > 0)) e.valoresGanho = "Confirme Valor Fee e/ou Valor EF (pelo menos um maior que zero)";
     }
     return e;
   }, [
@@ -334,7 +343,7 @@ export const OportunidadeAvancarDialog = ({
     if (key === "task") return !liveErrors.tarefas;
     if (key === "valores") return !liveErrors.valores;
     if (key === "ganho")
-      return !liveErrors.contrato && !liveErrors.grau && !liveErrors.monetizacao && !liveErrors.info;
+      return !liveErrors.contrato && !liveErrors.grau && !liveErrors.monetizacao && !liveErrors.info && !liveErrors.valoresGanho;
     return true;
   };
 
@@ -398,7 +407,7 @@ export const OportunidadeAvancarDialog = ({
         novasTarefas: tarefas,
         ganho,
       };
-      if (needs.valores) {
+      if (needs.valores || needs.ganho) {
         const fee = Number(valorFee || 0);
         const ef = Number(valorEf || 0);
         if (fee > 0) payload.valor_fee = fee;
@@ -764,6 +773,51 @@ export const OportunidadeAvancarDialog = ({
 
           {showStep === "ganho" && (
             <div className="space-y-5">
+              {/* Valores — revisão final (pode ter desconto vs. proposta) */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20">
+                  <DollarSign className="h-4 w-4 text-primary shrink-0" />
+                  <p className="text-[11px] text-foreground/80 leading-relaxed">
+                    Confirme os valores finais. Ajuste se houve desconto ou mudança em relação à proposta — eles geram as cobranças.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                      Valor Fee (mensal) — R$
+                    </Label>
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step="0.01"
+                      placeholder="0"
+                      value={valorFee}
+                      onChange={(e) => setValorFee(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                      Valor EF (entrada/setup) — R$
+                    </Label>
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step="0.01"
+                      placeholder="0"
+                      value={valorEf}
+                      onChange={(e) => setValorEf(e.target.value)}
+                    />
+                  </div>
+                </div>
+                {submitted && liveErrors.valoresGanho && (
+                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
+                    <AlertCircle className="h-3 w-3" /> {liveErrors.valoresGanho}
+                  </p>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
                   Contrato assinado * <span className="normal-case text-muted-foreground/70 font-normal">(PDF, máx. 20MB)</span>
