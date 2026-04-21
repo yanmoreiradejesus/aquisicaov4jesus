@@ -168,8 +168,17 @@ const Oportunidades = () => {
   };
 
   const handleDelete = async (id: string) => {
-    await remove.mutateAsync(id);
-    toast({ title: "Oportunidade excluída" });
+    try {
+      await remove.mutateAsync(id);
+      toast({ title: "Oportunidade excluída" });
+    } catch (err: any) {
+      console.error("Erro ao excluir oportunidade:", err);
+      const msg = err?.message || "";
+      const friendly = msg.includes("row-level security") || msg.includes("permission")
+        ? "Você não tem permissão para excluir oportunidades. Apenas administradores podem fazer isso."
+        : msg || "Não foi possível excluir a oportunidade.";
+      toast({ title: "Erro ao excluir", description: friendly, variant: "destructive" });
+    }
   };
 
   const ToggleBtn = ({ value, icon: Icon, label }: { value: "kanban" | "tarefas"; icon: any; label: string }) => (
