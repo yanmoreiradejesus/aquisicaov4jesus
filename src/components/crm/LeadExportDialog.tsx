@@ -117,7 +117,10 @@ export const LeadExportDialog = ({ open, onOpenChange, leads }: Props) => {
     }
     setLoading(true);
     try {
-      let exportable = [...leads];
+      const allowedEtapas = new Set(
+        Object.entries(etapas).filter(([, v]) => v).map(([k]) => k),
+      );
+      let exportable = leads.filter((l) => allowedEtapas.has(l.etapa));
 
       if (excludePending) {
         const { data, error } = await supabase
