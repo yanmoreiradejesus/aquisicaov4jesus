@@ -2,7 +2,78 @@ import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, History } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, History, Download } from "lucide-react";
+
+const TEMPLATE_HEADERS = [
+  "Nome da oportunidade",
+  "Empresa",
+  "Contato",
+  "Telefone",
+  "E-mail",
+  "Etapa",
+  "Temperatura",
+  "Valor Fee",
+  "Valor EF",
+  "Data da Proposta",
+  "Data Fechamento Previsto",
+  "Responsável",
+  "Notas",
+];
+
+const TEMPLATE_ROWS = [
+  [
+    "Acme - Projeto SEO",
+    "Acme Ltda",
+    "João Silva",
+    "(11) 99999-0000",
+    "joao@acme.com",
+    "proposta",
+    "quente",
+    "5000",
+    "15000",
+    "15/04/2026",
+    "30/05/2026",
+    "Maria Santos",
+    "Cliente recorrente",
+  ],
+  [
+    "Beta - Consultoria",
+    "Beta S.A.",
+    "Ana Souza",
+    "(21) 98888-1111",
+    "ana@beta.com",
+    "negociacao",
+    "morno",
+    "3000",
+    "8000",
+    "10/04/2026",
+    "",
+    "",
+    "Aguardando aprovação do contrato",
+  ],
+];
+
+const downloadTemplate = () => {
+  const escape = (v: string) => {
+    if (/[;"\n]/.test(v)) return `"${v.replace(/"/g, '""')}"`;
+    return v;
+  };
+  const lines = [
+    TEMPLATE_HEADERS.map(escape).join(";"),
+    ...TEMPLATE_ROWS.map((row) => row.map(escape).join(";")),
+  ];
+  // BOM para Excel reconhecer UTF-8
+  const csv = "\ufeff" + lines.join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "modelo-oportunidades.csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
 import {
   parseOportunidadesCsv,
   importOportunidades,
