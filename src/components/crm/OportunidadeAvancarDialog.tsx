@@ -770,6 +770,51 @@ export const OportunidadeAvancarDialog = ({
 
           {showStep === "ganho" && (
             <div className="space-y-5">
+              {/* Valores — revisão final (pode ter desconto vs. proposta) */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20">
+                  <DollarSign className="h-4 w-4 text-primary shrink-0" />
+                  <p className="text-[11px] text-foreground/80 leading-relaxed">
+                    Confirme os valores finais. Ajuste se houve desconto ou mudança em relação à proposta — eles geram as cobranças.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                      Valor Fee (mensal) — R$
+                    </Label>
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step="0.01"
+                      placeholder="0"
+                      value={valorFee}
+                      onChange={(e) => setValorFee(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                      Valor EF (entrada/setup) — R$
+                    </Label>
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      min={0}
+                      step="0.01"
+                      placeholder="0"
+                      value={valorEf}
+                      onChange={(e) => setValorEf(e.target.value)}
+                    />
+                  </div>
+                </div>
+                {submitted && liveErrors.valoresGanho && (
+                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
+                    <AlertCircle className="h-3 w-3" /> {liveErrors.valoresGanho}
+                  </p>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
                   Contrato assinado * <span className="normal-case text-muted-foreground/70 font-normal">(PDF, máx. 20MB)</span>
