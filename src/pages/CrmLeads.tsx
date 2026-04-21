@@ -36,6 +36,8 @@ const CrmLeads = () => {
   const { toast } = useToast();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useHorizontalWheelScroll(scrollRef);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -217,7 +219,7 @@ const CrmLeads = () => {
             </div>
           ) : (
             <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveId(null)}>
-              <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4">
+              <div ref={scrollRef} className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4">
                 {LEAD_ETAPAS.map((etapa) => (
                   <LeadColumn
                     key={etapa.id}
