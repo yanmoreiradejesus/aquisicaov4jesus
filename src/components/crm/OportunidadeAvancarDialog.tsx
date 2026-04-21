@@ -77,9 +77,15 @@ const TEMPERATURAS = [
   { value: "frio", label: "Frio", desc: "Esfriou", icon: Snowflake, color: "text-cyan-400", ring: "ring-cyan-400/40", bg: "bg-cyan-400/10" },
 ];
 
-const REQUIRES_MEETING = new Set(["negociacao", "contrato", "fechado_ganho", "follow_infinito"]);
-const REQUIRES_TASK = new Set(["negociacao", "contrato", "fechado_ganho", "follow_infinito"]);
-const REQUIRES_VALORES = new Set(["contrato", "fechado_ganho"]);
+// Etapas que exigem registro de reunião + temperatura.
+// Ganho NÃO exige (lead já fechou — foco em contrato/valores).
+const REQUIRES_MEETING = new Set(["negociacao", "contrato", "follow_infinito"]);
+// Tarefas: sugeridas em etapas em andamento. Ganho não precisa.
+const REQUIRES_TASK = new Set(["negociacao", "contrato", "follow_infinito"]);
+// Valores obrigatórios em "Dúvidas e Fechamento". Em "Ganho" os valores
+// aparecem dentro do próprio bloco ganho (para revisão/desconto), por isso
+// não precisam ser cobrados como step separado.
+const REQUIRES_VALORES = new Set(["contrato"]);
 const REQUIRES_GANHO_FORM = new Set(["fechado_ganho"]);
 const CONTRATO_BUCKET = "contratos-assinados";
 const CONTRATO_MAX_BYTES = 20 * 1024 * 1024;
