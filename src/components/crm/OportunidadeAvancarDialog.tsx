@@ -580,7 +580,7 @@ export const OportunidadeAvancarDialog = ({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-                  Tarefas *
+                  Próxima tarefa <span className="normal-case text-muted-foreground/70 font-normal">(opcional)</span>
                 </Label>
                 <span className={cn(
                   "text-[10px] font-semibold tabular-nums px-2 py-0.5 rounded-full",
