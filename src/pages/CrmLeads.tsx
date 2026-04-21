@@ -160,7 +160,7 @@ const CrmLeads = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-4 lg:px-8 py-6 lg:py-10 animate-fade-in">
+      <main className="w-full px-4 lg:px-8 py-6 lg:py-10 animate-fade-in">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div>
             <p className="text-[10px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-1">
