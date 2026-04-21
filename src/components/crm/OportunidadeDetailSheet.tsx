@@ -505,8 +505,10 @@ export const OportunidadeDetailSheet = ({
   // Conecta o auto-processamento ao callMeetingAI (definido acima)
   // Resumo via Sonnet + Tarefa via Opus 4.5 (auto-criada como sugestão pendente em Tarefas)
   autoProcessRef.current = async (txt: string) => {
+    console.log("[meeting-ai] autoProcess iniciado", { txtLen: txt.length, opId: form?.id });
     callMeetingAI("summarize", { silent: true, transcricaoOverride: txt });
     const tarefa = await callMeetingAI("suggest_task", { silent: true, transcricaoOverride: txt });
+    console.log("[meeting-ai] suggest_task retornou", { tarefa, formId: form?.id, autoTaskCreated: autoTaskCreatedRef.current, txtLen: txt.length });
     if (tarefa && form?.id && autoTaskCreatedRef.current !== txt) {
       autoTaskCreatedRef.current = txt;
       const dt = new Date();
@@ -518,8 +520,17 @@ export const OportunidadeDetailSheet = ({
           titulo: `[SUGESTÃO IA · ${tarefa.prioridade?.toUpperCase() ?? "MED"}] ${tarefa.titulo}\n${tarefa.descricao}`,
           data_agendada: dt.toISOString(),
         });
+        console.log("[meeting-ai] tarefa criada com sucesso");
         toast({ title: "Tarefa sugerida criada", description: `${tarefa.titulo} · prazo em ${dias}d` });
-      } catch (_) { /* silencioso */ }
+      } catch (e) {
+        console.error("[meeting-ai] erro ao criar tarefa:", e);
+      }
+    } else {
+      console.warn("[meeting-ai] tarefa NÃO criada", {
+        temTarefa: !!tarefa,
+        temFormId: !!form?.id,
+        jaCriadaPraEsteTxt: autoTaskCreatedRef.current === txt,
+      });
     }
   };
 
