@@ -308,9 +308,7 @@ export const OportunidadeAvancarDialog = ({
       }
       if (!temperatura) e.temperatura = "Selecione a temperatura";
     }
-    if (needs.task && tarefasPendentesCount === 0) {
-      e.tarefas = "Adicione ao menos 1 tarefa pendente";
-    }
+    // Tarefa é opcional — não bloqueia o avanço.
     if (needs.valores) {
       const fee = Number(valorFee || 0);
       const ef = Number(valorEf || 0);
