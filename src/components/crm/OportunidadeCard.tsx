@@ -168,7 +168,15 @@ export const OportunidadeCard = ({ oportunidade, onClick, overlay = false }: Pro
               </span>
             )}
             {dataPrev && (
-              <span className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide bg-amber-500/10 text-amber-300 border-amber-500/30 inline-flex items-center gap-1 tabular-nums">
+              <span
+                className={cn(
+                  "text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide inline-flex items-center gap-1 tabular-nums",
+                  isGanho
+                    ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+                    : "bg-amber-500/10 text-amber-300 border-amber-500/30",
+                )}
+                title={isGanho ? "Data de assinatura" : "Previsão de fechamento"}
+              >
                 <Calendar className="h-2.5 w-2.5" />{dataPrev}
               </span>
             )}
