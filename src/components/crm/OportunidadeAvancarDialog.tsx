@@ -192,13 +192,11 @@ export const OportunidadeAvancarDialog = ({
     }
   }, [open, oportunidade]);
 
-  // Steps necessários (depois de carregar tarefas existentes)
+  // Steps necessários (não removem o step atual quando o usuário preenche campos locais)
   const tarefasPendentesCount = tarefasExistentes.length + tarefas.length;
   const needs = useMemo(
-    () => computeNeededSteps(oportunidade, etapaDestino, tarefasPendentesCount),
-    // recalcula quando estado das tarefas/inputs muda
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [oportunidade, etapaDestino, tarefasExistentes.length, tarefas.length],
+    () => computeNeededSteps(oportunidade, etapaDestino, tarefasExistentes.length),
+    [oportunidade, etapaDestino, tarefasExistentes.length],
   );
 
   const stepOrder: Array<"meeting" | "task" | "valores" | "ganho"> = useMemo(() => {
