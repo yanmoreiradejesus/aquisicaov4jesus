@@ -5,16 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Filter, X } from "lucide-react";
-import { OPORTUNIDADE_ETAPAS } from "@/hooks/useCrmOportunidades";
+import { cn } from "@/lib/utils";
 
 export interface OportunidadeFilters {
   opDateFrom: string;
   opDateTo: string;
   leadDateFrom: string;
   leadDateTo: string;
-  reuniaoDateFrom: string;
-  reuniaoDateTo: string;
-  etapa: string;
   responsavel: string;
   temperatura: string;
   canal: string;
@@ -26,14 +23,17 @@ export const EMPTY_OP_FILTERS: OportunidadeFilters = {
   opDateTo: "",
   leadDateFrom: "",
   leadDateTo: "",
-  reuniaoDateFrom: "",
-  reuniaoDateTo: "",
-  etapa: "all",
   responsavel: "all",
   temperatura: "all",
   canal: "all",
   tier: "all",
 };
+
+const TEMPERATURA_OPTS: Array<{ value: string; label: string; dot: string }> = [
+  { value: "quente", label: "Quente", dot: "bg-red-500" },
+  { value: "morno", label: "Morno", dot: "bg-amber-500" },
+  { value: "frio", label: "Frio", dot: "bg-sky-500" },
+];
 
 interface Props {
   filters: OportunidadeFilters;
@@ -48,7 +48,6 @@ export const OportunidadesFilterPopover = ({ filters, onChange, oportunidades }:
         .sort()
         .map((v) => String(v));
 
-    // responsável: valor = id, label = full_name (fallback id)
     const respMap = new Map<string, string>();
     oportunidades.forEach((op: any) => {
       const id = op.responsavel_id || op.responsavel?.id;
@@ -61,7 +60,6 @@ export const OportunidadesFilterPopover = ({ filters, onChange, oportunidades }:
       .sort((a, b) => a.label.localeCompare(b.label));
 
     return {
-      temperatura: getStr((op) => op.temperatura),
       canal: getStr((op) => op.lead?.canal),
       tier: getStr((op) => op.lead?.tier),
       responsavel,
@@ -75,6 +73,10 @@ export const OportunidadesFilterPopover = ({ filters, onChange, oportunidades }:
 
   const update = (patch: Partial<OportunidadeFilters>) => onChange({ ...filters, ...patch });
   const clear = () => onChange(EMPTY_OP_FILTERS);
+
+  const toggleTemperatura = (val: string) => {
+    update({ temperatura: filters.temperatura === val ? "all" : val });
+  };
 
   return (
     <Popover>
@@ -113,31 +115,37 @@ export const OportunidadesFilterPopover = ({ filters, onChange, oportunidades }:
             onFrom={(v) => update({ leadDateFrom: v })}
             onTo={(v) => update({ leadDateTo: v })}
           />
-          <DateRange
-            label="Reunião realizada"
-            from={filters.reuniaoDateFrom}
-            to={filters.reuniaoDateTo}
-            onFrom={(v) => update({ reuniaoDateFrom: v })}
-            onTo={(v) => update({ reuniaoDateTo: v })}
-          />
 
-          <FilterSelect
-            label="Etapa"
-            value={filters.etapa}
-            options={OPORTUNIDADE_ETAPAS.map((e: any) => ({ value: e.id, label: e.label }))}
-            onChange={(v) => update({ etapa: v })}
-          />
+          <div>
+            <Label className="text-xs text-muted-foreground">Temperatura</Label>
+            <div className="grid grid-cols-3 gap-2 mt-1">
+              {TEMPERATURA_OPTS.map((t) => {
+                const active = filters.temperatura === t.value;
+                return (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => toggleTemperatura(t.value)}
+                    className={cn(
+                      "h-9 rounded-lg text-xs font-medium inline-flex items-center justify-center gap-1.5 border transition-all",
+                      active
+                        ? "border-primary bg-primary/10 text-foreground shadow-ios-sm"
+                        : "border-border bg-surface-2/40 text-muted-foreground hover:text-foreground hover:bg-surface-2/80"
+                    )}
+                  >
+                    <span className={cn("h-2 w-2 rounded-full", t.dot)} />
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <FilterSelect
             label="Responsável"
             value={filters.responsavel}
             options={uniques.responsavel}
             onChange={(v) => update({ responsavel: v })}
-          />
-          <FilterSelect
-            label="Temperatura"
-            value={filters.temperatura}
-            options={uniques.temperatura}
-            onChange={(v) => update({ temperatura: v })}
           />
           <FilterSelect
             label="Canal (lead)"
