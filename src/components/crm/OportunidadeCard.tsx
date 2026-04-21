@@ -103,7 +103,11 @@ export const OportunidadeCard = ({ oportunidade, onClick, overlay = false }: Pro
 
   const valorTotalNum = (Number(oportunidade.valor_ef) || 0) + (Number(oportunidade.valor_fee) || 0);
   const valorTotal = valorTotalNum > 0 ? fmtBRL(valorTotalNum) : null;
-  const dataPrev = !isProposta ? fmtDate(oportunidade.data_fechamento_previsto) : null;
+  const dataPrev = isGanho
+    ? fmtDate(oportunidade.data_fechamento_real)
+    : !isProposta
+    ? fmtDate(oportunidade.data_fechamento_previsto)
+    : null;
 
   const stopHard = (e: React.MouseEvent) => {
     e.stopPropagation();
