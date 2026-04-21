@@ -156,9 +156,19 @@ export const OportunidadeImportDialog = ({ open, onOpenChange }: Props) => {
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle className="font-heading text-2xl tracking-wider uppercase">
-            Importar oportunidades
-          </DialogTitle>
+          <div className="flex items-start justify-between gap-3">
+            <DialogTitle className="font-heading text-2xl tracking-wider uppercase">
+              Importar oportunidades
+            </DialogTitle>
+            <button
+              onClick={downloadTemplate}
+              className="shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground px-2 py-1 rounded-md hover:bg-muted/40 transition-colors"
+              title="Baixar CSV modelo de importação"
+            >
+              <Download className="h-3 w-3" />
+              Baixar modelo
+            </button>
+          </div>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
