@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -15,75 +15,14 @@ interface Props {
   leads: any[];
 }
 
-type ColDef = {
-  key: string;
-  label: string;
-  get: (l: any) => any;
-};
-
-const fmtDate = (v: any) => {
-  if (!v) return "";
-  try {
-    const d = new Date(v);
-    if (isNaN(d.getTime())) return "";
-    return d.toLocaleDateString("pt-BR");
-  } catch {
-    return "";
-  }
-};
-
-const fmtDateTime = (v: any) => {
-  if (!v) return "";
-  try {
-    const d = new Date(v);
-    if (isNaN(d.getTime())) return "";
-    return d.toLocaleString("pt-BR");
-  } catch {
-    return "";
-  }
-};
-
 const etapaLabel = (id: string) => LEAD_ETAPAS.find((e) => e.id === id)?.label ?? id;
 
-const COLUMNS: ColDef[] = [
-  { key: "nome", label: "Nome", get: (l) => l.nome ?? "" },
-  { key: "empresa", label: "Empresa", get: (l) => l.empresa ?? "" },
-  { key: "cargo", label: "Cargo", get: (l) => l.cargo ?? "" },
-  { key: "email", label: "E-mail", get: (l) => l.email ?? "" },
-  { key: "telefone", label: "Telefone", get: (l) => formatPhone(l.telefone) || "" },
-  { key: "instagram", label: "Instagram", get: (l) => l.instagram ?? "" },
-  { key: "site", label: "Site", get: (l) => l.site ?? "" },
-  { key: "etapa", label: "Etapa do CRM", get: (l) => etapaLabel(l.etapa) },
-  { key: "temperatura", label: "Temperatura", get: (l) => l.temperatura ?? "" },
-  { key: "qualificacao", label: "Qualificação", get: (l) => l.qualificacao ?? "" },
-  { key: "tier", label: "Tier", get: (l) => l.tier ?? "" },
-  { key: "urgencia", label: "Urgência", get: (l) => l.urgencia ?? "" },
-  { key: "canal", label: "Canal", get: (l) => l.canal ?? "" },
-  { key: "origem", label: "Origem", get: (l) => l.origem ?? "" },
-  { key: "segmento", label: "Segmento", get: (l) => l.segmento ?? "" },
-  { key: "faturamento", label: "Faturamento", get: (l) => l.faturamento ?? "" },
-  { key: "tipo_produto", label: "Tipo de Produto", get: (l) => l.tipo_produto ?? "" },
-  { key: "nome_produto", label: "Nome do Produto", get: (l) => l.nome_produto ?? "" },
-  { key: "documento_empresa", label: "CNPJ/Documento", get: (l) => l.documento_empresa ?? "" },
-  { key: "cidade", label: "Cidade", get: (l) => l.cidade ?? "" },
-  { key: "estado", label: "Estado", get: (l) => l.estado ?? "" },
-  { key: "pais", label: "País", get: (l) => l.pais ?? "" },
-  { key: "responsavel", label: "Responsável", get: (l) => l.responsavel?.full_name ?? l.responsavel?.email ?? "" },
-  { key: "arrematador", label: "Arrematador", get: (l) => l.arrematador ?? "" },
-  { key: "valor_pago", label: "Valor Pago", get: (l) => (l.valor_pago != null ? l.valor_pago : "") },
-  { key: "data_aquisicao", label: "Data de Aquisição", get: (l) => fmtDate(l.data_aquisicao) },
-  { key: "data_criacao_origem", label: "Data Criação Origem", get: (l) => fmtDateTime(l.data_criacao_origem) },
-  { key: "data_reuniao_agendada", label: "Reunião Agendada", get: (l) => fmtDateTime(l.data_reuniao_agendada) },
-  { key: "data_reuniao_realizada", label: "Reunião Realizada", get: (l) => fmtDateTime(l.data_reuniao_realizada) },
-  { key: "ultimo_contato_telefonico", label: "Último Contato Telefônico", get: (l) => fmtDateTime(l.ultimo_contato_telefonico) },
-  { key: "motivo_desqualificacao", label: "Motivo Desqualificação", get: (l) => l.motivo_desqualificacao ?? "" },
-  { key: "descricao", label: "Descrição", get: (l) => l.descricao ?? "" },
-  { key: "notas", label: "Notas", get: (l) => l.notas ?? "" },
-  { key: "created_at", label: "Criado em", get: (l) => fmtDateTime(l.created_at) },
-  { key: "updated_at", label: "Atualizado em", get: (l) => fmtDateTime(l.updated_at) },
+const FIXED_COLUMNS: { label: string; get: (l: any) => string }[] = [
+  { label: "Empresa", get: (l) => l.empresa ?? "" },
+  { label: "Nome", get: (l) => l.nome ?? "" },
+  { label: "Telefone", get: (l) => formatPhone(l.telefone) || "" },
+  { label: "Etapa do CRM", get: (l) => etapaLabel(l.etapa) },
 ];
-
-const DEFAULT_SELECTED = new Set(["nome", "empresa", "etapa", "telefone", "email", "responsavel"]);
 
 const csvEscape = (val: string) => {
   if (/[",\n;]/.test(val)) return `"${val.replace(/"/g, '""')}"`;
@@ -91,9 +30,6 @@ const csvEscape = (val: string) => {
 };
 
 export const LeadExportDialog = ({ open, onOpenChange, leads }: Props) => {
-  const [cols, setCols] = useState<Record<string, boolean>>(() =>
-    Object.fromEntries(COLUMNS.map((c) => [c.key, DEFAULT_SELECTED.has(c.key)])),
-  );
   const [etapas, setEtapas] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(LEAD_ETAPAS.map((e) => [e.id, true])),
   );
@@ -101,18 +37,17 @@ export const LeadExportDialog = ({ open, onOpenChange, leads }: Props) => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const selectedCols = useMemo(() => COLUMNS.filter((c) => cols[c.key]), [cols]);
-  const selectedCount = selectedCols.length;
-  const allSelected = selectedCount === COLUMNS.length;
+  const allEtapasSelected = Object.values(etapas).every(Boolean);
+  const selectedEtapasCount = Object.values(etapas).filter(Boolean).length;
 
-  const toggleAll = () => {
-    const next = !allSelected;
-    setCols(Object.fromEntries(COLUMNS.map((c) => [c.key, next])));
+  const toggleAllEtapas = () => {
+    const next = !allEtapasSelected;
+    setEtapas(Object.fromEntries(LEAD_ETAPAS.map((e) => [e.id, next])));
   };
 
   const handleExport = async () => {
-    if (selectedCount === 0) {
-      toast({ title: "Selecione ao menos uma coluna", variant: "destructive" });
+    if (selectedEtapasCount === 0) {
+      toast({ title: "Selecione ao menos uma etapa", variant: "destructive" });
       return;
     }
     setLoading(true);
@@ -133,8 +68,8 @@ export const LeadExportDialog = ({ open, onOpenChange, leads }: Props) => {
         exportable = exportable.filter((l) => !pendingIds.has(l.id));
       }
 
-      const header = selectedCols.map((c) => c.label);
-      const rows = exportable.map((l) => selectedCols.map((c) => c.get(l)));
+      const header = FIXED_COLUMNS.map((c) => c.label);
+      const rows = exportable.map((l) => FIXED_COLUMNS.map((c) => c.get(l)));
 
       const csv = [header, ...rows]
         .map((r) => r.map((v) => csvEscape(String(v ?? ""))).join(","))
@@ -161,13 +96,13 @@ export const LeadExportDialog = ({ open, onOpenChange, leads }: Props) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
+      <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="font-heading tracking-wider uppercase">
             Exportar leads em CSV
           </DialogTitle>
           <DialogDescription>
-            Escolha as colunas que deseja exportar e os filtros aplicáveis.
+            Serão exportadas as colunas: Empresa, Nome, Telefone e Etapa do CRM.
           </DialogDescription>
         </DialogHeader>
 
@@ -175,46 +110,14 @@ export const LeadExportDialog = ({ open, onOpenChange, leads }: Props) => {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-                Colunas ({selectedCount}/{COLUMNS.length})
+                Etapas do CRM ({selectedEtapasCount}/{LEAD_ETAPAS.length})
               </Label>
               <button
                 type="button"
-                onClick={toggleAll}
+                onClick={toggleAllEtapas}
                 className="text-xs text-primary hover:underline"
               >
-                {allSelected ? "Desmarcar todas" : "Selecionar todas"}
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {COLUMNS.map((c) => (
-                <label
-                  key={c.key}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border/60 bg-surface-1/40 hover:bg-surface-2/40 cursor-pointer transition-colors"
-                >
-                  <Checkbox
-                    checked={!!cols[c.key]}
-                    onCheckedChange={(v) => setCols((s) => ({ ...s, [c.key]: !!v }))}
-                  />
-                  <span className="text-sm truncate">{c.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-                Etapas do CRM ({Object.values(etapas).filter(Boolean).length}/{LEAD_ETAPAS.length})
-              </Label>
-              <button
-                type="button"
-                onClick={() => {
-                  const allOn = Object.values(etapas).every(Boolean);
-                  setEtapas(Object.fromEntries(LEAD_ETAPAS.map((e) => [e.id, !allOn])));
-                }}
-                className="text-xs text-primary hover:underline"
-              >
-                {Object.values(etapas).every(Boolean) ? "Desmarcar todas" : "Selecionar todas"}
+                {allEtapasSelected ? "Desmarcar todas" : "Selecionar todas"}
               </button>
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -255,7 +158,7 @@ export const LeadExportDialog = ({ open, onOpenChange, leads }: Props) => {
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Cancelar
           </Button>
-          <Button onClick={handleExport} disabled={loading || selectedCount === 0}>
+          <Button onClick={handleExport} disabled={loading || selectedEtapasCount === 0}>
             <Download className="h-4 w-4 mr-1.5" />
             {loading ? "Exportando..." : "Exportar CSV"}
           </Button>
