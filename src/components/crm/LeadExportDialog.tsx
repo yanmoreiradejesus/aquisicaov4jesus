@@ -94,6 +94,9 @@ export const LeadExportDialog = ({ open, onOpenChange, leads }: Props) => {
   const [cols, setCols] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(COLUMNS.map((c) => [c.key, DEFAULT_SELECTED.has(c.key)])),
   );
+  const [etapas, setEtapas] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(LEAD_ETAPAS.map((e) => [e.id, true])),
+  );
   const [excludePending, setExcludePending] = useState(true);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
