@@ -49,7 +49,24 @@ function statusVariant(status: string | null): { label: string; className: strin
 }
 
 export function LeadCallEventsList({ leadId }: Props) {
-  const { data: events = [], isLoading } = useLeadCallEvents(leadId);
+  const { user, isAdmin } = useAuth();
+  const [filter, setFilter] = useState<"mine" | "all">(isAdmin ? "all" : "mine");
+  const effectiveUserId = filter === "mine" ? (user?.id ?? null) : "all";
+  const { data: events = [], isLoading } = useLeadCallEvents(leadId, effectiveUserId);
+
+  // Lookup de profiles para mostrar nome do vendedor no modo "Todas"
+  const { data: profilesMap = {} } = useQuery({
+    queryKey: ["profiles_min_for_calls"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("id, full_name");
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      for (const p of data ?? []) map[p.id] = p.full_name ?? "";
+      return map;
+    },
+    enabled: filter === "all",
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Show only "final" history events in the main feed (one per call_id)
   const FINAL_EVENTS = new Set(["call-history-was-created", "ended"]);
@@ -63,16 +80,36 @@ export function LeadCallEventsList({ leadId }: Props) {
     history.push(e);
   }
 
+  const headerControls = isAdmin ? (
+    <div className="flex justify-end mb-2">
+      <Select value={filter} onValueChange={(v) => setFilter(v as "mine" | "all")}>
+        <SelectTrigger className="h-7 w-[170px] text-[11px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="mine" className="text-xs">Minhas chamadas</SelectItem>
+          <SelectItem value="all" className="text-xs">Todas (equipe)</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  ) : null;
+
   if (isLoading) {
     return (
-      <div className="text-xs text-muted-foreground py-2">Carregando ligações…</div>
+      <div>
+        {headerControls}
+        <div className="text-xs text-muted-foreground py-2">Carregando ligações…</div>
+      </div>
     );
   }
 
   if (history.length === 0) {
     return (
-      <div className="text-xs text-muted-foreground border border-dashed border-border/40 rounded-lg px-3 py-4 text-center">
-        Nenhuma ligação registrada ainda.
+      <div>
+        {headerControls}
+        <div className="text-xs text-muted-foreground border border-dashed border-border/40 rounded-lg px-3 py-4 text-center">
+          Nenhuma ligação registrada ainda.
+        </div>
       </div>
     );
   }
