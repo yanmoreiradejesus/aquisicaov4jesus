@@ -340,6 +340,12 @@ export const OportunidadeAvancarDialog = ({
       if (!grauExigencia) e.grau = "Selecione o grau de exigência do cliente";
       if (oportunidadesMonetizacao.trim().length < 5) e.monetizacao = "Descreva oportunidades de monetização";
       if (infoDeal.trim().length < 5) e.info = "Descreva informações gerais do deal";
+      if (!dataAssinatura) {
+        e.assinatura = "Informe a data de assinatura do contrato";
+      } else {
+        const d = new Date(dataAssinatura);
+        if (isNaN(d.getTime())) e.assinatura = "Data de assinatura inválida";
+      }
       const fee = Number(valorFee || 0);
       const ef = Number(valorEf || 0);
       if (!(fee > 0) && !(ef > 0)) e.valoresGanho = "Confirme Valor Fee e/ou Valor EF (pelo menos um maior que zero)";
