@@ -848,6 +848,27 @@ export const OportunidadeAvancarDialog = ({
 
               <div className="space-y-2">
                 <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                  Data de assinatura do contrato *
+                </Label>
+                <Input
+                  type="date"
+                  value={dataAssinatura}
+                  onChange={(e) => setDataAssinatura(e.target.value)}
+                  max={new Date().toISOString().slice(0, 10)}
+                  className={cn(submitted && liveErrors.assinatura && "border-destructive")}
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Define a data oficial de fechamento (data_fechamento_real) e o início do contrato.
+                </p>
+                {submitted && liveErrors.assinatura && (
+                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
+                    <AlertCircle className="h-3 w-3" /> {liveErrors.assinatura}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
                   Contrato assinado * <span className="normal-case text-muted-foreground/70 font-normal">(PDF, máx. 20MB)</span>
                 </Label>
                 <Input
