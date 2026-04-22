@@ -11,6 +11,7 @@ interface Props {
   oportunidades: any[];
   onEdit: (op: any) => void;
   defaultCollapsed?: boolean;
+  onOpenInNewTab?: (op: any) => void;
 }
 
 const fmtBRL = (v: number) =>
@@ -27,6 +28,7 @@ export const OportunidadeColumn = ({
   oportunidades,
   onEdit,
   defaultCollapsed = false,
+  onOpenInNewTab,
 }: Props) => {
   const { setNodeRef, isOver } = useDroppable({ id });
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
@@ -109,7 +111,12 @@ export const OportunidadeColumn = ({
         )}
       >
         {oportunidades.map((op) => (
-          <OportunidadeCard key={op.id} oportunidade={op} onClick={() => onEdit(op)} />
+          <OportunidadeCard
+            key={op.id}
+            oportunidade={op}
+            onClick={() => onEdit(op)}
+            onOpenInNewTab={onOpenInNewTab ? () => onOpenInNewTab(op) : undefined}
+          />
         ))}
         {oportunidades.length === 0 && (
           <div className="flex flex-col items-center justify-center text-center text-[11px] text-muted-foreground/50 py-12 select-none">

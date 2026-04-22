@@ -12,6 +12,7 @@ interface Props {
   onEdit: (lead: any) => void;
   defaultCollapsed?: boolean;
   onPhoneInteract?: (lead: any) => void;
+  onOpenInNewTab?: (lead: any) => void;
 }
 
 export const LeadColumn = ({
@@ -22,6 +23,7 @@ export const LeadColumn = ({
   onEdit,
   defaultCollapsed = false,
   onPhoneInteract,
+  onOpenInNewTab,
 }: Props) => {
   const { setNodeRef, isOver } = useDroppable({ id });
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
@@ -104,6 +106,7 @@ export const LeadColumn = ({
             showAge={id === "entrada"}
             showStageDays={id === "tentativa_contato"}
             onPhoneInteract={onPhoneInteract ? () => onPhoneInteract(lead) : undefined}
+            onOpenInNewTab={onOpenInNewTab ? () => onOpenInNewTab(lead) : undefined}
           />
         ))}
         {leads.length === 0 && (
