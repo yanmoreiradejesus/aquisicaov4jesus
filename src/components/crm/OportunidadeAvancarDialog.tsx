@@ -483,40 +483,42 @@ export const OportunidadeAvancarDialog = ({
         <div className="px-6 py-5 space-y-6">
           {showStep === "meeting" && (
             <>
-              {/* Temperatura */}
-              <div className="space-y-2.5">
-                <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-                  Temperatura *
-                </Label>
-                <div className="grid grid-cols-3 gap-2.5">
-                  {TEMPERATURAS.map((t) => {
-                    const Icon = t.icon;
-                    const active = temperatura === t.value;
-                    return (
-                      <button
-                        key={t.value}
-                        type="button"
-                        onClick={() => setTemperatura(t.value)}
-                        className={cn(
-                          "group flex flex-col items-center gap-1.5 py-4 px-2 rounded-xl border text-center transition-all",
-                          active
-                            ? cn("border-transparent ring-2", t.ring, t.bg, "shadow-ios-sm")
-                            : "border-border/40 hover:border-border bg-surface-1/50 hover:bg-surface-1",
-                        )}
-                      >
-                        <Icon className={cn("h-6 w-6 transition-colors", active ? t.color : "text-muted-foreground group-hover:text-foreground")} />
-                        <span className="text-[12px] font-semibold leading-none">{t.label}</span>
-                        <span className="text-[10px] text-muted-foreground leading-tight">{t.desc}</span>
-                      </button>
-                    );
-                  })}
+              {/* Temperatura — escondida quando destino é Ganho (lead já fechou) */}
+              {REQUIRES_TEMPERATURA.has(etapaDestino) && (
+                <div className="space-y-2.5">
+                  <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                    Temperatura *
+                  </Label>
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {TEMPERATURAS.map((t) => {
+                      const Icon = t.icon;
+                      const active = temperatura === t.value;
+                      return (
+                        <button
+                          key={t.value}
+                          type="button"
+                          onClick={() => setTemperatura(t.value)}
+                          className={cn(
+                            "group flex flex-col items-center gap-1.5 py-4 px-2 rounded-xl border text-center transition-all",
+                            active
+                              ? cn("border-transparent ring-2", t.ring, t.bg, "shadow-ios-sm")
+                              : "border-border/40 hover:border-border bg-surface-1/50 hover:bg-surface-1",
+                          )}
+                        >
+                          <Icon className={cn("h-6 w-6 transition-colors", active ? t.color : "text-muted-foreground group-hover:text-foreground")} />
+                          <span className="text-[12px] font-semibold leading-none">{t.label}</span>
+                          <span className="text-[10px] text-muted-foreground leading-tight">{t.desc}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {submitted && liveErrors.temperatura && (
+                    <p className="flex items-center gap-1.5 text-[11px] text-destructive">
+                      <AlertCircle className="h-3 w-3" /> {liveErrors.temperatura}
+                    </p>
+                  )}
                 </div>
-                {submitted && liveErrors.temperatura && (
-                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
-                    <AlertCircle className="h-3 w-3" /> {liveErrors.temperatura}
-                  </p>
-                )}
-              </div>
+              )}
 
               {/* Transcrição */}
               {!hasTranscricaoSalva ? (
