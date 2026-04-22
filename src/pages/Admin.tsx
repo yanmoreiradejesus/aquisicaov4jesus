@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, UserPlus, Send, Wand2, Pencil, Search, Clock } from "lucide-react";
+import { AdminVoipAccountsCard } from "@/components/admin/AdminVoipAccountsCard";
 
 interface UserWithAccess {
   id: string;
