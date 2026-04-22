@@ -317,7 +317,7 @@ export const OportunidadeAvancarDialog = ({
       } else if (adicionarNovaReuniao) {
         if (novaTranscricao.trim().length < 20) e.transcricao = "Transcrição complementar precisa de no mín. 20 caracteres";
       }
-      if (!temperatura) e.temperatura = "Selecione a temperatura";
+      if (REQUIRES_TEMPERATURA.has(etapaDestino) && !temperatura) e.temperatura = "Selecione a temperatura";
     }
     // Tarefa é opcional — não bloqueia o avanço.
     if (needs.valores) {
