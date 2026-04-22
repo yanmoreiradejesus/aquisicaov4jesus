@@ -77,9 +77,13 @@ const TEMPERATURAS = [
   { value: "frio", label: "Frio", desc: "Esfriou", icon: Snowflake, color: "text-cyan-400", ring: "ring-cyan-400/40", bg: "bg-cyan-400/10" },
 ];
 
-// Etapas que exigem registro de reunião + temperatura.
-// Ganho NÃO exige (lead já fechou — foco em contrato/valores).
-const REQUIRES_MEETING = new Set(["negociacao", "contrato", "follow_infinito"]);
+// Etapas que exigem registro de reunião (transcrição).
+// Ganho TAMBÉM exige transcrição (precisamos do registro da reunião que fechou),
+// mas neste caso a temperatura é dispensada (lead já fechou).
+const REQUIRES_MEETING = new Set(["negociacao", "contrato", "follow_infinito", "fechado_ganho"]);
+// Etapas onde a temperatura também é exigida no step de reunião.
+// Ganho está fora (lead fechou — temperatura não faz sentido).
+const REQUIRES_TEMPERATURA = new Set(["negociacao", "contrato", "follow_infinito"]);
 // Tarefas: sugeridas em etapas em andamento. Ganho não precisa.
 const REQUIRES_TASK = new Set(["negociacao", "contrato", "follow_infinito"]);
 // Valores obrigatórios em "Dúvidas e Fechamento". Em "Ganho" os valores
