@@ -228,6 +228,7 @@ export type Database = {
           transcricao: string | null
           transcricao_error: string | null
           transcricao_status: string | null
+          user_id: string | null
         }
         Insert: {
           call_id?: string | null
@@ -246,6 +247,7 @@ export type Database = {
           transcricao?: string | null
           transcricao_error?: string | null
           transcricao_status?: string | null
+          user_id?: string | null
         }
         Update: {
           call_id?: string | null
@@ -264,6 +266,7 @@ export type Database = {
           transcricao?: string | null
           transcricao_error?: string | null
           transcricao_status?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -784,6 +787,39 @@ export type Database = {
         Update: {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      voip_accounts: {
+        Row: {
+          apelido: string | null
+          ativo: boolean
+          created_at: string
+          id: string
+          operador_id: string
+          provider: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          apelido?: string | null
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          operador_id: string
+          provider?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          apelido?: string | null
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          operador_id?: string
+          provider?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

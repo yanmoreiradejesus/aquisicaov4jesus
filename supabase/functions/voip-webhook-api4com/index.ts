@@ -149,10 +149,24 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Resolve user_id via voip_accounts (operador -> usuário do CRM)
+    let userId: string | null = null;
+    if (operador) {
+      const { data: acc } = await supabase
+        .from("voip_accounts")
+        .select("user_id")
+        .eq("provider", "api4com")
+        .eq("operador_id", operador)
+        .eq("ativo", true)
+        .maybeSingle();
+      if (acc?.user_id) userId = acc.user_id;
+    }
+
     const { error: insertErr } = await supabase
       .from("crm_call_events")
       .insert({
         lead_id: leadId,
+        user_id: userId,
         provider: "api4com",
         event_type: eventType,
         call_id: callId,
