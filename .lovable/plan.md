@@ -1,34 +1,30 @@
 
 
-## Abrir card em nova aba via duplo-clique
+## Filtros de chamadas por usuário
 
-Adicionar suporte a **duplo-clique** nos cards de **Leads** e **Oportunidades** para abrir o detalhe em uma nova aba do navegador, mantendo o clique simples como está hoje (abre o sheet/dialog na própria página).
-
-### Comportamento
-- **1 clique**: abre o painel lateral (comportamento atual, sem mudanças).
-- **2 cliques (double-click)**: abre nova aba do navegador na URL da página correspondente, com query param `?id=<uuid>` que sinaliza qual card deve abrir automaticamente. Funciona também via **Ctrl/Cmd+clique** (mesma intenção: nova aba).
-- O duplo-clique não inicia drag e não dispara o clique simples (cancelamos via timer curto de ~220ms).
+Aplicar filtro de chamadas (`crm_call_events.user_id`) para que cada vendedor veja apenas as próprias ligações, e admin veja todas. Adicionar também um seletor visível no detalhe do lead.
 
 ### Mudanças
 
-**1. `src/components/crm/OportunidadeCard.tsx` e `src/components/crm/LeadCard.tsx`**
-- Adicionar nova prop opcional `onOpenInNewTab?: () => void`.
-- Substituir o handler `onClick` por um wrapper que:
-  - Se `e.metaKey || e.ctrlKey || e.button === 1` (clique do meio) → chama `onOpenInNewTab`.
-  - Caso contrário usa um pequeno debounce: dispara `onClick` após ~220ms; se um segundo clique chegar antes, cancela o timer e chama `onOpenInNewTab`.
-- Adicionar `onAuxClick` para tratar clique do botão do meio.
+**1. `src/hooks/useLeadCallEvents.ts`**
+- Aceitar parâmetro opcional `userId?: string | "all" | null`.
+- Aplicar `.eq("user_id", userId)` quando `userId` for um UUID; quando for `"all"` (ou admin sem filtro), não filtrar.
+- Incluir `userId` na `queryKey` para cache correto.
 
-**2. `src/pages/Oportunidades.tsx` e `src/pages/CrmLeads.tsx`**
-- Passar `onOpenInNewTab={() => window.open(\`/comercial/oportunidades?id=${op.id}\`, '_blank', 'noopener')}` (e equivalente para `/comercial/leads?id=...`).
-- Ao montar, ler `useSearchParams()`; se `id` estiver presente e existir no array carregado, abrir o sheet/dialog automaticamente desse registro (uma vez). Limpar o param da URL após abrir para não reabrir em refreshes.
+**2. `src/components/crm/LeadCallEventsList.tsx`**
+- Ler `useAuth()` para saber `user.id` e `isAdmin`.
+- Default: vendedor vê só as suas (`user_id = auth.uid()`); admin vê todas.
+- Adicionar um pequeno `Select` no topo do card com opções: **"Minhas chamadas"**, **"Todas (equipe)"** — visível só para admin. Vendedor comum vê fixo "Minhas chamadas" (sem seletor) com um link sutil "ver todas" caso queira inspecionar (opcional, podemos esconder).
+- Mostrar o nome do operador/vendedor em cada item quando estiver no modo "Todas" (lookup simples em `profiles` por `user_id`, ou exibir `operador` cru se não houver match).
+
+**3. (opcional, leve) `LeadDetailSheet.tsx`**
+- Garantir que o componente passa o filtro escolhido para o list — nenhuma mudança estrutural, só repassar prop se necessário.
 
 ### Detalhes técnicos
-- Usamos `window.open(url, '_blank', 'noopener,noreferrer')` para abrir nova aba segura.
-- O timer de duplo-clique fica em `useRef<number | null>` dentro do card; limpamos no `useEffect` de cleanup.
-- Mantemos `stopPropagation` nos botões internos (telefone/WhatsApp) — eles já não disparam o click do card.
-- A leitura do `?id=` nas páginas usa `useSearchParams` do `react-router-dom` (já em uso no app), e `setSearchParams({}, { replace: true })` para limpar.
-- Acessibilidade: adicionar `title="Clique para abrir · Duplo-clique para abrir em nova aba"` no card.
+- Reaproveita RLS atual de `crm_call_events` (SELECT liberado para `authenticated`); o filtro é só client-side por `user_id`.
+- Para mostrar nome do vendedor em "Todas", fazemos um `useQuery` único de `profiles` (`id, full_name`) e mapeamos por `user_id` — barato e cacheável.
+- Eventos antigos (sem `user_id` populado) aparecem no modo "Todas" e ficam ocultos no modo "Minhas". Isso é intencional — só ligações novas, com `operador` mapeado em `voip_accounts`, terão `user_id`.
 
 ### Fora do escopo
-- Não cria rota dedicada `/comercial/oportunidades/:id` (continua usando query param + sheet existente). Se no futuro quiser deep-link "puro", criamos rota separada.
+- Tela geral/global de chamadas (kanban de ligações). Se quiser depois, criamos `/comercial/chamadas` com filtros de período + vendedor + status.
 
