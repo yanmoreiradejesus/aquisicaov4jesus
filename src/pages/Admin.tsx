@@ -419,6 +419,16 @@ const Admin = () => {
               </div>
             ))}
           </TabsContent>
+
+          {/* ========== TAB VOIP ========== */}
+          <TabsContent value="voip" className="space-y-4 mt-4">
+            <p className="text-sm text-muted-foreground">
+              Mapeie o <code className="text-xs bg-muted px-1 py-0.5 rounded">operador_id</code> da
+              API4com (ou 3CPlus) ao usuário do sistema. Assim, as ligações desse operador são
+              atribuídas ao vendedor correto e aparecem no filtro "Minhas chamadas".
+            </p>
+            <AdminVoipAccountsCard />
+          </TabsContent>
         </Tabs>
       </div>
 
