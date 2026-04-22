@@ -19,6 +19,7 @@ export interface CallEvent {
   transcricao: string | null;
   transcricao_status: string | null;
   transcricao_error: string | null;
+  user_id: string | null;
 }
 
 export function useLeadCallEvents(
