@@ -90,7 +90,7 @@ export const OportunidadesFilterPopover = ({ filters, onChange, oportunidades }:
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[380px] p-4 max-h-[80vh] overflow-y-auto">
+      <PopoverContent align="end" className="w-[420px] p-4 max-h-[80vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-3">
           <h4 className="text-sm font-semibold">Filtrar oportunidades</h4>
           {activeCount > 0 && (
