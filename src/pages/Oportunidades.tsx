@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { OportunidadesFilterPopover, EMPTY_OP_FILTERS, type OportunidadeFilters } from "@/components/crm/OportunidadesFilterPopover";
 import { supabase } from "@/integrations/supabase/client";
+import WinCelebration from "@/components/celebrations/WinCelebration";
 
 const WORKFLOW_ETAPAS = new Set(["negociacao", "contrato", "follow_infinito", "fechado_ganho"]);
 
@@ -31,6 +32,7 @@ const Oportunidades = () => {
   const [avancarOpen, setAvancarOpen] = useState(false);
   const [pendingAvanco, setPendingAvanco] = useState<{ op: any; etapa: string } | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [celebration, setCelebration] = useState<{ nome_oportunidade: string; valor_total?: number } | null>(null);
   const { toast } = useToast();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -99,6 +101,13 @@ const Oportunidades = () => {
       {
         onSuccess: () => {
           if (etapa === "fechado_ganho") {
+            const op = oportunidades.find((o: any) => o.id === id);
+            setCelebration({
+              nome_oportunidade: op?.nome_oportunidade ?? "Oportunidade",
+              valor_total: extras.valor_fee != null || extras.valor_ef != null
+                ? (Number(extras.valor_fee ?? op?.valor_fee ?? 0) + Number(extras.valor_ef ?? op?.valor_ef ?? 0))
+                : op?.valor_total,
+            });
             toast({ title: "Oportunidade ganha! 🎉", description: "Cliente e cobranças criados automaticamente." });
           } else if (etapa === "fechado_perdido") {
             toast({ title: "Oportunidade marcada como perdida" });
@@ -193,6 +202,11 @@ const Oportunidades = () => {
         {
           onSuccess: () => {
             if (pendingAvanco.etapa === "fechado_ganho") {
+              const op = pendingAvanco.op;
+              setCelebration({
+                nome_oportunidade: op?.nome_oportunidade ?? "Oportunidade",
+                valor_total: (Number(payload.valor_fee ?? op?.valor_fee ?? 0) + Number(payload.valor_ef ?? op?.valor_ef ?? 0)) || op?.valor_total,
+              });
               toast({ title: "Oportunidade ganha! 🎉", description: "Cliente e cobranças criados automaticamente." });
             } else {
               toast({ title: "Etapa atualizada", description: "Tarefas registradas com sucesso." });
@@ -358,6 +372,13 @@ const Oportunidades = () => {
       />
 
       <OportunidadeImportDialog open={importOpen} onOpenChange={setImportOpen} />
+
+      {celebration && (
+        <WinCelebration
+          oportunidade={celebration}
+          onComplete={() => setCelebration(null)}
+        />
+      )}
     </div>
   );
 };
