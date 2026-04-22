@@ -193,6 +193,14 @@ export const OportunidadeAvancarDialog = ({
       setOportunidadesMonetizacao(oportunidade.oportunidades_monetizacao || "");
       setGrauExigencia(oportunidade.grau_exigencia || "");
       setInfoDeal(oportunidade.info_deal || "");
+      // Pré-preenche com a data de fechamento real (se houver) ou hoje
+      const baseAssinatura = oportunidade.data_fechamento_real
+        ? new Date(oportunidade.data_fechamento_real)
+        : new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      setDataAssinatura(
+        `${baseAssinatura.getFullYear()}-${pad(baseAssinatura.getMonth() + 1)}-${pad(baseAssinatura.getDate())}`,
+      );
       setValorFee(oportunidade.valor_fee != null && Number(oportunidade.valor_fee) > 0 ? String(oportunidade.valor_fee) : "");
       setValorEf(oportunidade.valor_ef != null && Number(oportunidade.valor_ef) > 0 ? String(oportunidade.valor_ef) : "");
 
