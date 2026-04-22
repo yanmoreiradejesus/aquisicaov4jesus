@@ -250,6 +250,7 @@ const Admin = () => {
               )}
             </TabsTrigger>
             <TabsTrigger value="templates">Templates de cargo</TabsTrigger>
+            <TabsTrigger value="voip">Contas VoIP</TabsTrigger>
           </TabsList>
 
           {/* ========== TAB USUÁRIOS ========== */}
