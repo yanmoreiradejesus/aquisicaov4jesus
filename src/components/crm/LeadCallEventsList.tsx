@@ -115,61 +115,71 @@ export function LeadCallEventsList({ leadId }: Props) {
   }
 
   return (
-    <div className="space-y-2">
-      {history.map((e) => {
-        const v = statusVariant(e.status);
-        const Icon = v.Icon;
-        return (
-          <div
-            key={e.id}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg border border-border/40 bg-background/30"
-          >
-            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <Icon className="h-3.5 w-3.5 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-medium">
-                  {format(new Date(e.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                </span>
-                <Badge variant="outline" className={`text-[10px] ${v.className}`}>{v.label}</Badge>
-                <Badge variant="outline" className={`text-[10px] ${providerLabel(e.provider).className}`}>
-                  {providerLabel(e.provider).label}
-                </Badge>
-                <span className="text-[10px] text-muted-foreground">
-                  Duração: {formatDuration(e.duracao_seg)}
-                </span>
-                {e.operador && (
-                  <span className="text-[10px] text-muted-foreground">
-                    • {e.operador}
+    <div>
+      {headerControls}
+      <div className="space-y-2">
+        {history.map((e) => {
+          const v = statusVariant(e.status);
+          const Icon = v.Icon;
+          const vendorName = e.user_id ? profilesMap[e.user_id] : null;
+          return (
+            <div
+              key={e.id}
+              className="flex items-center gap-3 px-3 py-2 rounded-lg border border-border/40 bg-background/30"
+            >
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Icon className="h-3.5 w-3.5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-medium">
+                    {format(new Date(e.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                   </span>
+                  <Badge variant="outline" className={`text-[10px] ${v.className}`}>{v.label}</Badge>
+                  <Badge variant="outline" className={`text-[10px] ${providerLabel(e.provider).className}`}>
+                    {providerLabel(e.provider).label}
+                  </Badge>
+                  <span className="text-[10px] text-muted-foreground">
+                    Duração: {formatDuration(e.duracao_seg)}
+                  </span>
+                  {e.operador && (
+                    <span className="text-[10px] text-muted-foreground">
+                      • {e.operador}
+                    </span>
+                  )}
+                  {filter === "all" && (vendorName || e.operador) && (
+                    <span className="inline-flex items-center gap-1 text-[10px] text-primary/80">
+                      <User className="h-2.5 w-2.5" />
+                      {vendorName || `op ${e.operador}`}
+                    </span>
+                  )}
+                </div>
+                {e.gravacao_url && (
+                  <audio
+                    controls
+                    preload="none"
+                    src={e.gravacao_url}
+                    className="mt-2 h-7 w-full max-w-xs"
+                  />
+                )}
+                {e.gravacao_url && (
+                  <TranscricaoBlock event={e} />
                 )}
               </div>
-              {e.gravacao_url && (
-                <audio
-                  controls
-                  preload="none"
-                  src={e.gravacao_url}
-                  className="mt-2 h-7 w-full max-w-xs"
-                />
-              )}
-              {e.gravacao_url && (
-                <TranscricaoBlock event={e} />
+              {e.gravacao_url && !navigator.userAgent.includes("Mobi") && (
+                <a
+                  href={e.gravacao_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 text-[10px] text-primary hover:underline inline-flex items-center gap-1"
+                >
+                  <Play className="h-3 w-3" /> Abrir
+                </a>
               )}
             </div>
-            {e.gravacao_url && !navigator.userAgent.includes("Mobi") && (
-              <a
-                href={e.gravacao_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="shrink-0 text-[10px] text-primary hover:underline inline-flex items-center gap-1"
-              >
-                <Play className="h-3 w-3" /> Abrir
-              </a>
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
