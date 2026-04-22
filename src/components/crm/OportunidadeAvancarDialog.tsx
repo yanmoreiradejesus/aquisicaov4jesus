@@ -46,6 +46,7 @@ interface GanhoPayload {
   oportunidades_monetizacao: string;
   grau_exigencia: string;
   info_deal: string;
+  data_assinatura: string; // ISO string — data em que o contrato foi assinado
 }
 
 interface Props {
