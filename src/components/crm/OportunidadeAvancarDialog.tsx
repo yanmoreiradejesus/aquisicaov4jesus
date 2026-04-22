@@ -46,6 +46,7 @@ interface GanhoPayload {
   oportunidades_monetizacao: string;
   grau_exigencia: string;
   info_deal: string;
+  data_assinatura: string; // ISO string — data em que o contrato foi assinado
 }
 
 interface Props {
@@ -166,6 +167,7 @@ export const OportunidadeAvancarDialog = ({
   const [oportunidadesMonetizacao, setOportunidadesMonetizacao] = useState("");
   const [grauExigencia, setGrauExigencia] = useState<string>("");
   const [infoDeal, setInfoDeal] = useState("");
+  const [dataAssinatura, setDataAssinatura] = useState<string>(""); // YYYY-MM-DD
 
   // IA: estado da sugestão automática de tarefa
   const [aiSuggesting, setAiSuggesting] = useState(false);
@@ -191,6 +193,14 @@ export const OportunidadeAvancarDialog = ({
       setOportunidadesMonetizacao(oportunidade.oportunidades_monetizacao || "");
       setGrauExigencia(oportunidade.grau_exigencia || "");
       setInfoDeal(oportunidade.info_deal || "");
+      // Pré-preenche com a data de fechamento real (se houver) ou hoje
+      const baseAssinatura = oportunidade.data_fechamento_real
+        ? new Date(oportunidade.data_fechamento_real)
+        : new Date();
+      const pad = (n: number) => String(n).padStart(2, "0");
+      setDataAssinatura(
+        `${baseAssinatura.getFullYear()}-${pad(baseAssinatura.getMonth() + 1)}-${pad(baseAssinatura.getDate())}`,
+      );
       setValorFee(oportunidade.valor_fee != null && Number(oportunidade.valor_fee) > 0 ? String(oportunidade.valor_fee) : "");
       setValorEf(oportunidade.valor_ef != null && Number(oportunidade.valor_ef) > 0 ? String(oportunidade.valor_ef) : "");
 
@@ -330,6 +340,12 @@ export const OportunidadeAvancarDialog = ({
       if (!grauExigencia) e.grau = "Selecione o grau de exigência do cliente";
       if (oportunidadesMonetizacao.trim().length < 5) e.monetizacao = "Descreva oportunidades de monetização";
       if (infoDeal.trim().length < 5) e.info = "Descreva informações gerais do deal";
+      if (!dataAssinatura) {
+        e.assinatura = "Informe a data de assinatura do contrato";
+      } else {
+        const d = new Date(dataAssinatura);
+        if (isNaN(d.getTime())) e.assinatura = "Data de assinatura inválida";
+      }
       const fee = Number(valorFee || 0);
       const ef = Number(valorEf || 0);
       if (!(fee > 0) && !(ef > 0)) e.valoresGanho = "Confirme Valor Fee e/ou Valor EF (pelo menos um maior que zero)";
@@ -340,6 +356,7 @@ export const OportunidadeAvancarDialog = ({
     hasTranscricaoSalva, adicionarNovaReuniao, novaTranscricao, temperatura, etapaDestino,
     tarefasPendentesCount, valorFee, valorEf,
     contratoFile, grauExigencia, oportunidadesMonetizacao, infoDeal, oportunidade?.contrato_url,
+    dataAssinatura,
   ]);
 
   const isStepValid = (s: number): boolean => {
@@ -348,7 +365,7 @@ export const OportunidadeAvancarDialog = ({
     if (key === "task") return !liveErrors.tarefas;
     if (key === "valores") return !liveErrors.valores;
     if (key === "ganho")
-      return !liveErrors.contrato && !liveErrors.grau && !liveErrors.monetizacao && !liveErrors.info && !liveErrors.valoresGanho;
+      return !liveErrors.contrato && !liveErrors.grau && !liveErrors.monetizacao && !liveErrors.info && !liveErrors.valoresGanho && !liveErrors.assinatura;
     return true;
   };
 
@@ -386,11 +403,15 @@ export const OportunidadeAvancarDialog = ({
       let ganho: GanhoPayload | undefined;
       if (needs.ganho) {
         const contrato_url = await uploadContrato();
+        // Convert YYYY-MM-DD to ISO at midday local to avoid timezone shifts
+        const [yy, mm, dd] = dataAssinatura.split("-").map(Number);
+        const assinaturaIso = new Date(yy, (mm ?? 1) - 1, dd ?? 1, 12, 0, 0).toISOString();
         ganho = {
           contrato_url: contrato_url || "",
           oportunidades_monetizacao: oportunidadesMonetizacao.trim(),
           grau_exigencia: grauExigencia,
           info_deal: infoDeal.trim(),
+          data_assinatura: assinaturaIso,
         };
       }
 
@@ -821,6 +842,27 @@ export const OportunidadeAvancarDialog = ({
                 {submitted && liveErrors.valoresGanho && (
                   <p className="flex items-center gap-1.5 text-[11px] text-destructive">
                     <AlertCircle className="h-3 w-3" /> {liveErrors.valoresGanho}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                  Data de assinatura do contrato *
+                </Label>
+                <Input
+                  type="date"
+                  value={dataAssinatura}
+                  onChange={(e) => setDataAssinatura(e.target.value)}
+                  max={new Date().toISOString().slice(0, 10)}
+                  className={cn(submitted && liveErrors.assinatura && "border-destructive")}
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Define a data oficial de fechamento (data_fechamento_real) e o início do contrato.
+                </p>
+                {submitted && liveErrors.assinatura && (
+                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
+                    <AlertCircle className="h-3 w-3" /> {liveErrors.assinatura}
                   </p>
                 )}
               </div>

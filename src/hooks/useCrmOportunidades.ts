@@ -72,6 +72,7 @@ export function useCrmOportunidades() {
       info_deal,
       valor_fee,
       valor_ef,
+      data_assinatura,
     }: {
       id: string;
       etapa: string;
@@ -85,9 +86,12 @@ export function useCrmOportunidades() {
       info_deal?: string;
       valor_fee?: number | null;
       valor_ef?: number | null;
+      data_assinatura?: string; // ISO string — vira data_fechamento_real
     }) => {
       const patch: any = { etapa };
-      if (etapa === "fechado_ganho") patch.data_fechamento_real = new Date().toISOString();
+      if (etapa === "fechado_ganho") {
+        patch.data_fechamento_real = data_assinatura ?? new Date().toISOString();
+      }
       if (etapa === "fechado_perdido" && motivo_perda) patch.motivo_perda = motivo_perda;
       if (transcricao_reuniao !== undefined) patch.transcricao_reuniao = transcricao_reuniao;
       if (temperatura !== undefined) patch.temperatura = temperatura;
