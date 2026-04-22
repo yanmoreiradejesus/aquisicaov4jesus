@@ -1,8 +1,11 @@
-import { Phone, PhoneOff, PhoneIncoming, Play, FileText, Loader2, RefreshCw, AlertCircle } from "lucide-react";
+import { Phone, PhoneOff, PhoneIncoming, Play, FileText, Loader2, RefreshCw, AlertCircle, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLeadCallEvents, type CallEvent } from "@/hooks/useLeadCallEvents";
+import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState } from "react";
