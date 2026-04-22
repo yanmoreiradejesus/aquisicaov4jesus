@@ -77,9 +77,13 @@ const TEMPERATURAS = [
   { value: "frio", label: "Frio", desc: "Esfriou", icon: Snowflake, color: "text-cyan-400", ring: "ring-cyan-400/40", bg: "bg-cyan-400/10" },
 ];
 
-// Etapas que exigem registro de reunião + temperatura.
-// Ganho NÃO exige (lead já fechou — foco em contrato/valores).
-const REQUIRES_MEETING = new Set(["negociacao", "contrato", "follow_infinito"]);
+// Etapas que exigem registro de reunião (transcrição).
+// Ganho TAMBÉM exige transcrição (precisamos do registro da reunião que fechou),
+// mas neste caso a temperatura é dispensada (lead já fechou).
+const REQUIRES_MEETING = new Set(["negociacao", "contrato", "follow_infinito", "fechado_ganho"]);
+// Etapas onde a temperatura também é exigida no step de reunião.
+// Ganho está fora (lead fechou — temperatura não faz sentido).
+const REQUIRES_TEMPERATURA = new Set(["negociacao", "contrato", "follow_infinito"]);
 // Tarefas: sugeridas em etapas em andamento. Ganho não precisa.
 const REQUIRES_TASK = new Set(["negociacao", "contrato", "follow_infinito"]);
 // Valores obrigatórios em "Dúvidas e Fechamento". Em "Ganho" os valores
@@ -115,7 +119,8 @@ export function computeNeededSteps(
   const hasTemperatura = !!oportunidade?.temperatura;
   const hasValores = Number(oportunidade?.valor_ef ?? 0) > 0 || Number(oportunidade?.valor_fee ?? 0) > 0;
 
-  const meeting = REQUIRES_MEETING.has(etapaDestino) && (!hasTranscricao || !hasTemperatura);
+  const requireTemp = REQUIRES_TEMPERATURA.has(etapaDestino);
+  const meeting = REQUIRES_MEETING.has(etapaDestino) && (!hasTranscricao || (requireTemp && !hasTemperatura));
   // Tarefa: passo é exibido se não houver nenhuma pendente (para sugerir via IA), mas é OPCIONAL — não bloqueia o avanço.
   const task = REQUIRES_TASK.has(etapaDestino) && tarefasPendentesCount === 0;
   const valores = REQUIRES_VALORES.has(etapaDestino) && !hasValores;
@@ -312,7 +317,7 @@ export const OportunidadeAvancarDialog = ({
       } else if (adicionarNovaReuniao) {
         if (novaTranscricao.trim().length < 20) e.transcricao = "Transcrição complementar precisa de no mín. 20 caracteres";
       }
-      if (!temperatura) e.temperatura = "Selecione a temperatura";
+      if (REQUIRES_TEMPERATURA.has(etapaDestino) && !temperatura) e.temperatura = "Selecione a temperatura";
     }
     // Tarefa é opcional — não bloqueia o avanço.
     if (needs.valores) {
@@ -332,7 +337,7 @@ export const OportunidadeAvancarDialog = ({
     return e;
   }, [
     needs.meeting, needs.task, needs.valores, needs.ganho,
-    hasTranscricaoSalva, adicionarNovaReuniao, novaTranscricao, temperatura,
+    hasTranscricaoSalva, adicionarNovaReuniao, novaTranscricao, temperatura, etapaDestino,
     tarefasPendentesCount, valorFee, valorEf,
     contratoFile, grauExigencia, oportunidadesMonetizacao, infoDeal, oportunidade?.contrato_url,
   ]);
@@ -403,7 +408,7 @@ export const OportunidadeAvancarDialog = ({
 
       const payload: Parameters<typeof onConfirm>[0] = {
         transcricao_reuniao: transcricaoFinal,
-        temperatura: needs.meeting ? temperatura : undefined,
+        temperatura: needs.meeting && REQUIRES_TEMPERATURA.has(etapaDestino) ? temperatura : undefined,
         novasTarefas: tarefas,
         ganho,
       };
@@ -478,40 +483,42 @@ export const OportunidadeAvancarDialog = ({
         <div className="px-6 py-5 space-y-6">
           {showStep === "meeting" && (
             <>
-              {/* Temperatura */}
-              <div className="space-y-2.5">
-                <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-                  Temperatura *
-                </Label>
-                <div className="grid grid-cols-3 gap-2.5">
-                  {TEMPERATURAS.map((t) => {
-                    const Icon = t.icon;
-                    const active = temperatura === t.value;
-                    return (
-                      <button
-                        key={t.value}
-                        type="button"
-                        onClick={() => setTemperatura(t.value)}
-                        className={cn(
-                          "group flex flex-col items-center gap-1.5 py-4 px-2 rounded-xl border text-center transition-all",
-                          active
-                            ? cn("border-transparent ring-2", t.ring, t.bg, "shadow-ios-sm")
-                            : "border-border/40 hover:border-border bg-surface-1/50 hover:bg-surface-1",
-                        )}
-                      >
-                        <Icon className={cn("h-6 w-6 transition-colors", active ? t.color : "text-muted-foreground group-hover:text-foreground")} />
-                        <span className="text-[12px] font-semibold leading-none">{t.label}</span>
-                        <span className="text-[10px] text-muted-foreground leading-tight">{t.desc}</span>
-                      </button>
-                    );
-                  })}
+              {/* Temperatura — escondida quando destino é Ganho (lead já fechou) */}
+              {REQUIRES_TEMPERATURA.has(etapaDestino) && (
+                <div className="space-y-2.5">
+                  <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                    Temperatura *
+                  </Label>
+                  <div className="grid grid-cols-3 gap-2.5">
+                    {TEMPERATURAS.map((t) => {
+                      const Icon = t.icon;
+                      const active = temperatura === t.value;
+                      return (
+                        <button
+                          key={t.value}
+                          type="button"
+                          onClick={() => setTemperatura(t.value)}
+                          className={cn(
+                            "group flex flex-col items-center gap-1.5 py-4 px-2 rounded-xl border text-center transition-all",
+                            active
+                              ? cn("border-transparent ring-2", t.ring, t.bg, "shadow-ios-sm")
+                              : "border-border/40 hover:border-border bg-surface-1/50 hover:bg-surface-1",
+                          )}
+                        >
+                          <Icon className={cn("h-6 w-6 transition-colors", active ? t.color : "text-muted-foreground group-hover:text-foreground")} />
+                          <span className="text-[12px] font-semibold leading-none">{t.label}</span>
+                          <span className="text-[10px] text-muted-foreground leading-tight">{t.desc}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {submitted && liveErrors.temperatura && (
+                    <p className="flex items-center gap-1.5 text-[11px] text-destructive">
+                      <AlertCircle className="h-3 w-3" /> {liveErrors.temperatura}
+                    </p>
+                  )}
                 </div>
-                {submitted && liveErrors.temperatura && (
-                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
-                    <AlertCircle className="h-3 w-3" /> {liveErrors.temperatura}
-                  </p>
-                )}
-              </div>
+              )}
 
               {/* Transcrição */}
               {!hasTranscricaoSalva ? (
