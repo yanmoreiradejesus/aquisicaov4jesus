@@ -337,7 +337,7 @@ export const OportunidadeAvancarDialog = ({
     return e;
   }, [
     needs.meeting, needs.task, needs.valores, needs.ganho,
-    hasTranscricaoSalva, adicionarNovaReuniao, novaTranscricao, temperatura,
+    hasTranscricaoSalva, adicionarNovaReuniao, novaTranscricao, temperatura, etapaDestino,
     tarefasPendentesCount, valorFee, valorEf,
     contratoFile, grauExigencia, oportunidadesMonetizacao, infoDeal, oportunidade?.contrato_url,
   ]);
