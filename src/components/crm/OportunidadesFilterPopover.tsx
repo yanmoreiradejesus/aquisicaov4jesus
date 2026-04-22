@@ -165,6 +165,82 @@ export const OportunidadesFilterPopover = ({ filters, onChange, oportunidades }:
   );
 };
 
+const fmt = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
+const buildPresets = (): Array<{ key: string; label: string; range: () => [string, string] }> => {
+  const today = new Date();
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  return [
+    { key: "today", label: "Hoje", range: () => [fmt(today), fmt(today)] },
+    {
+      key: "yesterday",
+      label: "Ontem",
+      range: () => {
+        const y = startOfDay(today);
+        y.setDate(y.getDate() - 1);
+        return [fmt(y), fmt(y)];
+      },
+    },
+    {
+      key: "7d",
+      label: "Últimos 7 dias",
+      range: () => {
+        const f = startOfDay(today);
+        f.setDate(f.getDate() - 6);
+        return [fmt(f), fmt(today)];
+      },
+    },
+    {
+      key: "30d",
+      label: "Últimos 30 dias",
+      range: () => {
+        const f = startOfDay(today);
+        f.setDate(f.getDate() - 29);
+        return [fmt(f), fmt(today)];
+      },
+    },
+    {
+      key: "thisMonth",
+      label: "Mês atual",
+      range: () => {
+        const f = new Date(today.getFullYear(), today.getMonth(), 1);
+        return [fmt(f), fmt(today)];
+      },
+    },
+    {
+      key: "lastMonth",
+      label: "Mês passado",
+      range: () => {
+        const f = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        const t = new Date(today.getFullYear(), today.getMonth(), 0);
+        return [fmt(f), fmt(t)];
+      },
+    },
+    {
+      key: "90d",
+      label: "Últimos 90 dias",
+      range: () => {
+        const f = startOfDay(today);
+        f.setDate(f.getDate() - 89);
+        return [fmt(f), fmt(today)];
+      },
+    },
+    {
+      key: "thisYear",
+      label: "Este ano",
+      range: () => {
+        const f = new Date(today.getFullYear(), 0, 1);
+        return [fmt(f), fmt(today)];
+      },
+    },
+  ];
+};
+
 const DateRange = ({
   label,
   from,
@@ -177,15 +253,82 @@ const DateRange = ({
   to: string;
   onFrom: (v: string) => void;
   onTo: (v: string) => void;
-}) => (
-  <div>
-    <Label className="text-xs text-muted-foreground">{label}</Label>
-    <div className="grid grid-cols-2 gap-2 mt-1">
-      <Input type="date" value={from} onChange={(e) => onFrom(e.target.value)} className="h-9" />
-      <Input type="date" value={to} onChange={(e) => onTo(e.target.value)} className="h-9" />
+}) => {
+  const presets = useMemo(buildPresets, []);
+  const activePreset = useMemo(() => {
+    if (!from && !to) return "";
+    return presets.find((p) => {
+      const [pf, pt] = p.range();
+      return pf === from && pt === to;
+    })?.key ?? "custom";
+  }, [from, to, presets]);
+
+  const apply = (key: string) => {
+    if (key === "clear") {
+      onFrom("");
+      onTo("");
+      return;
+    }
+    const p = presets.find((x) => x.key === key);
+    if (!p) return;
+    const [f, t] = p.range();
+    onFrom(f);
+    onTo(t);
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <Label className="text-xs text-muted-foreground">{label}</Label>
+        {(from || to) && (
+          <button
+            type="button"
+            onClick={() => apply("clear")}
+            className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-0.5"
+          >
+            <X className="h-3 w-3" /> limpar
+          </button>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-1 mt-1.5">
+        {presets.map((p) => {
+          const active = activePreset === p.key;
+          return (
+            <button
+              key={p.key}
+              type="button"
+              onClick={() => apply(p.key)}
+              className={cn(
+                "h-7 px-2.5 rounded-md text-[11px] font-medium border transition-all",
+                active
+                  ? "border-primary bg-primary/10 text-foreground"
+                  : "border-border bg-surface-2/40 text-muted-foreground hover:text-foreground hover:bg-surface-2/80"
+              )}
+            >
+              {p.label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="grid grid-cols-2 gap-2 mt-2">
+        <Input
+          type="date"
+          value={from}
+          onChange={(e) => onFrom(e.target.value)}
+          className="h-9 text-xs"
+          placeholder="De"
+        />
+        <Input
+          type="date"
+          value={to}
+          onChange={(e) => onTo(e.target.value)}
+          className="h-9 text-xs"
+          placeholder="Até"
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const FilterSelect = ({
   label,
