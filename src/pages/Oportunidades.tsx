@@ -184,6 +184,7 @@ const Oportunidades = () => {
       oportunidades_monetizacao: string;
       grau_exigencia: string;
       info_deal: string;
+      data_assinatura: string;
     };
   }) => {
     if (!pendingAvanco) return;
