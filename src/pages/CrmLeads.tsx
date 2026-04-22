@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useHorizontalWheelScroll } from "@/hooks/useHorizontalWheelScroll";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { LeadCard } from "@/components/crm/LeadCard";
@@ -34,6 +35,22 @@ const CrmLeads = () => {
   const [view, setView] = useState<"kanban" | "tarefas">("kanban");
   const [activeId, setActiveId] = useState<string | null>(null);
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const autoOpenedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (!id || isLoading || autoOpenedRef.current === id) return;
+    const lead = leads.find((l: any) => l.id === id);
+    if (lead) {
+      autoOpenedRef.current = id;
+      setEditing(lead);
+      setSheetOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete("id");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, isLoading, leads, setSearchParams]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -230,6 +247,7 @@ const CrmLeads = () => {
                     onEdit={(l) => { setEditing(l); setSheetOpen(true); }}
                     defaultCollapsed={etapa.id === "desqualificado"}
                     onPhoneInteract={handlePhoneInteract}
+                    onOpenInNewTab={(l) => window.open(`/comercial/leads?id=${l.id}`, "_blank", "noopener,noreferrer")}
                   />
                 ))}
               </div>

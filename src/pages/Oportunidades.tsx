@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useHorizontalWheelScroll } from "@/hooks/useHorizontalWheelScroll";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,22 @@ const Oportunidades = () => {
   const [importOpen, setImportOpen] = useState(false);
   const [celebration, setCelebration] = useState<{ nome_oportunidade: string; valor_total?: number } | null>(null);
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const autoOpenedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (!id || isLoading || autoOpenedRef.current === id) return;
+    const op = oportunidades.find((o: any) => o.id === id);
+    if (op) {
+      autoOpenedRef.current = id;
+      setEditing(op);
+      setSheetOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete("id");
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, isLoading, oportunidades, setSearchParams]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -330,6 +347,7 @@ const Oportunidades = () => {
                     color={etapa.color}
                     oportunidades={grouped[etapa.id] ?? []}
                     onEdit={(op) => { setEditing(op); setSheetOpen(true); }}
+                    onOpenInNewTab={(op) => window.open(`/comercial/oportunidades?id=${op.id}`, "_blank", "noopener,noreferrer")}
                     defaultCollapsed={etapa.id === "fechado_perdido" || etapa.id === "follow_infinito"}
                   />
                 ))}
