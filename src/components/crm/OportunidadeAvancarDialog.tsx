@@ -408,7 +408,7 @@ export const OportunidadeAvancarDialog = ({
 
       const payload: Parameters<typeof onConfirm>[0] = {
         transcricao_reuniao: transcricaoFinal,
-        temperatura: needs.meeting ? temperatura : undefined,
+        temperatura: needs.meeting && REQUIRES_TEMPERATURA.has(etapaDestino) ? temperatura : undefined,
         novasTarefas: tarefas,
         ganho,
       };
