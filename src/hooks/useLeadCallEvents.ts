@@ -21,18 +21,25 @@ export interface CallEvent {
   transcricao_error: string | null;
 }
 
-export function useLeadCallEvents(leadId?: string | null) {
+export function useLeadCallEvents(
+  leadId?: string | null,
+  userId?: string | "all" | null,
+) {
   const qc = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["crm_call_events", leadId],
+    queryKey: ["crm_call_events", leadId, userId ?? "all"],
     queryFn: async () => {
       if (!leadId) return [] as CallEvent[];
-      const { data, error } = await supabase
+      let q = supabase
         .from("crm_call_events" as any)
         .select("*")
         .eq("lead_id", leadId)
         .order("created_at", { ascending: false });
+      if (userId && userId !== "all") {
+        q = q.eq("user_id", userId);
+      }
+      const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as unknown as CallEvent[];
     },
