@@ -49,17 +49,17 @@ export function useLeadCallEvents(
   useEffect(() => {
     if (!leadId) return;
     const channel = supabase
-      .channel(`crm_call_events_${leadId}`)
+      .channel(`crm_call_events_${leadId}_${userId ?? "all"}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "crm_call_events", filter: `lead_id=eq.${leadId}` },
-        () => qc.invalidateQueries({ queryKey: ["crm_call_events", leadId] }),
+        () => qc.invalidateQueries({ queryKey: ["crm_call_events", leadId, userId ?? "all"] }),
       )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [leadId, qc]);
+  }, [leadId, userId, qc]);
 
   return query;
 }
