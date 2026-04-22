@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, UserPlus, Send, Wand2, Pencil, Search, Clock } from "lucide-react";
+import { AdminVoipAccountsCard } from "@/components/admin/AdminVoipAccountsCard";
 
 interface UserWithAccess {
   id: string;
@@ -249,6 +250,7 @@ const Admin = () => {
               )}
             </TabsTrigger>
             <TabsTrigger value="templates">Templates de cargo</TabsTrigger>
+            <TabsTrigger value="voip">Contas VoIP</TabsTrigger>
           </TabsList>
 
           {/* ========== TAB USUÁRIOS ========== */}
@@ -416,6 +418,16 @@ const Admin = () => {
                 </div>
               </div>
             ))}
+          </TabsContent>
+
+          {/* ========== TAB VOIP ========== */}
+          <TabsContent value="voip" className="space-y-4 mt-4">
+            <p className="text-sm text-muted-foreground">
+              Mapeie o <code className="text-xs bg-muted px-1 py-0.5 rounded">operador_id</code> da
+              API4com (ou 3CPlus) ao usuário do sistema. Assim, as ligações desse operador são
+              atribuídas ao vendedor correto e aparecem no filtro "Minhas chamadas".
+            </p>
+            <AdminVoipAccountsCard />
           </TabsContent>
         </Tabs>
       </div>
