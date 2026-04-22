@@ -403,11 +403,15 @@ export const OportunidadeAvancarDialog = ({
       let ganho: GanhoPayload | undefined;
       if (needs.ganho) {
         const contrato_url = await uploadContrato();
+        // Convert YYYY-MM-DD to ISO at midday local to avoid timezone shifts
+        const [yy, mm, dd] = dataAssinatura.split("-").map(Number);
+        const assinaturaIso = new Date(yy, (mm ?? 1) - 1, dd ?? 1, 12, 0, 0).toISOString();
         ganho = {
           contrato_url: contrato_url || "",
           oportunidades_monetizacao: oportunidadesMonetizacao.trim(),
           grau_exigencia: grauExigencia,
           info_deal: infoDeal.trim(),
+          data_assinatura: assinaturaIso,
         };
       }
 
