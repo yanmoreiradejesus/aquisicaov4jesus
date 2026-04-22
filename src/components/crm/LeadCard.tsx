@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { Copy, MessageCircle, Clock } from "lucide-react";
 import { CSS } from "@dnd-kit/utilities";
@@ -11,6 +12,7 @@ interface Props {
   showAge?: boolean;
   showStageDays?: boolean;
   onPhoneInteract?: () => void;
+  onOpenInNewTab?: () => void;
 }
 
 const tempAccent: Record<string, string> = {
@@ -37,8 +39,41 @@ export const LeadCard = ({
   showAge,
   showStageDays,
   onPhoneInteract,
+  onOpenInNewTab,
   overlay = false,
 }: Props & { overlay?: boolean }) => {
+  const clickTimerRef = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (clickTimerRef.current) window.clearTimeout(clickTimerRef.current);
+  }, []);
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (overlay) return;
+    if ((e.metaKey || e.ctrlKey) && onOpenInNewTab) {
+      e.preventDefault();
+      onOpenInNewTab();
+      return;
+    }
+    if (clickTimerRef.current) {
+      window.clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+      onOpenInNewTab?.();
+      return;
+    }
+    clickTimerRef.current = window.setTimeout(() => {
+      clickTimerRef.current = null;
+      onClick();
+    }, 220);
+  };
+
+  const handleAuxClick = (e: React.MouseEvent) => {
+    if (overlay) return;
+    if (e.button === 1 && onOpenInNewTab) {
+      e.preventDefault();
+      onOpenInNewTab();
+    }
+  };
+
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: lead.id,
     disabled: overlay,
@@ -94,7 +129,9 @@ export const LeadCard = ({
 
         <div
           {...(overlay ? {} : listeners)}
-          onClick={overlay ? undefined : onClick}
+          onClick={overlay ? undefined : handleCardClick}
+          onAuxClick={overlay ? undefined : handleAuxClick}
+          title={overlay ? undefined : "Clique para abrir · Duplo-clique (ou Ctrl/Cmd+clique) para abrir em nova aba"}
           className={cn("pl-3.5 pr-3 py-3", overlay ? "" : "cursor-grab active:cursor-grabbing")}
         >
           <div className="flex items-start justify-between gap-2">

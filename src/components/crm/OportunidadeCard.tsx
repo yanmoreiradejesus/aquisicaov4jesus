@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { Calendar, ListTodo, Copy, MessageCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 interface Props {
   oportunidade: any;
   onClick: () => void;
+  onOpenInNewTab?: () => void;
   overlay?: boolean;
 }
 
@@ -39,7 +40,39 @@ const resolveTemp = (raw?: string | null) => {
   return TEMP_PILL[raw.toLowerCase()] ?? null;
 };
 
-export const OportunidadeCard = ({ oportunidade, onClick, overlay = false }: Props) => {
+export const OportunidadeCard = ({ oportunidade, onClick, onOpenInNewTab, overlay = false }: Props) => {
+  const clickTimerRef = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (clickTimerRef.current) window.clearTimeout(clickTimerRef.current);
+  }, []);
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (overlay) return;
+    if ((e.metaKey || e.ctrlKey) && onOpenInNewTab) {
+      e.preventDefault();
+      onOpenInNewTab();
+      return;
+    }
+    if (clickTimerRef.current) {
+      window.clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+      onOpenInNewTab?.();
+      return;
+    }
+    clickTimerRef.current = window.setTimeout(() => {
+      clickTimerRef.current = null;
+      onClick();
+    }, 220);
+  };
+
+  const handleAuxClick = (e: React.MouseEvent) => {
+    if (overlay) return;
+    if (e.button === 1 && onOpenInNewTab) {
+      e.preventDefault();
+      onOpenInNewTab();
+    }
+  };
+
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: oportunidade.id,
     disabled: overlay,
@@ -135,7 +168,9 @@ export const OportunidadeCard = ({ oportunidade, onClick, overlay = false }: Pro
 
         <div
           {...(overlay ? {} : listeners)}
-          onClick={overlay ? undefined : onClick}
+          onClick={overlay ? undefined : handleCardClick}
+          onAuxClick={overlay ? undefined : handleAuxClick}
+          title={overlay ? undefined : "Clique para abrir · Duplo-clique (ou Ctrl/Cmd+clique) para abrir em nova aba"}
           className={cn("pl-3.5 pr-3 py-3", overlay ? "cursor-grabbing" : "cursor-grab active:cursor-grabbing")}
         >
           <div className="flex items-start justify-between gap-2">
