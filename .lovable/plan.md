@@ -1,30 +1,32 @@
 
 
-## Filtros de chamadas por usuário
+## Cadastrar operador API4com de outro usuário (admin) — via card no /admin
 
-Aplicar filtro de chamadas (`crm_call_events.user_id`) para que cada vendedor veja apenas as próprias ligações, e admin veja todas. Adicionar também um seletor visível no detalhe do lead.
+Adicionar um card em `/admin` onde você (admin) escolhe um vendedor da lista, cola o `operador_id` da API4com dele e salva. Pronto — sem precisar logar como ele.
 
 ### Mudanças
 
-**1. `src/hooks/useLeadCallEvents.ts`**
-- Aceitar parâmetro opcional `userId?: string | "all" | null`.
-- Aplicar `.eq("user_id", userId)` quando `userId` for um UUID; quando for `"all"` (ou admin sem filtro), não filtrar.
-- Incluir `userId` na `queryKey` para cache correto.
+**1. `src/components/admin/AdminVoipAccountsCard.tsx`** (novo)
+- Tabela com todas as `voip_accounts` (admin já tem RLS para ver tudo): **Usuário**, **Provider**, **Operador ID**, **Apelido**, **Ativo**, **Ações** (toggle ativo / excluir).
+- Botão **"+ Adicionar conta"** abre dialog com:
+  - Select **Usuário** — lista `profiles` aprovados (nome + email).
+  - Select **Provider** — `api4com` (default) / `3cplus`.
+  - Input **Operador ID** — o identificador que vem no payload do webhook (login/ramal do operador na API4com).
+  - Input **Apelido** (opcional).
+  - Switch **Ativo** (default ligado).
+- Salvar → `insert` em `voip_accounts` com o `user_id` escolhido (RLS já permite admin).
+- Toast de sucesso/erro; lista atualiza.
 
-**2. `src/components/crm/LeadCallEventsList.tsx`**
-- Ler `useAuth()` para saber `user.id` e `isAdmin`.
-- Default: vendedor vê só as suas (`user_id = auth.uid()`); admin vê todas.
-- Adicionar um pequeno `Select` no topo do card com opções: **"Minhas chamadas"**, **"Todas (equipe)"** — visível só para admin. Vendedor comum vê fixo "Minhas chamadas" (sem seletor) com um link sutil "ver todas" caso queira inspecionar (opcional, podemos esconder).
-- Mostrar o nome do operador/vendedor em cada item quando estiver no modo "Todas" (lookup simples em `profiles` por `user_id`, ou exibir `operador` cru se não houver match).
+**2. `src/pages/Admin.tsx`**
+- Renderizar `<AdminVoipAccountsCard />` abaixo da seção atual de usuários.
 
-**3. (opcional, leve) `LeadDetailSheet.tsx`**
-- Garantir que o componente passa o filtro escolhido para o list — nenhuma mudança estrutural, só repassar prop se necessário.
+### Como usar (depois de implementado)
+1. `/admin` → role até **"Contas VoIP da equipe"** → **+ Adicionar conta**.
+2. Escolha o vendedor, selecione `api4com`, cole o `operador_id`, salve.
+3. Próxima ligação daquele operador entra com `user_id` correto e aparece no filtro "Minhas chamadas" do vendedor.
 
 ### Detalhes técnicos
-- Reaproveita RLS atual de `crm_call_events` (SELECT liberado para `authenticated`); o filtro é só client-side por `user_id`.
-- Para mostrar nome do vendedor em "Todas", fazemos um `useQuery` único de `profiles` (`id, full_name`) e mapeamos por `user_id` — barato e cacheável.
-- Eventos antigos (sem `user_id` populado) aparecem no modo "Todas" e ficam ocultos no modo "Minhas". Isso é intencional — só ligações novas, com `operador` mapeado em `voip_accounts`, terão `user_id`.
-
-### Fora do escopo
-- Tela geral/global de chamadas (kanban de ligações). Se quiser depois, criamos `/comercial/chamadas` com filtros de período + vendedor + status.
+- Sem mudança de schema — `voip_accounts` e RLS já suportam admin gerenciar contas de terceiros.
+- Webhook continua único do sistema (mesma URL para todos); o que muda é só o mapeamento `operador_id → user_id`.
+- Lookup de nome via `useQuery` em `profiles` (`id, full_name, email`).
 
