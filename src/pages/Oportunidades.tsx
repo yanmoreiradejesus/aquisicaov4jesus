@@ -52,15 +52,19 @@ const Oportunidades = () => {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
+    const parseLocalDay = (s: string, end = false) => {
+      const [y, m, d] = s.split("-").map(Number);
+      if (!y || !m || !d) return null;
+      return end ? new Date(y, m - 1, d, 23, 59, 59, 999) : new Date(y, m - 1, d, 0, 0, 0, 0);
+    };
     const inRange = (val: any, from: string, to: string) => {
       if (!from && !to) return true;
       if (!val) return false;
       const d = new Date(val);
-      if (from && d < new Date(from)) return false;
-      if (to) {
-        const end = new Date(to); end.setHours(23, 59, 59, 999);
-        if (d > end) return false;
-      }
+      const fromD = from ? parseLocalDay(from, false) : null;
+      const toD = to ? parseLocalDay(to, true) : null;
+      if (fromD && d < fromD) return false;
+      if (toD && d > toD) return false;
       return true;
     };
     return oportunidades.filter((o: any) => {
