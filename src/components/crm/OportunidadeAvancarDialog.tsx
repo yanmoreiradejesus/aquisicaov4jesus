@@ -356,6 +356,7 @@ export const OportunidadeAvancarDialog = ({
     hasTranscricaoSalva, adicionarNovaReuniao, novaTranscricao, temperatura, etapaDestino,
     tarefasPendentesCount, valorFee, valorEf,
     contratoFile, grauExigencia, oportunidadesMonetizacao, infoDeal, oportunidade?.contrato_url,
+    dataAssinatura,
   ]);
 
   const isStepValid = (s: number): boolean => {
