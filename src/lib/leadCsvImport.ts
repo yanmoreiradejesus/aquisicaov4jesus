@@ -97,9 +97,21 @@ export function parseLeadsCsv(file: File): Promise<CsvLeadRow[]> {
               segmento: clean(pick(r, "Segmento")),
               canal: clean(pick(r, "Canal")),
               nome:
-                clean(pick(r, "Nome do responsável", "Nome do responsavel")) ??
-                clean(pick(r, "Nome da empresa")) ??
-                "",
+                clean(
+                  pick(
+                    r,
+                    "Nome do responsável",
+                    "Nome do responsavel",
+                    "Nome do lead",
+                    "Nome do contato",
+                    "Contato",
+                    "Responsável",
+                    "Responsavel",
+                    "Lead",
+                    "Nome",
+                    "Name",
+                  ),
+                ) ?? "(Sem nome)",
               email: clean(pick(r, "E-mail", "Email")),
               cargo: clean(pick(r, "Cargo")),
               telefone: clean(pick(r, "Telefone")),
