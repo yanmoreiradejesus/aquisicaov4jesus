@@ -28,10 +28,17 @@ export interface Atividade {
   google_sync_error?: string | null;
 }
 
-function fireSync(atividade_id: string, action: "upsert" | "delete", google_event_id?: string | null) {
+function fireSync(
+  atividade_id: string,
+  action: "upsert" | "delete",
+  google_event_id?: string | null,
+  google_resource_type?: string | null,
+) {
   // Fire-and-forget: não bloqueia o CRM, falha silenciosa
   supabase.functions
-    .invoke("sync-task-to-google", { body: { atividade_id, action, google_event_id } })
+    .invoke("sync-task-to-google", {
+      body: { atividade_id, action, google_event_id, google_resource_type },
+    })
     .catch((err) => console.warn("[sync-task-to-google]", err));
 }
 
