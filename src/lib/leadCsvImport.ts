@@ -97,9 +97,21 @@ export function parseLeadsCsv(file: File): Promise<CsvLeadRow[]> {
               segmento: clean(pick(r, "Segmento")),
               canal: clean(pick(r, "Canal")),
               nome:
-                clean(pick(r, "Nome do responsável", "Nome do responsavel")) ??
-                clean(pick(r, "Nome da empresa")) ??
-                "",
+                clean(
+                  pick(
+                    r,
+                    "Nome do responsável",
+                    "Nome do responsavel",
+                    "Nome do lead",
+                    "Nome do contato",
+                    "Contato",
+                    "Responsável",
+                    "Responsavel",
+                    "Lead",
+                    "Nome",
+                    "Name",
+                  ),
+                ) ?? "(Sem nome)",
               email: clean(pick(r, "E-mail", "Email")),
               cargo: clean(pick(r, "Cargo")),
               telefone: clean(pick(r, "Telefone")),
@@ -114,7 +126,7 @@ export function parseLeadsCsv(file: File): Promise<CsvLeadRow[]> {
               estado: clean(pick(r, "Estado", "UF")),
               etapa: "entrada" as const,
             }))
-            .filter((r) => r.nome);
+            .filter((r) => r.email || r.telefone || r.empresa || (r.nome && r.nome !== "(Sem nome)"));
           resolve(rows);
         } catch (e) {
           reject(e);
@@ -208,4 +220,152 @@ export async function importLeads(rows: CsvLeadRow[]): Promise<ImportResult> {
     errors,
     duplicateRows,
   };
+}
+
+// ============= UPDATE EXISTING LEADS =============
+
+export type UpdateMatchKey = "email" | "telefone";
+export type UpdateField = "nome" | "empresa" | "cargo" | "telefone" | "email";
+
+export interface UpdateResult {
+  total: number;
+  updated: number;
+  notFound: number;
+  errors: number;
+  notFoundRows: CsvLeadRow[];
+}
+
+const onlyDigits = (s: string | null) => (s ? s.replace(/\D/g, "") : "");
+
+export async function updateExistingLeads(
+  rows: CsvLeadRow[],
+  matchKey: UpdateMatchKey,
+  fields: UpdateField[],
+): Promise<UpdateResult> {
+  const result: UpdateResult = { total: rows.length, updated: 0, notFound: 0, errors: 0, notFoundRows: [] };
+  if (rows.length === 0 || fields.length === 0) return result;
+
+  // Build a lookup of existing leads by chosen key
+  const keyValues = rows
+    .map((r) => (matchKey === "email" ? r.email?.toLowerCase().trim() : onlyDigits(r.telefone)))
+    .filter((v): v is string => !!v);
+
+  const existingByKey = new Map<string, string>(); // key -> id
+
+  if (keyValues.length > 0) {
+    const uniq = Array.from(new Set(keyValues));
+    // chunk to avoid URL too long
+    for (let i = 0; i < uniq.length; i += 200) {
+      const slice = uniq.slice(i, i + 200);
+      if (matchKey === "email") {
+        const { data, error } = await supabase
+          .from("crm_leads")
+          .select("id, email")
+          .in("email", slice);
+        if (error) throw error;
+        (data ?? []).forEach((l: any) => {
+          if (l.email) existingByKey.set(l.email.toLowerCase().trim(), l.id);
+        });
+      } else {
+        // Telefone: fetch and normalize client-side (no functional index assumed)
+        const { data, error } = await supabase.from("crm_leads").select("id, telefone");
+        if (error) throw error;
+        (data ?? []).forEach((l: any) => {
+          const norm = onlyDigits(l.telefone);
+          if (norm) existingByKey.set(norm, l.id);
+        });
+        break; // already pulled all
+      }
+    }
+  }
+
+  for (const row of rows) {
+    const key =
+      matchKey === "email" ? row.email?.toLowerCase().trim() : onlyDigits(row.telefone);
+    if (!key) {
+      result.notFound++;
+      result.notFoundRows.push(row);
+      continue;
+    }
+    const id = existingByKey.get(key);
+    if (!id) {
+      result.notFound++;
+      result.notFoundRows.push(row);
+      continue;
+    }
+
+    const patch: Record<string, any> = {};
+    for (const f of fields) {
+      const val = (row as any)[f];
+      if (val !== null && val !== undefined && val !== "") patch[f] = val;
+    }
+    if (Object.keys(patch).length === 0) continue;
+
+    const { error } = await supabase.from("crm_leads").update(patch).eq("id", id);
+    if (error) result.errors++;
+    else result.updated++;
+  }
+
+  return result;
+}
+
+export interface UpdatePreviewRow {
+  csv: CsvLeadRow;
+  matchValue: string | null;
+  found: boolean;
+  currentValues: Partial<Record<UpdateField, string | null>>;
+}
+
+export async function previewUpdateRows(
+  rows: CsvLeadRow[],
+  matchKey: UpdateMatchKey,
+  limit = 5,
+): Promise<UpdatePreviewRow[]> {
+  const sample = rows.slice(0, limit);
+  const out: UpdatePreviewRow[] = [];
+
+  const keys = sample
+    .map((r) => (matchKey === "email" ? r.email?.toLowerCase().trim() : onlyDigits(r.telefone)))
+    .filter((v): v is string => !!v);
+
+  let existingMap = new Map<string, any>();
+  if (keys.length > 0) {
+    if (matchKey === "email") {
+      const { data } = await supabase
+        .from("crm_leads")
+        .select("id, nome, empresa, cargo, telefone, email")
+        .in("email", keys);
+      (data ?? []).forEach((l: any) => {
+        if (l.email) existingMap.set(l.email.toLowerCase().trim(), l);
+      });
+    } else {
+      const { data } = await supabase
+        .from("crm_leads")
+        .select("id, nome, empresa, cargo, telefone, email");
+      (data ?? []).forEach((l: any) => {
+        const k = onlyDigits(l.telefone);
+        if (k) existingMap.set(k, l);
+      });
+    }
+  }
+
+  for (const r of sample) {
+    const key = matchKey === "email" ? r.email?.toLowerCase().trim() : onlyDigits(r.telefone);
+    const existing = key ? existingMap.get(key) : null;
+    out.push({
+      csv: r,
+      matchValue: key ?? null,
+      found: !!existing,
+      currentValues: existing
+        ? {
+            nome: existing.nome,
+            empresa: existing.empresa,
+            cargo: existing.cargo,
+            telefone: existing.telefone,
+            email: existing.email,
+          }
+        : {},
+    });
+  }
+  return out;
 }
