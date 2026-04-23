@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 const SCOPE =
-  "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.email";
+  "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/tasks https://www.googleapis.com/auth/userinfo.email";
 
 function toBase64Url(input: Uint8Array | string) {
   const bytes = typeof input === "string" ? new TextEncoder().encode(input) : input;
