@@ -164,10 +164,15 @@ export const OportunidadeTimeline = ({
               autoFocus
               maxLength={200}
             />
-            <div className="grid grid-cols-2 gap-2">
-              <Input type="date" value={tarefaData} onChange={(e) => setTarefaData(e.target.value)} className="h-9 text-sm" />
-              <Input type="time" value={tarefaHora} onChange={(e) => setTarefaHora(e.target.value)} className="h-9 text-sm" />
-            </div>
+            <DateTimePicker
+              value={tarefaDate}
+              onChange={setTarefaDate}
+              placeholder="Selecionar data e hora"
+              minuteStep={5}
+            />
+            <p className="text-xs text-muted-foreground">
+              Será sincronizado como evento de 15min no Google Calendar.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="ghost" size="sm" onClick={() => setDialogOpen(false)}>Cancelar</Button>
