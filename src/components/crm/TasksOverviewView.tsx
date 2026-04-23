@@ -90,6 +90,19 @@ export function TasksOverviewView({ onOpenLead }: Props) {
     },
   });
 
+  const removeTask = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("crm_atividades" as any).delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["crm_atividades_overview"] });
+      qc.invalidateQueries({ queryKey: ["crm_atividades"] });
+      toast({ title: "Tarefa excluída" });
+    },
+    onError: (e: any) => toast({ title: "Erro ao excluir", description: e.message, variant: "destructive" }),
+  });
+
   const groups = useMemo(() => {
     const atrasadas: TaskRow[] = [];
     const hoje: TaskRow[] = [];
