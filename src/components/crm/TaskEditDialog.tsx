@@ -17,9 +17,11 @@ interface Props {
   task: TaskEditValue | null;
   onSave: (patch: { id: string; titulo: string; data_agendada: string }) => void;
   saving?: boolean;
+  /** Define o destino no Google: 'event' (Google Calendar) ou 'task' (Google Tasks). Default: 'event' */
+  syncTarget?: "event" | "task";
 }
 
-export function TaskEditDialog({ open, onOpenChange, task, onSave, saving }: Props) {
+export function TaskEditDialog({ open, onOpenChange, task, onSave, saving, syncTarget = "event" }: Props) {
   const [titulo, setTitulo] = useState("");
   const [date, setDate] = useState<Date | null>(null);
 
@@ -60,7 +62,9 @@ export function TaskEditDialog({ open, onOpenChange, task, onSave, saving }: Pro
             <Label>Data e hora</Label>
             <DateTimePicker value={date} onChange={setDate} minuteStep={5} />
             <p className="text-xs text-muted-foreground">
-              Será sincronizado como evento de 15min no Google Calendar.
+              {syncTarget === "task"
+                ? "Sincronizado com Google Tasks. A API usa apenas a data — a hora é exibida no título da tarefa."
+                : "Será sincronizado como evento de 15min no Google Calendar."}
             </p>
           </div>
         </div>
