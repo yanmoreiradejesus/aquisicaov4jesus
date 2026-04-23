@@ -154,6 +154,7 @@ export type Database = {
           data_conclusao: string | null
           descricao: string | null
           google_event_id: string | null
+          google_resource_type: string | null
           google_sync_error: string | null
           google_sync_status: string | null
           id: string
@@ -170,6 +171,7 @@ export type Database = {
           data_conclusao?: string | null
           descricao?: string | null
           google_event_id?: string | null
+          google_resource_type?: string | null
           google_sync_error?: string | null
           google_sync_status?: string | null
           id?: string
@@ -186,6 +188,7 @@ export type Database = {
           data_conclusao?: string | null
           descricao?: string | null
           google_event_id?: string | null
+          google_resource_type?: string | null
           google_sync_error?: string | null
           google_sync_status?: string | null
           id?: string
