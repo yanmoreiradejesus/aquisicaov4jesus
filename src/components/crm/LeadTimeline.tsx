@@ -82,15 +82,13 @@ export const LeadTimeline = ({
   };
 
   const handleAddTarefa = async () => {
-    if (!tarefaTitulo.trim() || !tarefaData) {
+    if (!tarefaTitulo.trim() || !tarefaDate) {
       toast({ title: "Preencha título e data", variant: "destructive" });
       return;
     }
-    const iso = new Date(`${tarefaData}T${tarefaHora || "09:00"}:00`).toISOString();
-    await addTarefa.mutateAsync({ titulo: tarefaTitulo.trim(), data_agendada: iso });
+    await addTarefa.mutateAsync({ titulo: tarefaTitulo.trim(), data_agendada: tarefaDate.toISOString() });
     setTarefaTitulo("");
-    setTarefaData("");
-    setTarefaHora("09:00");
+    setTarefaDate(null);
     setDialogOpen(false);
     toast({ title: "Tarefa criada" });
   };
