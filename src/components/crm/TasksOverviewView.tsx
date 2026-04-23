@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { format, isToday, isTomorrow, isPast, endOfDay, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarClock, CheckCircle2, Circle, AlertTriangle, Calendar as CalendarIcon, ArrowRight, ChevronDown, Eye, EyeOff } from "lucide-react";
+import { CalendarClock, CheckCircle2, Circle, AlertTriangle, Calendar as CalendarIcon, ArrowRight, ChevronDown, Eye, EyeOff, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
@@ -90,6 +90,19 @@ export function TasksOverviewView({ onOpenLead }: Props) {
     },
   });
 
+  const removeTask = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("crm_atividades" as any).delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["crm_atividades_overview"] });
+      qc.invalidateQueries({ queryKey: ["crm_atividades"] });
+      toast({ title: "Tarefa excluída" });
+    },
+    onError: (e: any) => toast({ title: "Erro ao excluir", description: e.message, variant: "destructive" }),
+  });
+
   const groups = useMemo(() => {
     const atrasadas: TaskRow[] = [];
     const hoje: TaskRow[] = [];
@@ -167,6 +180,15 @@ export function TasksOverviewView({ onOpenLead }: Props) {
             <ArrowRight className="h-3.5 w-3.5" />
           </button>
         )}
+        <button
+          onClick={() => {
+            if (confirm("Excluir esta tarefa?")) removeTask.mutate(t.id);
+          }}
+          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all shrink-0 p-1 rounded-md hover:bg-destructive/10"
+          title="Excluir tarefa"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
       </li>
     );
   };
