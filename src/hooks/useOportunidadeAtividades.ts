@@ -3,9 +3,16 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Atividade } from "./useLeadAtividades";
 
-function fireSync(atividade_id: string, action: "upsert" | "delete", google_event_id?: string | null) {
+function fireSync(
+  atividade_id: string,
+  action: "upsert" | "delete",
+  google_event_id?: string | null,
+  google_resource_type?: string | null,
+) {
   supabase.functions
-    .invoke("sync-task-to-google", { body: { atividade_id, action, google_event_id } })
+    .invoke("sync-task-to-google", {
+      body: { atividade_id, action, google_event_id, google_resource_type },
+    })
     .catch((err) => console.warn("[sync-task-to-google]", err));
 }
 
@@ -141,18 +148,19 @@ export function useOportunidadeAtividades(oportunidadeId?: string | null) {
     mutationFn: async (id: string) => {
       const { data: row } = await supabase
         .from("crm_atividades" as any)
-        .select("google_event_id")
+        .select("google_event_id, google_resource_type")
         .eq("id", id)
         .maybeSingle();
       const eventId = (row as any)?.google_event_id ?? null;
+      const resourceType = (row as any)?.google_resource_type ?? "task";
 
       const { error } = await supabase.from("crm_atividades" as any).delete().eq("id", id);
       if (error) throw error;
-      return { id, eventId };
+      return { id, eventId, resourceType };
     },
-    onSuccess: ({ id, eventId }) => {
+    onSuccess: ({ id, eventId, resourceType }) => {
       qc.invalidateQueries({ queryKey: ["crm_atividades_op", oportunidadeId] });
-      if (eventId) fireSync(id, "delete", eventId);
+      if (eventId) fireSync(id, "delete", eventId, resourceType);
     },
   });
 
