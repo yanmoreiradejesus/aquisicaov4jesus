@@ -28,6 +28,7 @@ import {
 import { useOportunidadeAtividades } from "@/hooks/useOportunidadeAtividades";
 import type { Atividade, AtividadeTipo } from "@/hooks/useLeadAtividades";
 import { useToast } from "@/hooks/use-toast";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
 
 const TIPO_META: Record<AtividadeTipo, { label: string; icon: any; color: string }> = {
   criacao: { label: "Criação", icon: Sparkles, color: "text-blue-400 bg-blue-500/10 border-blue-500/30" },
