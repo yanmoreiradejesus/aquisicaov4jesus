@@ -126,7 +126,7 @@ export function parseLeadsCsv(file: File): Promise<CsvLeadRow[]> {
               estado: clean(pick(r, "Estado", "UF")),
               etapa: "entrada" as const,
             }))
-            .filter((r) => r.nome);
+            .filter((r) => r.email || r.telefone || r.empresa || (r.nome && r.nome !== "(Sem nome)"));
           resolve(rows);
         } catch (e) {
           reject(e);
