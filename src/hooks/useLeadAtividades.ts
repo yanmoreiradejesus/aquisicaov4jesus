@@ -28,10 +28,17 @@ export interface Atividade {
   google_sync_error?: string | null;
 }
 
-function fireSync(atividade_id: string, action: "upsert" | "delete", google_event_id?: string | null) {
+function fireSync(
+  atividade_id: string,
+  action: "upsert" | "delete",
+  google_event_id?: string | null,
+  google_resource_type?: string | null,
+) {
   // Fire-and-forget: não bloqueia o CRM, falha silenciosa
   supabase.functions
-    .invoke("sync-task-to-google", { body: { atividade_id, action, google_event_id } })
+    .invoke("sync-task-to-google", {
+      body: { atividade_id, action, google_event_id, google_resource_type },
+    })
     .catch((err) => console.warn("[sync-task-to-google]", err));
 }
 
@@ -144,21 +151,22 @@ export function useLeadAtividades(leadId?: string | null) {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      // Captura o google_event_id ANTES do delete
+      // Captura o google_event_id + resource_type ANTES do delete
       const { data: row } = await supabase
         .from("crm_atividades" as any)
-        .select("google_event_id")
+        .select("google_event_id, google_resource_type")
         .eq("id", id)
         .maybeSingle();
       const eventId = (row as any)?.google_event_id ?? null;
+      const resourceType = (row as any)?.google_resource_type ?? "event";
 
       const { error } = await supabase.from("crm_atividades" as any).delete().eq("id", id);
       if (error) throw error;
-      return { id, eventId };
+      return { id, eventId, resourceType };
     },
-    onSuccess: ({ id, eventId }) => {
+    onSuccess: ({ id, eventId, resourceType }) => {
       qc.invalidateQueries({ queryKey: ["crm_atividades", leadId] });
-      if (eventId) fireSync(id, "delete", eventId);
+      if (eventId) fireSync(id, "delete", eventId, resourceType);
     },
   });
 

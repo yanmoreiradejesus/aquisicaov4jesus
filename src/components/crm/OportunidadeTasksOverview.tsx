@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { format, isToday, isTomorrow, isPast, endOfDay, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarClock, CheckCircle2, Circle, AlertTriangle, Calendar as CalendarIcon, ArrowRight, ChevronDown, Eye, EyeOff, Trash2, Pencil, AlertCircle } from "lucide-react";
+import { CalendarClock, CheckCircle2, Circle, AlertTriangle, Calendar as CalendarIcon, ArrowRight, ChevronDown, Eye, EyeOff, Trash2, Pencil, AlertCircle, ListChecks } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -170,9 +170,9 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
       return (
         <TooltipProvider><Tooltip>
           <TooltipTrigger asChild>
-            <CalendarIcon className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+            <ListChecks className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
           </TooltipTrigger>
-          <TooltipContent>Sincronizado com Google Calendar (15min)</TooltipContent>
+          <TooltipContent>Sincronizado com Google Tasks</TooltipContent>
         </Tooltip></TooltipProvider>
       );
     }
@@ -305,7 +305,7 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
       {googleConnected === false && (
         <div className="max-w-4xl mx-auto mb-3 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-200 text-sm">
           <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-          <p>Conecte sua conta Google em <a href="/perfil" className="underline font-medium">/perfil</a> para sincronizar tarefas automaticamente com o Google Calendar (eventos de 15min).</p>
+          <p>Conecte sua conta Google em <a href="/perfil" className="underline font-medium">/perfil</a> para sincronizar tarefas de oportunidades automaticamente com o Google Tasks.</p>
         </div>
       )}
       {isLoading ? (
@@ -330,6 +330,7 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
         task={editTask}
         onSave={(p) => updateTask.mutate(p)}
         saving={updateTask.isPending}
+        syncTarget="task"
       />
     </div>
   );
