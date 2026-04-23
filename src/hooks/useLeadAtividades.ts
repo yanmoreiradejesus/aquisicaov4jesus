@@ -97,7 +97,7 @@ export function useLeadAtividades(leadId?: string | null) {
         google_sync_status: "pending",
       }).select("id").single();
       if (error) throw error;
-      return data as { id: string };
+      return data as unknown as { id: string };
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["crm_atividades", leadId] });

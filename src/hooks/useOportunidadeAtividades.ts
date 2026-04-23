@@ -76,7 +76,7 @@ export function useOportunidadeAtividades(oportunidadeId?: string | null) {
         google_sync_status: "pending",
       }).select("id").single();
       if (error) throw error;
-      return data as { id: string };
+      return data as unknown as { id: string };
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["crm_atividades_op", oportunidadeId] });
