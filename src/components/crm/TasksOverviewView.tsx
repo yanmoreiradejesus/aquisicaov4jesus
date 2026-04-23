@@ -180,6 +180,15 @@ export function TasksOverviewView({ onOpenLead }: Props) {
             <ArrowRight className="h-3.5 w-3.5" />
           </button>
         )}
+        <button
+          onClick={() => {
+            if (confirm("Excluir esta tarefa?")) removeTask.mutate(t.id);
+          }}
+          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all shrink-0 p-1 rounded-md hover:bg-destructive/10"
+          title="Excluir tarefa"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
       </li>
     );
   };
