@@ -28,6 +28,7 @@ import {
 import { useOportunidadeAtividades } from "@/hooks/useOportunidadeAtividades";
 import type { Atividade, AtividadeTipo } from "@/hooks/useLeadAtividades";
 import { useToast } from "@/hooks/use-toast";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
 
 const TIPO_META: Record<AtividadeTipo, { label: string; icon: any; color: string }> = {
   criacao: { label: "Criação", icon: Sparkles, color: "text-blue-400 bg-blue-500/10 border-blue-500/30" },
@@ -62,14 +63,14 @@ export const OportunidadeTimeline = ({
 
   const [nota, setNota] = useState("");
   const [tarefaTitulo, setTarefaTitulo] = useState("");
-  // Default: hoje + 3 dias (evita tarefa nascer atrasada)
-  const defaultTarefaData = (() => {
+  // Default: hoje + 3 dias às 09:00 (evita tarefa nascer atrasada)
+  const defaultTarefaDate = (() => {
     const d = new Date();
     d.setDate(d.getDate() + 3);
-    return d.toISOString().slice(0, 10);
+    d.setHours(9, 0, 0, 0);
+    return d;
   })();
-  const [tarefaData, setTarefaData] = useState(defaultTarefaData);
-  const [tarefaHora, setTarefaHora] = useState("09:00");
+  const [tarefaDate, setTarefaDate] = useState<Date | null>(defaultTarefaDate);
 
   const [internalDialog, setInternalDialog] = useState(false);
   const dialogOpen = tarefaDialogOpen ?? internalDialog;
@@ -86,15 +87,13 @@ export const OportunidadeTimeline = ({
   };
 
   const handleAddTarefa = async () => {
-    if (!tarefaTitulo.trim() || !tarefaData) {
+    if (!tarefaTitulo.trim() || !tarefaDate) {
       toast({ title: "Preencha título e data", variant: "destructive" });
       return;
     }
-    const iso = new Date(`${tarefaData}T${tarefaHora || "09:00"}:00`).toISOString();
-    await addTarefa.mutateAsync({ titulo: tarefaTitulo.trim(), data_agendada: iso });
+    await addTarefa.mutateAsync({ titulo: tarefaTitulo.trim(), data_agendada: tarefaDate.toISOString() });
     setTarefaTitulo("");
-    setTarefaData(defaultTarefaData);
-    setTarefaHora("09:00");
+    setTarefaDate(defaultTarefaDate);
     setDialogOpen(false);
     toast({ title: "Tarefa criada" });
   };
@@ -165,10 +164,15 @@ export const OportunidadeTimeline = ({
               autoFocus
               maxLength={200}
             />
-            <div className="grid grid-cols-2 gap-2">
-              <Input type="date" value={tarefaData} onChange={(e) => setTarefaData(e.target.value)} className="h-9 text-sm" />
-              <Input type="time" value={tarefaHora} onChange={(e) => setTarefaHora(e.target.value)} className="h-9 text-sm" />
-            </div>
+            <DateTimePicker
+              value={tarefaDate}
+              onChange={setTarefaDate}
+              placeholder="Selecionar data e hora"
+              minuteStep={5}
+            />
+            <p className="text-xs text-muted-foreground">
+              Será sincronizado como evento de 15min no Google Calendar.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="ghost" size="sm" onClick={() => setDialogOpen(false)}>Cancelar</Button>

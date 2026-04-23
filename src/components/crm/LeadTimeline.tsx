@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/dialog";
 import { useLeadAtividades, type Atividade, type AtividadeTipo } from "@/hooks/useLeadAtividades";
 import { useToast } from "@/hooks/use-toast";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
 
 const TIPO_META: Record<AtividadeTipo, { label: string; icon: any; color: string }> = {
   criacao: { label: "Criação", icon: Sparkles, color: "text-blue-400 bg-blue-500/10 border-blue-500/30" },
@@ -63,8 +64,7 @@ export const LeadTimeline = ({
 
   const [nota, setNota] = useState("");
   const [tarefaTitulo, setTarefaTitulo] = useState("");
-  const [tarefaData, setTarefaData] = useState("");
-  const [tarefaHora, setTarefaHora] = useState("09:00");
+  const [tarefaDate, setTarefaDate] = useState<Date | null>(null);
 
   // Permite controle externo OU interno do dialog
   const [internalDialog, setInternalDialog] = useState(false);
@@ -82,15 +82,13 @@ export const LeadTimeline = ({
   };
 
   const handleAddTarefa = async () => {
-    if (!tarefaTitulo.trim() || !tarefaData) {
+    if (!tarefaTitulo.trim() || !tarefaDate) {
       toast({ title: "Preencha título e data", variant: "destructive" });
       return;
     }
-    const iso = new Date(`${tarefaData}T${tarefaHora || "09:00"}:00`).toISOString();
-    await addTarefa.mutateAsync({ titulo: tarefaTitulo.trim(), data_agendada: iso });
+    await addTarefa.mutateAsync({ titulo: tarefaTitulo.trim(), data_agendada: tarefaDate.toISOString() });
     setTarefaTitulo("");
-    setTarefaData("");
-    setTarefaHora("09:00");
+    setTarefaDate(null);
     setDialogOpen(false);
     toast({ title: "Tarefa criada" });
   };
@@ -163,20 +161,15 @@ export const LeadTimeline = ({
               className="h-9 text-sm"
               autoFocus
             />
-            <div className="grid grid-cols-2 gap-2">
-              <Input
-                type="date"
-                value={tarefaData}
-                onChange={(e) => setTarefaData(e.target.value)}
-                className="h-9 text-sm"
-              />
-              <Input
-                type="time"
-                value={tarefaHora}
-                onChange={(e) => setTarefaHora(e.target.value)}
-                className="h-9 text-sm"
-              />
-            </div>
+            <DateTimePicker
+              value={tarefaDate}
+              onChange={setTarefaDate}
+              placeholder="Selecionar data e hora"
+              minuteStep={5}
+            />
+            <p className="text-xs text-muted-foreground">
+              Será sincronizado como evento de 15min no Google Calendar.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="ghost" size="sm" onClick={() => setDialogOpen(false)}>

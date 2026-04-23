@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
 
 export interface TaskEditValue {
   id: string;
@@ -18,32 +19,24 @@ interface Props {
   saving?: boolean;
 }
 
-// Converte ISO -> formato datetime-local do input (sem timezone, hora local)
-function toLocalInput(iso: string): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
 export function TaskEditDialog({ open, onOpenChange, task, onSave, saving }: Props) {
   const [titulo, setTitulo] = useState("");
-  const [data, setData] = useState("");
+  const [date, setDate] = useState<Date | null>(null);
 
   useEffect(() => {
     if (task) {
       setTitulo(task.titulo || "");
-      setData(toLocalInput(task.data_agendada));
+      setDate(task.data_agendada ? new Date(task.data_agendada) : null);
     }
   }, [task]);
 
   const handleSave = () => {
     if (!task) return;
-    if (!titulo.trim() || !data) return;
+    if (!titulo.trim() || !date) return;
     onSave({
       id: task.id,
       titulo: titulo.trim(),
-      data_agendada: new Date(data).toISOString(),
+      data_agendada: date.toISOString(),
     });
   };
 
@@ -64,13 +57,8 @@ export function TaskEditDialog({ open, onOpenChange, task, onSave, saving }: Pro
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="task-data">Data e hora</Label>
-            <Input
-              id="task-data"
-              type="datetime-local"
-              value={data}
-              onChange={(e) => setData(e.target.value)}
-            />
+            <Label>Data e hora</Label>
+            <DateTimePicker value={date} onChange={setDate} minuteStep={5} />
             <p className="text-xs text-muted-foreground">
               Será sincronizado como evento de 15min no Google Calendar.
             </p>
@@ -80,7 +68,7 @@ export function TaskEditDialog({ open, onOpenChange, task, onSave, saving }: Pro
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={!titulo.trim() || !data || saving}>
+          <Button onClick={handleSave} disabled={!titulo.trim() || !date || saving}>
             {saving ? "Salvando..." : "Salvar"}
           </Button>
         </DialogFooter>
