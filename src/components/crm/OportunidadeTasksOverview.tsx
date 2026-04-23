@@ -305,7 +305,7 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
       {googleConnected === false && (
         <div className="max-w-4xl mx-auto mb-3 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-200 text-sm">
           <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-          <p>Conecte sua conta Google em <a href="/perfil" className="underline font-medium">/perfil</a> para sincronizar tarefas automaticamente com o Google Calendar (eventos de 15min).</p>
+          <p>Conecte sua conta Google em <a href="/perfil" className="underline font-medium">/perfil</a> para sincronizar tarefas de oportunidades automaticamente com o Google Tasks.</p>
         </div>
       )}
       {isLoading ? (
