@@ -330,6 +330,7 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
         task={editTask}
         onSave={(p) => updateTask.mutate(p)}
         saving={updateTask.isPending}
+        syncTarget="task"
       />
     </div>
   );

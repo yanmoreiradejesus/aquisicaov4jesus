@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Loader2, RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
+import { Calendar, Loader2, RefreshCw, CheckCircle2, AlertCircle, ListChecks } from "lucide-react";
 import { useGoogleCalendar } from "@/hooks/useGoogleCalendar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+
+const RECONNECT_HINT = "reconecte sua conta google";
 
 export function GoogleSyncCard() {
   const { user } = useAuth();
@@ -14,13 +16,33 @@ export function GoogleSyncCard() {
   const { toast } = useToast();
   const [resyncing, setResyncing] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [needsReconnect, setNeedsReconnect] = useState(false);
+
+  // Detecta se há tarefas com erro de scope para sugerir reconexão
+  useEffect(() => {
+    if (!user || !isConnected) {
+      setNeedsReconnect(false);
+      return;
+    }
+    (async () => {
+      const { data } = await supabase
+        .from("crm_atividades" as any)
+        .select("google_sync_error")
+        .eq("usuario_id", user.id)
+        .eq("google_sync_status", "error")
+        .limit(20);
+      const hasScopeErr = ((data ?? []) as any[]).some((r) =>
+        (r?.google_sync_error || "").toLowerCase().includes(RECONNECT_HINT)
+      );
+      setNeedsReconnect(hasScopeErr);
+    })();
+  }, [user, isConnected, resyncing]);
 
   const handleResync = async () => {
     if (!user) return;
     setResyncing(true);
     setProgress(null);
     try {
-      // Pega tarefas do usuário que precisam sincronizar
       const { data, error } = await supabase
         .from("crm_atividades" as any)
         .select("id")
@@ -59,11 +81,17 @@ export function GoogleSyncCard() {
     }
   };
 
+  const handleReconnect = async () => {
+    // Desconecta + conecta novamente para gerar novo consent com scope atualizado
+    await disconnect();
+    await connect();
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Calendar className="h-5 w-5" /> Google Calendar
+          <Calendar className="h-5 w-5" /> Google (Calendar + Tasks)
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -79,9 +107,31 @@ export function GoogleSyncCard() {
               </Badge>
               {emailGoogle && <span className="text-sm text-muted-foreground">{emailGoogle}</span>}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Suas tarefas do CRM são sincronizadas automaticamente como eventos de 15min no Google Calendar. Reuniões agendadas com leads também são criadas automaticamente.
-            </p>
+            <div className="space-y-2 text-xs text-muted-foreground">
+              <div className="flex items-start gap-2">
+                <Calendar className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
+                <p><strong className="text-foreground">Tarefas de Leads</strong> → Google Calendar (eventos de 15min com horário cravado).</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <ListChecks className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
+                <p><strong className="text-foreground">Tarefas de Oportunidades</strong> → Google Tasks (lista "My Tasks", com horário no título).</p>
+              </div>
+            </div>
+
+            {needsReconnect && (
+              <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-200 text-sm">
+                <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                <div className="flex-1">
+                  <p className="font-medium mb-1">Reconexão necessária</p>
+                  <p className="text-xs opacity-90">Sua conexão atual não autoriza Google Tasks. Reconecte para liberar a sincronização de tarefas de oportunidades.</p>
+                  <Button size="sm" variant="outline" className="mt-2" onClick={handleReconnect} disabled={loading}>
+                    {loading && <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />}
+                    Reconectar Google
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-wrap gap-2">
               <Button
                 size="sm"
@@ -106,12 +156,12 @@ export function GoogleSyncCard() {
             <div className="flex items-start gap-2 text-sm text-amber-200">
               <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
               <p>
-                Conecte sua conta Google para sincronizar tarefas do CRM como eventos de 15min no Google Calendar e criar reuniões automaticamente com leads.
+                Conecte sua conta Google para sincronizar tarefas do CRM: <strong>leads</strong> viram eventos no Google Calendar (15min) e <strong>oportunidades</strong> viram itens no Google Tasks.
               </p>
             </div>
             <Button onClick={connect} disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Conectar Google Calendar
+              Conectar Google
             </Button>
           </>
         )}
