@@ -64,8 +64,7 @@ export const LeadTimeline = ({
 
   const [nota, setNota] = useState("");
   const [tarefaTitulo, setTarefaTitulo] = useState("");
-  const [tarefaData, setTarefaData] = useState("");
-  const [tarefaHora, setTarefaHora] = useState("09:00");
+  const [tarefaDate, setTarefaDate] = useState<Date | null>(null);
 
   // Permite controle externo OU interno do dialog
   const [internalDialog, setInternalDialog] = useState(false);
