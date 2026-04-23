@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { format, isToday, isTomorrow, isPast, endOfDay, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarClock, CheckCircle2, Circle, AlertTriangle, Calendar as CalendarIcon, ArrowRight, ChevronDown, Eye, EyeOff } from "lucide-react";
+import { CalendarClock, CheckCircle2, Circle, AlertTriangle, Calendar as CalendarIcon, ArrowRight, ChevronDown, Eye, EyeOff, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
@@ -93,6 +93,28 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
     },
   });
 
+  const removeTask = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("crm_atividades" as any)
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["crm_atividades_oport_overview"] });
+      qc.invalidateQueries({ queryKey: ["crm_atividades"] });
+      toast({ title: "Tarefa excluída" });
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Erro ao excluir tarefa",
+        description: err?.message || "Não foi possível excluir a tarefa.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const groups = useMemo(() => {
     const atrasadas: TaskRow[] = [];
     const hoje: TaskRow[] = [];
@@ -127,6 +149,12 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
   const TaskItem = ({ t }: { t: TaskRow }) => {
     const d = t.data_agendada ? new Date(t.data_agendada) : null;
     const ref = t.lead_empresa || t.lead_nome || t.op_nome;
+
+    const handleDelete = () => {
+      if (!confirm("Excluir esta tarefa?")) return;
+      removeTask.mutate(t.id);
+    };
+
     return (
       <li
         className={cn(
@@ -169,6 +197,14 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
             <ArrowRight className="h-3.5 w-3.5" />
           </button>
         )}
+        <button
+          onClick={handleDelete}
+          disabled={removeTask.isPending}
+          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive shrink-0 disabled:opacity-40"
+          title="Excluir tarefa"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
       </li>
     );
   };
