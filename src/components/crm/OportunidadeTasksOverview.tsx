@@ -2,12 +2,15 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { format, isToday, isTomorrow, isPast, endOfDay, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarClock, CheckCircle2, Circle, AlertTriangle, Calendar as CalendarIcon, ArrowRight, ChevronDown, Eye, EyeOff, Trash2 } from "lucide-react";
+import { CalendarClock, CheckCircle2, Circle, AlertTriangle, Calendar as CalendarIcon, ArrowRight, ChevronDown, Eye, EyeOff, Trash2, Pencil, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useGoogleCalendar } from "@/hooks/useGoogleCalendar";
 import { cn } from "@/lib/utils";
+import { TaskEditDialog, TaskEditValue } from "./TaskEditDialog";
 
 interface TaskRow {
   id: string;
@@ -17,6 +20,9 @@ interface TaskRow {
   data_agendada: string | null;
   data_conclusao: string | null;
   concluida: boolean;
+  google_event_id: string | null;
+  google_sync_status: string | null;
+  google_sync_error: string | null;
   op_nome?: string | null;
   lead_nome?: string | null;
   lead_empresa?: string | null;
@@ -30,22 +36,22 @@ type SectionKey = "atrasadas" | "hoje" | "amanha" | "proximos" | "concluidas";
 
 const CONCLUIDAS_LIMIT = 20;
 
+function fireSync(atividade_id: string, action: "upsert" | "delete", google_event_id?: string | null) {
+  supabase.functions
+    .invoke("sync-task-to-google", { body: { atividade_id, action, google_event_id } })
+    .catch((err) => console.warn("[sync-task-to-google]", err));
+}
+
 export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
   const qc = useQueryClient();
   const { toast } = useToast();
+  const { isConnected: googleConnected } = useGoogleCalendar();
+  const [editTask, setEditTask] = useState<TaskEditValue | null>(null);
   const [hidden, setHidden] = useState<Record<SectionKey, boolean>>({
-    atrasadas: false,
-    hoje: false,
-    amanha: false,
-    proximos: false,
-    concluidas: false,
+    atrasadas: false, hoje: false, amanha: false, proximos: false, concluidas: false,
   });
   const [open, setOpen] = useState<Record<SectionKey, boolean>>({
-    atrasadas: true,
-    hoje: true,
-    amanha: false,
-    proximos: false,
-    concluidas: false,
+    atrasadas: true, hoje: true, amanha: false, proximos: false, concluidas: false,
   });
   const [showAllConcluidas, setShowAllConcluidas] = useState(false);
 
@@ -54,7 +60,7 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("crm_atividades" as any)
-        .select("id, oportunidade_id, titulo, descricao, data_agendada, data_conclusao, concluida, crm_oportunidades!inner(nome_oportunidade, crm_leads(nome, empresa))")
+        .select("id, oportunidade_id, titulo, descricao, data_agendada, data_conclusao, concluida, google_event_id, google_sync_status, google_sync_error, crm_oportunidades!inner(nome_oportunidade, crm_leads(nome, empresa))")
         .eq("tipo", "tarefa")
         .not("oportunidade_id", "is", null)
         .not("data_agendada", "is", null)
@@ -68,6 +74,9 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
         data_agendada: r.data_agendada,
         data_conclusao: r.data_conclusao,
         concluida: r.concluida,
+        google_event_id: r.google_event_id,
+        google_sync_status: r.google_sync_status,
+        google_sync_error: r.google_sync_error,
         op_nome: r.crm_oportunidades?.nome_oportunidade,
         lead_nome: r.crm_oportunidades?.crm_leads?.nome,
         lead_empresa: r.crm_oportunidades?.crm_leads?.empresa,
@@ -75,44 +84,57 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
     },
   });
 
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["crm_atividades_oport_overview"] });
+    qc.invalidateQueries({ queryKey: ["crm_atividades"] });
+  };
+
   const toggle = useMutation({
     mutationFn: async ({ id, concluida }: { id: string; concluida: boolean }) => {
       const { error } = await supabase
         .from("crm_atividades" as any)
-        .update({
-          concluida,
-          data_conclusao: concluida ? new Date().toISOString() : null,
-        })
+        .update({ concluida, data_conclusao: concluida ? new Date().toISOString() : null, google_sync_status: "pending" })
         .eq("id", id);
       if (error) throw error;
+      return id;
     },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ["crm_atividades_oport_overview"] });
-      qc.invalidateQueries({ queryKey: ["crm_atividades"] });
+    onSuccess: (id, vars) => {
+      invalidate();
+      fireSync(id, "upsert");
       toast({ title: vars.concluida ? "Tarefa concluída" : "Tarefa reaberta" });
     },
   });
 
-  const removeTask = useMutation({
-    mutationFn: async (id: string) => {
+  const updateTask = useMutation({
+    mutationFn: async ({ id, titulo, data_agendada }: { id: string; titulo: string; data_agendada: string }) => {
       const { error } = await supabase
         .from("crm_atividades" as any)
-        .delete()
+        .update({ titulo, descricao: titulo, data_agendada, google_sync_status: "pending" })
         .eq("id", id);
       if (error) throw error;
+      return id;
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["crm_atividades_oport_overview"] });
-      qc.invalidateQueries({ queryKey: ["crm_atividades"] });
+    onSuccess: (id) => {
+      invalidate();
+      fireSync(id, "upsert");
+      toast({ title: "Tarefa atualizada" });
+      setEditTask(null);
+    },
+    onError: (e: any) => toast({ title: "Erro ao atualizar", description: e.message, variant: "destructive" }),
+  });
+
+  const removeTask = useMutation({
+    mutationFn: async (task: TaskRow) => {
+      const { error } = await supabase.from("crm_atividades" as any).delete().eq("id", task.id);
+      if (error) throw error;
+      return task;
+    },
+    onSuccess: (task) => {
+      invalidate();
+      if (task.google_event_id) fireSync(task.id, "delete", task.google_event_id);
       toast({ title: "Tarefa excluída" });
     },
-    onError: (err: any) => {
-      toast({
-        title: "Erro ao excluir tarefa",
-        description: err?.message || "Não foi possível excluir a tarefa.",
-        variant: "destructive",
-      });
-    },
+    onError: (err: any) => toast({ title: "Erro ao excluir tarefa", description: err?.message || "Não foi possível excluir.", variant: "destructive" }),
   });
 
   const groups = useMemo(() => {
@@ -124,10 +146,7 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
     const limiteProx = endOfDay(addDays(new Date(), 7));
 
     tasks.forEach((t) => {
-      if (t.concluida) {
-        concluidas.push(t);
-        return;
-      }
+      if (t.concluida) { concluidas.push(t); return; }
       if (!t.data_agendada) return;
       const d = new Date(t.data_agendada);
       if (isPast(d) && !isToday(d)) atrasadas.push(t);
@@ -146,29 +165,44 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
 
   const total = tasks.length;
 
+  const SyncIcon = ({ t }: { t: TaskRow }) => {
+    if (t.google_sync_status === "synced" && t.google_event_id) {
+      return (
+        <TooltipProvider><Tooltip>
+          <TooltipTrigger asChild>
+            <CalendarIcon className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+          </TooltipTrigger>
+          <TooltipContent>Sincronizado com Google Calendar (15min)</TooltipContent>
+        </Tooltip></TooltipProvider>
+      );
+    }
+    if (t.google_sync_status === "error") {
+      return (
+        <TooltipProvider><Tooltip>
+          <TooltipTrigger asChild>
+            <AlertCircle className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+          </TooltipTrigger>
+          <TooltipContent>Erro ao sincronizar: {t.google_sync_error || "desconhecido"}</TooltipContent>
+        </Tooltip></TooltipProvider>
+      );
+    }
+    return null;
+  };
+
   const TaskItem = ({ t }: { t: TaskRow }) => {
     const d = t.data_agendada ? new Date(t.data_agendada) : null;
     const ref = t.lead_empresa || t.lead_nome || t.op_nome;
 
-    const handleDelete = () => {
-      if (!confirm("Excluir esta tarefa?")) return;
-      removeTask.mutate(t.id);
-    };
-
     return (
-      <li
-        className={cn(
-          "group flex items-center gap-3 rounded-xl border border-border bg-surface-1/60 hover:bg-surface-2/70 px-4 py-3 transition-colors",
-          t.concluida && "opacity-70"
-        )}
-      >
+      <li className={cn(
+        "group flex items-center gap-3 rounded-xl border border-border bg-surface-1/60 hover:bg-surface-2/70 px-4 py-3 transition-colors",
+        t.concluida && "opacity-70"
+      )}>
         <button
           onClick={() => toggle.mutate({ id: t.id, concluida: !t.concluida })}
           className={cn(
             "transition-colors shrink-0",
-            t.concluida
-              ? "text-emerald-400 hover:text-muted-foreground"
-              : "text-muted-foreground hover:text-emerald-400"
+            t.concluida ? "text-emerald-400 hover:text-muted-foreground" : "text-muted-foreground hover:text-emerald-400"
           )}
           title={t.concluida ? "Reabrir tarefa" : "Marcar como concluída"}
         >
@@ -184,21 +218,29 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
           <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
             <CalendarClock className="h-3.5 w-3.5" />
             {format(d, "dd/MM HH'h'mm", { locale: ptBR })}
+            <SyncIcon t={t} />
           </span>
         )}
         {ref && (
           <button
-            onClick={() => {
-              if (t.oportunidade_id && onOpenOportunidade) onOpenOportunidade(t.oportunidade_id);
-            }}
+            onClick={() => { if (t.oportunidade_id && onOpenOportunidade) onOpenOportunidade(t.oportunidade_id); }}
             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors shrink-0"
           >
             <span className="truncate max-w-[180px]">{ref}</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </button>
         )}
+        {!t.concluida && (
+          <button
+            onClick={() => setEditTask({ id: t.id, titulo: t.titulo || t.descricao || "", data_agendada: t.data_agendada || "" })}
+            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 shrink-0"
+            title="Editar tarefa"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+        )}
         <button
-          onClick={handleDelete}
+          onClick={() => { if (confirm("Excluir esta tarefa?")) removeTask.mutate(t); }}
           disabled={removeTask.isPending}
           className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive shrink-0 disabled:opacity-40"
           title="Excluir tarefa"
@@ -209,20 +251,9 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
     );
   };
 
-  const Section = ({
-    sectionKey,
-    title,
-    icon: Icon,
-    items,
-    tone,
-    isConcluidas,
-  }: {
-    sectionKey: SectionKey;
-    title: string;
-    icon: any;
-    items: TaskRow[];
-    tone: "danger" | "primary" | "warning" | "muted" | "success";
-    isConcluidas?: boolean;
+  const Section = ({ sectionKey, title, icon: Icon, items, tone, isConcluidas }: {
+    sectionKey: SectionKey; title: string; icon: any; items: TaskRow[];
+    tone: "danger" | "primary" | "warning" | "muted" | "success"; isConcluidas?: boolean;
   }) => {
     const toneClasses = {
       danger: "text-red-400 border-red-500/30 bg-red-500/10",
@@ -237,31 +268,15 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
     const visibleItems = isConcluidas && !showAllConcluidas ? items.slice(0, CONCLUIDAS_LIMIT) : items;
 
     return (
-      <Collapsible
-        open={isOpen}
-        onOpenChange={(v) => setOpen((o) => ({ ...o, [sectionKey]: v }))}
-        className="glass rounded-2xl shadow-ios-sm overflow-hidden"
-      >
+      <Collapsible open={isOpen} onOpenChange={(v) => setOpen((o) => ({ ...o, [sectionKey]: v }))} className="glass rounded-2xl shadow-ios-sm overflow-hidden">
         <div className="flex items-center gap-2 p-3">
-          <CollapsibleTrigger
-            disabled={isHidden}
-            className="flex-1 flex items-center gap-3 text-left disabled:cursor-not-allowed group"
-          >
-            <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center border", toneClasses)}>
-              <Icon className="h-4 w-4" />
-            </div>
+          <CollapsibleTrigger disabled={isHidden} className="flex-1 flex items-center gap-3 text-left disabled:cursor-not-allowed group">
+            <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center border", toneClasses)}><Icon className="h-4 w-4" /></div>
             <h3 className="text-sm font-semibold text-foreground">{title}</h3>
             <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">{items.length}</Badge>
-            <ChevronDown className={cn(
-              "h-4 w-4 text-muted-foreground transition-transform ml-auto",
-              isOpen && "rotate-180"
-            )} />
+            <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform ml-auto", isOpen && "rotate-180")} />
           </CollapsibleTrigger>
-          <button
-            onClick={() => setHidden((h) => ({ ...h, [sectionKey]: !h[sectionKey] }))}
-            className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-md hover:bg-surface-2"
-            title={isHidden ? "Mostrar tarefas" : "Ocultar tarefas"}
-          >
+          <button onClick={() => setHidden((h) => ({ ...h, [sectionKey]: !h[sectionKey] }))} className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-md hover:bg-surface-2" title={isHidden ? "Mostrar tarefas" : "Ocultar tarefas"}>
             {isHidden ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
         </div>
@@ -271,14 +286,9 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
               <p className="text-xs text-muted-foreground py-6 text-center">Nenhuma tarefa</p>
             ) : (
               <>
-                <ul className="space-y-2 pt-3">
-                  {visibleItems.map((t) => <TaskItem key={t.id} t={t} />)}
-                </ul>
+                <ul className="space-y-2 pt-3">{visibleItems.map((t) => <TaskItem key={t.id} t={t} />)}</ul>
                 {isConcluidas && items.length > CONCLUIDAS_LIMIT && (
-                  <button
-                    onClick={() => setShowAllConcluidas((v) => !v)}
-                    className="w-full mt-3 text-xs text-primary hover:text-primary/80 transition-colors py-2"
-                  >
+                  <button onClick={() => setShowAllConcluidas((v) => !v)} className="w-full mt-3 text-xs text-primary hover:text-primary/80 transition-colors py-2">
                     {showAllConcluidas ? "Mostrar menos" : `Ver mais (${items.length - CONCLUIDAS_LIMIT})`}
                   </button>
                 )}
@@ -292,6 +302,12 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
 
   return (
     <div className="animate-fade-in">
+      {googleConnected === false && (
+        <div className="max-w-4xl mx-auto mb-3 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-200 text-sm">
+          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+          <p>Conecte sua conta Google em <a href="/perfil" className="underline font-medium">/perfil</a> para sincronizar tarefas automaticamente com o Google Calendar (eventos de 15min).</p>
+        </div>
+      )}
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Carregando...</p>
       ) : total === 0 ? (
@@ -308,6 +324,13 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
           <Section sectionKey="concluidas" title="Concluídas" icon={CheckCircle2} items={groups.concluidas} tone="success" isConcluidas />
         </div>
       )}
+      <TaskEditDialog
+        open={!!editTask}
+        onOpenChange={(v) => { if (!v) setEditTask(null); }}
+        task={editTask}
+        onSave={(p) => updateTask.mutate(p)}
+        saving={updateTask.isPending}
+      />
     </div>
   );
 }

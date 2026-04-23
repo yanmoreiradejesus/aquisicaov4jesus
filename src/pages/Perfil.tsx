@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { User, Camera, Loader2 } from "lucide-react";
 import { VoipAccountsCard } from "@/components/VoipAccountsCard";
+import { GoogleSyncCard } from "@/components/GoogleSyncCard";
 
 const Perfil = () => {
   const { user, profile, loading } = useAuth();
@@ -184,6 +185,10 @@ const Perfil = () => {
             </Button>
           </CardContent>
         </Card>
+
+        <div className="mt-6">
+          <GoogleSyncCard />
+        </div>
 
         <div className="mt-6">
           <VoipAccountsCard userId={user.id} />
