@@ -63,14 +63,14 @@ export const OportunidadeTimeline = ({
 
   const [nota, setNota] = useState("");
   const [tarefaTitulo, setTarefaTitulo] = useState("");
-  // Default: hoje + 3 dias (evita tarefa nascer atrasada)
-  const defaultTarefaData = (() => {
+  // Default: hoje + 3 dias às 09:00 (evita tarefa nascer atrasada)
+  const defaultTarefaDate = (() => {
     const d = new Date();
     d.setDate(d.getDate() + 3);
-    return d.toISOString().slice(0, 10);
+    d.setHours(9, 0, 0, 0);
+    return d;
   })();
-  const [tarefaData, setTarefaData] = useState(defaultTarefaData);
-  const [tarefaHora, setTarefaHora] = useState("09:00");
+  const [tarefaDate, setTarefaDate] = useState<Date | null>(defaultTarefaDate);
 
   const [internalDialog, setInternalDialog] = useState(false);
   const dialogOpen = tarefaDialogOpen ?? internalDialog;
