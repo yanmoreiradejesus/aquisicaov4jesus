@@ -30,7 +30,15 @@ interface Props {
 }
 
 type Mode = "create" | "update";
-const ALL_FIELDS: UpdateField[] = ["nome", "empresa", "cargo", "telefone", "email"];
+const ALL_FIELDS: UpdateField[] = ["nome", "empresa", "cargo", "telefone", "email", "data_criacao_origem"];
+const FIELD_LABELS: Record<UpdateField, string> = {
+  nome: "nome",
+  empresa: "empresa",
+  cargo: "cargo",
+  telefone: "telefone",
+  email: "email",
+  data_criacao_origem: "data de cadastro original",
+};
 
 export const LeadImportDialog = ({ open, onOpenChange, onOpenExport }: Props) => {
   const [mode, setMode] = useState<Mode>("create");
