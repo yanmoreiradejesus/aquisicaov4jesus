@@ -30,7 +30,15 @@ interface Props {
 }
 
 type Mode = "create" | "update";
-const ALL_FIELDS: UpdateField[] = ["nome", "empresa", "cargo", "telefone", "email"];
+const ALL_FIELDS: UpdateField[] = ["nome", "empresa", "cargo", "telefone", "email", "data_criacao_origem"];
+const FIELD_LABELS: Record<UpdateField, string> = {
+  nome: "nome",
+  empresa: "empresa",
+  cargo: "cargo",
+  telefone: "telefone",
+  email: "email",
+  data_criacao_origem: "data de cadastro original",
+};
 
 export const LeadImportDialog = ({ open, onOpenChange, onOpenExport }: Props) => {
   const [mode, setMode] = useState<Mode>("create");
@@ -45,7 +53,7 @@ export const LeadImportDialog = ({ open, onOpenChange, onOpenExport }: Props) =>
 
   // Update mode state
   const [matchKey, setMatchKey] = useState<UpdateMatchKey>("email");
-  const [fields, setFields] = useState<UpdateField[]>(["nome"]);
+  const [fields, setFields] = useState<UpdateField[]>(["nome", "data_criacao_origem"]);
   const [preview, setPreview] = useState<UpdatePreviewRow[] | null>(null);
   const [suspectPct, setSuspectPct] = useState<number>(0);
 
@@ -230,7 +238,7 @@ export const LeadImportDialog = ({ open, onOpenChange, onOpenExport }: Props) =>
                   {ALL_FIELDS.map((f) => (
                     <label key={f} className="flex items-center gap-1.5 text-xs cursor-pointer">
                       <Checkbox checked={fields.includes(f)} onCheckedChange={() => toggleField(f)} />
-                      {f}
+                      {FIELD_LABELS[f]}
                     </label>
                   ))}
                 </div>
@@ -255,24 +263,50 @@ export const LeadImportDialog = ({ open, onOpenChange, onOpenExport }: Props) =>
                 />
               </div>
 
-              {parsed && (
-                <div className="rounded-md border border-border bg-card p-4 space-y-2">
-                  <p className="text-sm">
-                    <span className="font-semibold text-foreground">{parsed.length}</span>{" "}
-                    <span className="text-muted-foreground">linha(s) em </span>
-                    <span className="text-foreground">{file?.name}</span>
-                  </p>
-                  {suspectPct >= 30 && (
-                    <div className="flex items-start gap-2 text-xs text-destructive">
-                      <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                      <span>
-                        <strong>{suspectPct.toFixed(0)}%</strong> das linhas têm <code>nome == empresa</code>.
-                        Verifique se a coluna de nome do CSV está correta.
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
+              {parsed && (() => {
+                const semData = parsed.filter((r) => !r.data_criacao_origem).length;
+                const pctSemData = parsed.length ? (semData / parsed.length) * 100 : 0;
+                const sample = parsed.find((r) => !!r.data_criacao_origem)?.data_criacao_origem;
+                const sampleFmt = sample
+                  ? new Date(sample).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "medium" })
+                  : null;
+                return (
+                  <div className="rounded-md border border-border bg-card p-4 space-y-2">
+                    <p className="text-sm">
+                      <span className="font-semibold text-foreground">{parsed.length}</span>{" "}
+                      <span className="text-muted-foreground">linha(s) em </span>
+                      <span className="text-foreground">{file?.name}</span>
+                    </p>
+                    {suspectPct >= 30 && (
+                      <div className="flex items-start gap-2 text-xs text-destructive">
+                        <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                        <span>
+                          <strong>{suspectPct.toFixed(0)}%</strong> das linhas têm <code>nome == empresa</code>.
+                          Verifique se a coluna de nome do CSV está correta.
+                        </span>
+                      </div>
+                    )}
+                    {pctSemData >= 20 && (
+                      <div className="flex items-start gap-2 text-xs text-orange-500">
+                        <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                        <span>
+                          <strong>{semData} de {parsed.length}</strong> linha(s) ({pctSemData.toFixed(0)}%) sem data
+                          de cadastro detectada. Confira se o CSV tem a coluna <code>"Data de criação"</code> no
+                          formato <code>dd/MM/yyyy HH:mm:ss</code>.
+                        </span>
+                      </div>
+                    )}
+                    {sampleFmt && (
+                      <div className="flex items-start gap-2 text-xs text-success">
+                        <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                        <span>
+                          Data de cadastro detectada — exemplo: <strong>{sampleFmt}</strong>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {mode === "update" && preview && preview.length > 0 && (
                 <div className="rounded-md border border-border bg-card overflow-hidden">

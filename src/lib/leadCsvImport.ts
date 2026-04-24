@@ -52,11 +52,27 @@ const parseDateBR = (v: any): string | null => {
 const parseDateTimeBR = (v: any): string | null => {
   const s = clean(v);
   if (!s) return null;
-  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}):(\d{2}))?$/);
-  if (!m) return null;
-  const [, dd, mm, yyyy, hh = "00", mi = "00", ss = "00"] = m;
-  // Trata como horário de Brasília (UTC-3)
-  return `${yyyy}-${mm}-${dd}T${hh}:${mi}:${ss}-03:00`;
+
+  // dd/MM/yyyy [HH:mm[:ss]]
+  let m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:[\sT]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (m) {
+    const [, dd, mm, yyyy, hh = "00", mi = "00", ss = "00"] = m;
+    return `${yyyy}-${mm}-${dd}T${hh.padStart(2, "0")}:${mi}:${ss}-03:00`;
+  }
+
+  // yyyy-MM-dd [HH:mm[:ss]]  (ISO/americano sem timezone)
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[\sT]+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (m) {
+    const [, yyyy, mm, dd, hh = "00", mi = "00", ss = "00"] = m;
+    return `${yyyy}-${mm}-${dd}T${hh.padStart(2, "0")}:${mi}:${ss}-03:00`;
+  }
+
+  // ISO completo com timezone (yyyy-MM-ddTHH:mm:ss[Z|±HH:mm])
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:?\d{2})$/.test(s)) {
+    return s;
+  }
+
+  return null;
 };
 
 export function parseLeadsCsv(file: File): Promise<CsvLeadRow[]> {
@@ -120,7 +136,11 @@ export function parseLeadsCsv(file: File): Promise<CsvLeadRow[]> {
               documento_empresa: clean(pick(r, "Documento da empresa", "CNPJ", "Documento")),
               tipo_produto: clean(pick(r, "Tipo de produto", "Tipo produto", "Produto tipo")),
               urgencia: clean(pick(r, "Urgência", "Urgencia", "Prioridade")),
-              data_criacao_origem: parseDateTimeBR(pick(r, "Data de criação", "Data de criacao")),
+              data_criacao_origem: parseDateTimeBR(pick(r,
+                "Data de criação", "Data de criacao",
+                "Data de cadastro", "Data cadastro",
+                "Criado em", "Created At", "Created",
+              )),
               descricao: clean(pick(r, "Descrição", "Descricao")),
               cidade: clean(pick(r, "Cidade")),
               estado: clean(pick(r, "Estado", "UF")),
@@ -225,7 +245,7 @@ export async function importLeads(rows: CsvLeadRow[]): Promise<ImportResult> {
 // ============= UPDATE EXISTING LEADS =============
 
 export type UpdateMatchKey = "email" | "telefone";
-export type UpdateField = "nome" | "empresa" | "cargo" | "telefone" | "email";
+export type UpdateField = "nome" | "empresa" | "cargo" | "telefone" | "email" | "data_criacao_origem";
 
 export interface UpdateResult {
   total: number;
