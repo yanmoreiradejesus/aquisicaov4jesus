@@ -238,7 +238,7 @@ export const LeadImportDialog = ({ open, onOpenChange, onOpenExport }: Props) =>
                   {ALL_FIELDS.map((f) => (
                     <label key={f} className="flex items-center gap-1.5 text-xs cursor-pointer">
                       <Checkbox checked={fields.includes(f)} onCheckedChange={() => toggleField(f)} />
-                      {f}
+                      {FIELD_LABELS[f]}
                     </label>
                   ))}
                 </div>
