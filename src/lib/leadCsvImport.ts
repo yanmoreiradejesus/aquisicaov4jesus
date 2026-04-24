@@ -245,7 +245,7 @@ export async function importLeads(rows: CsvLeadRow[]): Promise<ImportResult> {
 // ============= UPDATE EXISTING LEADS =============
 
 export type UpdateMatchKey = "email" | "telefone";
-export type UpdateField = "nome" | "empresa" | "cargo" | "telefone" | "email";
+export type UpdateField = "nome" | "empresa" | "cargo" | "telefone" | "email" | "data_criacao_origem";
 
 export interface UpdateResult {
   total: number;
