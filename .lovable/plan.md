@@ -1,74 +1,75 @@
-## Corrigir `data_criacao_origem` dos leads antigos + diagnóstico no importador
+## Diagnóstico confirmado
 
-### Diagnóstico real
+O problema não é só a gravação: os eventos da 3CPlus estão entrando no banco, mas estão sendo salvos praticamente vazios.
 
-Conferi seu CSV e o parser atual:
+Hoje acontece isto:
+- o webhook recebe um payload válido da 3CPlus
+- esse payload vem no formato `call-history-was-created -> callHistory`
+- o parser atual não lê esse formato corretamente
+- por isso o sistema grava a chamada sem telefone, sem duração, sem lead e sem link da gravação
+- como a tela do lead só mostra chamadas vinculadas ao `lead_id`, ela acaba aparecendo como se não tivesse vindo absolutamente nada
 
-- O CSV vem com a coluna **`Data de criação`** no formato `22/04/2026 14:41:56` ✅
-- O `parseDateTimeBR` em `src/lib/leadCsvImport.ts` (linha 55) **já reconhece esse formato exato**
-- O `pick` na linha 123 **já procura por "Data de criação"**
+Também confirmei um segundo ponto:
+- não existe mapeamento de contas VoIP da equipe para `provider = 3cplus`, então o `user_id` das chamadas também não está sendo resolvido
 
-Ou seja, o importador novo está correto — leads importados a partir desse CSV entram com a data certa.
+## O que vou implementar
 
-**O problema real**: rodei no banco e tem **52 de 151 leads (34%) sem `data_criacao_origem`**. Esses são leads de importações antigas (antes do campo existir, ou de planilhas com header diferente). Hoje o `LeadCard` cai no fallback `data_aquisicao || created_at` (= data da importação) pra eles, e a ordenação/timeline fica errada.
+1. Corrigir o webhook da 3CPlus
+- Detectar o nome do evento pela chave de topo do payload.
+- Extrair os dados de `callHistory` corretamente.
+- Salvar os campos certos no evento: telefone, duração, status, operador, identificador da chamada e payload bruto.
 
-### Mudanças
+2. Vincular a chamada ao lead correto
+- Usar o telefone principal da chamada e, como fallback, o telefone de `mailing_data.phone`.
+- Normalizar os números e refazer o match com `crm_leads`.
+- Atualizar `ultimo_contato_telefonico` quando a chamada finalizada for vinculada.
 
-**1. Habilitar `data_criacao_origem` como campo atualizável no re-import**
+3. Corrigir o tipo do evento salvo
+- Gravar `call-history-was-created` quando esse for o evento real.
+- Evitar continuar classificando tudo como `call-was-connected`.
+- Ajustar a lógica para a listagem do CRM enxergar essas chamadas como eventos finais válidos.
 
-Em `src/lib/leadCsvImport.ts`:
-- Adicionar `"data_criacao_origem"` no tipo `UpdateField`
-- A função `updateExistingLeads` já tem lógica genérica que aceita qualquer campo do `CsvLeadRow` — só precisa entrar na lista permitida
+4. Resolver atribuição por vendedor
+- Ler o operador da 3CPlus a partir do payload real.
+- Mapear esse operador para `voip_accounts` com `provider = 3cplus`.
+- Preparar o backfill de `user_id` para que filtros como “Minhas chamadas” funcionem corretamente.
 
-Em `src/components/crm/LeadImportDialog.tsx`:
-- Adicionar checkbox "Data de cadastro original" na lista de campos atualizáveis no modo "Atualizar existentes"
-- Marcar como sugerido por padrão
+5. Backfill dos registros já recebidos
+- Reprocessar os `raw_payload` já salvos da 3CPlus.
+- Preencher telefone, duração, status, `call_id`, `lead_id` e, quando possível, `user_id`.
+- Fazer com que as chamadas antigas passem a aparecer no histórico dos leads.
 
-Resultado: você re-importa o mesmo CSV em modo "Atualizar" matchando por **email**, marca só "Data de cadastro original" e os 52 leads antigos ficam corrigidos com a data real da planilha.
+6. Gravações
+- Para chamadas novas: deixar o fluxo pronto para salvar `gravacao_url` assim que a 3CPlus disponibilizar esse link via API.
+- Para chamadas antigas: adicionar recuperação da gravação usando o identificador `telephony_id`.
+- Quando a URL entrar, a transcrição automática já existente continuará funcionando.
 
-**2. Diagnóstico visual no preview da importação**
+## O que depende de você
 
-Em `LeadImportDialog.tsx`, no painel de preview (antes do botão "Importar"):
-- Calcular: `linhas sem data_criacao_origem detectada / total`
-- Se `>= 20%`: alerta amarelo dizendo quantas linhas estão sem data e qual coluna/formato esperar
-- Sempre mostrar (em verde) a primeira data detectada como sample, ex: "Exemplo de data detectada: 22/04/2026 14:41:56"
+Para recuperar o áudio das gravações da 3CPlus, vou precisar do token da API da 3CPlus.
 
-Feedback imediato se uma planilha futura vier com header diferente.
+Sem esse token eu ainda consigo corrigir agora:
+- telefone
+- duração
+- status
+- vínculo com lead
+- exibição no histórico
 
-**3. Aceitar variações comuns do nome da coluna (defensivo)**
+Com o token eu consigo também:
+- buscar o link real da gravação
+- preencher os áudios antigos
+- liberar transcrição automática dessas ligações
 
-Mesmo seu CSV atual estando correto, expandir o `pick` da linha 123 pra cobrir variações de outros sistemas:
+## Arquivos e áreas que serão ajustados
 
-```ts
-parseDateTimeBR(pick(r,
-  "Data de criação", "Data de criacao",  // já existe
-  "Data de cadastro", "Data cadastro",
-  "Criado em", "Created At",
-))
-```
+- `supabase/functions/voip-webhook-3cplus/index.ts`
+- possível rotina de backfill para `crm_call_events`
+- eventual ajuste leve na lógica de exibição, se necessário, após normalizar os eventos
 
-Sem `"Data"` no fallback (evita conflito com a coluna `Data` que é a data de aquisição no seu CSV).
+## Resultado esperado
 
-**4. Aceitar formatos extras de data (defensivo)**
-
-Refatorar `parseDateTimeBR` pra também aceitar:
-- `dd/MM/yyyy` puro (sem hora) → `00:00:00`
-- `dd/MM/yyyy HH:mm` (sem segundos)
-- `yyyy-MM-dd[ HH:mm[:ss]]` (formato ISO de exports técnicos)
-
-O formato atual do seu CSV continua funcionando igual.
-
-### Não vou mexer em
-
-- O parser principal pro seu CSV — já tá certo
-- Ordem do `useCrmLeads.ts` por `created_at` — é a ordem de inserção no CRM, faz sentido manter
-- Nenhuma migration de banco — o campo `data_criacao_origem` já existe
-
-### Como você usa depois do deploy
-
-1. Abrir importador de leads
-2. Modo: **"Atualizar existentes"**
-3. Match por: **Email**
-4. Campos a atualizar: marcar **"Data de cadastro original"**
-5. Subir o mesmo CSV `aquisicoes_2026-04-24...csv`
-6. Os 52 leads antigos ganham a data correta da planilha
+Depois da implementação:
+- as próximas chamadas da 3CPlus entrarão com dados completos
+- as chamadas existentes voltarão a aparecer no lead correto
+- o histórico deixará de ficar vazio
+- as gravações poderão ser recuperadas assim que o token da API da 3CPlus for informado
