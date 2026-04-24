@@ -53,7 +53,7 @@ export const LeadImportDialog = ({ open, onOpenChange, onOpenExport }: Props) =>
 
   // Update mode state
   const [matchKey, setMatchKey] = useState<UpdateMatchKey>("email");
-  const [fields, setFields] = useState<UpdateField[]>(["nome"]);
+  const [fields, setFields] = useState<UpdateField[]>(["nome", "data_criacao_origem"]);
   const [preview, setPreview] = useState<UpdatePreviewRow[] | null>(null);
   const [suspectPct, setSuspectPct] = useState<number>(0);
 
