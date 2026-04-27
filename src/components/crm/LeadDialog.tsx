@@ -162,6 +162,14 @@ export const LeadDialog = ({ open, onOpenChange, lead, onSave, onDelete }: Props
               onChange={(e) => set("data_criacao_origem", e.target.value)}
             />
           </div>
+          <div className="space-y-1.5">
+            <Label>Data de cadastro no sistema</Label>
+            <Input
+              type="datetime-local"
+              value={form.created_at ? String(form.created_at).slice(0, 16) : ""}
+              onChange={(e) => set("created_at", e.target.value)}
+            />
+          </div>
           <div className="space-y-1.5 md:col-span-2">
             <Label>Descrição</Label>
             <Textarea rows={3} value={form.descricao ?? ""} onChange={(e) => set("descricao", e.target.value)} />
