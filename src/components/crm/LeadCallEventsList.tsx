@@ -59,7 +59,7 @@ function statusVariant(status: string | null): { label: string; className: strin
 
 export function LeadCallEventsList({ leadId }: Props) {
   const { user, isAdmin } = useAuth();
-  const [filter, setFilter] = useState<"mine" | "all">(isAdmin ? "all" : "mine");
+  const [filter, setFilter] = useState<"mine" | "all">("all");
   const effectiveUserId = filter === "mine" ? (user?.id ?? null) : "all";
   const { data: events = [], isLoading } = useLeadCallEvents(leadId, effectiveUserId);
 
@@ -73,7 +73,23 @@ export function LeadCallEventsList({ leadId }: Props) {
       for (const p of data ?? []) map[p.id] = p.full_name ?? "";
       return map;
     },
-    enabled: filter === "all",
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Lookup de apelidos de ramais (voip_accounts) por operador_id
+  const { data: ramalApelidoMap = {} } = useQuery({
+    queryKey: ["voip_accounts_apelidos"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("voip_accounts")
+        .select("operador_id, apelido");
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      for (const v of data ?? []) {
+        if (v.operador_id && v.apelido) map[String(v.operador_id)] = v.apelido;
+      }
+      return map;
+    },
     staleTime: 5 * 60 * 1000,
   });
 
@@ -151,29 +167,25 @@ export function LeadCallEventsList({ leadId }: Props) {
                   <span className="text-[10px] text-muted-foreground">
                     Duração: {formatDuration(e.duracao_seg)}
                   </span>
-                  {e.operador && (
-                    <span className="text-[10px] text-muted-foreground">
-                      • {e.operador}
-                    </span>
-                  )}
-                  {filter === "all" && (vendorName || e.operador) && (
+                  {e.operador && (() => {
+                    const apelido = ramalApelidoMap[String(e.operador)];
+                    return (
+                      <span className="text-[10px] text-muted-foreground">
+                        • Ramal {e.operador}{apelido ? ` — ${apelido}` : ""}
+                      </span>
+                    );
+                  })()}
+                  {filter === "all" && vendorName && (
                     <span className="inline-flex items-center gap-1 text-[10px] text-primary/80">
                       <User className="h-2.5 w-2.5" />
-                      {vendorName || `op ${e.operador}`}
+                      {vendorName}
                     </span>
                   )}
                 </div>
                 {(() => {
                   const src = audioSrc(e);
                   const tooShort = (e.duracao_seg ?? 0) < 3;
-                  if (!src) return null;
-                  if (tooShort) {
-                    return (
-                      <div className="mt-2 text-[10px] text-muted-foreground italic">
-                        Sem áudio (chamada muito curta)
-                      </div>
-                    );
-                  }
+                  if (!src || tooShort) return null;
                   return (
                     <>
                       <audio
