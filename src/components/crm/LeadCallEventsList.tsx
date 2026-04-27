@@ -76,19 +76,22 @@ export function LeadCallEventsList({ leadId }: Props) {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Lookup de apelidos de ramais (voip_accounts) por operador_id
-  const { data: ramalApelidoMap = {} } = useQuery({
-    queryKey: ["voip_accounts_apelidos"],
+  // Lookup de contas voip: mapeia tanto por operador_id (ramal SIP) quanto por agent_id (3CPlus)
+  // para resolver apelido + ramal exibido
+  const { data: voipLookup = { byOperador: {}, byAgent: {} } } = useQuery({
+    queryKey: ["voip_accounts_lookup"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("voip_accounts")
-        .select("operador_id, apelido");
+        .select("operador_id, apelido, agent_id, provider");
       if (error) throw error;
-      const map: Record<string, string> = {};
-      for (const v of data ?? []) {
-        if (v.operador_id && v.apelido) map[String(v.operador_id)] = v.apelido;
+      const byOperador: Record<string, { apelido: string | null; ramal: string }> = {};
+      const byAgent: Record<string, { apelido: string | null; ramal: string }> = {};
+      for (const v of (data ?? []) as Array<{ operador_id: string; apelido: string | null; agent_id: string | null; provider: string }>) {
+        if (v.operador_id) byOperador[String(v.operador_id)] = { apelido: v.apelido, ramal: v.operador_id };
+        if (v.agent_id) byAgent[String(v.agent_id)] = { apelido: v.apelido, ramal: v.operador_id };
       }
-      return map;
+      return { byOperador, byAgent };
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -168,10 +171,16 @@ export function LeadCallEventsList({ leadId }: Props) {
                     Duração: {formatDuration(e.duracao_seg)}
                   </span>
                   {e.operador && (() => {
-                    const apelido = ramalApelidoMap[String(e.operador)];
+                    const key = String(e.operador);
+                    // Para 3cplus o `operador` salvo é o agent_id; para api4com é o ramal
+                    const match = e.provider === "3cplus"
+                      ? (voipLookup.byAgent[key] ?? voipLookup.byOperador[key])
+                      : (voipLookup.byOperador[key] ?? voipLookup.byAgent[key]);
+                    const ramal = match?.ramal ?? key;
+                    const apelido = match?.apelido;
                     return (
                       <span className="text-[10px] text-muted-foreground">
-                        • Ramal {e.operador}{apelido ? ` — ${apelido}` : ""}
+                        • Ramal {ramal}{apelido ? ` — ${apelido}` : ""}
                       </span>
                     );
                   })()}

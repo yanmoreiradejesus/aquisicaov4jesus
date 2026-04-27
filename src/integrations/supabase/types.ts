@@ -805,6 +805,7 @@ export type Database = {
       }
       voip_accounts: {
         Row: {
+          agent_id: string | null
           apelido: string | null
           ativo: boolean
           created_at: string
@@ -815,6 +816,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          agent_id?: string | null
           apelido?: string | null
           ativo?: boolean
           created_at?: string
@@ -825,6 +827,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          agent_id?: string | null
           apelido?: string | null
           ativo?: boolean
           created_at?: string

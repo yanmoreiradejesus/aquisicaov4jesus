@@ -38,6 +38,7 @@ interface VoipAccount {
   operador_id: string;
   apelido: string | null;
   ativo: boolean;
+  agent_id: string | null;
 }
 
 interface ProfileLite {
@@ -58,6 +59,7 @@ export const AdminVoipAccountsCard = () => {
   const [provider, setProvider] = useState("api4com");
   const [operadorId, setOperadorId] = useState("");
   const [apelido, setApelido] = useState("");
+  const [agentId, setAgentId] = useState("");
   const [ativo, setAtivo] = useState(true);
 
   const fetchAll = async () => {
@@ -82,6 +84,7 @@ export const AdminVoipAccountsCard = () => {
     setProvider("api4com");
     setOperadorId("");
     setApelido("");
+    setAgentId("");
     setAtivo(true);
   };
 
@@ -90,12 +93,17 @@ export const AdminVoipAccountsCard = () => {
       toast.error("Selecione um usuário e informe o Operador ID");
       return;
     }
+    if (provider === "3cplus" && !agentId.trim()) {
+      toast.error("Para 3CPlus, informe também o Agent ID");
+      return;
+    }
     setSaving(true);
     const { error } = await supabase.from("voip_accounts").insert({
       user_id: userId,
       provider,
       operador_id: operadorId.trim(),
       apelido: apelido.trim() || null,
+      agent_id: provider === "3cplus" ? agentId.trim() : null,
       ativo,
     });
     setSaving(false);
@@ -155,7 +163,8 @@ export const AdminVoipAccountsCard = () => {
               <TableRow>
                 <TableHead>Usuário</TableHead>
                 <TableHead>Provider</TableHead>
-                <TableHead>Operador ID</TableHead>
+                <TableHead>Operador ID (Ramal)</TableHead>
+                <TableHead>Agent ID (3CPlus)</TableHead>
                 <TableHead>Apelido</TableHead>
                 <TableHead>Ativo</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
@@ -180,6 +189,9 @@ export const AdminVoipAccountsCard = () => {
                       <Badge variant="outline">{acc.provider}</Badge>
                     </TableCell>
                     <TableCell className="font-mono text-sm">{acc.operador_id}</TableCell>
+                    <TableCell className="font-mono text-sm text-muted-foreground">
+                      {acc.agent_id || "—"}
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {acc.apelido || "—"}
                     </TableCell>
@@ -233,16 +245,31 @@ export const AdminVoipAccountsCard = () => {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Operador ID *</Label>
+              <Label>Operador ID (Ramal) *</Label>
               <Input
                 value={operadorId}
                 onChange={(e) => setOperadorId(e.target.value)}
-                placeholder="Ex: login/ramal do operador no painel da API4com"
+                placeholder={provider === "3cplus" ? "Ex: 7777 (ramal SIP)" : "Ex: login/ramal do operador no painel da API4com"}
               />
               <p className="text-xs text-muted-foreground">
-                É o identificador que vem no payload do webhook (campo "operador").
+                {provider === "3cplus"
+                  ? "Ramal SIP usado para discar (ex: 7777, 9999)."
+                  : "Identificador que vem no payload do webhook (campo \"operador\")."}
               </p>
             </div>
+            {provider === "3cplus" && (
+              <div className="space-y-2">
+                <Label>Agent ID 3CPlus *</Label>
+                <Input
+                  value={agentId}
+                  onChange={(e) => setAgentId(e.target.value)}
+                  placeholder="Ex: 198934"
+                />
+                <p className="text-xs text-muted-foreground">
+                  ID interno do usuário na 3CPlus. Encontre na URL ao editar o usuário no painel (ex: /users/<b>198934</b>/edit). É o que vem nos webhooks de chamada.
+                </p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Apelido (opcional)</Label>
               <Input

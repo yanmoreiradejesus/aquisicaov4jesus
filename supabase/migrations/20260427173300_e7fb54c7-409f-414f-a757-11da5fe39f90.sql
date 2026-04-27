@@ -1,0 +1,2 @@
+ALTER TABLE public.voip_accounts ADD COLUMN IF NOT EXISTS agent_id TEXT;
+COMMENT ON COLUMN public.voip_accounts.agent_id IS 'ID interno do agente na 3CPlus (diferente do ramal SIP). Encontrado na URL ao editar o usuário na 3CPlus.';
