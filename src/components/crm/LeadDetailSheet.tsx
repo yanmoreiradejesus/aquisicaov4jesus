@@ -417,6 +417,26 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
               )}
               <HoverEditField label="Descrição" value={form.descricao ?? ""} onChange={(v) => set("descricao", v)} multiline />
               <HoverEditField label="Notas internas" value={form.notas ?? ""} onChange={(v) => set("notas", v)} multiline />
+
+              <div className="group flex items-start justify-between gap-3 py-2 border-b border-border/30 last:border-0">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1">
+                    Data de cadastro (origem)
+                  </p>
+                  <Input
+                    type="datetime-local"
+                    value={form.data_criacao_origem ? String(form.data_criacao_origem).slice(0, 16) : ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      set("data_criacao_origem", v ? new Date(v).toISOString() : null);
+                    }}
+                    className="h-8 text-sm"
+                  />
+                  <p className="text-[10px] text-muted-foreground/70 mt-1">
+                    Data original do lead (vinda da planilha). Usada nos filtros de data.
+                  </p>
+                </div>
+              </div>
             </div>
           </TabsContent>
 
