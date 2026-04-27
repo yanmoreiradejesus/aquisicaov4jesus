@@ -167,9 +167,6 @@ export function LeadCallEventsList({ leadId }: Props) {
                   <Badge variant="outline" className={`text-[10px] ${providerLabel(e.provider).className}`}>
                     {providerLabel(e.provider).label}
                   </Badge>
-                  <span className="text-[10px] text-muted-foreground">
-                    Duração: {formatDuration(e.duracao_seg)}
-                  </span>
                   {e.operador && (() => {
                     const key = String(e.operador);
                     // Para 3cplus o `operador` salvo é o agent_id; para api4com é o ramal
@@ -179,11 +176,25 @@ export function LeadCallEventsList({ leadId }: Props) {
                     const ramal = match?.ramal ?? key;
                     const apelido = match?.apelido;
                     return (
-                      <span className="text-[10px] text-muted-foreground">
-                        • Ramal {ramal}{apelido ? ` — ${apelido}` : ""}
-                      </span>
+                      <>
+                        {apelido && (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] font-semibold bg-primary/15 text-primary border-primary/40"
+                          >
+                            <User className="h-2.5 w-2.5 mr-1" />
+                            {apelido}
+                          </Badge>
+                        )}
+                        <span className="text-[10px] text-muted-foreground">
+                          Ramal {ramal}
+                        </span>
+                      </>
                     );
                   })()}
+                  <span className="text-[10px] text-muted-foreground">
+                    • Duração: {formatDuration(e.duracao_seg)}
+                  </span>
                   {filter === "all" && vendorName && (
                     <span className="inline-flex items-center gap-1 text-[10px] text-primary/80">
                       <User className="h-2.5 w-2.5" />
