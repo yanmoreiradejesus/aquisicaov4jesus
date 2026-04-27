@@ -49,6 +49,13 @@ export const LeadDialog = ({ open, onOpenChange, lead, onSave, onDelete }: Props
       else payload.valor_pago = Number(payload.valor_pago);
       if (!payload.data_aquisicao) payload.data_aquisicao = null;
       if (!payload.data_criacao_origem) payload.data_criacao_origem = null;
+      // created_at: converte datetime-local para ISO; se vazio em novo lead, deixa o default do banco
+      if (payload.created_at) {
+        const s = String(payload.created_at);
+        payload.created_at = s.length <= 16 ? new Date(s).toISOString() : s;
+      } else {
+        delete payload.created_at;
+      }
       await onSave(payload);
       onOpenChange(false);
     } finally {
@@ -160,6 +167,14 @@ export const LeadDialog = ({ open, onOpenChange, lead, onSave, onDelete }: Props
               type="datetime-local"
               value={form.data_criacao_origem ? String(form.data_criacao_origem).slice(0, 16) : ""}
               onChange={(e) => set("data_criacao_origem", e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Data de cadastro no sistema</Label>
+            <Input
+              type="datetime-local"
+              value={form.created_at ? String(form.created_at).slice(0, 16) : ""}
+              onChange={(e) => set("created_at", e.target.value)}
             />
           </div>
           <div className="space-y-1.5 md:col-span-2">
