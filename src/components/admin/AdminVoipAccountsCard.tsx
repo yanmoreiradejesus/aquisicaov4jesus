@@ -81,12 +81,29 @@ export const AdminVoipAccountsCard = () => {
   const profileMap = new Map(profiles.map((p) => [p.id, p]));
 
   const resetForm = () => {
+    setEditingId(null);
     setUserId("");
     setProvider("api4com");
     setOperadorId("");
     setApelido("");
     setAgentId("");
     setAtivo(true);
+  };
+
+  const openCreate = () => {
+    resetForm();
+    setDialogOpen(true);
+  };
+
+  const openEdit = (acc: VoipAccount) => {
+    setEditingId(acc.id);
+    setUserId(acc.user_id);
+    setProvider(acc.provider);
+    setOperadorId(acc.operador_id);
+    setApelido(acc.apelido ?? "");
+    setAgentId(acc.agent_id ?? "");
+    setAtivo(acc.ativo);
+    setDialogOpen(true);
   };
 
   const handleSave = async () => {
@@ -99,20 +116,23 @@ export const AdminVoipAccountsCard = () => {
       return;
     }
     setSaving(true);
-    const { error } = await supabase.from("voip_accounts").insert({
+    const payload = {
       user_id: userId,
       provider,
       operador_id: operadorId.trim(),
       apelido: apelido.trim() || null,
       agent_id: provider === "3cplus" ? agentId.trim() : null,
       ativo,
-    });
+    };
+    const { error } = editingId
+      ? await supabase.from("voip_accounts").update(payload).eq("id", editingId)
+      : await supabase.from("voip_accounts").insert(payload);
     setSaving(false);
     if (error) {
       toast.error("Erro ao salvar", { description: error.message });
       return;
     }
-    toast.success("Conta VoIP cadastrada");
+    toast.success(editingId ? "Conta VoIP atualizada" : "Conta VoIP cadastrada");
     setDialogOpen(false);
     resetForm();
     fetchAll();
