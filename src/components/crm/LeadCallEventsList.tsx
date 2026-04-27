@@ -173,23 +173,15 @@ export function LeadCallEventsList({ leadId }: Props) {
                     const match = e.provider === "3cplus"
                       ? (voipLookup.byAgent[key] ?? voipLookup.byOperador[key])
                       : (voipLookup.byOperador[key] ?? voipLookup.byAgent[key]);
-                    const ramal = match?.ramal ?? key;
                     const apelido = match?.apelido;
                     return (
-                      <>
-                        {apelido && (
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] font-semibold bg-primary/15 text-primary border-primary/40"
-                          >
-                            <User className="h-2.5 w-2.5 mr-1" />
-                            {apelido}
-                          </Badge>
-                        )}
-                        <span className="text-[10px] text-muted-foreground">
-                          Ramal {ramal}
-                        </span>
-                      </>
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] font-semibold bg-primary/15 text-primary border-primary/40"
+                      >
+                        <User className="h-2.5 w-2.5 mr-1" />
+                        {apelido ?? `#${key}`}
+                      </Badge>
                     );
                   })()}
                   <span className="text-[10px] text-muted-foreground">
