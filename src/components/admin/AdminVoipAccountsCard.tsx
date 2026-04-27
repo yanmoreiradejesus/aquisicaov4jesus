@@ -245,16 +245,31 @@ export const AdminVoipAccountsCard = () => {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Operador ID *</Label>
+              <Label>Operador ID (Ramal) *</Label>
               <Input
                 value={operadorId}
                 onChange={(e) => setOperadorId(e.target.value)}
-                placeholder="Ex: login/ramal do operador no painel da API4com"
+                placeholder={provider === "3cplus" ? "Ex: 7777 (ramal SIP)" : "Ex: login/ramal do operador no painel da API4com"}
               />
               <p className="text-xs text-muted-foreground">
-                É o identificador que vem no payload do webhook (campo "operador").
+                {provider === "3cplus"
+                  ? "Ramal SIP usado para discar (ex: 7777, 9999)."
+                  : "Identificador que vem no payload do webhook (campo \"operador\")."}
               </p>
             </div>
+            {provider === "3cplus" && (
+              <div className="space-y-2">
+                <Label>Agent ID 3CPlus *</Label>
+                <Input
+                  value={agentId}
+                  onChange={(e) => setAgentId(e.target.value)}
+                  placeholder="Ex: 198934"
+                />
+                <p className="text-xs text-muted-foreground">
+                  ID interno do usuário na 3CPlus. Encontre na URL ao editar o usuário no painel (ex: /users/<b>198934</b>/edit). É o que vem nos webhooks de chamada.
+                </p>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Apelido (opcional)</Label>
               <Input
