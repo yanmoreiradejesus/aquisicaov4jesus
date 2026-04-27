@@ -249,9 +249,9 @@ Deno.serve(async (req) => {
         if (acc?.user_id) userId = acc.user_id;
       }
 
-      // Gravação
+      // Gravação (pode ser pulado para acelerar)
       let gravacaoUrl = row.gravacao_url ?? parsed.gravacaoUrl;
-      if (!gravacaoUrl && parsed.recorded && parsed.callId && token) {
+      if (!skipRecordings && !gravacaoUrl && parsed.recorded && parsed.callId && token) {
         gravacaoUrl = await fetch3CPlusRecordingUrl(parsed.callId, token);
         if (gravacaoUrl) recordings++;
       }
