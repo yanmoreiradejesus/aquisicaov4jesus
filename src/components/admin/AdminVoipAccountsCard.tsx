@@ -53,6 +53,7 @@ export const AdminVoipAccountsCard = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // form
   const [userId, setUserId] = useState("");
