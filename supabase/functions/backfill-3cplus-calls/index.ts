@@ -78,7 +78,7 @@ function extract3CPlusEvent(payload: any): { eventType: string; data: any } {
 
 function buildCallEventRow(eventType: string, data: any, payload: any) {
   const callId = (pick<string | number>(data, [
-    "telephony_id", "_id", "id", "call_id", "uuid", "uniqueid", "callId", "sid",
+    "_id", "telephony_id", "id", "call_id", "uuid", "uniqueid", "callId", "sid",
   ]))?.toString() ?? null;
   const telefoneRaw = (pick<string | number>(data, [
     "number", "phone", "mailing_data.phone", "telephone", "to", "destination",
