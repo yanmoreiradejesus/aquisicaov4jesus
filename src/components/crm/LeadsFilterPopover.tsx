@@ -93,6 +93,7 @@ export const LeadsFilterPopover = ({ filters, onChange, leads }: Props) => {
             to={filters.dateTo}
             onFrom={(v) => update({ dateFrom: v })}
             onTo={(v) => update({ dateTo: v })}
+            onRangeChange={(f, t) => update({ dateFrom: f, dateTo: t })}
           />
 
           <FilterSelect
