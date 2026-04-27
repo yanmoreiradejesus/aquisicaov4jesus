@@ -16,6 +16,15 @@ interface Props {
   leadId: string;
 }
 
+function audioSrc(e: CallEvent): string | null {
+  if (!e.gravacao_url && !e.call_id) return null;
+  // 3CPlus exige Bearer token — usar proxy backend
+  if (e.provider === "3cplus" && e.call_id) {
+    return `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/play-3cplus-recording?call_id=${encodeURIComponent(e.call_id)}`;
+  }
+  return e.gravacao_url;
+}
+
 function formatDuration(sec: number | null): string {
   if (!sec || sec <= 0) return "—";
   const m = Math.floor(sec / 60);
