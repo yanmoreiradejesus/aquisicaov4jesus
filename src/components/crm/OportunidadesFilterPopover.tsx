@@ -103,6 +103,7 @@ export const OportunidadesFilterPopover = ({ filters, onChange, oportunidades }:
             to={filters.leadDateTo}
             onFrom={(v) => update({ leadDateFrom: v })}
             onTo={(v) => update({ leadDateTo: v })}
+            onRangeChange={(f, t) => update({ leadDateFrom: f, leadDateTo: t })}
           />
 
           <div>
