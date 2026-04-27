@@ -108,36 +108,20 @@ function buildCallEventRow(eventType: string, data: any, payload: any) {
   };
 }
 
-async function fetch3CPlusRecordingUrl(telephonyId: string, token: string): Promise<string | null> {
-  const baseUrls = ["https://app.3c.plus/api/v1", "https://api.3c.plus/v1"];
-  const paths = [
-    `/calls/${telephonyId}/recording`, `/call-history/${telephonyId}/recording`,
-    `/recordings/${telephonyId}`, `/calls/${telephonyId}`,
-  ];
-  for (const base of baseUrls) {
-    for (const path of paths) {
-      try {
-        const res = await fetch(`${base}${path}`, {
-          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-        });
-        if (!res.ok) continue;
-        const ct = res.headers.get("content-type") ?? "";
-        if (ct.includes("audio/") || ct.includes("application/octet-stream")) {
-          return `${base}${path}`;
-        }
-        const body = await res.json().catch(() => null);
-        if (!body) continue;
-        const url = pick<string>(body, [
-          "recording_url", "url", "recording", "audio_url",
-          "data.recording_url", "data.url", "data.recording",
-        ]) ?? null;
-        if (url) return url;
-      } catch (e) {
-        console.warn(`[3cplus] fetch recording ${base}${path} failed:`, e);
-      }
-    }
+async function fetch3CPlusRecordingUrl(callId: string, token: string): Promise<string | null> {
+  const url = `https://app.3c.plus/api/v1/calls/${callId}/recording`;
+  try {
+    const res = await fetch(url, {
+      method: "HEAD",
+      headers: { Authorization: `Bearer ${token}` },
+      redirect: "follow",
+    });
+    if (res.ok || res.status === 302) return url;
+    return null;
+  } catch (e) {
+    console.warn(`[3cplus] HEAD recording failed:`, e);
+    return null;
   }
-  return null;
 }
 
 Deno.serve(async (req) => {
