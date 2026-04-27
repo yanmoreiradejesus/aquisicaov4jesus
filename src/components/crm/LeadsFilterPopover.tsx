@@ -87,23 +87,13 @@ export const LeadsFilterPopover = ({ filters, onChange, leads }: Props) => {
         </div>
 
         <div className="space-y-3">
-          <div>
-            <Label className="text-xs text-muted-foreground">Data de criação</Label>
-            <div className="grid grid-cols-2 gap-2 mt-1">
-              <Input
-                type="date"
-                value={filters.dateFrom}
-                onChange={(e) => update({ dateFrom: e.target.value })}
-                className="h-9"
-              />
-              <Input
-                type="date"
-                value={filters.dateTo}
-                onChange={(e) => update({ dateTo: e.target.value })}
-                className="h-9"
-              />
-            </div>
-          </div>
+          <DateRange
+            label="Data de criação do lead"
+            from={filters.dateFrom}
+            to={filters.dateTo}
+            onFrom={(v) => update({ dateFrom: v })}
+            onTo={(v) => update({ dateTo: v })}
+          />
 
           <FilterSelect
             label="Etapa"
