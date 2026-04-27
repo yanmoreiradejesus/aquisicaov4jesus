@@ -236,12 +236,14 @@ export const DateRange = ({
   to,
   onFrom,
   onTo,
+  onRangeChange,
 }: {
   label: string;
   from: string;
   to: string;
   onFrom: (v: string) => void;
   onTo: (v: string) => void;
+  onRangeChange?: (from: string, to: string) => void;
 }) => {
   const presets = useMemo(buildDatePresets, []);
   const activePreset = useMemo(() => {
@@ -252,17 +254,20 @@ export const DateRange = ({
     })?.key ?? "custom";
   }, [from, to, presets]);
 
+  const setBoth = (f: string, t: string) => {
+    if (onRangeChange) onRangeChange(f, t);
+    else { onFrom(f); onTo(t); }
+  };
+
   const apply = (key: string) => {
     if (key === "clear") {
-      onFrom("");
-      onTo("");
+      setBoth("", "");
       return;
     }
     const p = presets.find((x) => x.key === key);
     if (!p) return;
     const [f, t] = p.range();
-    onFrom(f);
-    onTo(t);
+    setBoth(f, t);
   };
 
   return (
