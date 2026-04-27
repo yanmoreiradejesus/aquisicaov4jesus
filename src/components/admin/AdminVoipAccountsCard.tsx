@@ -189,6 +189,9 @@ export const AdminVoipAccountsCard = () => {
                       <Badge variant="outline">{acc.provider}</Badge>
                     </TableCell>
                     <TableCell className="font-mono text-sm">{acc.operador_id}</TableCell>
+                    <TableCell className="font-mono text-sm text-muted-foreground">
+                      {acc.agent_id || "—"}
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {acc.apelido || "—"}
                     </TableCell>
