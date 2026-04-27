@@ -163,7 +163,8 @@ export const AdminVoipAccountsCard = () => {
               <TableRow>
                 <TableHead>Usuário</TableHead>
                 <TableHead>Provider</TableHead>
-                <TableHead>Operador ID</TableHead>
+                <TableHead>Operador ID (Ramal)</TableHead>
+                <TableHead>Agent ID (3CPlus)</TableHead>
                 <TableHead>Apelido</TableHead>
                 <TableHead>Ativo</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
