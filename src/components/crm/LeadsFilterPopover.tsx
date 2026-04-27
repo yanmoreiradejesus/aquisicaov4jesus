@@ -1,11 +1,11 @@
 import { useMemo } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Filter, X } from "lucide-react";
 import { LEAD_ETAPAS } from "@/hooks/useCrmLeads";
+import { DateRange } from "@/components/crm/OportunidadesFilterPopover";
 
 export interface LeadFilters {
   dateFrom: string;
