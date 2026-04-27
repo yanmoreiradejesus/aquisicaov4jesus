@@ -165,7 +165,15 @@ export function LeadCallEventsList({ leadId }: Props) {
                 </div>
                 {(() => {
                   const src = audioSrc(e);
+                  const tooShort = (e.duracao_seg ?? 0) < 3;
                   if (!src) return null;
+                  if (tooShort) {
+                    return (
+                      <div className="mt-2 text-[10px] text-muted-foreground italic">
+                        Sem áudio (chamada muito curta)
+                      </div>
+                    );
+                  }
                   return (
                     <>
                       <audio
@@ -181,7 +189,8 @@ export function LeadCallEventsList({ leadId }: Props) {
               </div>
               {(() => {
                 const src = audioSrc(e);
-                if (!src || navigator.userAgent.includes("Mobi")) return null;
+                const tooShort = (e.duracao_seg ?? 0) < 3;
+                if (!src || tooShort || navigator.userAgent.includes("Mobi")) return null;
                 return (
                   <a
                     href={src}

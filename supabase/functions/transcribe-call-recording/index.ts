@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
 
     const { data: event, error: fetchErr } = await admin
       .from("crm_call_events")
-      .select("id, gravacao_url, transcricao")
+      .select("id, gravacao_url, transcricao, duracao_seg")
       .eq("id", eventId)
       .single();
 
@@ -98,8 +98,38 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Pula chamadas muito curtas (sem áudio útil)
+    if ((event.duracao_seg ?? 0) < 3) {
+      await admin
+        .from("crm_call_events")
+        .update({ transcricao_status: "sem_audio", transcricao_error: null })
+        .eq("id", eventId);
+      return new Response(JSON.stringify({ ok: true, skipped: "chamada muito curta" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     console.log(`[transcribe] event=${eventId} baixando ${event.gravacao_url}`);
-    const { base64, mime } = await downloadAudioAsBase64(event.gravacao_url);
+    let base64: string;
+    let mime: string;
+    try {
+      const r = await downloadAudioAsBase64(event.gravacao_url);
+      base64 = r.base64;
+      mime = r.mime;
+    } catch (downloadErr) {
+      const msg = downloadErr instanceof Error ? downloadErr.message : String(downloadErr);
+      // 422 da 3CPlus = sem gravação disponível, não é erro real
+      if (msg.includes("422")) {
+        await admin
+          .from("crm_call_events")
+          .update({ transcricao_status: "sem_audio", transcricao_error: null })
+          .eq("id", eventId);
+        return new Response(JSON.stringify({ ok: true, skipped: "sem gravação no provider" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      throw downloadErr;
+    }
     console.log(`[transcribe] event=${eventId} áudio baixado (${base64.length} chars b64, mime=${mime})`);
 
     const transcricao = await transcribeWithGemini(base64, mime);
