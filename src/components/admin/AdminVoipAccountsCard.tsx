@@ -220,7 +220,10 @@ export const AdminVoipAccountsCard = () => {
                       <Switch checked={acc.ativo} onCheckedChange={() => toggleAtivo(acc)} />
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button size="sm" variant="ghost" onClick={() => handleDelete(acc.id)}>
+                      <Button size="sm" variant="ghost" onClick={() => openEdit(acc)} title="Editar">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => handleDelete(acc.id)} title="Excluir">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </TableCell>
