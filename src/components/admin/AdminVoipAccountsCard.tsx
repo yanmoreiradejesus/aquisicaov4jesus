@@ -38,6 +38,7 @@ interface VoipAccount {
   operador_id: string;
   apelido: string | null;
   ativo: boolean;
+  agent_id: string | null;
 }
 
 interface ProfileLite {
