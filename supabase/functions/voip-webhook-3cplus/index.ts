@@ -250,6 +250,16 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Política: descartar chamadas que não correspondem a nenhum lead do CRM.
+    // Respondemos 200 para o 3CPlus não reenviar, mas não persistimos nada.
+    if (!leadId) {
+      console.log("[3cplus] descartado — sem lead match:", parsed.telefoneNorm);
+      return new Response(
+        JSON.stringify({ ok: true, skipped: true, reason: "no_lead_match" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     // Resolver user_id via voip_accounts
     let userId: string | null = null;
     if (parsed.operador) {
