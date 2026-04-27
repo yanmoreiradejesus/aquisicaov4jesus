@@ -184,13 +184,19 @@ Deno.serve(async (req) => {
 
   const token = Deno.env.get("THREECPLUS_API_TOKEN");
 
-  // Busca todos os registros 3cplus
+  // Parâmetros opcionais via query string
+  const url = new URL(req.url);
+  const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "200", 10), 500);
+  const offset = parseInt(url.searchParams.get("offset") ?? "0", 10);
+  const skipRecordings = url.searchParams.get("skip_recordings") === "1";
+
+  // Busca lote de registros 3cplus
   const { data: rows, error: selErr } = await supabase
     .from("crm_call_events")
     .select("id, raw_payload, gravacao_url, lead_id, user_id")
     .eq("provider", "3cplus")
     .order("created_at", { ascending: false })
-    .limit(1000);
+    .range(offset, offset + limit - 1);
 
   if (selErr) {
     return new Response(JSON.stringify({ error: selErr.message }), {
