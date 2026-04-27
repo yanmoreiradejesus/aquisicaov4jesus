@@ -29,7 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Phone, Plus, Trash2 } from "lucide-react";
+import { Phone, Plus, Trash2, Pencil } from "lucide-react";
 
 interface VoipAccount {
   id: string;
