@@ -129,39 +129,32 @@ Deno.serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  // Autenticação: precisa de usuário admin
+  // Autenticação: aceita (a) service role key OU (b) JWT de usuário admin
   const authHeader = req.headers.get("Authorization") ?? "";
   const jwt = authHeader.replace(/^Bearer\s+/i, "");
-  if (!jwt) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey);
+
+  let authorized = false;
+  if (jwt && jwt === serviceRoleKey) {
+    authorized = true;
+  } else if (jwt) {
+    const { data: userData } = await supabase.auth.getUser(jwt);
+    if (userData?.user) {
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userData.user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      if (roles) authorized = true;
+    }
   }
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
-
-  const { data: userData, error: userErr } = await supabase.auth.getUser(jwt);
-  if (userErr || !userData?.user) {
+  if (!authorized) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
-
-  const { data: roles } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", userData.user.id)
-    .eq("role", "admin")
-    .maybeSingle();
-
-  if (!roles) {
-    return new Response(JSON.stringify({ error: "Forbidden — admin only" }), {
-      status: 403,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
