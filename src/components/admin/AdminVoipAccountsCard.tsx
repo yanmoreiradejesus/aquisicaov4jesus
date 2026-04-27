@@ -167,7 +167,7 @@ export const AdminVoipAccountsCard = () => {
         <CardTitle className="flex items-center gap-2 text-base">
           <Phone className="h-4 w-4" /> Contas VoIP da equipe
         </CardTitle>
-        <Button size="sm" onClick={() => setDialogOpen(true)}>
+        <Button size="sm" onClick={openCreate}>
           <Plus className="h-4 w-4 mr-2" /> Adicionar conta
         </Button>
       </CardHeader>
