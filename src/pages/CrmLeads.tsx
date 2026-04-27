@@ -60,10 +60,11 @@ const CrmLeads = () => {
     const q = search.trim().toLowerCase();
     return leads.filter((l: any) => {
       if (q && ![l.nome, l.email, l.empresa, l.telefone].some((v) => v?.toLowerCase().includes(q))) return false;
-      if (filters.dateFrom && new Date(l.created_at) < new Date(filters.dateFrom)) return false;
+      const dataRef = l.data_criacao_origem || l.created_at;
+      if (filters.dateFrom && new Date(dataRef) < new Date(filters.dateFrom)) return false;
       if (filters.dateTo) {
         const end = new Date(filters.dateTo); end.setHours(23, 59, 59, 999);
-        if (new Date(l.created_at) > end) return false;
+        if (new Date(dataRef) > end) return false;
       }
       if (filters.etapa !== "all" && l.etapa !== filters.etapa) return false;
       if (filters.origem !== "all" && l.origem !== filters.origem) return false;
