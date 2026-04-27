@@ -59,6 +59,7 @@ export const AdminVoipAccountsCard = () => {
   const [provider, setProvider] = useState("api4com");
   const [operadorId, setOperadorId] = useState("");
   const [apelido, setApelido] = useState("");
+  const [agentId, setAgentId] = useState("");
   const [ativo, setAtivo] = useState(true);
 
   const fetchAll = async () => {
