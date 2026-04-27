@@ -8,8 +8,6 @@ import { Filter, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface OportunidadeFilters {
-  opDateFrom: string;
-  opDateTo: string;
   leadDateFrom: string;
   leadDateTo: string;
   responsavel: string;
@@ -19,8 +17,6 @@ export interface OportunidadeFilters {
 }
 
 export const EMPTY_OP_FILTERS: OportunidadeFilters = {
-  opDateFrom: "",
-  opDateTo: "",
   leadDateFrom: "",
   leadDateTo: "",
   responsavel: "all",
@@ -102,14 +98,7 @@ export const OportunidadesFilterPopover = ({ filters, onChange, oportunidades }:
 
         <div className="space-y-3">
           <DateRange
-            label="Criação da oportunidade"
-            from={filters.opDateFrom}
-            to={filters.opDateTo}
-            onFrom={(v) => update({ opDateFrom: v })}
-            onTo={(v) => update({ opDateTo: v })}
-          />
-          <DateRange
-            label="Criação do lead"
+            label="Data de criação do lead"
             from={filters.leadDateFrom}
             to={filters.leadDateTo}
             onFrom={(v) => update({ leadDateFrom: v })}
@@ -172,7 +161,7 @@ const fmt = (d: Date) => {
   return `${y}-${m}-${day}`;
 };
 
-const buildPresets = (): Array<{ key: string; label: string; range: () => [string, string] }> => {
+export const buildDatePresets = (): Array<{ key: string; label: string; range: () => [string, string] }> => {
   const today = new Date();
   const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
   return [
@@ -241,7 +230,7 @@ const buildPresets = (): Array<{ key: string; label: string; range: () => [strin
   ];
 };
 
-const DateRange = ({
+export const DateRange = ({
   label,
   from,
   to,
@@ -254,7 +243,7 @@ const DateRange = ({
   onFrom: (v: string) => void;
   onTo: (v: string) => void;
 }) => {
-  const presets = useMemo(buildPresets, []);
+  const presets = useMemo(buildDatePresets, []);
   const activePreset = useMemo(() => {
     if (!from && !to) return "";
     return presets.find((p) => {
