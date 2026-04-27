@@ -167,55 +167,39 @@ export function buildCallEventRow(eventType: string, data: any, payload: any) {
 }
 
 /**
- * Tenta buscar a URL da gravação via API REST da 3CPlus usando o telephony_id.
- * Tenta múltiplos endpoints conhecidos — retorna a primeira URL válida encontrada.
+ * Retorna a URL da gravação na API da 3CPlus para um call_id (ObjectId).
+ * A URL exige Bearer token para download — quem baixa precisa enviar
+ * Authorization: Bearer THREECPLUS_API_TOKEN.
  */
-export async function fetch3CPlusRecordingUrl(
-  telephonyId: string,
+export function build3CPlusRecordingUrl(callId: string): string {
+  return `https://app.3c.plus/api/v1/calls/${callId}/recording`;
+}
+
+/**
+ * Verifica se a gravação existe na API da 3CPlus (HEAD request).
+ */
+export async function check3CPlusRecording(
+  callId: string,
   token: string,
 ): Promise<string | null> {
-  const baseUrls = [
-    "https://app.3c.plus/api/v1",
-    "https://api.3c.plus/v1",
-  ];
-  const paths = [
-    `/calls/${telephonyId}/recording`,
-    `/call-history/${telephonyId}/recording`,
-    `/recordings/${telephonyId}`,
-    `/calls/${telephonyId}`,
-  ];
-
-  for (const base of baseUrls) {
-    for (const path of paths) {
-      try {
-        const res = await fetch(`${base}${path}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
-        });
-        if (!res.ok) continue;
-        const ct = res.headers.get("content-type") ?? "";
-        if (ct.includes("audio/") || ct.includes("application/octet-stream")) {
-          // É o próprio áudio — retornamos a URL acessada (mas precisa de auth, então não serve direto)
-          // Nesse caso, gravamos a URL com o ID; o download real precisa do token.
-          return `${base}${path}`;
-        }
-        const body = await res.json().catch(() => null);
-        if (!body) continue;
-        const url =
-          pick<string>(body, [
-            "recording_url", "url", "recording", "audio_url",
-            "data.recording_url", "data.url", "data.recording",
-          ]) ?? null;
-        if (url) return url;
-      } catch (e) {
-        console.warn(`[3cplus] fetch recording ${base}${path} failed:`, e);
-      }
-    }
+  const url = build3CPlusRecordingUrl(callId);
+  try {
+    const res = await fetch(url, {
+      method: "HEAD",
+      headers: { Authorization: `Bearer ${token}` },
+      redirect: "follow",
+    });
+    if (res.ok || res.status === 302) return url;
+    console.warn(`[3cplus] recording HEAD ${callId}: ${res.status}`);
+    return null;
+  } catch (e) {
+    console.warn(`[3cplus] recording HEAD error:`, e);
+    return null;
   }
-  return null;
 }
+
+// Alias para compat com código existente
+export const fetch3CPlusRecordingUrl = check3CPlusRecording;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
