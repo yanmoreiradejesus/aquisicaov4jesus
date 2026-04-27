@@ -29,7 +29,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { Phone, Plus, Trash2 } from "lucide-react";
+import { Phone, Plus, Trash2, Pencil } from "lucide-react";
 
 interface VoipAccount {
   id: string;
@@ -53,6 +53,7 @@ export const AdminVoipAccountsCard = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // form
   const [userId, setUserId] = useState("");
@@ -80,12 +81,29 @@ export const AdminVoipAccountsCard = () => {
   const profileMap = new Map(profiles.map((p) => [p.id, p]));
 
   const resetForm = () => {
+    setEditingId(null);
     setUserId("");
     setProvider("api4com");
     setOperadorId("");
     setApelido("");
     setAgentId("");
     setAtivo(true);
+  };
+
+  const openCreate = () => {
+    resetForm();
+    setDialogOpen(true);
+  };
+
+  const openEdit = (acc: VoipAccount) => {
+    setEditingId(acc.id);
+    setUserId(acc.user_id);
+    setProvider(acc.provider);
+    setOperadorId(acc.operador_id);
+    setApelido(acc.apelido ?? "");
+    setAgentId(acc.agent_id ?? "");
+    setAtivo(acc.ativo);
+    setDialogOpen(true);
   };
 
   const handleSave = async () => {
@@ -98,20 +116,23 @@ export const AdminVoipAccountsCard = () => {
       return;
     }
     setSaving(true);
-    const { error } = await supabase.from("voip_accounts").insert({
+    const payload = {
       user_id: userId,
       provider,
       operador_id: operadorId.trim(),
       apelido: apelido.trim() || null,
       agent_id: provider === "3cplus" ? agentId.trim() : null,
       ativo,
-    });
+    };
+    const { error } = editingId
+      ? await supabase.from("voip_accounts").update(payload).eq("id", editingId)
+      : await supabase.from("voip_accounts").insert(payload);
     setSaving(false);
     if (error) {
       toast.error("Erro ao salvar", { description: error.message });
       return;
     }
-    toast.success("Conta VoIP cadastrada");
+    toast.success(editingId ? "Conta VoIP atualizada" : "Conta VoIP cadastrada");
     setDialogOpen(false);
     resetForm();
     fetchAll();
@@ -146,7 +167,7 @@ export const AdminVoipAccountsCard = () => {
         <CardTitle className="flex items-center gap-2 text-base">
           <Phone className="h-4 w-4" /> Contas VoIP da equipe
         </CardTitle>
-        <Button size="sm" onClick={() => setDialogOpen(true)}>
+        <Button size="sm" onClick={openCreate}>
           <Plus className="h-4 w-4 mr-2" /> Adicionar conta
         </Button>
       </CardHeader>
@@ -199,7 +220,10 @@ export const AdminVoipAccountsCard = () => {
                       <Switch checked={acc.ativo} onCheckedChange={() => toggleAtivo(acc)} />
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button size="sm" variant="ghost" onClick={() => handleDelete(acc.id)}>
+                      <Button size="sm" variant="ghost" onClick={() => openEdit(acc)} title="Editar">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => handleDelete(acc.id)} title="Excluir">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </TableCell>
@@ -214,7 +238,7 @@ export const AdminVoipAccountsCard = () => {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Adicionar conta VoIP</DialogTitle>
+            <DialogTitle>{editingId ? "Editar conta VoIP" : "Adicionar conta VoIP"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
