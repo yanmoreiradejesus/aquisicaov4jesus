@@ -238,7 +238,7 @@ export const AdminVoipAccountsCard = () => {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Adicionar conta VoIP</DialogTitle>
+            <DialogTitle>{editingId ? "Editar conta VoIP" : "Adicionar conta VoIP"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
