@@ -1,75 +1,50 @@
-## Diagnóstico confirmado
+## Plano de implementação — Integração 3CPlus
 
-O problema não é só a gravação: os eventos da 3CPlus estão entrando no banco, mas estão sendo salvos praticamente vazios.
+### 1. Salvar o token da 3CPlus de forma segura
+- Vou armazenar o token (`GUrUQ4yl3...vk21`) como **secret do backend** com o nome `THREECPLUS_API_TOKEN`.
+- O token **não vai ficar no código** nem exposto no frontend. Só as edge functions conseguem ler.
+- Por segurança, recomendo trocar esse token na 3CPlus depois que tudo estiver funcionando, já que ele apareceu no chat.
 
-Hoje acontece isto:
-- o webhook recebe um payload válido da 3CPlus
-- esse payload vem no formato `call-history-was-created -> callHistory`
-- o parser atual não lê esse formato corretamente
-- por isso o sistema grava a chamada sem telefone, sem duração, sem lead e sem link da gravação
-- como a tela do lead só mostra chamadas vinculadas ao `lead_id`, ela acaba aparecendo como se não tivesse vindo absolutamente nada
+### 2. Corrigir o webhook da 3CPlus (`voip-webhook-3cplus`)
+- Detectar o evento real pela chave de topo do payload (`call-history-was-created`, `call-was-connected`, etc.).
+- Extrair corretamente de `callHistory`: telefone, duração, status, operador, `telephony_id`, `recorded`.
+- Salvar `event_type` correto (não mais tudo como `call-was-connected`).
+- Manter `raw_payload` para auditoria.
 
-Também confirmei um segundo ponto:
-- não existe mapeamento de contas VoIP da equipe para `provider = 3cplus`, então o `user_id` das chamadas também não está sendo resolvido
+### 3. Vincular chamada ao lead correto
+- Normalizar telefone (principal + fallback `mailing_data.phone`).
+- Fazer match com `crm_leads.telefone` normalizado.
+- Quando vincular e o evento for final, atualizar `ultimo_contato_telefonico` no lead.
 
-## O que vou implementar
+### 4. Buscar a gravação automaticamente via API da 3CPlus
+- Quando o webhook chegar com `recorded: true` e `telephony_id`, a edge function vai chamar a API da 3CPlus usando o token para baixar o link da gravação.
+- Salvar a URL em `crm_call_events.gravacao_url`.
+- O trigger existente `trigger_transcribe_call_recording` já dispara a transcrição automática a partir daí.
 
-1. Corrigir o webhook da 3CPlus
-- Detectar o nome do evento pela chave de topo do payload.
-- Extrair os dados de `callHistory` corretamente.
-- Salvar os campos certos no evento: telefone, duração, status, operador, identificador da chamada e payload bruto.
+### 5. Backfill dos registros já recebidos
+- Criar uma edge function `backfill-3cplus-calls` (rodada manualmente por admin).
+- Ela vai reprocessar todos os `raw_payload` já salvos:
+  - corrigir telefone, duração, status, `event_type`, `call_id`
+  - vincular `lead_id`
+  - buscar gravação via API quando `recorded: true`
+- Resultado: as chamadas antigas voltam a aparecer no histórico do lead, com áudio quando disponível.
 
-2. Vincular a chamada ao lead correto
-- Usar o telefone principal da chamada e, como fallback, o telefone de `mailing_data.phone`.
-- Normalizar os números e refazer o match com `crm_leads`.
-- Atualizar `ultimo_contato_telefonico` quando a chamada finalizada for vinculada.
+### 6. Mapeamento operador → vendedor (atribuição por user)
+- Garantir que `voip_accounts` aceite `provider = '3cplus'` com `operador_id` igual ao operador retornado pela 3CPlus.
+- Resolver `user_id` da chamada cruzando operador do payload com `voip_accounts`.
+- Card de admin já existe (`AdminVoipAccountsCard`) — confirmar que permite cadastrar contas 3CPlus.
 
-3. Corrigir o tipo do evento salvo
-- Gravar `call-history-was-created` quando esse for o evento real.
-- Evitar continuar classificando tudo como `call-was-connected`.
-- Ajustar a lógica para a listagem do CRM enxergar essas chamadas como eventos finais válidos.
+### O que muda para o usuário final
+- **Chamadas novas**: entram com telefone, duração, status, vendedor e gravação preenchidos automaticamente.
+- **Chamadas antigas**: passam a aparecer no lead correto após o backfill, com áudio recuperado quando disponível.
+- **Transcrição automática** das ligações volta a funcionar.
 
-4. Resolver atribuição por vendedor
-- Ler o operador da 3CPlus a partir do payload real.
-- Mapear esse operador para `voip_accounts` com `provider = 3cplus`.
-- Preparar o backfill de `user_id` para que filtros como “Minhas chamadas” funcionem corretamente.
+### Arquivos que serão alterados/criados
+- `supabase/functions/voip-webhook-3cplus/index.ts` (corrigir parser + buscar gravação)
+- `supabase/functions/backfill-3cplus-calls/index.ts` (novo — reprocessa histórico)
+- Pequeno botão admin para disparar o backfill (opcional, posso usar curl/edge call direto)
 
-5. Backfill dos registros já recebidos
-- Reprocessar os `raw_payload` já salvos da 3CPlus.
-- Preencher telefone, duração, status, `call_id`, `lead_id` e, quando possível, `user_id`.
-- Fazer com que as chamadas antigas passem a aparecer no histórico dos leads.
+### Dependência
+- Único pendente: confirmar com a 3CPlus o **endpoint exato** de download da gravação (provavelmente `GET /api/v1/calls/{telephony_id}/recording` ou similar). Vou implementar com o padrão mais comum e ajustar se a 3CPlus retornar erro — os logs vão mostrar a URL correta rapidinho.
 
-6. Gravações
-- Para chamadas novas: deixar o fluxo pronto para salvar `gravacao_url` assim que a 3CPlus disponibilizar esse link via API.
-- Para chamadas antigas: adicionar recuperação da gravação usando o identificador `telephony_id`.
-- Quando a URL entrar, a transcrição automática já existente continuará funcionando.
-
-## O que depende de você
-
-Para recuperar o áudio das gravações da 3CPlus, vou precisar do token da API da 3CPlus.
-
-Sem esse token eu ainda consigo corrigir agora:
-- telefone
-- duração
-- status
-- vínculo com lead
-- exibição no histórico
-
-Com o token eu consigo também:
-- buscar o link real da gravação
-- preencher os áudios antigos
-- liberar transcrição automática dessas ligações
-
-## Arquivos e áreas que serão ajustados
-
-- `supabase/functions/voip-webhook-3cplus/index.ts`
-- possível rotina de backfill para `crm_call_events`
-- eventual ajuste leve na lógica de exibição, se necessário, após normalizar os eventos
-
-## Resultado esperado
-
-Depois da implementação:
-- as próximas chamadas da 3CPlus entrarão com dados completos
-- as chamadas existentes voltarão a aparecer no lead correto
-- o histórico deixará de ficar vazio
-- as gravações poderão ser recuperadas assim que o token da API da 3CPlus for informado
+Posso seguir?
