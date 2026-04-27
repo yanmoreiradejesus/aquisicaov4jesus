@@ -841,6 +841,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      backfill_3cplus_call_events: {
+        Args: never
+        Returns: {
+          linked: number
+          processed: number
+          updated: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -850,6 +858,7 @@ export type Database = {
       }
       is_approved: { Args: { _user_id: string }; Returns: boolean }
       marcar_cobrancas_atrasadas: { Args: never; Returns: undefined }
+      normalize_phone_br: { Args: { phone: string }; Returns: string }
     }
     Enums: {
       account_status: "ativo" | "pausado" | "encerrado"
