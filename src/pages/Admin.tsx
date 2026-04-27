@@ -431,6 +431,7 @@ const Admin = () => {
               atribuídas ao vendedor correto e aparecem no filtro "Minhas chamadas".
             </p>
             <AdminVoipAccountsCard />
+            <AdminBackfill3CPlusCard />
           </TabsContent>
 
           {/* ========== TAB CORRIGIR LEADS ========== */}
