@@ -171,10 +171,16 @@ export function LeadCallEventsList({ leadId }: Props) {
                     Duração: {formatDuration(e.duracao_seg)}
                   </span>
                   {e.operador && (() => {
-                    const apelido = ramalApelidoMap[String(e.operador)];
+                    const key = String(e.operador);
+                    // Para 3cplus o `operador` salvo é o agent_id; para api4com é o ramal
+                    const match = e.provider === "3cplus"
+                      ? (voipLookup.byAgent[key] ?? voipLookup.byOperador[key])
+                      : (voipLookup.byOperador[key] ?? voipLookup.byAgent[key]);
+                    const ramal = match?.ramal ?? key;
+                    const apelido = match?.apelido;
                     return (
                       <span className="text-[10px] text-muted-foreground">
-                        • Ramal {e.operador}{apelido ? ` — ${apelido}` : ""}
+                        • Ramal {ramal}{apelido ? ` — ${apelido}` : ""}
                       </span>
                     );
                   })()}
