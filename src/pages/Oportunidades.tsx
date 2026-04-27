@@ -86,7 +86,6 @@ const Oportunidades = () => {
     };
     return oportunidades.filter((o: any) => {
       if (q && ![o.nome_oportunidade, o.lead?.nome, o.lead?.empresa].some((v) => v?.toLowerCase().includes(q))) return false;
-      if (!inRange(o.created_at, filters.opDateFrom, filters.opDateTo)) return false;
       if (!inRange(o.lead?.data_criacao_origem ?? o.lead?.created_at, filters.leadDateFrom, filters.leadDateTo)) return false;
       if (filters.responsavel !== "all" && (o.responsavel_id ?? o.responsavel?.id) !== filters.responsavel) return false;
       if (filters.temperatura !== "all" && o.temperatura !== filters.temperatura) return false;
