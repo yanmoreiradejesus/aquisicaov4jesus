@@ -149,6 +149,7 @@ export function buildCallEventRow(eventType: string, data: any, payload: any) {
       "recording_url", "record_url", "recording", "audio_url", "url",
     ])?.toString() ?? null;
 
+  const recorded = pick<boolean>(data, ["recorded"]) === true;
   const telefoneNorm = normalizePhone(telefoneRaw);
 
   return {
@@ -160,8 +161,60 @@ export function buildCallEventRow(eventType: string, data: any, payload: any) {
     duracao,
     status,
     gravacaoUrl,
+    recorded,
     raw_payload: payload,
   };
+}
+
+/**
+ * Tenta buscar a URL da gravação via API REST da 3CPlus usando o telephony_id.
+ * Tenta múltiplos endpoints conhecidos — retorna a primeira URL válida encontrada.
+ */
+export async function fetch3CPlusRecordingUrl(
+  telephonyId: string,
+  token: string,
+): Promise<string | null> {
+  const baseUrls = [
+    "https://app.3c.plus/api/v1",
+    "https://api.3c.plus/v1",
+  ];
+  const paths = [
+    `/calls/${telephonyId}/recording`,
+    `/call-history/${telephonyId}/recording`,
+    `/recordings/${telephonyId}`,
+    `/calls/${telephonyId}`,
+  ];
+
+  for (const base of baseUrls) {
+    for (const path of paths) {
+      try {
+        const res = await fetch(`${base}${path}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+        });
+        if (!res.ok) continue;
+        const ct = res.headers.get("content-type") ?? "";
+        if (ct.includes("audio/") || ct.includes("application/octet-stream")) {
+          // É o próprio áudio — retornamos a URL acessada (mas precisa de auth, então não serve direto)
+          // Nesse caso, gravamos a URL com o ID; o download real precisa do token.
+          return `${base}${path}`;
+        }
+        const body = await res.json().catch(() => null);
+        if (!body) continue;
+        const url =
+          pick<string>(body, [
+            "recording_url", "url", "recording", "audio_url",
+            "data.recording_url", "data.url", "data.recording",
+          ]) ?? null;
+        if (url) return url;
+      } catch (e) {
+        console.warn(`[3cplus] fetch recording ${base}${path} failed:`, e);
+      }
+    }
+  }
+  return null;
 }
 
 Deno.serve(async (req) => {
