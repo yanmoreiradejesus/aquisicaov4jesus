@@ -105,7 +105,7 @@ export function extract3CPlusEvent(payload: any): { eventType: string; data: any
 export function buildCallEventRow(eventType: string, data: any, payload: any) {
   const callId = (
     pick<string | number>(data, [
-      "telephony_id", "_id", "id", "call_id", "uuid", "uniqueid", "callId", "sid",
+      "_id", "telephony_id", "id", "call_id", "uuid", "uniqueid", "callId", "sid",
     ])
   )?.toString() ?? null;
 
@@ -149,6 +149,7 @@ export function buildCallEventRow(eventType: string, data: any, payload: any) {
       "recording_url", "record_url", "recording", "audio_url", "url",
     ])?.toString() ?? null;
 
+  const recorded = pick<boolean>(data, ["recorded"]) === true;
   const telefoneNorm = normalizePhone(telefoneRaw);
 
   return {
@@ -160,9 +161,45 @@ export function buildCallEventRow(eventType: string, data: any, payload: any) {
     duracao,
     status,
     gravacaoUrl,
+    recorded,
     raw_payload: payload,
   };
 }
+
+/**
+ * Retorna a URL da gravação na API da 3CPlus para um call_id (ObjectId).
+ * A URL exige Bearer token para download — quem baixa precisa enviar
+ * Authorization: Bearer THREECPLUS_API_TOKEN.
+ */
+export function build3CPlusRecordingUrl(callId: string): string {
+  return `https://app.3c.plus/api/v1/calls/${callId}/recording`;
+}
+
+/**
+ * Verifica se a gravação existe na API da 3CPlus (HEAD request).
+ */
+export async function check3CPlusRecording(
+  callId: string,
+  token: string,
+): Promise<string | null> {
+  const url = build3CPlusRecordingUrl(callId);
+  try {
+    const res = await fetch(url, {
+      method: "HEAD",
+      headers: { Authorization: `Bearer ${token}` },
+      redirect: "follow",
+    });
+    if (res.ok || res.status === 302) return url;
+    console.warn(`[3cplus] recording HEAD ${callId}: ${res.status}`);
+    return null;
+  } catch (e) {
+    console.warn(`[3cplus] recording HEAD error:`, e);
+    return null;
+  }
+}
+
+// Alias para compat com código existente
+export const fetch3CPlusRecordingUrl = check3CPlusRecording;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -226,6 +263,18 @@ Deno.serve(async (req) => {
       if (acc?.user_id) userId = acc.user_id;
     }
 
+    // Se a chamada foi gravada e ainda não temos URL, tenta buscar via API da 3CPlus
+    let gravacaoUrl = parsed.gravacaoUrl;
+    if (!gravacaoUrl && parsed.recorded && parsed.callId) {
+      const token = Deno.env.get("THREECPLUS_API_TOKEN");
+      if (token) {
+        gravacaoUrl = await fetch3CPlusRecordingUrl(parsed.callId, token);
+        if (gravacaoUrl) console.log("[3cplus] recording fetched:", gravacaoUrl);
+      } else {
+        console.warn("[3cplus] THREECPLUS_API_TOKEN not configured");
+      }
+    }
+
     const { error: insertErr } = await supabase
       .from("crm_call_events")
       .insert({
@@ -239,7 +288,7 @@ Deno.serve(async (req) => {
         operador: parsed.operador,
         duracao_seg: parsed.duracao,
         status: parsed.status,
-        gravacao_url: parsed.gravacaoUrl,
+        gravacao_url: gravacaoUrl,
         raw_payload: payload,
       });
 

@@ -16,6 +16,15 @@ interface Props {
   leadId: string;
 }
 
+function audioSrc(e: CallEvent): string | null {
+  if (!e.gravacao_url && !e.call_id) return null;
+  // 3CPlus exige Bearer token — usar proxy backend
+  if (e.provider === "3cplus" && e.call_id) {
+    return `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/play-3cplus-recording?call_id=${encodeURIComponent(e.call_id)}`;
+  }
+  return e.gravacao_url;
+}
+
 function formatDuration(sec: number | null): string {
   if (!sec || sec <= 0) return "—";
   const m = Math.floor(sec / 60);
@@ -154,28 +163,36 @@ export function LeadCallEventsList({ leadId }: Props) {
                     </span>
                   )}
                 </div>
-                {e.gravacao_url && (
-                  <audio
-                    controls
-                    preload="none"
-                    src={e.gravacao_url}
-                    className="mt-2 h-7 w-full max-w-xs"
-                  />
-                )}
-                {e.gravacao_url && (
-                  <TranscricaoBlock event={e} />
-                )}
+                {(() => {
+                  const src = audioSrc(e);
+                  if (!src) return null;
+                  return (
+                    <>
+                      <audio
+                        controls
+                        preload="none"
+                        src={src}
+                        className="mt-2 h-7 w-full max-w-xs"
+                      />
+                      <TranscricaoBlock event={e} />
+                    </>
+                  );
+                })()}
               </div>
-              {e.gravacao_url && !navigator.userAgent.includes("Mobi") && (
-                <a
-                  href={e.gravacao_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0 text-[10px] text-primary hover:underline inline-flex items-center gap-1"
-                >
-                  <Play className="h-3 w-3" /> Abrir
-                </a>
-              )}
+              {(() => {
+                const src = audioSrc(e);
+                if (!src || navigator.userAgent.includes("Mobi")) return null;
+                return (
+                  <a
+                    href={src}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 text-[10px] text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    <Play className="h-3 w-3" /> Abrir
+                  </a>
+                );
+              })()}
             </div>
           );
         })}

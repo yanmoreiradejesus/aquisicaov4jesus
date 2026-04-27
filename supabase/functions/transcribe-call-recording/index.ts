@@ -14,7 +14,13 @@ const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
 async function downloadAudioAsBase64(url: string): Promise<{ base64: string; mime: string }> {
-  const r = await fetch(url);
+  // 3CPlus exige autenticação Bearer
+  const headers: Record<string, string> = {};
+  if (url.includes("3c.plus")) {
+    const token = Deno.env.get("THREECPLUS_API_TOKEN");
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
+  const r = await fetch(url, { headers, redirect: "follow" });
   if (!r.ok) throw new Error(`Falha ao baixar gravação: ${r.status}`);
   const mime = r.headers.get("content-type") || "audio/mpeg";
   const buf = new Uint8Array(await r.arrayBuffer());
