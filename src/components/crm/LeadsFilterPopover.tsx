@@ -1,11 +1,11 @@
 import { useMemo } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Filter, X } from "lucide-react";
 import { LEAD_ETAPAS } from "@/hooks/useCrmLeads";
+import { DateRange } from "@/components/crm/OportunidadesFilterPopover";
 
 export interface LeadFilters {
   dateFrom: string;
@@ -87,23 +87,13 @@ export const LeadsFilterPopover = ({ filters, onChange, leads }: Props) => {
         </div>
 
         <div className="space-y-3">
-          <div>
-            <Label className="text-xs text-muted-foreground">Data de criação</Label>
-            <div className="grid grid-cols-2 gap-2 mt-1">
-              <Input
-                type="date"
-                value={filters.dateFrom}
-                onChange={(e) => update({ dateFrom: e.target.value })}
-                className="h-9"
-              />
-              <Input
-                type="date"
-                value={filters.dateTo}
-                onChange={(e) => update({ dateTo: e.target.value })}
-                className="h-9"
-              />
-            </div>
-          </div>
+          <DateRange
+            label="Data de criação do lead"
+            from={filters.dateFrom}
+            to={filters.dateTo}
+            onFrom={(v) => update({ dateFrom: v })}
+            onTo={(v) => update({ dateTo: v })}
+          />
 
           <FilterSelect
             label="Etapa"
