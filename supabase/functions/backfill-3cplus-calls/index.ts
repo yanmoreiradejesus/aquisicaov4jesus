@@ -7,11 +7,6 @@
 // Requer: usuário autenticado com role 'admin'.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import {
-  extract3CPlusEvent,
-  buildCallEventRow,
-  fetch3CPlusRecordingUrl,
-} from "../voip-webhook-3cplus/index.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -28,6 +23,121 @@ function normalizePhone(phone?: string | null): string {
   if (d.startsWith("0")) d = d.slice(1);
   if (d.length > 11) d = d.slice(-11);
   return d;
+}
+
+function pick<T = unknown>(obj: any, keys: string[]): T | undefined {
+  for (const k of keys) {
+    const parts = k.split(".");
+    let cur: any = obj;
+    for (const p of parts) {
+      if (cur && typeof cur === "object" && p in cur) cur = cur[p];
+      else { cur = undefined; break; }
+    }
+    if (cur !== undefined && cur !== null && cur !== "") return cur as T;
+  }
+  return undefined;
+}
+
+function parseDuration(v: unknown): number | null {
+  if (v == null) return null;
+  if (typeof v === "number" && isFinite(v)) return Math.round(v);
+  if (typeof v === "string") {
+    if (/^\d+$/.test(v)) return parseInt(v, 10);
+    const parts = v.split(":").map((p) => parseInt(p, 10));
+    if (parts.every((n) => !isNaN(n))) {
+      if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+      if (parts.length === 2) return parts[0] * 60 + parts[1];
+    }
+  }
+  return null;
+}
+
+const KNOWN_3CPLUS_EVENTS = [
+  "call-history-was-created", "call-was-connected", "call-was-not-answered",
+  "call-was-qualified", "call-was-finished", "call-was-abandoned",
+  "manual-call-acw-started", "manual-call-acw-ended",
+];
+
+function extract3CPlusEvent(payload: any): { eventType: string; data: any } {
+  if (!payload || typeof payload !== "object") return { eventType: "unknown", data: {} };
+  const topKey = Object.keys(payload).find((k) => KNOWN_3CPLUS_EVENTS.includes(k));
+  if (topKey) {
+    const inner = payload[topKey] ?? {};
+    return { eventType: topKey, data: inner.callHistory ?? inner.call ?? inner.data ?? inner ?? {} };
+  }
+  for (const k of Object.keys(payload)) {
+    const v = payload[k];
+    if (v && typeof v === "object" && (v.callHistory || v.call)) {
+      return { eventType: k, data: v.callHistory ?? v.call };
+    }
+  }
+  const explicit = pick<string>(payload, ["event", "type", "event_name"]) ??
+    (payload.callHistory ? "call-history-was-created" : "unknown");
+  return { eventType: explicit, data: payload.callHistory ?? payload.call ?? payload.data ?? payload };
+}
+
+function buildCallEventRow(eventType: string, data: any, payload: any) {
+  const callId = (pick<string | number>(data, [
+    "telephony_id", "_id", "id", "call_id", "uuid", "uniqueid", "callId", "sid",
+  ]))?.toString() ?? null;
+  const telefoneRaw = (pick<string | number>(data, [
+    "number", "phone", "mailing_data.phone", "telephone", "to", "destination",
+    "called_number", "contact_phone", "lead_phone", "called", "dst",
+  ]))?.toString() ?? null;
+  const agentId = pick<string | number>(data, ["agent.id"]);
+  const agentName = pick<string>(data, ["agent.name"]);
+  const operadorRaw =
+    (agentId !== undefined && agentId !== null && Number(agentId) !== 0 ? String(agentId) : null) ??
+    (agentName ? String(agentName) : null) ??
+    pick<string>(data, ["operator", "user", "user_name", "extension", "ramal"])?.toString() ?? null;
+  const duracao = parseDuration(pick(data, [
+    "speaking_with_agent_time", "speaking_time", "billed_time",
+    "duration", "billsec", "talk_time", "call_duration",
+  ]));
+  const status = pick<string>(data, [
+    "hangupCause.text", "hangupCause", "qualification.name",
+    "status", "call_status", "disposition", "result",
+  ])?.toString() ?? null;
+  const gravacaoUrl = pick<string>(data, [
+    "recording_url", "record_url", "recording", "audio_url", "url",
+  ])?.toString() ?? null;
+  const recorded = pick<boolean>(data, ["recorded"]) === true;
+  return {
+    eventType, callId, telefoneRaw, telefoneNorm: normalizePhone(telefoneRaw),
+    operador: operadorRaw, duracao, status, gravacaoUrl, recorded,
+  };
+}
+
+async function fetch3CPlusRecordingUrl(telephonyId: string, token: string): Promise<string | null> {
+  const baseUrls = ["https://app.3c.plus/api/v1", "https://api.3c.plus/v1"];
+  const paths = [
+    `/calls/${telephonyId}/recording`, `/call-history/${telephonyId}/recording`,
+    `/recordings/${telephonyId}`, `/calls/${telephonyId}`,
+  ];
+  for (const base of baseUrls) {
+    for (const path of paths) {
+      try {
+        const res = await fetch(`${base}${path}`, {
+          headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+        });
+        if (!res.ok) continue;
+        const ct = res.headers.get("content-type") ?? "";
+        if (ct.includes("audio/") || ct.includes("application/octet-stream")) {
+          return `${base}${path}`;
+        }
+        const body = await res.json().catch(() => null);
+        if (!body) continue;
+        const url = pick<string>(body, [
+          "recording_url", "url", "recording", "audio_url",
+          "data.recording_url", "data.url", "data.recording",
+        ]) ?? null;
+        if (url) return url;
+      } catch (e) {
+        console.warn(`[3cplus] fetch recording ${base}${path} failed:`, e);
+      }
+    }
+  }
+  return null;
 }
 
 Deno.serve(async (req) => {
