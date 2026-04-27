@@ -163,28 +163,36 @@ export function LeadCallEventsList({ leadId }: Props) {
                     </span>
                   )}
                 </div>
-                {e.gravacao_url && (
-                  <audio
-                    controls
-                    preload="none"
-                    src={e.gravacao_url}
-                    className="mt-2 h-7 w-full max-w-xs"
-                  />
-                )}
-                {e.gravacao_url && (
-                  <TranscricaoBlock event={e} />
-                )}
+                {(() => {
+                  const src = audioSrc(e);
+                  if (!src) return null;
+                  return (
+                    <>
+                      <audio
+                        controls
+                        preload="none"
+                        src={src}
+                        className="mt-2 h-7 w-full max-w-xs"
+                      />
+                      <TranscricaoBlock event={e} />
+                    </>
+                  );
+                })()}
               </div>
-              {e.gravacao_url && !navigator.userAgent.includes("Mobi") && (
-                <a
-                  href={e.gravacao_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="shrink-0 text-[10px] text-primary hover:underline inline-flex items-center gap-1"
-                >
-                  <Play className="h-3 w-3" /> Abrir
-                </a>
-              )}
+              {(() => {
+                const src = audioSrc(e);
+                if (!src || navigator.userAgent.includes("Mobi")) return null;
+                return (
+                  <a
+                    href={src}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 text-[10px] text-primary hover:underline inline-flex items-center gap-1"
+                  >
+                    <Play className="h-3 w-3" /> Abrir
+                  </a>
+                );
+              })()}
             </div>
           );
         })}
