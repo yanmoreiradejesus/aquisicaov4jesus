@@ -37,6 +37,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Shield, UserPlus, Send, Wand2, Pencil, Search, Clock } from "lucide-react";
 import { AdminVoipAccountsCard } from "@/components/admin/AdminVoipAccountsCard";
 import { AdminFixLeadsCard } from "@/components/admin/AdminFixLeadsCard";
+import { AdminBackfill3CPlusCard } from "@/components/admin/AdminBackfill3CPlusCard";
 
 interface UserWithAccess {
   id: string;
@@ -430,6 +431,7 @@ const Admin = () => {
               atribuídas ao vendedor correto e aparecem no filtro "Minhas chamadas".
             </p>
             <AdminVoipAccountsCard />
+            <AdminBackfill3CPlusCard />
           </TabsContent>
 
           {/* ========== TAB CORRIGIR LEADS ========== */}
