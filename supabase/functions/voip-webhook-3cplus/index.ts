@@ -279,6 +279,18 @@ Deno.serve(async (req) => {
       if (acc?.user_id) userId = acc.user_id;
     }
 
+    // Se a chamada foi gravada e ainda não temos URL, tenta buscar via API da 3CPlus
+    let gravacaoUrl = parsed.gravacaoUrl;
+    if (!gravacaoUrl && parsed.recorded && parsed.callId) {
+      const token = Deno.env.get("THREECPLUS_API_TOKEN");
+      if (token) {
+        gravacaoUrl = await fetch3CPlusRecordingUrl(parsed.callId, token);
+        if (gravacaoUrl) console.log("[3cplus] recording fetched:", gravacaoUrl);
+      } else {
+        console.warn("[3cplus] THREECPLUS_API_TOKEN not configured");
+      }
+    }
+
     const { error: insertErr } = await supabase
       .from("crm_call_events")
       .insert({
@@ -292,7 +304,7 @@ Deno.serve(async (req) => {
         operador: parsed.operador,
         duracao_seg: parsed.duracao,
         status: parsed.status,
-        gravacao_url: parsed.gravacaoUrl,
+        gravacao_url: gravacaoUrl,
         raw_payload: payload,
       });
 
