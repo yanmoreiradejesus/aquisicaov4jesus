@@ -106,20 +106,6 @@ export const AdminVoipAccountsCard = () => {
       agent_id: provider === "3cplus" ? agentId.trim() : null,
       ativo,
     });
-
-  const handleSave = async () => {
-    if (!userId || !operadorId.trim()) {
-      toast.error("Selecione um usuário e informe o Operador ID");
-      return;
-    }
-    setSaving(true);
-    const { error } = await supabase.from("voip_accounts").insert({
-      user_id: userId,
-      provider,
-      operador_id: operadorId.trim(),
-      apelido: apelido.trim() || null,
-      ativo,
-    });
     setSaving(false);
     if (error) {
       toast.error("Erro ao salvar", { description: error.message });
