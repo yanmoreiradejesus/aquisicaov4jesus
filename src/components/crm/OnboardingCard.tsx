@@ -1,8 +1,8 @@
 import { useDraggable } from "@dnd-kit/core";
-import { Calendar, GraduationCap, Brain } from "lucide-react";
+import { Calendar, GraduationCap, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const NIVEL_CONSCIENCIA_LABEL: Record<string, string> = {
+const CATEGORIA_PRODUTOS_LABEL: Record<string, string> = {
   saber: "Saber",
   ter: "Ter",
   executar: "Executar",
