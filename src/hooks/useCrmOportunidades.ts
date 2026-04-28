@@ -85,6 +85,7 @@ export function useCrmOportunidades() {
       oportunidades_monetizacao?: string;
       grau_exigencia?: string;
       info_deal?: string;
+      nivel_consciencia?: string;
       valor_fee?: number | null;
       valor_ef?: number | null;
       data_assinatura?: string; // ISO string — vira data_fechamento_real
