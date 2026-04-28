@@ -376,7 +376,7 @@ export const OportunidadeAvancarDialog = ({
     if (key === "task") return !liveErrors.tarefas;
     if (key === "valores") return !liveErrors.valores;
     if (key === "ganho")
-      return !liveErrors.contrato && !liveErrors.grau && !liveErrors.monetizacao && !liveErrors.info && !liveErrors.valoresGanho && !liveErrors.assinatura;
+      return !liveErrors.contrato && !liveErrors.grau && !liveErrors.monetizacao && !liveErrors.info && !liveErrors.valoresGanho && !liveErrors.assinatura && !liveErrors.consciencia;
     return true;
   };
 
