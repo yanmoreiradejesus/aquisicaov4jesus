@@ -176,6 +176,7 @@ export const OportunidadeAvancarDialog = ({
   const [grauExigencia, setGrauExigencia] = useState<string>("");
   const [infoDeal, setInfoDeal] = useState("");
   const [dataAssinatura, setDataAssinatura] = useState<string>(""); // YYYY-MM-DD
+  const [nivelConsciencia, setNivelConsciencia] = useState<string>("");
 
   // IA: estado da sugestão automática de tarefa
   const [aiSuggesting, setAiSuggesting] = useState(false);
