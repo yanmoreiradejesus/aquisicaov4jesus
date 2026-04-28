@@ -70,6 +70,7 @@ export function useCrmOportunidades() {
       oportunidades_monetizacao,
       grau_exigencia,
       info_deal,
+      nivel_consciencia,
       valor_fee,
       valor_ef,
       data_assinatura,
