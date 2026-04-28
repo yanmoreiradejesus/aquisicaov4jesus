@@ -928,7 +928,38 @@ export const OportunidadeAvancarDialog = ({
                       </button>
                     );
                   })}
+              </div>
+
+              <div className="space-y-2.5">
+                <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                  Nível de consciência do cliente *
+                </Label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {NIVEIS_CONSCIENCIA.map((n) => {
+                    const active = nivelConsciencia === n.value;
+                    return (
+                      <button
+                        key={n.value}
+                        type="button"
+                        onClick={() => setNivelConsciencia(n.value)}
+                        className={cn(
+                          "py-2.5 px-2 rounded-lg border text-[12px] font-semibold transition-all",
+                          active
+                            ? "border-transparent ring-2 ring-primary/40 bg-primary/10 text-primary shadow-ios-sm"
+                            : "border-border/40 hover:border-border bg-surface-1/50 text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {n.label}
+                      </button>
+                    );
+                  })}
                 </div>
+                {submitted && liveErrors.consciencia && (
+                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
+                    <AlertCircle className="h-3 w-3" /> {liveErrors.consciencia}
+                  </p>
+                )}
+              </div>
                 {submitted && liveErrors.grau && (
                   <p className="flex items-center gap-1.5 text-[11px] text-destructive">
                     <AlertCircle className="h-3 w-3" /> {liveErrors.grau}
