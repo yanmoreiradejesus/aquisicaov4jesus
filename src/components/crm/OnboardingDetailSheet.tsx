@@ -169,7 +169,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
       };
 
       const { data, error } = await supabase.functions.invoke("meeting-ai", {
-        body: { action: "pre_growth_class", contexto },
+        body: { action: "pre_growth_class", contexto, provider: "opus45" },
       });
       if (error) throw error;
       const relatorio = (data as any)?.relatorio as string | undefined;
