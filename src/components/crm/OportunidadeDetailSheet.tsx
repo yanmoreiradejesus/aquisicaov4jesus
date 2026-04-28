@@ -239,7 +239,7 @@ const GRAU_EXIGENCIA_STYLES: Record<string, { label: string; cls: string }> = {
   critico: { label: "Crítico", cls: "bg-red-400/10 text-red-400 border-red-400/40" },
 };
 
-const NIVEL_CONSCIENCIA_LABEL: Record<string, string> = {
+const CATEGORIA_PRODUTOS_LABEL: Record<string, string> = {
   saber: "Saber",
   ter: "Ter",
   executar: "Executar",
@@ -248,13 +248,11 @@ const NIVEL_CONSCIENCIA_LABEL: Record<string, string> = {
 
 const DealFechadoPanel = ({
   contratoUrl,
-  grauExigencia,
   oportunidadesMonetizacao,
   infoDeal,
   nivelConsciencia,
 }: {
   contratoUrl?: string | null;
-  grauExigencia?: string | null;
   oportunidadesMonetizacao?: string | null;
   infoDeal?: string | null;
   nivelConsciencia?: string | null;
@@ -273,8 +271,6 @@ const DealFechadoPanel = ({
       });
     return () => { cancelled = true; };
   }, [contratoUrl]);
-
-  const grau = grauExigencia ? GRAU_EXIGENCIA_STYLES[grauExigencia] : null;
 
   return (
     <div className="space-y-3 py-1">
@@ -305,26 +301,11 @@ const DealFechadoPanel = ({
       <div className="flex items-start justify-between gap-3 py-2 border-b border-border/30">
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1">
-            Grau de exigência do cliente
+            Categoria de produtos
           </p>
-          {grau ? (
-            <span className={cn("inline-block px-2.5 py-1 rounded-md border text-xs font-semibold", grau.cls)}>
-              {grau.label}
-            </span>
-          ) : (
-            <p className="text-sm text-muted-foreground/60">—</p>
-          )}
-        </div>
-      </div>
-
-      <div className="flex items-start justify-between gap-3 py-2 border-b border-border/30">
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1">
-            Nível de consciência do cliente
-          </p>
-          {nivelConsciencia && NIVEL_CONSCIENCIA_LABEL[nivelConsciencia] ? (
+          {nivelConsciencia && CATEGORIA_PRODUTOS_LABEL[nivelConsciencia] ? (
             <span className="inline-block px-2.5 py-1 rounded-md border text-xs font-semibold bg-primary/10 text-primary border-primary/30">
-              {NIVEL_CONSCIENCIA_LABEL[nivelConsciencia]}
+              {CATEGORIA_PRODUTOS_LABEL[nivelConsciencia]}
             </span>
           ) : (
             <p className="text-sm text-muted-foreground/60">—</p>
@@ -873,7 +854,7 @@ export const OportunidadeDetailSheet = ({
               </AccordionItem>
 
               {/* Deal Fechado — só aparece se ganho ou se já houver dados */}
-              {(form.etapa === "fechado_ganho" || form.contrato_url || form.grau_exigencia || form.oportunidades_monetizacao || form.info_deal || form.nivel_consciencia) && (
+              {(form.etapa === "fechado_ganho" || form.contrato_url || form.oportunidades_monetizacao || form.info_deal || form.nivel_consciencia) && (
                 <AccordionItem
                   value="deal-fechado"
                   className="border border-emerald-500/30 rounded-lg bg-emerald-500/5 px-4"
@@ -887,7 +868,6 @@ export const OportunidadeDetailSheet = ({
                   <AccordionContent className="pb-2">
                     <DealFechadoPanel
                       contratoUrl={form.contrato_url}
-                      grauExigencia={form.grau_exigencia}
                       oportunidadesMonetizacao={form.oportunidades_monetizacao}
                       infoDeal={form.info_deal}
                       nivelConsciencia={form.nivel_consciencia}

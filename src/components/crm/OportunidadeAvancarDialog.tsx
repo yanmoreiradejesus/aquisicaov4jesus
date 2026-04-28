@@ -50,7 +50,7 @@ interface GanhoPayload {
   data_assinatura: string; // ISO string — data em que o contrato foi assinado
 }
 
-const NIVEIS_CONSCIENCIA = [
+const CATEGORIAS_PRODUTOS = [
   { value: "saber", label: "Saber" },
   { value: "ter", label: "Ter" },
   { value: "executar", label: "Executar" },
@@ -73,12 +73,6 @@ interface Props {
   }) => Promise<void> | void;
 }
 
-const GRAUS_EXIGENCIA = [
-  { value: "baixo", label: "Baixo", color: "text-emerald-400 bg-emerald-400/10 ring-emerald-400/40" },
-  { value: "medio", label: "Médio", color: "text-amber-400 bg-amber-400/10 ring-amber-400/40" },
-  { value: "alto", label: "Alto", color: "text-orange-400 bg-orange-400/10 ring-orange-400/40" },
-  { value: "critico", label: "Crítico", color: "text-red-400 bg-red-400/10 ring-red-400/40" },
-];
 
 const TEMPERATURAS = [
   { value: "quente", label: "Quente", desc: "Pronto para fechar", icon: Flame, color: "text-red-400", ring: "ring-red-400/40", bg: "bg-red-400/10" },
@@ -347,7 +341,6 @@ export const OportunidadeAvancarDialog = ({
     }
     if (needs.ganho) {
       if (!contratoFile && !oportunidade?.contrato_url) e.contrato = "Anexe o contrato assinado (PDF)";
-      if (!grauExigencia) e.grau = "Selecione o grau de exigência do cliente";
       if (oportunidadesMonetizacao.trim().length < 5) e.monetizacao = "Descreva oportunidades de monetização";
       if (infoDeal.trim().length < 5) e.info = "Descreva informações gerais do deal";
       if (!dataAssinatura) {
@@ -356,7 +349,7 @@ export const OportunidadeAvancarDialog = ({
         const d = new Date(dataAssinatura);
         if (isNaN(d.getTime())) e.assinatura = "Data de assinatura inválida";
       }
-      if (!nivelConsciencia) e.consciencia = "Selecione o nível de consciência do cliente";
+      if (!nivelConsciencia) e.consciencia = "Selecione a categoria de produtos";
       const fee = Number(valorFee || 0);
       const ef = Number(valorEf || 0);
       if (!(fee > 0) && !(ef > 0)) e.valoresGanho = "Confirme Valor Fee e/ou Valor EF (pelo menos um maior que zero)";
@@ -376,7 +369,7 @@ export const OportunidadeAvancarDialog = ({
     if (key === "task") return !liveErrors.tarefas;
     if (key === "valores") return !liveErrors.valores;
     if (key === "ganho")
-      return !liveErrors.contrato && !liveErrors.grau && !liveErrors.monetizacao && !liveErrors.info && !liveErrors.valoresGanho && !liveErrors.assinatura && !liveErrors.consciencia;
+      return !liveErrors.contrato && !liveErrors.monetizacao && !liveErrors.info && !liveErrors.valoresGanho && !liveErrors.assinatura && !liveErrors.consciencia;
     return true;
   };
 
@@ -909,39 +902,10 @@ export const OportunidadeAvancarDialog = ({
 
               <div className="space-y-2.5">
                 <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-                  Grau de exigência do cliente *
-                </Label>
-                <div className="grid grid-cols-4 gap-2">
-                  {GRAUS_EXIGENCIA.map((g) => {
-                    const active = grauExigencia === g.value;
-                    return (
-                      <button
-                        key={g.value}
-                        type="button"
-                        onClick={() => setGrauExigencia(g.value)}
-                        className={cn(
-                          "py-2.5 px-2 rounded-lg border text-[12px] font-semibold transition-all",
-                          active ? cn("border-transparent ring-2 shadow-ios-sm", g.color) : "border-border/40 hover:border-border bg-surface-1/50 text-muted-foreground hover:text-foreground",
-                        )}
-                      >
-                        {g.label}
-                      </button>
-                    );
-                  })}
-                </div>
-                {submitted && liveErrors.grau && (
-                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
-                    <AlertCircle className="h-3 w-3" /> {liveErrors.grau}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2.5">
-                <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-                  Nível de consciência do cliente *
+                  Categoria de produtos *
                 </Label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {NIVEIS_CONSCIENCIA.map((n) => {
+                  {CATEGORIAS_PRODUTOS.map((n) => {
                     const active = nivelConsciencia === n.value;
                     return (
                       <button

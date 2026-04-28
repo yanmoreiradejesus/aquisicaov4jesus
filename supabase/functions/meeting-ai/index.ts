@@ -21,13 +21,15 @@ Deno.serve(async (req) => {
     const providerKey = MODEL_MAP[provider as string] ? (provider as string) : "sonnet";
     const claudeModel = MODEL_MAP[providerKey];
 
-    if (!transcricao || typeof transcricao !== "string" || transcricao.trim().length < 20) {
+    const isPreGC = action === "pre_growth_class";
+
+    if (!isPreGC && (!transcricao || typeof transcricao !== "string" || transcricao.trim().length < 20)) {
       return new Response(
         JSON.stringify({ error: "Transcrição muito curta. Cole o texto da reunião antes de usar a IA." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-    if (action !== "summarize" && action !== "suggest_task") {
+    if (action !== "summarize" && action !== "suggest_task" && action !== "pre_growth_class") {
       return new Response(JSON.stringify({ error: "Ação inválida" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -77,6 +79,55 @@ Deno.serve(async (req) => {
 
 Transcrição:
 """${transcricao}"""${ctxStr}`;
+    } else if (action === "pre_growth_class") {
+      systemPrompt =
+        "Você é um Account Manager sênior preparando o briefing executivo PRÉ Growth Class (kick-off com cliente recém-fechado). Sintetize TODA a história do cliente — desde a captação do lead até o fechamento — em um relatório estruturado, claro e acionável em português do Brasil. Use Markdown rico (## seções, ### subseções, **negrito**, listas, emojis sutis em cabeçalhos). Seja específico e cite informações reais. Quando algum dado não estiver disponível, escreva '_Não informado_' — nunca invente.";
+      userPrompt = `Gere o RELATÓRIO PRÉ GROWTH CLASS seguindo EXATAMENTE este formato:
+
+## 🏢 Identificação do Cliente
+- **Empresa / Cliente:** ...
+- **Contato principal:** nome, cargo, e-mail/telefone
+- **Segmento / Faturamento / Localização:** ...
+- **Categoria de produtos contratada:** Saber / Ter / Executar / Potencializar
+- **Valor do deal:** Fee mensal + EF (entrada)
+- **Data de assinatura:** ...
+
+## 📥 Origem & Captação do Lead
+Como o lead chegou, canal, origem, arrematador, data de criação, urgência inicial, tier.
+
+## 🧭 Qualificação & Descoberta
+- **Dor principal / contexto de negócio**
+- **Objetivos declarados** pelo cliente
+- **Critérios de decisão / nível de urgência**
+- Notas relevantes da pré-qualificação (IA + humana)
+
+## 💼 Jornada Comercial
+Resumo cronológico da evolução pelo funil (entrada → reunião → proposta → negociação → contrato → ganho), incluindo objeções levantadas e como foram tratadas.
+
+## 📝 Reunião(ões) de Vendas
+Pontos-chave da(s) transcrição(ões) da(s) reunião(ões) — quem participou, o que foi discutido, decisões tomadas.
+
+## ✅ O Que Foi Contratado
+- Produtos/serviços incluídos no escopo
+- Expectativas explicitamente alinhadas no fechamento
+- Prazos e marcos combinados
+
+## 💰 Oportunidades de Monetização Identificadas
+Upsells, cross-sells e expansões já mapeadas pelo closer (resgatar do campo "Oportunidades de monetização").
+
+## ⚠️ Riscos & Pontos de Atenção
+Sinais de alerta, expectativas que podem virar atrito, gaps de informação a investigar na Growth Class.
+
+## 🎯 Agenda Sugerida da Growth Class
+3-5 bullets com a ordem ideal de tópicos para a reunião — alinhamento de expectativas, validação do escopo, plano de ação inicial, próximos passos.
+
+## 🚀 Próximas Ações Pós-Growth Class
+Lista acionável (checkbox markdown) do que precisa acontecer logo após a reunião.
+
+---
+
+Dados consolidados do cliente (use TUDO o que estiver disponível abaixo):
+${JSON.stringify(contexto ?? {}, null, 2)}`;
     } else {
       systemPrompt =
         "Você é um SDR/closer experiente. Sugere a PRÓXIMA tarefa mais estratégica do vendedor, de forma específica e acionável, em português do Brasil.";
@@ -104,7 +155,7 @@ Transcrição:
 
     const anthropicBody: any = {
       model: claudeModel,
-      max_tokens: 2048,
+      max_tokens: action === "pre_growth_class" ? 4096 : 2048,
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],
     };
@@ -155,6 +206,11 @@ Transcrição:
     if (action === "summarize") {
       const content = data.content?.find((b: any) => b.type === "text")?.text ?? "";
       return new Response(JSON.stringify({ resumo: content }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } else if (action === "pre_growth_class") {
+      const content = data.content?.find((b: any) => b.type === "text")?.text ?? "";
+      return new Response(JSON.stringify({ relatorio: content }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     } else {
