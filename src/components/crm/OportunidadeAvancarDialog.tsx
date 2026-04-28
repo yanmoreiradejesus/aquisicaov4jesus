@@ -422,6 +422,7 @@ export const OportunidadeAvancarDialog = ({
           oportunidades_monetizacao: oportunidadesMonetizacao.trim(),
           grau_exigencia: grauExigencia,
           info_deal: infoDeal.trim(),
+          nivel_consciencia: nivelConsciencia,
           data_assinatura: assinaturaIso,
         };
       }
