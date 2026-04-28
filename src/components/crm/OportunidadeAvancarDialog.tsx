@@ -341,7 +341,6 @@ export const OportunidadeAvancarDialog = ({
     }
     if (needs.ganho) {
       if (!contratoFile && !oportunidade?.contrato_url) e.contrato = "Anexe o contrato assinado (PDF)";
-      if (!grauExigencia) e.grau = "Selecione o grau de exigência do cliente";
       if (oportunidadesMonetizacao.trim().length < 5) e.monetizacao = "Descreva oportunidades de monetização";
       if (infoDeal.trim().length < 5) e.info = "Descreva informações gerais do deal";
       if (!dataAssinatura) {
@@ -350,7 +349,7 @@ export const OportunidadeAvancarDialog = ({
         const d = new Date(dataAssinatura);
         if (isNaN(d.getTime())) e.assinatura = "Data de assinatura inválida";
       }
-      if (!nivelConsciencia) e.consciencia = "Selecione o nível de consciência do cliente";
+      if (!nivelConsciencia) e.consciencia = "Selecione a categoria de produtos";
       const fee = Number(valorFee || 0);
       const ef = Number(valorEf || 0);
       if (!(fee > 0) && !(ef > 0)) e.valoresGanho = "Confirme Valor Fee e/ou Valor EF (pelo menos um maior que zero)";
