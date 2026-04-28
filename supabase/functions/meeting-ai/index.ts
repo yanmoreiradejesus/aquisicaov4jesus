@@ -208,6 +208,11 @@ Transcrição:
       return new Response(JSON.stringify({ resumo: content }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    } else if (action === "pre_growth_class") {
+      const content = data.content?.find((b: any) => b.type === "text")?.text ?? "";
+      return new Response(JSON.stringify({ relatorio: content }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     } else {
       const toolUse = data.content?.find((b: any) => b.type === "tool_use");
       const args = toolUse?.input ?? null;
