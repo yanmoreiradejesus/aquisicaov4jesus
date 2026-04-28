@@ -890,6 +890,7 @@ export const OportunidadeDetailSheet = ({
                       grauExigencia={form.grau_exigencia}
                       oportunidadesMonetizacao={form.oportunidades_monetizacao}
                       infoDeal={form.info_deal}
+                      nivelConsciencia={form.nivel_consciencia}
                     />
                   </AccordionContent>
                 </AccordionItem>
