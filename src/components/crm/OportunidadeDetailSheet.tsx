@@ -873,7 +873,7 @@ export const OportunidadeDetailSheet = ({
               </AccordionItem>
 
               {/* Deal Fechado — só aparece se ganho ou se já houver dados */}
-              {(form.etapa === "fechado_ganho" || form.contrato_url || form.grau_exigencia || form.oportunidades_monetizacao || form.info_deal) && (
+              {(form.etapa === "fechado_ganho" || form.contrato_url || form.grau_exigencia || form.oportunidades_monetizacao || form.info_deal || form.nivel_consciencia) && (
                 <AccordionItem
                   value="deal-fechado"
                   className="border border-emerald-500/30 rounded-lg bg-emerald-500/5 px-4"
