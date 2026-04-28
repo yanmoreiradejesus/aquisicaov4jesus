@@ -155,7 +155,7 @@ Transcrição:
 
     const anthropicBody: any = {
       model: claudeModel,
-      max_tokens: 2048,
+      max_tokens: action === "pre_growth_class" ? 4096 : 2048,
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],
     };
