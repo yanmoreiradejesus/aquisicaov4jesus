@@ -50,7 +50,7 @@ interface GanhoPayload {
   data_assinatura: string; // ISO string — data em que o contrato foi assinado
 }
 
-const NIVEIS_CONSCIENCIA = [
+const CATEGORIAS_PRODUTOS = [
   { value: "saber", label: "Saber" },
   { value: "ter", label: "Ter" },
   { value: "executar", label: "Executar" },
