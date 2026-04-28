@@ -21,13 +21,15 @@ Deno.serve(async (req) => {
     const providerKey = MODEL_MAP[provider as string] ? (provider as string) : "sonnet";
     const claudeModel = MODEL_MAP[providerKey];
 
-    if (!transcricao || typeof transcricao !== "string" || transcricao.trim().length < 20) {
+    const isPreGC = action === "pre_growth_class";
+
+    if (!isPreGC && (!transcricao || typeof transcricao !== "string" || transcricao.trim().length < 20)) {
       return new Response(
         JSON.stringify({ error: "Transcrição muito curta. Cole o texto da reunião antes de usar a IA." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-    if (action !== "summarize" && action !== "suggest_task") {
+    if (action !== "summarize" && action !== "suggest_task" && action !== "pre_growth_class") {
       return new Response(JSON.stringify({ error: "Ação inválida" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
