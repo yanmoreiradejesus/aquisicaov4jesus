@@ -46,8 +46,16 @@ interface GanhoPayload {
   oportunidades_monetizacao: string;
   grau_exigencia: string;
   info_deal: string;
+  nivel_consciencia: string;
   data_assinatura: string; // ISO string — data em que o contrato foi assinado
 }
+
+const NIVEIS_CONSCIENCIA = [
+  { value: "saber", label: "Saber" },
+  { value: "ter", label: "Ter" },
+  { value: "executar", label: "Executar" },
+  { value: "potencializar", label: "Potencializar" },
+];
 
 interface Props {
   open: boolean;
