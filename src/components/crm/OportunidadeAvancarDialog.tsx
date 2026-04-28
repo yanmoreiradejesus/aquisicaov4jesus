@@ -356,6 +356,7 @@ export const OportunidadeAvancarDialog = ({
         const d = new Date(dataAssinatura);
         if (isNaN(d.getTime())) e.assinatura = "Data de assinatura inválida";
       }
+      if (!nivelConsciencia) e.consciencia = "Selecione o nível de consciência do cliente";
       const fee = Number(valorFee || 0);
       const ef = Number(valorEf || 0);
       if (!(fee > 0) && !(ef > 0)) e.valoresGanho = "Confirme Valor Fee e/ou Valor EF (pelo menos um maior que zero)";
@@ -366,7 +367,7 @@ export const OportunidadeAvancarDialog = ({
     hasTranscricaoSalva, adicionarNovaReuniao, novaTranscricao, temperatura, etapaDestino,
     tarefasPendentesCount, valorFee, valorEf,
     contratoFile, grauExigencia, oportunidadesMonetizacao, infoDeal, oportunidade?.contrato_url,
-    dataAssinatura,
+    dataAssinatura, nivelConsciencia,
   ]);
 
   const isStepValid = (s: number): boolean => {
