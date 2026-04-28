@@ -21,9 +21,19 @@ export type Database = {
           created_at: string
           data_fim_contrato: string | null
           data_inicio_contrato: string
+          growth_class_ata: string | null
+          growth_class_data_agendada: string | null
+          growth_class_data_realizada: string | null
+          growth_class_expectativas: string | null
+          growth_class_google_event_id: string | null
+          growth_class_meet_link: string | null
+          growth_class_oportunidades_monetizacao: string | null
+          growth_class_proximos_passos: string | null
+          growth_class_responsavel_id: string | null
           health_score: number | null
           id: string
           notas: string | null
+          onboarding_status: Database["public"]["Enums"]["onboarding_status"]
           oportunidade_id: string | null
           produtos_contratados: Json | null
           proxima_revisao: string | null
@@ -36,9 +46,19 @@ export type Database = {
           created_at?: string
           data_fim_contrato?: string | null
           data_inicio_contrato?: string
+          growth_class_ata?: string | null
+          growth_class_data_agendada?: string | null
+          growth_class_data_realizada?: string | null
+          growth_class_expectativas?: string | null
+          growth_class_google_event_id?: string | null
+          growth_class_meet_link?: string | null
+          growth_class_oportunidades_monetizacao?: string | null
+          growth_class_proximos_passos?: string | null
+          growth_class_responsavel_id?: string | null
           health_score?: number | null
           id?: string
           notas?: string | null
+          onboarding_status?: Database["public"]["Enums"]["onboarding_status"]
           oportunidade_id?: string | null
           produtos_contratados?: Json | null
           proxima_revisao?: string | null
@@ -51,9 +71,19 @@ export type Database = {
           created_at?: string
           data_fim_contrato?: string | null
           data_inicio_contrato?: string
+          growth_class_ata?: string | null
+          growth_class_data_agendada?: string | null
+          growth_class_data_realizada?: string | null
+          growth_class_expectativas?: string | null
+          growth_class_google_event_id?: string | null
+          growth_class_meet_link?: string | null
+          growth_class_oportunidades_monetizacao?: string | null
+          growth_class_proximos_passos?: string | null
+          growth_class_responsavel_id?: string | null
           health_score?: number | null
           id?: string
           notas?: string | null
+          onboarding_status?: Database["public"]["Enums"]["onboarding_status"]
           oportunidade_id?: string | null
           produtos_contratados?: Json | null
           proxima_revisao?: string | null
@@ -885,6 +915,7 @@ export type Database = {
         | "reuniao_agendada"
         | "reuniao_realizada"
         | "no_show"
+      onboarding_status: "entrada" | "atrasada" | "concluida" | "churn_m0"
       oportunidade_etapa:
         | "proposta"
         | "negociacao"
@@ -1045,6 +1076,7 @@ export const Constants = {
         "reuniao_realizada",
         "no_show",
       ],
+      onboarding_status: ["entrada", "atrasada", "concluida", "churn_m0"],
       oportunidade_etapa: [
         "proposta",
         "negociacao",
