@@ -125,10 +125,10 @@ export const OnboardingCard = ({ account, onClick, overlay = false }: Props) => 
                 GC {fmtDate(gcAgendada)}
               </span>
             ) : null}
-            {op?.nivel_consciencia && NIVEL_CONSCIENCIA_LABEL[op.nivel_consciencia] && (
+            {op?.nivel_consciencia && CATEGORIA_PRODUTOS_LABEL[op.nivel_consciencia] && (
               <span className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide inline-flex items-center gap-1 bg-primary/10 text-primary border-primary/30">
-                <Brain className="h-2.5 w-2.5" />
-                {NIVEL_CONSCIENCIA_LABEL[op.nivel_consciencia]}
+                <Package className="h-2.5 w-2.5" />
+                {CATEGORIA_PRODUTOS_LABEL[op.nivel_consciencia]}
               </span>
             )}
             {account.data_inicio_contrato && (
