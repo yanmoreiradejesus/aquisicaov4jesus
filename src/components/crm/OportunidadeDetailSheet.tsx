@@ -239,7 +239,7 @@ const GRAU_EXIGENCIA_STYLES: Record<string, { label: string; cls: string }> = {
   critico: { label: "Crítico", cls: "bg-red-400/10 text-red-400 border-red-400/40" },
 };
 
-const NIVEL_CONSCIENCIA_LABEL: Record<string, string> = {
+const CATEGORIA_PRODUTOS_LABEL: Record<string, string> = {
   saber: "Saber",
   ter: "Ter",
   executar: "Executar",
