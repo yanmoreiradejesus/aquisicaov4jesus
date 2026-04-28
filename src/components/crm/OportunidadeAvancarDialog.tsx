@@ -903,39 +903,10 @@ export const OportunidadeAvancarDialog = ({
 
               <div className="space-y-2.5">
                 <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-                  Grau de exigência do cliente *
-                </Label>
-                <div className="grid grid-cols-4 gap-2">
-                  {GRAUS_EXIGENCIA.map((g) => {
-                    const active = grauExigencia === g.value;
-                    return (
-                      <button
-                        key={g.value}
-                        type="button"
-                        onClick={() => setGrauExigencia(g.value)}
-                        className={cn(
-                          "py-2.5 px-2 rounded-lg border text-[12px] font-semibold transition-all",
-                          active ? cn("border-transparent ring-2 shadow-ios-sm", g.color) : "border-border/40 hover:border-border bg-surface-1/50 text-muted-foreground hover:text-foreground",
-                        )}
-                      >
-                        {g.label}
-                      </button>
-                    );
-                  })}
-                </div>
-                {submitted && liveErrors.grau && (
-                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
-                    <AlertCircle className="h-3 w-3" /> {liveErrors.grau}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2.5">
-                <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-                  Nível de consciência do cliente *
+                  Categoria de produtos *
                 </Label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {NIVEIS_CONSCIENCIA.map((n) => {
+                  {CATEGORIAS_PRODUTOS.map((n) => {
                     const active = nivelConsciencia === n.value;
                     return (
                       <button
