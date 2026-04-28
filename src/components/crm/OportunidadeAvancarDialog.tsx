@@ -928,6 +928,12 @@ export const OportunidadeAvancarDialog = ({
                       </button>
                     );
                   })}
+                </div>
+                {submitted && liveErrors.grau && (
+                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
+                    <AlertCircle className="h-3 w-3" /> {liveErrors.grau}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2.5">
@@ -957,12 +963,6 @@ export const OportunidadeAvancarDialog = ({
                 {submitted && liveErrors.consciencia && (
                   <p className="flex items-center gap-1.5 text-[11px] text-destructive">
                     <AlertCircle className="h-3 w-3" /> {liveErrors.consciencia}
-                  </p>
-                )}
-              </div>
-                {submitted && liveErrors.grau && (
-                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
-                    <AlertCircle className="h-3 w-3" /> {liveErrors.grau}
                   </p>
                 )}
               </div>
