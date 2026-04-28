@@ -6,10 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { GraduationCap, Building2, ExternalLink } from "lucide-react";
+import { GraduationCap, Building2, ExternalLink, Sparkles, FileText, Copy, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ONBOARDING_ETAPAS } from "@/hooks/useOnboarding";
+import ReactMarkdown from "react-markdown";
 
 interface Props {
   open: boolean;
@@ -35,10 +36,21 @@ const fmtBRL = (v?: number | null) =>
         maximumFractionDigits: 0,
       }).format(Number(v));
 
+const fmtDateTime = (iso?: string | null) =>
+  !iso ? "—" : new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+
+const CATEGORIA_PRODUTOS_LABEL: Record<string, string> = {
+  saber: "Saber",
+  ter: "Ter",
+  executar: "Executar",
+  potencializar: "Potencializar",
+};
+
 export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: Props) => {
   const [form, setForm] = useState<any>(null);
   const [responsaveis, setResponsaveis] = useState<{ id: string; full_name: string | null; email: string }[]>([]);
   const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -76,6 +88,124 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
     }
   };
 
+  const handleGerarRelatorio = async () => {
+    setGenerating(true);
+    try {
+      // Busca atividades da oportunidade e do lead para enriquecer o contexto
+      let atividades: any[] = [];
+      if (op?.id) {
+        const { data } = await supabase
+          .from("crm_atividades" as any)
+          .select("tipo, descricao, titulo, data_agendada, data_conclusao, concluida, created_at")
+          .or(`oportunidade_id.eq.${op.id}${lead?.id ? `,lead_id.eq.${lead.id}` : ""}`)
+          .order("created_at", { ascending: true })
+          .limit(80);
+        atividades = (data as any[]) ?? [];
+      }
+
+      const contexto = {
+        cliente: {
+          nome: form.cliente_nome,
+          data_inicio_contrato: form.data_inicio_contrato,
+          data_fim_contrato: form.data_fim_contrato,
+          status: form.status,
+        },
+        lead: lead
+          ? {
+              nome: lead.nome,
+              email: lead.email,
+              telefone: lead.telefone,
+              empresa: lead.empresa,
+              cargo: lead.cargo,
+              segmento: lead.segmento,
+              faturamento: lead.faturamento,
+              cidade: lead.cidade,
+              estado: lead.estado,
+              pais: lead.pais,
+              origem: lead.origem,
+              canal: lead.canal,
+              tier: lead.tier,
+              urgencia: lead.urgencia,
+              temperatura: lead.temperatura,
+              qualificacao: lead.qualificacao,
+              arrematador: lead.arrematador,
+              data_aquisicao: lead.data_aquisicao,
+              data_criacao_origem: lead.data_criacao_origem,
+              created_at: lead.created_at,
+              descricao: lead.descricao,
+              notas: lead.notas,
+              instagram: lead.instagram,
+              site: lead.site,
+              briefing_mercado: lead.briefing_mercado,
+              pesquisa_pre_qualificacao: lead.pesquisa_pre_qualificacao,
+              data_reuniao_agendada: lead.data_reuniao_agendada,
+              data_reuniao_realizada: lead.data_reuniao_realizada,
+            }
+          : null,
+        oportunidade: op
+          ? {
+              nome: op.nome_oportunidade,
+              etapa: op.etapa,
+              temperatura: op.temperatura,
+              valor_fee: op.valor_fee,
+              valor_ef: op.valor_ef,
+              valor_total: (Number(op.valor_ef) || 0) + (Number(op.valor_fee) || 0),
+              data_proposta: op.data_proposta,
+              data_fechamento_real: op.data_fechamento_real,
+              categoria_produtos: op.nivel_consciencia
+                ? CATEGORIA_PRODUTOS_LABEL[op.nivel_consciencia]
+                : null,
+              info_deal: op.info_deal,
+              oportunidades_monetizacao: op.oportunidades_monetizacao,
+              resumo_reuniao: op.resumo_reuniao,
+              transcricao_reuniao: op.transcricao_reuniao,
+              notas: op.notas,
+              motivo_perda: op.motivo_perda,
+            }
+          : null,
+        atividades: atividades.map((a) => ({
+          tipo: a.tipo,
+          titulo: a.titulo,
+          descricao: a.descricao,
+          data: a.data_agendada || a.created_at,
+          concluida: a.concluida,
+        })),
+      };
+
+      const { data, error } = await supabase.functions.invoke("meeting-ai", {
+        body: { action: "pre_growth_class", contexto },
+      });
+      if (error) throw error;
+      const relatorio = (data as any)?.relatorio as string | undefined;
+      if (!relatorio) throw new Error("Resposta vazia da IA");
+
+      const agora = new Date().toISOString();
+      update({
+        pre_growth_class_relatorio: relatorio,
+        pre_growth_class_gerado_em: agora,
+      });
+      toast({ title: "Relatório gerado", description: "Revise e clique em Salvar para persistir." });
+    } catch (e: any) {
+      toast({
+        title: "Erro ao gerar relatório",
+        description: e?.message || "Falha ao chamar a IA",
+        variant: "destructive",
+      });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleCopyRelatorio = async () => {
+    if (!form.pre_growth_class_relatorio) return;
+    try {
+      await navigator.clipboard.writeText(form.pre_growth_class_relatorio);
+      toast({ title: "Relatório copiado" });
+    } catch {
+      toast({ title: "Não foi possível copiar", variant: "destructive" });
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
@@ -106,6 +236,9 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
           <TabsList>
             <TabsTrigger value="growth">
               <GraduationCap className="h-3.5 w-3.5 mr-1.5" /> Growth Class
+            </TabsTrigger>
+            <TabsTrigger value="pre-gc">
+              <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Pré GC (IA)
             </TabsTrigger>
             <TabsTrigger value="info">Contrato</TabsTrigger>
           </TabsList>
@@ -217,6 +350,66 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
                 className="mt-1.5 min-h-[90px]"
               />
             </div>
+          </TabsContent>
+
+          <TabsContent value="pre-gc" className="space-y-4 mt-4">
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 flex items-start gap-3">
+              <FileText className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+              <div className="text-[12px] text-foreground/80 leading-relaxed">
+                <p className="font-semibold mb-1">Relatório Pré Growth Class</p>
+                <p>
+                  Síntese gerada por IA com toda a história do cliente — origem, qualificação,
+                  reuniões de vendas, oportunidades de monetização e agenda sugerida da GC.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                onClick={handleGerarRelatorio}
+                disabled={generating}
+              >
+                {generating ? (
+                  <>
+                    <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    Gerando...
+                  </>
+                ) : form.pre_growth_class_relatorio ? (
+                  <>
+                    <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                    Regenerar relatório
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                    Gerar relatório
+                  </>
+                )}
+              </Button>
+              {form.pre_growth_class_relatorio && (
+                <Button size="sm" variant="ghost" onClick={handleCopyRelatorio}>
+                  <Copy className="h-3.5 w-3.5 mr-1.5" />
+                  Copiar
+                </Button>
+              )}
+              {form.pre_growth_class_gerado_em && (
+                <span className="text-[11px] text-muted-foreground ml-auto">
+                  Gerado em {fmtDateTime(form.pre_growth_class_gerado_em)}
+                </span>
+              )}
+            </div>
+
+            {form.pre_growth_class_relatorio ? (
+              <div className="rounded-lg border border-border/40 bg-background/40 p-4 prose prose-invert prose-sm max-w-none prose-headings:font-display prose-headings:tracking-[-0.01em] prose-h2:text-base prose-h2:mt-5 prose-h2:mb-2 prose-h3:text-sm prose-p:text-[13px] prose-li:text-[13px] prose-strong:text-foreground prose-a:text-primary">
+                <ReactMarkdown>{form.pre_growth_class_relatorio}</ReactMarkdown>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground py-6 text-center">
+                Nenhum relatório gerado ainda. Clique em <strong>Gerar relatório</strong> para
+                consolidar todas as informações desde a captação do lead até o fechamento.
+              </p>
+            )}
           </TabsContent>
 
           <TabsContent value="info" className="space-y-4 mt-4">
