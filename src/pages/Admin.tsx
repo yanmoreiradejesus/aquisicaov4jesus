@@ -66,6 +66,7 @@ const AVAILABLE_PAGES = [
   { path: "/aquisicao/financeiro", label: "Financeiro", group: "Data Analytics" },
   { path: "/comercial/leads", label: "CRM Leads", group: "Comercial" },
   { path: "/comercial/oportunidades", label: "CRM Oportunidades", group: "Comercial" },
+  { path: "/comercial/onboarding", label: "Onboarding", group: "Comercial" },
   { path: "/comercial/accounts", label: "Accounts", group: "Comercial" },
   { path: "/comercial/cobrancas", label: "Cobranças", group: "Comercial" },
   { path: "/app-v4", label: "App V4", group: "Outros" },

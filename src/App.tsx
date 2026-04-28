@@ -18,6 +18,7 @@ import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import CrmLeads from "./pages/CrmLeads";
 import Oportunidades from "./pages/Oportunidades";
+import Onboarding from "./pages/Onboarding";
 import ComercialPlaceholder from "./pages/ComercialPlaceholder";
 import GoogleCallback from "./pages/GoogleCallback";
 
@@ -90,6 +91,11 @@ const AppRoutes = () => {
         <Route path="/comercial/oportunidades" element={
           <ProtectedRoute requiredPath="/comercial/oportunidades">
             <PageTransition><Oportunidades /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/comercial/onboarding" element={
+          <ProtectedRoute requiredPath="/comercial/onboarding">
+            <PageTransition><Onboarding /></PageTransition>
           </ProtectedRoute>
         } />
         <Route path="/comercial/accounts" element={
