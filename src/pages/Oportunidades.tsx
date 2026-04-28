@@ -204,6 +204,7 @@ const Oportunidades = () => {
       oportunidades_monetizacao: string;
       grau_exigencia: string;
       info_deal: string;
+      nivel_consciencia: string;
       data_assinatura: string;
     };
   }) => {

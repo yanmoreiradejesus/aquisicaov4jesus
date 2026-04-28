@@ -46,8 +46,16 @@ interface GanhoPayload {
   oportunidades_monetizacao: string;
   grau_exigencia: string;
   info_deal: string;
+  nivel_consciencia: string;
   data_assinatura: string; // ISO string — data em que o contrato foi assinado
 }
+
+const NIVEIS_CONSCIENCIA = [
+  { value: "saber", label: "Saber" },
+  { value: "ter", label: "Ter" },
+  { value: "executar", label: "Executar" },
+  { value: "potencializar", label: "Potencializar" },
+];
 
 interface Props {
   open: boolean;
@@ -168,6 +176,7 @@ export const OportunidadeAvancarDialog = ({
   const [grauExigencia, setGrauExigencia] = useState<string>("");
   const [infoDeal, setInfoDeal] = useState("");
   const [dataAssinatura, setDataAssinatura] = useState<string>(""); // YYYY-MM-DD
+  const [nivelConsciencia, setNivelConsciencia] = useState<string>("");
 
   // IA: estado da sugestão automática de tarefa
   const [aiSuggesting, setAiSuggesting] = useState(false);
@@ -193,6 +202,7 @@ export const OportunidadeAvancarDialog = ({
       setOportunidadesMonetizacao(oportunidade.oportunidades_monetizacao || "");
       setGrauExigencia(oportunidade.grau_exigencia || "");
       setInfoDeal(oportunidade.info_deal || "");
+      setNivelConsciencia(oportunidade.nivel_consciencia || "");
       // Pré-preenche com a data de fechamento real (se houver) ou hoje
       const baseAssinatura = oportunidade.data_fechamento_real
         ? new Date(oportunidade.data_fechamento_real)
@@ -346,6 +356,7 @@ export const OportunidadeAvancarDialog = ({
         const d = new Date(dataAssinatura);
         if (isNaN(d.getTime())) e.assinatura = "Data de assinatura inválida";
       }
+      if (!nivelConsciencia) e.consciencia = "Selecione o nível de consciência do cliente";
       const fee = Number(valorFee || 0);
       const ef = Number(valorEf || 0);
       if (!(fee > 0) && !(ef > 0)) e.valoresGanho = "Confirme Valor Fee e/ou Valor EF (pelo menos um maior que zero)";
@@ -356,7 +367,7 @@ export const OportunidadeAvancarDialog = ({
     hasTranscricaoSalva, adicionarNovaReuniao, novaTranscricao, temperatura, etapaDestino,
     tarefasPendentesCount, valorFee, valorEf,
     contratoFile, grauExigencia, oportunidadesMonetizacao, infoDeal, oportunidade?.contrato_url,
-    dataAssinatura,
+    dataAssinatura, nivelConsciencia,
   ]);
 
   const isStepValid = (s: number): boolean => {
@@ -365,7 +376,7 @@ export const OportunidadeAvancarDialog = ({
     if (key === "task") return !liveErrors.tarefas;
     if (key === "valores") return !liveErrors.valores;
     if (key === "ganho")
-      return !liveErrors.contrato && !liveErrors.grau && !liveErrors.monetizacao && !liveErrors.info && !liveErrors.valoresGanho && !liveErrors.assinatura;
+      return !liveErrors.contrato && !liveErrors.grau && !liveErrors.monetizacao && !liveErrors.info && !liveErrors.valoresGanho && !liveErrors.assinatura && !liveErrors.consciencia;
     return true;
   };
 
@@ -411,6 +422,7 @@ export const OportunidadeAvancarDialog = ({
           oportunidades_monetizacao: oportunidadesMonetizacao.trim(),
           grau_exigencia: grauExigencia,
           info_deal: infoDeal.trim(),
+          nivel_consciencia: nivelConsciencia,
           data_assinatura: assinaturaIso,
         };
       }
@@ -920,6 +932,37 @@ export const OportunidadeAvancarDialog = ({
                 {submitted && liveErrors.grau && (
                   <p className="flex items-center gap-1.5 text-[11px] text-destructive">
                     <AlertCircle className="h-3 w-3" /> {liveErrors.grau}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2.5">
+                <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
+                  Nível de consciência do cliente *
+                </Label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {NIVEIS_CONSCIENCIA.map((n) => {
+                    const active = nivelConsciencia === n.value;
+                    return (
+                      <button
+                        key={n.value}
+                        type="button"
+                        onClick={() => setNivelConsciencia(n.value)}
+                        className={cn(
+                          "py-2.5 px-2 rounded-lg border text-[12px] font-semibold transition-all",
+                          active
+                            ? "border-transparent ring-2 ring-primary/40 bg-primary/10 text-primary shadow-ios-sm"
+                            : "border-border/40 hover:border-border bg-surface-1/50 text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {n.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {submitted && liveErrors.consciencia && (
+                  <p className="flex items-center gap-1.5 text-[11px] text-destructive">
+                    <AlertCircle className="h-3 w-3" /> {liveErrors.consciencia}
                   </p>
                 )}
               </div>

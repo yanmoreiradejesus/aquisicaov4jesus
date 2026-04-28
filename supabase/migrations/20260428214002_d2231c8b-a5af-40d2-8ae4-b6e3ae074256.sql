@@ -1,0 +1,1 @@
+ALTER TABLE public.crm_oportunidades ADD COLUMN IF NOT EXISTS nivel_consciencia TEXT;

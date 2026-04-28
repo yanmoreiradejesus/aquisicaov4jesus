@@ -70,6 +70,7 @@ export function useCrmOportunidades() {
       oportunidades_monetizacao,
       grau_exigencia,
       info_deal,
+      nivel_consciencia,
       valor_fee,
       valor_ef,
       data_assinatura,
@@ -84,6 +85,7 @@ export function useCrmOportunidades() {
       oportunidades_monetizacao?: string;
       grau_exigencia?: string;
       info_deal?: string;
+      nivel_consciencia?: string;
       valor_fee?: number | null;
       valor_ef?: number | null;
       data_assinatura?: string; // ISO string — vira data_fechamento_real
@@ -99,6 +101,7 @@ export function useCrmOportunidades() {
       if (oportunidades_monetizacao !== undefined) patch.oportunidades_monetizacao = oportunidades_monetizacao;
       if (grau_exigencia !== undefined) patch.grau_exigencia = grau_exigencia;
       if (info_deal !== undefined) patch.info_deal = info_deal;
+      if (nivel_consciencia !== undefined) patch.nivel_consciencia = nivel_consciencia;
       if (valor_fee !== undefined) patch.valor_fee = valor_fee;
       if (valor_ef !== undefined) patch.valor_ef = valor_ef;
 

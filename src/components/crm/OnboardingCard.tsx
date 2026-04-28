@@ -1,6 +1,13 @@
 import { useDraggable } from "@dnd-kit/core";
-import { Calendar, GraduationCap, AlertCircle } from "lucide-react";
+import { Calendar, GraduationCap, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const NIVEL_CONSCIENCIA_LABEL: Record<string, string> = {
+  saber: "Saber",
+  ter: "Ter",
+  executar: "Executar",
+  potencializar: "Potencializar",
+};
 
 interface Props {
   account: any;
@@ -117,10 +124,11 @@ export const OnboardingCard = ({ account, onClick, overlay = false }: Props) => 
                 <Calendar className="h-2.5 w-2.5" />
                 GC {fmtDate(gcAgendada)}
               </span>
-            ) : (
-              <span className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide inline-flex items-center gap-1 bg-muted/30 text-muted-foreground border-border/40">
-                <AlertCircle className="h-2.5 w-2.5" />
-                GC não agendada
+            ) : null}
+            {op?.nivel_consciencia && NIVEL_CONSCIENCIA_LABEL[op.nivel_consciencia] && (
+              <span className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide inline-flex items-center gap-1 bg-primary/10 text-primary border-primary/30">
+                <Brain className="h-2.5 w-2.5" />
+                {NIVEL_CONSCIENCIA_LABEL[op.nivel_consciencia]}
               </span>
             )}
             {account.data_inicio_contrato && (

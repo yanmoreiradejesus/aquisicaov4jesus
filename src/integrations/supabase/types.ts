@@ -516,6 +516,7 @@ export type Database = {
           info_deal: string | null
           lead_id: string | null
           motivo_perda: string | null
+          nivel_consciencia: string | null
           nome_oportunidade: string
           notas: string | null
           oportunidades_monetizacao: string | null
@@ -540,6 +541,7 @@ export type Database = {
           info_deal?: string | null
           lead_id?: string | null
           motivo_perda?: string | null
+          nivel_consciencia?: string | null
           nome_oportunidade: string
           notas?: string | null
           oportunidades_monetizacao?: string | null
@@ -564,6 +566,7 @@ export type Database = {
           info_deal?: string | null
           lead_id?: string | null
           motivo_perda?: string | null
+          nivel_consciencia?: string | null
           nome_oportunidade?: string
           notas?: string | null
           oportunidades_monetizacao?: string | null
