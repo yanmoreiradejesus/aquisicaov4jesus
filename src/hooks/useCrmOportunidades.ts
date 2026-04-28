@@ -101,6 +101,7 @@ export function useCrmOportunidades() {
       if (oportunidades_monetizacao !== undefined) patch.oportunidades_monetizacao = oportunidades_monetizacao;
       if (grau_exigencia !== undefined) patch.grau_exigencia = grau_exigencia;
       if (info_deal !== undefined) patch.info_deal = info_deal;
+      if (nivel_consciencia !== undefined) patch.nivel_consciencia = nivel_consciencia;
       if (valor_fee !== undefined) patch.valor_fee = valor_fee;
       if (valor_ef !== undefined) patch.valor_ef = valor_ef;
 
