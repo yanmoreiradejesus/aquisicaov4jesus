@@ -81,48 +81,48 @@ Transcrição:
 """${transcricao}"""${ctxStr}`;
     } else if (action === "pre_growth_class") {
       systemPrompt =
-        "Você é um Account Manager sênior preparando o briefing executivo PRÉ Growth Class (kick-off com cliente recém-fechado). Sintetize TODA a história do cliente — desde a captação do lead até o fechamento — em um relatório estruturado, claro e acionável em português do Brasil. Use Markdown rico (## seções, ### subseções, **negrito**, listas, emojis sutis em cabeçalhos). Seja específico e cite informações reais. Quando algum dado não estiver disponível, escreva '_Não informado_' — nunca invente.";
-      userPrompt = `Gere o RELATÓRIO PRÉ GROWTH CLASS seguindo EXATAMENTE este formato:
+        "Você é um Account Manager sênior preparando o briefing executivo PRÉ Growth Class (kick-off com cliente recém-fechado). Seu padrão de diagnóstico é o framework SPICED (Situation, Pain, Impact, Critical Event, Decision) — use-o como espinha dorsal do relatório. Tom: objetivo, executivo, direto ao ponto. Sem encheção de linguiça, sem repetições, sem floreios. Em português do Brasil. Use Markdown limpo (## seções, ### subseções, **negrito**, listas, emojis sutis nos cabeçalhos). Quando um dado não estiver disponível, escreva '_Não informado_' e, se for relevante para SPICED, registre como gap a investigar na Growth Class. NUNCA invente informações.";
+      userPrompt = `Gere o RELATÓRIO PRÉ GROWTH CLASS seguindo EXATAMENTE este formato. Seja conciso — bullets curtos, frases diretas.
 
-## 🏢 Identificação do Cliente
-- **Empresa / Cliente:** ...
-- **Contato principal:** nome, cargo, e-mail/telefone
-- **Segmento / Faturamento / Localização:** ...
-- **Categoria de produtos contratada:** Saber / Ter / Executar / Potencializar
-- **Valor do deal:** Fee mensal + EF (entrada)
-- **Data de assinatura:** ...
+## 🏢 Identificação
+- **Empresa:** ... | **Segmento:** ... | **Faturamento:** ... | **Localização:** ...
+- **Contato principal:** nome, cargo, contato
+- **Categoria contratada:** Saber / Ter / Executar / Potencializar
+- **Deal:** Fee mensal R$ X + EF R$ Y | **Assinatura:** data
 
-## 📥 Origem & Captação do Lead
-Como o lead chegou, canal, origem, arrematador, data de criação, urgência inicial, tier.
+## 🎯 SPICED — Diagnóstico Consolidado
 
-## 🧭 Qualificação & Descoberta
-- **Dor principal / contexto de negócio**
-- **Objetivos declarados** pelo cliente
-- **Critérios de decisão / nível de urgência**
-- Notas relevantes da pré-qualificação (IA + humana)
+### S — Situation (Situação atual)
+Onde o cliente está hoje: contexto de negócio, estrutura, momento. Máx. 4 bullets.
 
-## 💼 Jornada Comercial
-Resumo cronológico da evolução pelo funil (entrada → reunião → proposta → negociação → contrato → ganho), incluindo objeções levantadas e como foram tratadas.
+### P — Pain (Dor)
+Dores concretas levantadas na qualificação e nas reuniões. Bullets diretos.
 
-## 📝 Reunião(ões) de Vendas
-Pontos-chave da(s) transcrição(ões) da(s) reunião(ões) — quem participou, o que foi discutido, decisões tomadas.
+### I — Impact (Impacto)
+Custo de manter a dor (financeiro, operacional, estratégico). Quantificar quando houver número.
 
-## ✅ O Que Foi Contratado
-- Produtos/serviços incluídos no escopo
-- Expectativas explicitamente alinhadas no fechamento
+### C — Critical Event (Evento crítico)
+Prazo, marco ou gatilho que torna a solução urgente AGORA. Se não houver, marcar como gap.
+
+### D — Decision (Decisão)
+Quem decide, quem influencia, critérios de decisão, processo de aprovação.
+
+## 💼 O Que Foi Contratado
+- Escopo e produtos incluídos
+- Expectativas alinhadas no fechamento
 - Prazos e marcos combinados
 
-## 💰 Oportunidades de Monetização Identificadas
-Upsells, cross-sells e expansões já mapeadas pelo closer (resgatar do campo "Oportunidades de monetização").
+## 💰 Oportunidades de Monetização
+Upsells/cross-sells já mapeados pelo closer (campo "oportunidades_monetizacao").
 
 ## ⚠️ Riscos & Pontos de Atenção
-Sinais de alerta, expectativas que podem virar atrito, gaps de informação a investigar na Growth Class.
+Gaps de informação, expectativas potencialmente desalinhadas, sinais de alerta.
 
 ## 🎯 Agenda Sugerida da Growth Class
-3-5 bullets com a ordem ideal de tópicos para a reunião — alinhamento de expectativas, validação do escopo, plano de ação inicial, próximos passos.
+3-5 bullets objetivos com a ordem ideal de tópicos.
 
-## 🚀 Próximas Ações Pós-Growth Class
-Lista acionável (checkbox markdown) do que precisa acontecer logo após a reunião.
+## 🚀 Próximas Ações Pós-GC
+Lista acionável (checkbox markdown) — quem, o quê, quando.
 
 ---
 

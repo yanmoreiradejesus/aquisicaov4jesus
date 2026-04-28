@@ -128,10 +128,6 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
               urgencia: lead.urgencia,
               temperatura: lead.temperatura,
               qualificacao: lead.qualificacao,
-              arrematador: lead.arrematador,
-              data_aquisicao: lead.data_aquisicao,
-              data_criacao_origem: lead.data_criacao_origem,
-              created_at: lead.created_at,
               descricao: lead.descricao,
               notas: lead.notas,
               instagram: lead.instagram,
@@ -173,7 +169,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
       };
 
       const { data, error } = await supabase.functions.invoke("meeting-ai", {
-        body: { action: "pre_growth_class", contexto },
+        body: { action: "pre_growth_class", contexto, provider: "opus45" },
       });
       if (error) throw error;
       const relatorio = (data as any)?.relatorio as string | undefined;
