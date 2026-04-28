@@ -1,6 +1,13 @@
 import { useDraggable } from "@dnd-kit/core";
-import { Calendar, GraduationCap, AlertCircle } from "lucide-react";
+import { Calendar, GraduationCap, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const NIVEL_CONSCIENCIA_LABEL: Record<string, string> = {
+  saber: "Saber",
+  ter: "Ter",
+  executar: "Executar",
+  potencializar: "Potencializar",
+};
 
 interface Props {
   account: any;
