@@ -29,6 +29,7 @@ const V4Header = () => {
   const comercialItems = [
     { path: "/comercial/leads", label: "Leads" },
     { path: "/comercial/oportunidades", label: "Oportunidades" },
+    { path: "/comercial/onboarding", label: "Onboarding" },
     { path: "/comercial/accounts", label: "Accounts" },
     { path: "/comercial/cobrancas", label: "Cobranças" },
   ];
