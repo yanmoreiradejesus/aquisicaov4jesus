@@ -202,6 +202,7 @@ export const OportunidadeAvancarDialog = ({
       setOportunidadesMonetizacao(oportunidade.oportunidades_monetizacao || "");
       setGrauExigencia(oportunidade.grau_exigencia || "");
       setInfoDeal(oportunidade.info_deal || "");
+      setNivelConsciencia(oportunidade.nivel_consciencia || "");
       // Pré-preenche com a data de fechamento real (se houver) ou hoje
       const baseAssinatura = oportunidade.data_fechamento_real
         ? new Date(oportunidade.data_fechamento_real)
