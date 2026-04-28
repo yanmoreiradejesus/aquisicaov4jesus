@@ -35,6 +35,8 @@ export type Database = {
           notas: string | null
           onboarding_status: Database["public"]["Enums"]["onboarding_status"]
           oportunidade_id: string | null
+          pre_growth_class_gerado_em: string | null
+          pre_growth_class_relatorio: string | null
           produtos_contratados: Json | null
           proxima_revisao: string | null
           status: Database["public"]["Enums"]["account_status"]
@@ -60,6 +62,8 @@ export type Database = {
           notas?: string | null
           onboarding_status?: Database["public"]["Enums"]["onboarding_status"]
           oportunidade_id?: string | null
+          pre_growth_class_gerado_em?: string | null
+          pre_growth_class_relatorio?: string | null
           produtos_contratados?: Json | null
           proxima_revisao?: string | null
           status?: Database["public"]["Enums"]["account_status"]
@@ -85,6 +89,8 @@ export type Database = {
           notas?: string | null
           onboarding_status?: Database["public"]["Enums"]["onboarding_status"]
           oportunidade_id?: string | null
+          pre_growth_class_gerado_em?: string | null
+          pre_growth_class_relatorio?: string | null
           produtos_contratados?: Json | null
           proxima_revisao?: string | null
           status?: Database["public"]["Enums"]["account_status"]
