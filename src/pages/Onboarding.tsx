@@ -142,7 +142,8 @@ const Onboarding = () => {
                   label={etapa.label}
                   color={etapa.color}
                   accounts={grouped[etapa.id] ?? []}
-                  onEdit={(acc) => { setEditing(acc); setSheetOpen(true); }}
+                  onEdit={(acc) => openAcc(acc.id)}
+                  onOpenInNewTab={(acc) => window.open(`/comercial/onboarding/${acc.id}`, "_blank", "noopener,noreferrer")}
                   defaultCollapsed={etapa.id === "churn_m0"}
                 />
               ))}
