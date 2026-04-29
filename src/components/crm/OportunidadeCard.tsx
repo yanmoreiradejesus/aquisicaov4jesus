@@ -1,10 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import { Calendar, ListTodo, Copy, MessageCircle } from "lucide-react";
+import { Calendar, ListTodo, Copy, MessageCircle, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPhone, whatsappNumber } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 
 interface Props {
   oportunidade: any;
@@ -153,7 +159,7 @@ export const OportunidadeCard = ({ oportunidade, onClick, onOpenInNewTab, overla
     toast({ title: "Telefone copiado", description: phoneFmt });
   };
 
-  return (
+  const cardInner = (
     <div ref={overlay ? undefined : setNodeRef} style={style} {...(overlay ? {} : attributes)}>
       <div
         className={cn(
