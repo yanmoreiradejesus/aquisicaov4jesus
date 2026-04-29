@@ -35,22 +35,30 @@ const Oportunidades = () => {
   const [importOpen, setImportOpen] = useState(false);
   const [celebration, setCelebration] = useState<{ nome_oportunidade: string; valor_total?: number } | null>(null);
   const { toast } = useToast();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const autoOpenedRef = useRef<string | null>(null);
+  const navigate = useNavigate();
+  const { oportunidadeId } = useParams<{ oportunidadeId?: string }>();
+  const notFoundToastedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const id = searchParams.get("id");
-    if (!id || isLoading || autoOpenedRef.current === id) return;
-    const op = oportunidades.find((o: any) => o.id === id);
+    if (!oportunidadeId) {
+      setSheetOpen(false);
+      setEditing(null);
+      return;
+    }
+    if (isLoading) return;
+    const op = oportunidades.find((o: any) => o.id === oportunidadeId);
     if (op) {
-      autoOpenedRef.current = id;
       setEditing(op);
       setSheetOpen(true);
-      const next = new URLSearchParams(searchParams);
-      next.delete("id");
-      setSearchParams(next, { replace: true });
+    } else if (notFoundToastedRef.current !== oportunidadeId) {
+      notFoundToastedRef.current = oportunidadeId;
+      toast({ title: "Oportunidade não encontrada", variant: "destructive" });
+      navigate("/comercial/oportunidades", { replace: true });
     }
-  }, [searchParams, isLoading, oportunidades, setSearchParams]);
+  }, [oportunidadeId, oportunidades, isLoading, navigate, toast]);
+
+  const openOp = (id: string) => navigate(`/comercial/oportunidades/${id}`);
+  const closeOp = () => navigate("/comercial/oportunidades");
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const scrollRef = useRef<HTMLDivElement>(null);
