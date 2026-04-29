@@ -9,6 +9,7 @@ import { GraduationCap, Building2, ExternalLink, FileText, Copy, RefreshCw, Chec
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { OnboardingCopilot } from "./OnboardingCopilot";
+
 import ReactMarkdown from "react-markdown";
 
 interface Props {
