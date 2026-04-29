@@ -183,7 +183,7 @@ const SalesforceStepper = ({
   );
 };
 
-export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtapa, onDelete, onDisqualify }: Props) => {
+export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtapa, onDelete, onDisqualify, fullPage = false, backTo }: Props) => {
   const [form, setForm] = useState<any>(null);
   const [qualOpen, setQualOpen] = useState(false);
   const [pendingEtapa, setPendingEtapa] = useState<string | null>(null);
