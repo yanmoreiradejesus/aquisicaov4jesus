@@ -161,7 +161,7 @@ const Onboarding = () => {
 
       <OnboardingDetailSheet
         open={sheetOpen}
-        onOpenChange={setSheetOpen}
+        onOpenChange={(v) => { if (!v) closeAcc(); else setSheetOpen(true); }}
         account={editing}
         onSave={handleSave}
       />
