@@ -5,11 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { GraduationCap, Building2, ExternalLink, FileText, Copy, RefreshCw } from "lucide-react";
+import { GraduationCap, Building2, ExternalLink, FileText, Copy, RefreshCw, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { ONBOARDING_ETAPAS } from "@/hooks/useOnboarding";
 import ReactMarkdown from "react-markdown";
 
 interface Props {
@@ -373,44 +371,6 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
 
           <TabsContent value="growth" className="space-y-4 mt-4">
             <div>
-              <Label>Status do Onboarding</Label>
-              <Select
-                value={form.onboarding_status}
-                onValueChange={(v) => update({ onboarding_status: v })}
-              >
-                <SelectTrigger className="mt-1.5">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ONBOARDING_ETAPAS.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>{e.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <Label>Data agendada</Label>
-                <Input
-                  type="datetime-local"
-                  value={toLocalInput(form.growth_class_data_agendada)}
-                  onChange={(e) => update({ growth_class_data_agendada: fromLocalInput(e.target.value) })}
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label>Data realizada</Label>
-                <Input
-                  type="datetime-local"
-                  value={toLocalInput(form.growth_class_data_realizada)}
-                  onChange={(e) => update({ growth_class_data_realizada: fromLocalInput(e.target.value) })}
-                  className="mt-1.5"
-                />
-              </div>
-            </div>
-
-            <div>
               <Label>Expectativa do cliente</Label>
               <Textarea
                 placeholder="O que o cliente espera, o que foi alinhado..."
@@ -439,6 +399,28 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
                 className="mt-1.5 min-h-[180px] font-mono text-xs"
               />
             </div>
+
+            {form.onboarding_status !== "concluida" && (
+              <div className="pt-2">
+                <Button
+                  variant="outline"
+                  className="w-full border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10 hover:text-emerald-200"
+                  onClick={() => update({ onboarding_status: "concluida", growth_class_data_realizada: new Date().toISOString() })}
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Marcar Growth Class como concluída
+                </Button>
+                <p className="text-[11px] text-muted-foreground text-center mt-2">
+                  Lembre-se de clicar em <strong>Salvar</strong> para persistir.
+                </p>
+              </div>
+            )}
+            {form.onboarding_status === "concluida" && (
+              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-center text-[13px] text-emerald-300 font-medium inline-flex items-center justify-center gap-2 w-full">
+                <CheckCircle2 className="h-4 w-4" />
+                Growth Class concluída
+              </div>
+            )}
           </TabsContent>
         </Tabs>
 

@@ -886,6 +886,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auto_mark_onboarding_atrasada: { Args: never; Returns: undefined }
       backfill_3cplus_call_events: {
         Args: never
         Returns: {
