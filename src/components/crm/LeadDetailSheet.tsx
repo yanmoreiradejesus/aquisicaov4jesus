@@ -51,6 +51,10 @@ interface Props {
   fullPage?: boolean;
   /** Caminho pra onde voltar quando fullPage */
   backTo?: string;
+  /** Navegação prev/next quando fullPage */
+  onPrev?: () => void;
+  onNext?: () => void;
+  positionLabel?: string;
 }
 
 /** Deriva o Tier a partir do faturamento */
@@ -183,7 +187,7 @@ const SalesforceStepper = ({
   );
 };
 
-export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtapa, onDelete, onDisqualify, fullPage = false, backTo }: Props) => {
+export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtapa, onDelete, onDisqualify, fullPage = false, backTo, onPrev, onNext, positionLabel }: Props) => {
   const [form, setForm] = useState<any>(null);
   const [qualOpen, setQualOpen] = useState(false);
   const [pendingEtapa, setPendingEtapa] = useState<string | null>(null);
@@ -291,6 +295,9 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
       open={open}
       onOpenChange={onOpenChange}
       backTo={backTo}
+      onPrev={onPrev}
+      onNext={onNext}
+      positionLabel={positionLabel}
       contentClassName={fullPage ? "" : "w-screen sm:max-w-[min(96vw,1400px)] overflow-y-auto glass-strong border-l-border/60"}
     >
         {fullPage ? (

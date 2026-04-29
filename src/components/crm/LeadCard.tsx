@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import { Copy, MessageCircle, Clock, ExternalLink } from "lucide-react";
+import { Copy, MessageCircle, Clock, ExternalLink, Link2 } from "lucide-react";
 import { CSS } from "@dnd-kit/utilities";
 import { formatPhone, whatsappNumber, timeAgo } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
@@ -212,6 +212,16 @@ export const LeadCard = ({
 
   if (overlay || !onOpenInNewTab) return cardInner;
 
+  const copyLink = async () => {
+    const url = `${window.location.origin}/comercial/leads/${lead.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: "Link copiado", description: "Cole onde quiser compartilhar." });
+    } catch {
+      toast({ title: "Erro ao copiar", variant: "destructive" });
+    }
+  };
+
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>{cardInner}</ContextMenuTrigger>
@@ -219,6 +229,10 @@ export const LeadCard = ({
         <ContextMenuItem onSelect={() => onOpenInNewTab()}>
           <ExternalLink className="h-3.5 w-3.5 mr-2" />
           Abrir em nova aba
+        </ContextMenuItem>
+        <ContextMenuItem onSelect={copyLink}>
+          <Link2 className="h-3.5 w-3.5 mr-2" />
+          Copiar link
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
