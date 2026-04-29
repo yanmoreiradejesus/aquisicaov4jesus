@@ -278,10 +278,7 @@ const CrmLeads = () => {
           )
         ) : (
           <TasksOverviewView
-            onOpenLead={(leadId) => {
-              const lead = leads.find((l: any) => l.id === leadId);
-              if (lead) { setEditing(lead); setSheetOpen(true); }
-            }}
+            onOpenLead={(id) => openLead(id)}
           />
         )}
       </main>
