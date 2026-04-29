@@ -47,6 +47,10 @@ interface Props {
   onChangeEtapa: (id: string, etapa: string) => Promise<void> | void;
   onDelete?: (id: string) => Promise<void> | void;
   onDisqualify?: (lead: any) => void;
+  /** Quando true, renderiza como página full-screen */
+  fullPage?: boolean;
+  /** Caminho pra onde voltar quando fullPage */
+  backTo?: string;
 }
 
 /** Deriva o Tier a partir do faturamento */
