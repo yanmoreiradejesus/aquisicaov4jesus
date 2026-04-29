@@ -254,10 +254,10 @@ const CrmLeads = () => {
                     label={etapa.label}
                     color={etapa.color}
                     leads={grouped[etapa.id] ?? []}
-                    onEdit={(l) => { setEditing(l); setSheetOpen(true); }}
+                    onEdit={(l) => openLead(l.id)}
                     defaultCollapsed={etapa.id === "desqualificado"}
                     onPhoneInteract={handlePhoneInteract}
-                    onOpenInNewTab={(l) => window.open(`/comercial/leads?id=${l.id}`, "_blank", "noopener,noreferrer")}
+                    onOpenInNewTab={(l) => window.open(`/comercial/leads/${l.id}`, "_blank", "noopener,noreferrer")}
                   />
                 ))}
               </div>
