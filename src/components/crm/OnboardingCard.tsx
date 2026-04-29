@@ -1,6 +1,7 @@
 import { useDraggable } from "@dnd-kit/core";
-import { Calendar, GraduationCap, Package, ExternalLink } from "lucide-react";
+import { Calendar, GraduationCap, Package, ExternalLink, Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -37,6 +38,7 @@ const fmtDate = (iso?: string | null) => {
 };
 
 export const OnboardingCard = ({ account, onClick, onOpenInNewTab, overlay = false }: Props) => {
+  const { toast } = useToast();
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: account.id,
     disabled: overlay,
@@ -169,6 +171,16 @@ export const OnboardingCard = ({ account, onClick, onOpenInNewTab, overlay = fal
 
   if (overlay || !onOpenInNewTab) return cardInner;
 
+  const copyLink = async () => {
+    const url = `${window.location.origin}/comercial/onboarding/${account.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: "Link copiado", description: "Cole onde quiser compartilhar." });
+    } catch {
+      toast({ title: "Erro ao copiar", variant: "destructive" });
+    }
+  };
+
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>{cardInner}</ContextMenuTrigger>
@@ -176,6 +188,10 @@ export const OnboardingCard = ({ account, onClick, onOpenInNewTab, overlay = fal
         <ContextMenuItem onSelect={() => onOpenInNewTab()}>
           <ExternalLink className="h-3.5 w-3.5 mr-2" />
           Abrir em nova aba
+        </ContextMenuItem>
+        <ContextMenuItem onSelect={copyLink}>
+          <Link2 className="h-3.5 w-3.5 mr-2" />
+          Copiar link
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
