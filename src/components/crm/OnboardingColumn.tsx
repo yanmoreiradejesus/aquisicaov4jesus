@@ -10,6 +10,7 @@ interface Props {
   color: string;
   accounts: any[];
   onEdit: (acc: any) => void;
+  onOpenInNewTab?: (acc: any) => void;
   defaultCollapsed?: boolean;
 }
 
