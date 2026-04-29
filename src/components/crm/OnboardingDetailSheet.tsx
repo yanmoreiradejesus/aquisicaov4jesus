@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { GraduationCap, Building2, ExternalLink, Sparkles, FileText, Copy, RefreshCw } from "lucide-react";
+import { GraduationCap, Building2, ExternalLink, FileText, Copy, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ONBOARDING_ETAPAS } from "@/hooks/useOnboarding";
@@ -39,6 +39,9 @@ const fmtBRL = (v?: number | null) =>
 const fmtDateTime = (iso?: string | null) =>
   !iso ? "—" : new Date(iso).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 
+const fmtDate = (iso?: string | null) =>
+  !iso ? "—" : new Date(iso).toLocaleDateString("pt-BR");
+
 const CATEGORIA_PRODUTOS_LABEL: Record<string, string> = {
   saber: "Saber",
   ter: "Ter",
@@ -51,6 +54,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
   const [responsaveis, setResponsaveis] = useState<{ id: string; full_name: string | null; email: string }[]>([]);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [contratoSignedUrl, setContratoSignedUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -66,6 +70,19 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
       .order("full_name")
       .then(({ data }) => setResponsaveis((data as any[]) ?? []));
   }, [open]);
+
+  // Sign contrato URL when present
+  useEffect(() => {
+    const path = form?.oportunidade?.contrato_url;
+    if (!path) {
+      setContratoSignedUrl(null);
+      return;
+    }
+    supabase.storage
+      .from("contratos-assinados")
+      .createSignedUrl(path, 60 * 60)
+      .then(({ data }) => setContratoSignedUrl(data?.signedUrl ?? null));
+  }, [form?.oportunidade?.contrato_url]);
 
   if (!form) return null;
 
@@ -91,7 +108,6 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
   const handleGerarRelatorio = async () => {
     setGenerating(true);
     try {
-      // Busca atividades da oportunidade e do lead para enriquecer o contexto
       let atividades: any[] = [];
       if (op?.id) {
         const { data } = await supabase
@@ -173,7 +189,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
       });
       if (error) throw error;
       const relatorio = (data as any)?.relatorio as string | undefined;
-      if (!relatorio) throw new Error("Resposta vazia da IA");
+      if (!relatorio) throw new Error("Resposta vazia");
 
       const agora = new Date().toISOString();
       update({
@@ -184,7 +200,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
     } catch (e: any) {
       toast({
         title: "Erro ao gerar relatório",
-        description: e?.message || "Falha ao chamar a IA",
+        description: e?.message || "Falha ao gerar",
         variant: "destructive",
       });
     } finally {
@@ -228,16 +244,132 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
           </div>
         </SheetHeader>
 
-        <Tabs defaultValue="growth" className="mt-6">
+        <Tabs defaultValue="pre-gc" className="mt-6">
           <TabsList>
+            <TabsTrigger value="pre-gc">
+              <FileText className="h-3.5 w-3.5 mr-1.5" /> Pré GC
+            </TabsTrigger>
             <TabsTrigger value="growth">
               <GraduationCap className="h-3.5 w-3.5 mr-1.5" /> Growth Class
             </TabsTrigger>
-            <TabsTrigger value="pre-gc">
-              <Sparkles className="h-3.5 w-3.5 mr-1.5" /> Pré GC (IA)
-            </TabsTrigger>
-            <TabsTrigger value="info">Contrato</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="pre-gc" className="space-y-5 mt-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                onClick={handleGerarRelatorio}
+                disabled={generating}
+              >
+                {generating ? (
+                  <>
+                    <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    Gerando...
+                  </>
+                ) : form.pre_growth_class_relatorio ? (
+                  <>
+                    <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                    Regenerar
+                  </>
+                ) : (
+                  <>
+                    <FileText className="h-3.5 w-3.5 mr-1.5" />
+                    Gerar relatório
+                  </>
+                )}
+              </Button>
+              {form.pre_growth_class_relatorio && (
+                <Button size="sm" variant="ghost" onClick={handleCopyRelatorio}>
+                  <Copy className="h-3.5 w-3.5 mr-1.5" />
+                  Copiar
+                </Button>
+              )}
+              {form.pre_growth_class_gerado_em && (
+                <span className="text-[11px] text-muted-foreground ml-auto">
+                  Gerado em {fmtDateTime(form.pre_growth_class_gerado_em)}
+                </span>
+              )}
+            </div>
+
+            {form.pre_growth_class_relatorio ? (
+              <div className="rounded-lg border border-border/40 bg-background/40 p-4 prose prose-invert prose-sm max-w-none prose-headings:font-display prose-headings:tracking-[-0.01em] prose-h2:text-base prose-h2:mt-5 prose-h2:mb-2 prose-h3:text-sm prose-p:text-[13px] prose-li:text-[13px] prose-strong:text-foreground prose-a:text-primary">
+                <ReactMarkdown>{form.pre_growth_class_relatorio}</ReactMarkdown>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground py-6 text-center">
+                Relatório ainda em geração ou pendente. Clique em <strong>Gerar relatório</strong> caso não apareça em alguns instantes.
+              </p>
+            )}
+
+            {/* Anexos: contrato + informações gerais */}
+            <div className="space-y-3 pt-4 border-t border-border/40">
+              <h3 className="font-display text-sm font-semibold tracking-[-0.01em] text-foreground/90">
+                Contrato & Informações Gerais
+              </h3>
+
+              <div className="rounded-lg border border-border/40 bg-background/40 p-3 space-y-2 text-[13px]">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">Contrato assinado</span>
+                  {contratoSignedUrl ? (
+                    <a
+                      href={contratoSignedUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-primary hover:underline font-medium"
+                    >
+                      Abrir PDF <ExternalLink className="h-3 w-3" />
+                    </a>
+                  ) : (
+                    <span className="text-foreground/60">—</span>
+                  )}
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">Categoria de produtos</span>
+                  <span className="text-foreground/90 font-medium">
+                    {op?.nivel_consciencia ? CATEGORIA_PRODUTOS_LABEL[op.nivel_consciencia] : "—"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">Valor Fee mensal</span>
+                  <span className="text-foreground/90 font-medium tabular-nums">{fmtBRL(op?.valor_fee)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">Valor EF</span>
+                  <span className="text-foreground/90 font-medium tabular-nums">{fmtBRL(op?.valor_ef)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">Valor total</span>
+                  <span className="text-foreground/90 font-semibold tabular-nums">{fmtBRL(valorTotal)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">Início do contrato</span>
+                  <span className="text-foreground/90 font-medium tabular-nums">{fmtDate(form.data_inicio_contrato)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-muted-foreground">Fim do contrato</span>
+                  <span className="text-foreground/90 font-medium tabular-nums">{fmtDate(form.data_fim_contrato)}</span>
+                </div>
+              </div>
+
+              {op?.info_deal && (
+                <div>
+                  <Label className="text-xs text-muted-foreground">Informações do deal</Label>
+                  <div className="mt-1.5 rounded-lg border border-border/40 bg-background/40 p-3 text-[13px] text-foreground/85 whitespace-pre-wrap">
+                    {op.info_deal}
+                  </div>
+                </div>
+              )}
+
+              {op?.oportunidades_monetizacao && (
+                <div>
+                  <Label className="text-xs text-muted-foreground">Oportunidades de monetização (mapeadas no fechamento)</Label>
+                  <div className="mt-1.5 rounded-lg border border-border/40 bg-background/40 p-3 text-[13px] text-foreground/85 whitespace-pre-wrap">
+                    {op.oportunidades_monetizacao}
+                  </div>
+                </div>
+              )}
+            </div>
+          </TabsContent>
 
           <TabsContent value="growth" className="space-y-4 mt-4">
             <div>
@@ -279,202 +411,32 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
             </div>
 
             <div>
-              <Label>Responsável pela reunião</Label>
-              <Select
-                value={form.growth_class_responsavel_id ?? "none"}
-                onValueChange={(v) => update({ growth_class_responsavel_id: v === "none" ? null : v })}
-              >
-                <SelectTrigger className="mt-1.5">
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">— Nenhum —</SelectItem>
-                  {responsaveis.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>{r.full_name || r.email}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>Link da reunião (Google Meet)</Label>
-              <Input
-                type="url"
-                placeholder="https://meet.google.com/..."
-                value={form.growth_class_meet_link ?? ""}
-                onChange={(e) => update({ growth_class_meet_link: e.target.value })}
-                className="mt-1.5"
-              />
-            </div>
-
-            <div>
-              <Label>Expectativas alinhadas</Label>
+              <Label>Expectativa do cliente</Label>
               <Textarea
-                placeholder="O que o cliente espera, o que foi balizado..."
+                placeholder="O que o cliente espera, o que foi alinhado..."
                 value={form.growth_class_expectativas ?? ""}
                 onChange={(e) => update({ growth_class_expectativas: e.target.value })}
-                className="mt-1.5 min-h-[90px]"
+                className="mt-1.5 min-h-[100px]"
               />
-            </div>
-
-            <div>
-              <Label>Ata / Resumo da reunião</Label>
-              <Textarea
-                placeholder="Pontos discutidos, decisões tomadas..."
-                value={form.growth_class_ata ?? ""}
-                onChange={(e) => update({ growth_class_ata: e.target.value })}
-                className="mt-1.5 min-h-[110px]"
-              />
-            </div>
-
-            <div>
-              <Label>Próximos passos</Label>
-              <Textarea
-                placeholder="Ações a serem executadas após a Growth Class..."
-                value={form.growth_class_proximos_passos ?? ""}
-                onChange={(e) => update({ growth_class_proximos_passos: e.target.value })}
-                className="mt-1.5 min-h-[90px]"
-              />
-            </div>
-
-            <div>
-              <Label>Oportunidades de monetização</Label>
-              <Textarea
-                placeholder="Possíveis upsells, cross-sells, novas frentes..."
-                value={form.growth_class_oportunidades_monetizacao ?? ""}
-                onChange={(e) => update({ growth_class_oportunidades_monetizacao: e.target.value })}
-                className="mt-1.5 min-h-[90px]"
-              />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="pre-gc" className="space-y-4 mt-4">
-            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 flex items-start gap-3">
-              <FileText className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-              <div className="text-[12px] text-foreground/80 leading-relaxed">
-                <p className="font-semibold mb-1">Relatório Pré Growth Class</p>
-                <p>
-                  Síntese gerada por IA com toda a história do cliente — origem, qualificação,
-                  reuniões de vendas, oportunidades de monetização e agenda sugerida da GC.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                size="sm"
-                onClick={handleGerarRelatorio}
-                disabled={generating}
-              >
-                {generating ? (
-                  <>
-                    <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                    Gerando...
-                  </>
-                ) : form.pre_growth_class_relatorio ? (
-                  <>
-                    <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
-                    Regenerar relatório
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                    Gerar relatório
-                  </>
-                )}
-              </Button>
-              {form.pre_growth_class_relatorio && (
-                <Button size="sm" variant="ghost" onClick={handleCopyRelatorio}>
-                  <Copy className="h-3.5 w-3.5 mr-1.5" />
-                  Copiar
-                </Button>
-              )}
-              {form.pre_growth_class_gerado_em && (
-                <span className="text-[11px] text-muted-foreground ml-auto">
-                  Gerado em {fmtDateTime(form.pre_growth_class_gerado_em)}
-                </span>
-              )}
-            </div>
-
-            {form.pre_growth_class_relatorio ? (
-              <div className="rounded-lg border border-border/40 bg-background/40 p-4 prose prose-invert prose-sm max-w-none prose-headings:font-display prose-headings:tracking-[-0.01em] prose-h2:text-base prose-h2:mt-5 prose-h2:mb-2 prose-h3:text-sm prose-p:text-[13px] prose-li:text-[13px] prose-strong:text-foreground prose-a:text-primary">
-                <ReactMarkdown>{form.pre_growth_class_relatorio}</ReactMarkdown>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground py-6 text-center">
-                Nenhum relatório gerado ainda. Clique em <strong>Gerar relatório</strong> para
-                consolidar todas as informações desde a captação do lead até o fechamento.
-              </p>
-            )}
-          </TabsContent>
-
-          <TabsContent value="info" className="space-y-4 mt-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <Label>Cliente</Label>
-                <Input
-                  value={form.cliente_nome ?? ""}
-                  onChange={(e) => update({ cliente_nome: e.target.value })}
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label>Status do contrato</Label>
-                <Select value={form.status} onValueChange={(v) => update({ status: v })}>
-                  <SelectTrigger className="mt-1.5">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ativo">Ativo</SelectItem>
-                    <SelectItem value="pausado">Pausado</SelectItem>
-                    <SelectItem value="encerrado">Encerrado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Data início contrato</Label>
-                <Input
-                  type="date"
-                  value={form.data_inicio_contrato ?? ""}
-                  onChange={(e) => update({ data_inicio_contrato: e.target.value || null })}
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label>Data fim contrato</Label>
-                <Input
-                  type="date"
-                  value={form.data_fim_contrato ?? ""}
-                  onChange={(e) => update({ data_fim_contrato: e.target.value || null })}
-                  className="mt-1.5"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label>Account Manager</Label>
-              <Select
-                value={form.account_manager_id ?? "none"}
-                onValueChange={(v) => update({ account_manager_id: v === "none" ? null : v })}
-              >
-                <SelectTrigger className="mt-1.5">
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">— Nenhum —</SelectItem>
-                  {responsaveis.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>{r.full_name || r.email}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
 
             <div>
               <Label>Notas</Label>
               <Textarea
-                value={form.notas ?? ""}
-                onChange={(e) => update({ notas: e.target.value })}
+                placeholder="Observações livres da reunião..."
+                value={form.growth_class_ata ?? ""}
+                onChange={(e) => update({ growth_class_ata: e.target.value })}
                 className="mt-1.5 min-h-[100px]"
+              />
+            </div>
+
+            <div>
+              <Label>Transcrição da reunião</Label>
+              <Textarea
+                placeholder="Cole aqui a transcrição completa da Growth Class..."
+                value={form.growth_class_transcricao_reuniao ?? ""}
+                onChange={(e) => update({ growth_class_transcricao_reuniao: e.target.value })}
+                className="mt-1.5 min-h-[180px] font-mono text-xs"
               />
             </div>
           </TabsContent>
