@@ -229,8 +229,13 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+    <DetailShell
+      fullPage={fullPage}
+      open={open}
+      onOpenChange={onOpenChange}
+      backTo={backTo}
+      contentClassName={fullPage ? "" : "w-full sm:max-w-2xl overflow-y-auto"}
+    >
         <SheetHeader className="text-left space-y-2">
           <div className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.2em] uppercase text-muted-foreground">
             <Building2 className="h-3 w-3" /> Contrato em Onboarding
