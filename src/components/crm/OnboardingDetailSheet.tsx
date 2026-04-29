@@ -191,11 +191,17 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
       if (!relatorio) throw new Error("Resposta vazia");
 
       const agora = new Date().toISOString();
+      // Auto-salva direto no banco — não precisa esperar o usuário clicar em Salvar
+      const { error: upErr } = await supabase
+        .from("accounts" as any)
+        .update({ pre_growth_class_relatorio: relatorio, pre_growth_class_gerado_em: agora })
+        .eq("id", form.id);
+      if (upErr) throw upErr;
       update({
         pre_growth_class_relatorio: relatorio,
         pre_growth_class_gerado_em: agora,
       });
-      toast({ title: "Relatório gerado", description: "Revise e clique em Salvar para persistir." });
+      toast({ title: "Relatório gerado e salvo" });
     } catch (e: any) {
       toast({
         title: "Erro ao gerar relatório",
