@@ -12,6 +12,7 @@ const CATEGORIA_PRODUTOS_LABEL: Record<string, string> = {
 interface Props {
   account: any;
   onClick: () => void;
+  onOpenInNewTab?: () => void;
   overlay?: boolean;
 }
 
@@ -29,11 +30,27 @@ const fmtDate = (iso?: string | null) => {
   return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 };
 
-export const OnboardingCard = ({ account, onClick, overlay = false }: Props) => {
+export const OnboardingCard = ({ account, onClick, onOpenInNewTab, overlay = false }: Props) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: account.id,
     disabled: overlay,
   });
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    if ((e.metaKey || e.ctrlKey) && onOpenInNewTab) {
+      e.preventDefault();
+      onOpenInNewTab();
+      return;
+    }
+    onClick();
+  };
+
+  const handleAuxClick = (e: React.MouseEvent) => {
+    if (e.button === 1 && onOpenInNewTab) {
+      e.preventDefault();
+      onOpenInNewTab();
+    }
+  };
 
   const style: React.CSSProperties | undefined = overlay
     ? undefined
@@ -85,7 +102,8 @@ export const OnboardingCard = ({ account, onClick, overlay = false }: Props) => 
 
         <div
           {...(overlay ? {} : listeners)}
-          onClick={overlay ? undefined : onClick}
+          onClick={overlay ? undefined : handleCardClick}
+          onAuxClick={overlay ? undefined : handleAuxClick}
           className={cn("pl-3.5 pr-3 py-3", overlay ? "cursor-grabbing" : "cursor-grab active:cursor-grabbing")}
         >
           <div className="flex items-start justify-between gap-2">

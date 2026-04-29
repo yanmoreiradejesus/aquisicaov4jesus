@@ -1,4 +1,5 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { useHorizontalWheelScroll } from "@/hooks/useHorizontalWheelScroll";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,30 @@ const Onboarding = () => {
   const [editing, setEditing] = useState<any | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { accountId } = useParams<{ accountId?: string }>();
+  const notFoundToastedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!accountId) {
+      setSheetOpen(false);
+      setEditing(null);
+      return;
+    }
+    if (isLoading) return;
+    const acc = accounts.find((a: any) => a.id === accountId);
+    if (acc) {
+      setEditing(acc);
+      setSheetOpen(true);
+    } else if (notFoundToastedRef.current !== accountId) {
+      notFoundToastedRef.current = accountId;
+      toast({ title: "Contrato não encontrado", variant: "destructive" });
+      navigate("/comercial/onboarding", { replace: true });
+    }
+  }, [accountId, accounts, isLoading, navigate, toast]);
+
+  const openAcc = (id: string) => navigate(`/comercial/onboarding/${id}`);
+  const closeAcc = () => navigate("/comercial/onboarding");
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -117,7 +142,8 @@ const Onboarding = () => {
                   label={etapa.label}
                   color={etapa.color}
                   accounts={grouped[etapa.id] ?? []}
-                  onEdit={(acc) => { setEditing(acc); setSheetOpen(true); }}
+                  onEdit={(acc) => openAcc(acc.id)}
+                  onOpenInNewTab={(acc) => window.open(`/comercial/onboarding/${acc.id}`, "_blank", "noopener,noreferrer")}
                   defaultCollapsed={etapa.id === "churn_m0"}
                 />
               ))}
@@ -135,7 +161,7 @@ const Onboarding = () => {
 
       <OnboardingDetailSheet
         open={sheetOpen}
-        onOpenChange={setSheetOpen}
+        onOpenChange={(v) => { if (!v) closeAcc(); else setSheetOpen(true); }}
         account={editing}
         onSave={handleSave}
       />

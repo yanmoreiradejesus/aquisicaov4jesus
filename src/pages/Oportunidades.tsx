@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useHorizontalWheelScroll } from "@/hooks/useHorizontalWheelScroll";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
@@ -35,22 +35,30 @@ const Oportunidades = () => {
   const [importOpen, setImportOpen] = useState(false);
   const [celebration, setCelebration] = useState<{ nome_oportunidade: string; valor_total?: number } | null>(null);
   const { toast } = useToast();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const autoOpenedRef = useRef<string | null>(null);
+  const navigate = useNavigate();
+  const { oportunidadeId } = useParams<{ oportunidadeId?: string }>();
+  const notFoundToastedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const id = searchParams.get("id");
-    if (!id || isLoading || autoOpenedRef.current === id) return;
-    const op = oportunidades.find((o: any) => o.id === id);
+    if (!oportunidadeId) {
+      setSheetOpen(false);
+      setEditing(null);
+      return;
+    }
+    if (isLoading) return;
+    const op = oportunidades.find((o: any) => o.id === oportunidadeId);
     if (op) {
-      autoOpenedRef.current = id;
       setEditing(op);
       setSheetOpen(true);
-      const next = new URLSearchParams(searchParams);
-      next.delete("id");
-      setSearchParams(next, { replace: true });
+    } else if (notFoundToastedRef.current !== oportunidadeId) {
+      notFoundToastedRef.current = oportunidadeId;
+      toast({ title: "Oportunidade não encontrada", variant: "destructive" });
+      navigate("/comercial/oportunidades", { replace: true });
     }
-  }, [searchParams, isLoading, oportunidades, setSearchParams]);
+  }, [oportunidadeId, oportunidades, isLoading, navigate, toast]);
+
+  const openOp = (id: string) => navigate(`/comercial/oportunidades/${id}`);
+  const closeOp = () => navigate("/comercial/oportunidades");
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -346,8 +354,8 @@ const Oportunidades = () => {
                     label={etapa.label}
                     color={etapa.color}
                     oportunidades={grouped[etapa.id] ?? []}
-                    onEdit={(op) => { setEditing(op); setSheetOpen(true); }}
-                    onOpenInNewTab={(op) => window.open(`/comercial/oportunidades?id=${op.id}`, "_blank", "noopener,noreferrer")}
+                    onEdit={(op) => openOp(op.id)}
+                    onOpenInNewTab={(op) => window.open(`/comercial/oportunidades/${op.id}`, "_blank", "noopener,noreferrer")}
                     defaultCollapsed={etapa.id === "fechado_perdido" || etapa.id === "follow_infinito"}
                   />
                 ))}
@@ -363,17 +371,22 @@ const Oportunidades = () => {
           )
         ) : (
           <OportunidadeTasksOverview
-            onOpenOportunidade={(opId) => {
-              const op = oportunidades.find((o: any) => o.id === opId);
-              if (op) { setEditing(op); setSheetOpen(true); }
-            }}
+            onOpenOportunidade={(id) => openOp(id)}
           />
         )}
       </main>
 
       <OportunidadeDetailSheet
         open={sheetOpen}
-        onOpenChange={setSheetOpen}
+        onOpenChange={(v) => {
+          if (!v) {
+            // Se está aberto via URL, navega de volta. Caso contrário (criação nova), só fecha.
+            if (oportunidadeId) closeOp();
+            else setSheetOpen(false);
+          } else {
+            setSheetOpen(true);
+          }
+        }}
         oportunidade={editing}
         onSave={handleSave}
         onDelete={handleDelete}

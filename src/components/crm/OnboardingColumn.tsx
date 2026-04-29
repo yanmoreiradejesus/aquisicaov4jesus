@@ -10,6 +10,7 @@ interface Props {
   color: string;
   accounts: any[];
   onEdit: (acc: any) => void;
+  onOpenInNewTab?: (acc: any) => void;
   defaultCollapsed?: boolean;
 }
 
@@ -26,6 +27,7 @@ export const OnboardingColumn = ({
   color,
   accounts,
   onEdit,
+  onOpenInNewTab,
   defaultCollapsed = false,
 }: Props) => {
   const { setNodeRef, isOver } = useDroppable({ id });
@@ -109,7 +111,12 @@ export const OnboardingColumn = ({
         )}
       >
         {accounts.map((acc) => (
-          <OnboardingCard key={acc.id} account={acc} onClick={() => onEdit(acc)} />
+          <OnboardingCard
+            key={acc.id}
+            account={acc}
+            onClick={() => onEdit(acc)}
+            onOpenInNewTab={onOpenInNewTab ? () => onOpenInNewTab(acc) : undefined}
+          />
         ))}
         {accounts.length === 0 && (
           <div className="flex flex-col items-center justify-center text-center text-[11px] text-muted-foreground/50 py-12 select-none">

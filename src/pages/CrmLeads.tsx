@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useHorizontalWheelScroll } from "@/hooks/useHorizontalWheelScroll";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { LeadCard } from "@/components/crm/LeadCard";
@@ -35,22 +35,31 @@ const CrmLeads = () => {
   const [view, setView] = useState<"kanban" | "tarefas">("kanban");
   const [activeId, setActiveId] = useState<string | null>(null);
   const { toast } = useToast();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const autoOpenedRef = useRef<string | null>(null);
+  const navigate = useNavigate();
+  const { leadId } = useParams<{ leadId?: string }>();
+  const notFoundToastedRef = useRef<string | null>(null);
 
+  // Sincroniza URL → sheet
   useEffect(() => {
-    const id = searchParams.get("id");
-    if (!id || isLoading || autoOpenedRef.current === id) return;
-    const lead = leads.find((l: any) => l.id === id);
+    if (!leadId) {
+      setSheetOpen(false);
+      setEditing(null);
+      return;
+    }
+    if (isLoading) return;
+    const lead = leads.find((l: any) => l.id === leadId);
     if (lead) {
-      autoOpenedRef.current = id;
       setEditing(lead);
       setSheetOpen(true);
-      const next = new URLSearchParams(searchParams);
-      next.delete("id");
-      setSearchParams(next, { replace: true });
+    } else if (notFoundToastedRef.current !== leadId) {
+      notFoundToastedRef.current = leadId;
+      toast({ title: "Lead não encontrado", variant: "destructive" });
+      navigate("/comercial/leads", { replace: true });
     }
-  }, [searchParams, isLoading, leads, setSearchParams]);
+  }, [leadId, leads, isLoading, navigate, toast]);
+
+  const openLead = (id: string) => navigate(`/comercial/leads/${id}`);
+  const closeLead = () => navigate("/comercial/leads");
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -245,10 +254,10 @@ const CrmLeads = () => {
                     label={etapa.label}
                     color={etapa.color}
                     leads={grouped[etapa.id] ?? []}
-                    onEdit={(l) => { setEditing(l); setSheetOpen(true); }}
+                    onEdit={(l) => openLead(l.id)}
                     defaultCollapsed={etapa.id === "desqualificado"}
                     onPhoneInteract={handlePhoneInteract}
-                    onOpenInNewTab={(l) => window.open(`/comercial/leads?id=${l.id}`, "_blank", "noopener,noreferrer")}
+                    onOpenInNewTab={(l) => window.open(`/comercial/leads/${l.id}`, "_blank", "noopener,noreferrer")}
                   />
                 ))}
               </div>
@@ -269,10 +278,7 @@ const CrmLeads = () => {
           )
         ) : (
           <TasksOverviewView
-            onOpenLead={(leadId) => {
-              const lead = leads.find((l: any) => l.id === leadId);
-              if (lead) { setEditing(lead); setSheetOpen(true); }
-            }}
+            onOpenLead={(id) => openLead(id)}
           />
         )}
       </main>
@@ -287,12 +293,12 @@ const CrmLeads = () => {
 
       <LeadDetailSheet
         open={sheetOpen}
-        onOpenChange={setSheetOpen}
+        onOpenChange={(v) => { if (!v) closeLead(); else setSheetOpen(true); }}
         lead={editing}
         onSave={handleSave}
         onChangeEtapa={(id, etapa) => updateEtapa.mutateAsync({ id, etapa })}
         onDelete={handleDelete}
-        onDisqualify={(l) => { setSheetOpen(false); setDesqualLead(l); setDesqualOpen(true); }}
+        onDisqualify={(l) => { closeLead(); setDesqualLead(l); setDesqualOpen(true); }}
       />
 
       <LeadImportDialog

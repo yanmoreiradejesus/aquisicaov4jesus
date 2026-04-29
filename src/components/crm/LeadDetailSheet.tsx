@@ -36,6 +36,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CopyLinkButton } from "./CopyLinkButton";
 
 interface Props {
   open: boolean;
@@ -283,9 +284,12 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-screen sm:max-w-[min(96vw,1400px)] overflow-y-auto glass-strong border-l-border/60">
         <SheetHeader>
-          <SheetTitle className="tracking-tight text-[22px] font-semibold pr-10">
-            {form.empresa || form.nome}
-          </SheetTitle>
+          <div className="flex items-start justify-between gap-2 pr-10">
+            <SheetTitle className="tracking-tight text-[22px] font-semibold">
+              {form.empresa || form.nome}
+            </SheetTitle>
+            {form.id && <CopyLinkButton path={`/comercial/leads/${form.id}`} className="mt-1" />}
+          </div>
         </SheetHeader>
 
         {/* STEPPER estilo Salesforce */}
