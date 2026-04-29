@@ -102,7 +102,8 @@ export const OnboardingCard = ({ account, onClick, onOpenInNewTab, overlay = fal
 
         <div
           {...(overlay ? {} : listeners)}
-          onClick={overlay ? undefined : onClick}
+          onClick={overlay ? undefined : handleCardClick}
+          onAuxClick={overlay ? undefined : handleAuxClick}
           className={cn("pl-3.5 pr-3 py-3", overlay ? "cursor-grabbing" : "cursor-grab active:cursor-grabbing")}
         >
           <div className="flex items-start justify-between gap-2">
