@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { OnboardingCopilot } from "./OnboardingCopilot";
 import { CopyLinkButton } from "./CopyLinkButton";
+import { DetailShell } from "./DetailShell";
 
 import ReactMarkdown from "react-markdown";
 
@@ -18,6 +19,8 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   account: any | null;
   onSave: (acc: any) => Promise<void>;
+  fullPage?: boolean;
+  backTo?: string;
 }
 
 const toLocalInput = (iso?: string | null) => {
@@ -50,7 +53,7 @@ const CATEGORIA_PRODUTOS_LABEL: Record<string, string> = {
   potencializar: "Potencializar",
 };
 
-export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: Props) => {
+export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, fullPage = false, backTo }: Props) => {
   const [form, setForm] = useState<any>(null);
   const [responsaveis, setResponsaveis] = useState<{ id: string; full_name: string | null; email: string }[]>([]);
   const [saving, setSaving] = useState(false);
@@ -226,8 +229,13 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+    <DetailShell
+      fullPage={fullPage}
+      open={open}
+      onOpenChange={onOpenChange}
+      backTo={backTo}
+      contentClassName={fullPage ? "" : "w-full sm:max-w-2xl overflow-y-auto"}
+    >
         <SheetHeader className="text-left space-y-2">
           <div className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.2em] uppercase text-muted-foreground">
             <Building2 className="h-3 w-3" /> Contrato em Onboarding
@@ -449,7 +457,6 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
             {saving ? "Salvando..." : "Salvar"}
           </Button>
         </div>
-      </SheetContent>
-    </Sheet>
+    </DetailShell>
   );
 };

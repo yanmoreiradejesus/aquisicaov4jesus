@@ -34,6 +34,7 @@ import { LeadCallEventsList } from "./LeadCallEventsList";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { CopyLinkButton } from "./CopyLinkButton";
+import { DetailShell } from "./DetailShell";
 
 interface Props {
   open: boolean;
@@ -42,6 +43,8 @@ interface Props {
   onSave: (op: any) => Promise<void> | void;
   onChangeEtapa: (id: string, etapaDestino: string, op: any) => void;
   onDelete?: (id: string) => Promise<void> | void;
+  fullPage?: boolean;
+  backTo?: string;
 }
 
 /** Deriva o Tier a partir do faturamento (mesmo critério do CRM Lead) */
@@ -327,6 +330,8 @@ export const OportunidadeDetailSheet = ({
   onSave,
   onChangeEtapa,
   onDelete,
+  fullPage = false,
+  backTo,
 }: Props) => {
   const [form, setForm] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<string>("informacoes");
@@ -601,11 +606,13 @@ export const OportunidadeDetailSheet = ({
 
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="w-screen sm:max-w-[min(96vw,1400px)] overflow-y-auto glass-strong border-l-border/60"
-      >
+    <DetailShell
+      fullPage={fullPage}
+      open={open}
+      onOpenChange={onOpenChange}
+      backTo={backTo}
+      contentClassName={fullPage ? "" : "w-screen sm:max-w-[min(96vw,1400px)] overflow-y-auto glass-strong border-l-border/60"}
+    >
         <SheetHeader>
           <div className="flex items-start justify-between gap-2 pr-10">
             <SheetTitle className="tracking-tight text-[22px] font-semibold">
@@ -1113,7 +1120,6 @@ export const OportunidadeDetailSheet = ({
             {form.id && <OportunidadeTimeline oportunidadeId={form.id} />}
           </TabsContent>
         </Tabs>
-      </SheetContent>
-    </Sheet>
+    </DetailShell>
   );
 };

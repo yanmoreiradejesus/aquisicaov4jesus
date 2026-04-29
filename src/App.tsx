@@ -19,6 +19,9 @@ import NotFound from "./pages/NotFound";
 import CrmLeads from "./pages/CrmLeads";
 import Oportunidades from "./pages/Oportunidades";
 import Onboarding from "./pages/Onboarding";
+import LeadDetailPage from "./pages/LeadDetailPage";
+import OportunidadeDetailPage from "./pages/OportunidadeDetailPage";
+import OnboardingDetailPage from "./pages/OnboardingDetailPage";
 import ComercialPlaceholder from "./pages/ComercialPlaceholder";
 import GoogleCallback from "./pages/GoogleCallback";
 
@@ -90,7 +93,7 @@ const AppRoutes = () => {
         } />
         <Route path="/comercial/leads/:leadId" element={
           <ProtectedRoute requiredPath="/comercial/leads">
-            <PageTransition><CrmLeads /></PageTransition>
+            <PageTransition><LeadDetailPage /></PageTransition>
           </ProtectedRoute>
         } />
         <Route path="/comercial/oportunidades" element={
@@ -100,7 +103,7 @@ const AppRoutes = () => {
         } />
         <Route path="/comercial/oportunidades/:oportunidadeId" element={
           <ProtectedRoute requiredPath="/comercial/oportunidades">
-            <PageTransition><Oportunidades /></PageTransition>
+            <PageTransition><OportunidadeDetailPage /></PageTransition>
           </ProtectedRoute>
         } />
         <Route path="/comercial/onboarding" element={
@@ -110,7 +113,7 @@ const AppRoutes = () => {
         } />
         <Route path="/comercial/onboarding/:accountId" element={
           <ProtectedRoute requiredPath="/comercial/onboarding">
-            <PageTransition><Onboarding /></PageTransition>
+            <PageTransition><OnboardingDetailPage /></PageTransition>
           </ProtectedRoute>
         } />
         <Route path="/comercial/accounts" element={
