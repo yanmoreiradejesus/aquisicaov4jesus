@@ -35,22 +35,31 @@ const CrmLeads = () => {
   const [view, setView] = useState<"kanban" | "tarefas">("kanban");
   const [activeId, setActiveId] = useState<string | null>(null);
   const { toast } = useToast();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const autoOpenedRef = useRef<string | null>(null);
+  const navigate = useNavigate();
+  const { leadId } = useParams<{ leadId?: string }>();
+  const notFoundToastedRef = useRef<string | null>(null);
 
+  // Sincroniza URL → sheet
   useEffect(() => {
-    const id = searchParams.get("id");
-    if (!id || isLoading || autoOpenedRef.current === id) return;
-    const lead = leads.find((l: any) => l.id === id);
+    if (!leadId) {
+      setSheetOpen(false);
+      setEditing(null);
+      return;
+    }
+    if (isLoading) return;
+    const lead = leads.find((l: any) => l.id === leadId);
     if (lead) {
-      autoOpenedRef.current = id;
       setEditing(lead);
       setSheetOpen(true);
-      const next = new URLSearchParams(searchParams);
-      next.delete("id");
-      setSearchParams(next, { replace: true });
+    } else if (notFoundToastedRef.current !== leadId) {
+      notFoundToastedRef.current = leadId;
+      toast({ title: "Lead não encontrado", variant: "destructive" });
+      navigate("/comercial/leads", { replace: true });
     }
-  }, [searchParams, isLoading, leads, setSearchParams]);
+  }, [leadId, leads, isLoading, navigate, toast]);
+
+  const openLead = (id: string) => navigate(`/comercial/leads/${id}`);
+  const closeLead = () => navigate("/comercial/leads");
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const scrollRef = useRef<HTMLDivElement>(null);
