@@ -111,7 +111,12 @@ export const OnboardingColumn = ({
         )}
       >
         {accounts.map((acc) => (
-          <OnboardingCard key={acc.id} account={acc} onClick={() => onEdit(acc)} />
+          <OnboardingCard
+            key={acc.id}
+            account={acc}
+            onClick={() => onEdit(acc)}
+            onOpenInNewTab={onOpenInNewTab ? () => onOpenInNewTab(acc) : undefined}
+          />
         ))}
         {accounts.length === 0 && (
           <div className="flex flex-col items-center justify-center text-center text-[11px] text-muted-foreground/50 py-12 select-none">
