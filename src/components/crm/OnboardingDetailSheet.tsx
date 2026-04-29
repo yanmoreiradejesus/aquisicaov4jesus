@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { OnboardingCopilot } from "./OnboardingCopilot";
 import { CopyLinkButton } from "./CopyLinkButton";
+import { DetailShell } from "./DetailShell";
 
 import ReactMarkdown from "react-markdown";
 
@@ -18,6 +19,8 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   account: any | null;
   onSave: (acc: any) => Promise<void>;
+  fullPage?: boolean;
+  backTo?: string;
 }
 
 const toLocalInput = (iso?: string | null) => {
