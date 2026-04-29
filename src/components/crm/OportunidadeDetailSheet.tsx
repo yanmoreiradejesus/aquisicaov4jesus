@@ -33,6 +33,7 @@ import { PreQualificationPanel } from "./PreQualificationPanel";
 import { LeadCallEventsList } from "./LeadCallEventsList";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { CopyLinkButton } from "./CopyLinkButton";
 
 interface Props {
   open: boolean;
