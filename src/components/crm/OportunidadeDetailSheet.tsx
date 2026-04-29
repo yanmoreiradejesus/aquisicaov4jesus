@@ -607,9 +607,12 @@ export const OportunidadeDetailSheet = ({
         className="w-screen sm:max-w-[min(96vw,1400px)] overflow-y-auto glass-strong border-l-border/60"
       >
         <SheetHeader>
-          <SheetTitle className="tracking-tight text-[22px] font-semibold pr-10">
-            {form.nome_oportunidade || "Oportunidade"}
-          </SheetTitle>
+          <div className="flex items-start justify-between gap-2 pr-10">
+            <SheetTitle className="tracking-tight text-[22px] font-semibold">
+              {form.nome_oportunidade || "Oportunidade"}
+            </SheetTitle>
+            {form.id && <CopyLinkButton path={`/comercial/oportunidades/${form.id}`} className="mt-1" />}
+          </div>
         </SheetHeader>
 
         {/* STEPPER */}
