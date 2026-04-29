@@ -81,48 +81,78 @@ Transcrição:
 """${transcricao}"""${ctxStr}`;
     } else if (action === "pre_growth_class") {
       systemPrompt =
-        "Você é um Account Manager sênior preparando o briefing executivo PRÉ Growth Class (kick-off com cliente recém-fechado). Seu padrão de diagnóstico é o framework SPICED (Situation, Pain, Impact, Critical Event, Decision) — use-o como espinha dorsal do relatório. Tom: objetivo, executivo, direto ao ponto. Sem encheção de linguiça, sem repetições, sem floreios. Em português do Brasil. Use Markdown limpo (## seções, ### subseções, **negrito**, listas, emojis sutis nos cabeçalhos). Quando um dado não estiver disponível, escreva '_Não informado_' e, se for relevante para SPICED, registre como gap a investigar na Growth Class. NUNCA invente informações.";
-      userPrompt = `Gere o RELATÓRIO PRÉ GROWTH CLASS seguindo EXATAMENTE este formato. Seja conciso — bullets curtos, frases diretas.
+        "Você é um Account Manager sênior preparando o briefing executivo PRÉ Growth Class (kick-off com cliente recém-fechado). Seu padrão de diagnóstico é o framework SPICED (Situation, Pain, Impact, Critical Event, Decision). Tom: objetivo, executivo, direto ao ponto. Sem encheção de linguiça. Português do Brasil. Use Markdown LIMPO: ## seções, ### subseções, **negrito**, listas com '-' e '1.', emojis sutis nos cabeçalhos. " +
+        "REGRAS DE FORMATAÇÃO CRÍTICAS:\n" +
+        "1. NUNCA use tabelas markdown (`| col | col |`). Tabelas viram uma linha só no front. SEMPRE use listas verticais ou blocos com **negrito** + bullets.\n" +
+        "2. Cada item de lista em SUA PRÓPRIA linha, com quebra de linha real entre itens.\n" +
+        "3. Para produtos contratados e riscos, use o padrão BLOCO: `**Nome do item**` numa linha, depois bullets `-` com detalhes nas linhas seguintes.\n" +
+        "4. Quando um dado não estiver disponível, escreva '_Não informado_' e registre como gap se relevante. NUNCA invente informações.";
+      userPrompt = `Gere o RELATÓRIO PRÉ GROWTH CLASS seguindo EXATAMENTE este formato. Seja conciso — bullets curtos, frases diretas. NUNCA use tabelas markdown.
 
 ## 🏢 Identificação
 - **Empresa:** ... | **Segmento:** ... | **Faturamento:** ... | **Localização:** ...
 - **Contato principal:** nome, cargo, contato
 - **Categoria contratada:** Saber / Ter / Executar / Potencializar
-- **Deal:** Fee mensal R$ X + EF R$ Y | **Assinatura:** data
+- **Assinatura do contrato:** data
+
+## 💼 Produtos Contratados
+**FONTE DE VERDADE: o texto do contrato em \`contrato.texto_extraido\`.** Liste TODOS os produtos discriminados no contrato, um abaixo do outro, no formato:
+
+**1. Nome do Produto**
+- Valor: 12x R$ X (total R$ Y)
+- Prazo: ...
+- Escopo discriminado no contrato: bullet 1; bullet 2; bullet 3...
+
+**2. Próximo Produto**
+- Valor: ...
+- (etc.)
+
+REGRAS:
+- Se um produto (ex.: "Assessoria Mensal") aparecer no contrato sem escopo discriminado, escreva "_Escopo não detalhado no contrato_" e adicione esse item em "Riscos & Pontos de Atenção" com mitigação "validar escopo com o cliente na GC".
+- Se valor_fee/valor_ef da oportunidade divergirem dos valores do contrato, sinalize a divergência aqui em **negrito** ("⚠️ Divergência: ...").
+- Se o contrato não estiver disponível (\`contrato.disponivel = false\`), escreva "⚠️ Contrato não anexado/extraído" e use os dados da oportunidade (valor_fee, valor_ef, categoria) com aviso de que precisam ser confirmados.
 
 ## 🎯 SPICED — Diagnóstico Consolidado
 
-### S — Situation (Situação atual)
-Onde o cliente está hoje: contexto de negócio, estrutura, momento. Máx. 4 bullets.
+### S — Situation
+Onde o cliente está hoje. Máx. 4 bullets curtos.
 
-### P — Pain (Dor)
-Dores concretas levantadas na qualificação e nas reuniões. Bullets diretos.
+### P — Pain
+Dores levantadas na qualificação e reuniões. Bullets diretos.
 
-### I — Impact (Impacto)
-Custo de manter a dor (financeiro, operacional, estratégico). Quantificar quando houver número.
+### I — Impact
+Custo de manter a dor (financeiro, operacional, estratégico). Quantifique quando houver número.
 
-### C — Critical Event (Evento crítico)
+### C — Critical Event
 Prazo, marco ou gatilho que torna a solução urgente AGORA. Se não houver, marcar como gap.
 
-### D — Decision (Decisão)
-Quem decide, quem influencia, critérios de decisão, processo de aprovação.
-
-## 💼 O Que Foi Contratado
-- Escopo e produtos incluídos
-- Expectativas alinhadas no fechamento
-- Prazos e marcos combinados
+### D — Decision
+Quem decide, quem influencia, critérios e processo de aprovação.
 
 ## 💰 Oportunidades de Monetização
-Upsells/cross-sells já mapeados pelo closer (campo "oportunidades_monetizacao").
+Upsells/cross-sells já mapeados pelo closer (campo \`oportunidades_monetizacao\`). Bullets curtos.
 
 ## ⚠️ Riscos & Pontos de Atenção
-Gaps de informação, expectativas potencialmente desalinhadas, sinais de alerta.
+Liste UM POR BLOCO (nunca em tabela). Severidade no título com emoji: 🔴 Alta, 🟡 Média, 🟢 Baixa.
+
+**🔴 Alta — Título do risco**
+Descrição curta do risco em 1-2 linhas.
+**Mitigação:** ação concreta.
+
+**🟡 Média — Próximo risco**
+...
+**Mitigação:** ...
+
+Sempre inclua aqui:
+- Gaps de escopo do contrato (ex.: "Assessoria Mensal sem detalhamento").
+- Divergências entre proposta e contrato.
+- Expectativas potencialmente desalinhadas.
 
 ## 🎯 Agenda Sugerida da Growth Class
 3-5 bullets objetivos com a ordem ideal de tópicos.
 
 ## 🚀 Próximas Ações Pós-GC
-Lista acionável (checkbox markdown) — quem, o quê, quando.
+Lista acionável (checkbox markdown \`- [ ]\`) — quem, o quê, quando.
 
 ---
 

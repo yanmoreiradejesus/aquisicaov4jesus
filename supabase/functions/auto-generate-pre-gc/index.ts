@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { account_id } = await req.json();
+    const { account_id, force } = await req.json();
     if (!account_id || typeof account_id !== "string") {
       return new Response(JSON.stringify({ error: "account_id obrigatório" }), {
         status: 400,
@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (account.pre_growth_class_relatorio) {
+    if (account.pre_growth_class_relatorio && !force) {
       return new Response(JSON.stringify({ ok: true, skipped: "já gerado" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -66,6 +66,27 @@ Deno.serve(async (req) => {
         .order("created_at", { ascending: true })
         .limit(80);
       atividades = (data as any[]) ?? [];
+    }
+
+    // 2.5 Contrato assinado (PDF) — fonte de verdade dos produtos contratados
+    let contratoTexto: string | null = null;
+    let contratoErro: string | null = null;
+    if (op?.contrato_url) {
+      try {
+        const { data: blob, error: dlErr } = await supabase.storage
+          .from("contratos-assinados")
+          .download(op.contrato_url);
+        if (dlErr) throw dlErr;
+        const buf = new Uint8Array(await blob.arrayBuffer());
+        const pdfParse = (await import("npm:pdf-parse@1.1.1")).default;
+        const result = await pdfParse(buf);
+        const raw = (result?.text ?? "").replace(/\s+\n/g, "\n").trim();
+        // Limita a ~12k caracteres p/ caber confortavelmente no contexto
+        contratoTexto = raw.length > 12000 ? raw.slice(0, 12000) + "\n\n[...truncado...]" : raw;
+      } catch (e) {
+        console.error("falha ao extrair contrato", e);
+        contratoErro = e instanceof Error ? e.message : "erro desconhecido";
+      }
     }
 
     const contexto = {
@@ -130,6 +151,19 @@ Deno.serve(async (req) => {
         data: a.data_agendada || a.created_at,
         concluida: a.concluida,
       })),
+      contrato: contratoTexto
+        ? {
+            disponivel: true,
+            texto_extraido: contratoTexto,
+            obs: "Texto extraído do PDF do contrato assinado. Use como FONTE DE VERDADE para produtos, valores, prazos e escopo.",
+          }
+        : {
+            disponivel: false,
+            erro: contratoErro,
+            obs: contratoErro
+              ? `Contrato existe mas falhou na extração: ${contratoErro}. Sinalize como gap.`
+              : "Nenhum contrato anexado na oportunidade. Sinalize como gap em Riscos & Pontos de Atenção.",
+          },
     };
 
     // 3. Call meeting-ai

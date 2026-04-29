@@ -1,88 +1,84 @@
-## Objetivo
+## Problema
 
-Tornar cada card de Lead, Oportunidade e Onboarding **endereçável por URL**, mantendo o sheet lateral atual como interface (sem mudar o layout). Isso permite:
+Hoje o relatório **Pré Growth Class** (gerado em `auto-generate-pre-gc` → `meeting-ai/pre_growth_class`) sofre dois problemas concretos visíveis nos prints:
 
-- Abrir card em nova guia (Ctrl/Cmd+clique)
-- Copiar e compartilhar link interno (ex: `/comercial/leads/abc-123`)
-- Voltar/avançar do navegador funcionar como esperado
-- Refresh da página mantém o card aberto
+1. **Tabelas markdown viram uma linha só** — o modelo gera `| Produto | Valor | Prazo | |---|---|---| | ... |` numa única linha, e como o renderer atual não trata tabelas, fica ilegível. Mesmo problema acontece em "Riscos & Pontos de Atenção".
+2. **"Assessoria Mensal (pré-aprovada)"** é descrita de forma genérica — não há garantia de que os produtos efetivamente listados no contrato (PDF anexado em `crm_oportunidades.contrato_url`) estejam discriminados.
 
-## Abordagem
+## O que vamos fazer
 
-Manter o sheet lateral como hoje, mas **sincronizado com a URL**. A rota da lista vira "pai" e o ID do card vira parâmetro:
+### 1. Cruzar com o contrato (PDF) na geração do Pré-GC
 
+Na edge function `auto-generate-pre-gc`:
+
+- Se `op.contrato_url` existir, baixar o PDF do storage (`contratos` bucket) com a service role.
+- Extrair o texto via `pdf-parse@1.1.1` (mesma lib já usada no `closer-copilot`).
+- Truncar para ~12k caracteres (mais que suficiente p/ contratos da V4).
+- Anexar ao `contexto.contrato` enviado para `meeting-ai`.
+
+No prompt de `pre_growth_class` (`meeting-ai`), adicionar regras explícitas:
+
+- **Fonte de verdade dos produtos = contrato.** Listar TODOS os produtos discriminados no PDF (nome, valor, parcelamento, prazo de início/fim).
+- Se o contrato citar "Assessoria Mensal" sem detalhar serviços, marcar como **gap** e listar em "Riscos & Pontos de Atenção" com sugestão "validar escopo da assessoria com o cliente na GC".
+- Se houver divergência entre `valor_fee`/`valor_ef` da oportunidade e os valores do contrato, sinalizar a divergência.
+
+### 2. Reorganizar o layout — sem tabelas markdown
+
+Reescrever o template do prompt para usar **listas estruturadas** (que renderizam bem) em vez de tabelas:
+
+**Antes (atual)** — tabela markdown que vira uma linha:
 ```text
-/comercial/leads              → lista
-/comercial/leads/:leadId      → lista + sheet aberto naquele lead
-
-/comercial/oportunidades                    → lista
-/comercial/oportunidades/:oportunidadeId    → lista + sheet aberto
-
-/comercial/onboarding              → lista
-/comercial/onboarding/:accountId   → lista + sheet aberto
+| Produto | Valor | Prazo |
+|---------|-------|-------|
+| Estruturação | 12x R$1.499 | 30-45 dias |
 ```
 
-Vantagens dessa abordagem:
-- Não quebra nada do que já existe (o sheet continua igual)
-- Não precisa criar páginas novas — só mais 3 rotas que renderizam o mesmo componente da lista
-- O contexto da lista atrás do sheet é preservado, igual hoje
-- Funciona em nova guia: ao acessar `/comercial/leads/abc` direto, a lista carrega e o sheet abre naquele card
-
-## Mudanças por página
-
-### 1. Roteamento (`src/App.tsx`)
-Adicionar 3 rotas com parâmetro de ID, apontando para os mesmos componentes (`CrmLeads`, `Oportunidades`, `Onboarding`):
-
+**Depois** — cards/blocos em lista:
 ```text
-/comercial/leads/:leadId
-/comercial/oportunidades/:oportunidadeId
-/comercial/onboarding/:accountId
+### 💼 Produtos Contratados
+
+**1. Estruturação Estratégica**
+- Valor: 12x R$ 1.499 (total R$ 17.984)
+- Prazo: 30-45 dias
+- Escopo: Diagnóstico completo, pesquisa de mercado, personas/PUV...
+
+**2. Assessoria Mensal**
+- Valor: 12x R$ 3.136,63
+- Início: pós-estruturação
+- Escopo discriminado no contrato: ... (ou: ⚠️ não detalhado — validar na GC)
 ```
 
-### 2. Páginas de listagem
-Em cada página (`CrmLeads.tsx`, `Oportunidades.tsx`, `Onboarding.tsx`):
+Mesma transformação para **Riscos**:
+```text
+### ⚠️ Riscos & Pontos de Atenção
 
-- Ler o ID via `useParams()`
-- Quando há ID na URL → abrir o sheet com aquele card
-- Quando o usuário clica num card → `navigate('/comercial/leads/{id}')` em vez de só `setSelected(id)`
-- Quando fecha o sheet → `navigate('/comercial/leads')` (volta pra rota base)
-- Se o ID da URL não existe nos dados → toast "card não encontrado" e redirect pra base
+**🔴 Alta — Expectativa de resultado rápido**
+"nós vai voar então ou não?" com pressão financeira real.
+**Mitigação:** gestão de expectativa cirúrgica no kickoff; roadmap claro com small wins mensais.
 
-### 3. Botão "Copiar link" no header do sheet
-Adicionar um ícone discreto (Link/Copy) no header de cada DetailSheet ao lado do título que copia a URL completa pro clipboard com toast "link copiado".
+**🟡 Média — Capacidade de investimento limitada**
+...
+```
 
-### 4. Comportamento de "abrir em nova guia"
-Os cards passam a ser renderizados envolvendo o conteúdo clicável com a navegação programática + suporte a `Ctrl/Cmd+click` e clique do meio. Solução simples: usar um `<a href="/comercial/leads/{id}">` invisível por cima do card (ou `onAuxClick` + `onClick` checando metaKey/ctrlKey). Prefiro a abordagem do `<a>` porque o navegador já trata nova guia/nova janela nativamente, sem código extra.
+### 3. Garantir renderização correta no front
 
-## Detalhes técnicos
-
-**Estado vs URL como fonte da verdade:**
-A URL passa a ser a **única fonte da verdade** para "qual card está aberto". O `useState` local de `selected` é removido — derivado de `useParams()`. Isso evita dessincronia entre URL e UI.
-
-**Carregamento direto via URL (nova guia):**
-Hoje as páginas já carregam todos os leads/oportunidades/accounts. Se o `:id` estiver na lista carregada, o sheet abre. Se a lista ainda está carregando, mostrar loading no sheet enquanto isso. Se após carregar o ID não existir, mostrar erro e voltar pra lista.
-
-**Permissões:**
-As rotas continuam dentro do `ProtectedRoute` com o mesmo `requiredPath` (`/comercial/leads`, etc.). Compartilhar um link com alguém sem acesso à página leva pra tela de "sem permissão" — comportamento correto.
-
-**Compatibilidade com filtros/busca:**
-Filtros da lista vivem em `useState` local (não na URL). Ao abrir um link direto de card, a lista carrega sem filtros — o sheet abre normalmente por cima. Se quiser no futuro também colocar filtros na URL via query string, é trivial adicionar depois.
+O componente que renderiza `pre_growth_class_relatorio` precisa suportar bem o markdown (listas aninhadas, negrito, h3). Verificar se está usando `react-markdown` com `prose`. Se não estiver, ajustar.
 
 ## Arquivos afetados
 
-- `src/App.tsx` — adicionar 3 rotas
-- `src/pages/CrmLeads.tsx` — ler `useParams`, navegar ao abrir/fechar
-- `src/pages/Oportunidades.tsx` — idem
-- `src/pages/Onboarding.tsx` — idem
-- `src/components/crm/LeadDetailSheet.tsx` — botão copiar link no header
-- `src/components/crm/OportunidadeDetailSheet.tsx` — idem
-- `src/components/crm/OnboardingDetailSheet.tsx` — idem
-- Componentes de card (LeadCard, OportunidadeCard, OnboardingCard) — wrap com `<a>` ou ajustar handler de clique para suportar Ctrl/Cmd+click
+- `supabase/functions/auto-generate-pre-gc/index.ts` — baixar e extrair texto do contrato (`contrato_url`), passar como `contexto.contrato_texto`.
+- `supabase/functions/meeting-ai/index.ts` — reescrever o prompt do `pre_growth_class` para: (a) eliminar tabelas markdown, (b) usar contrato como fonte de verdade dos produtos, (c) detectar gaps/divergências.
+- Componente que renderiza o relatório no detalhe da Account (Onboarding) — confirmar markdown renderer com `prose`. Identificarei o arquivo exato durante a implementação.
 
-## Não incluído (sugestões para depois)
+## Detalhes técnicos
 
-- Filtros/busca refletidos na URL (query string) — útil para compartilhar "lista filtrada"
-- Página dedicada full-screen do card (alternativa ao sheet) — só faria sentido se quisermos uma view diferente, mas a ideia atual mantém o sheet
-- Breadcrumbs
+- Bucket dos contratos: o caminho `5de1b0ce-.../...pdf` indica path relativo. Vou inspecionar o bucket usado no upload (provavelmente `contratos`) e usar `supabase.storage.from(bucket).download(path)` com service role.
+- Modelo: mantém o atual (Anthropic Opus via `provider: "opus45"`), só muda prompt e contexto.
+- Regenerar o relatório de accounts já gerados é opcional — botão "Regenerar Pré-GC" provavelmente já existe; se não, adiciono um na tela de detalhe.
 
-Posso seguir com isso?
+## Resultado esperado
+
+- Pré-GC com produtos discriminados conforme o contrato real, valores e prazos corretos.
+- Layout legível: blocos verticais em vez de tabelas comprimidas.
+- Riscos visíveis um abaixo do outro com severidade destacada.
+- Gaps explícitos quando o contrato não detalha o escopo (ex.: "Assessoria Mensal sem serviços listados").

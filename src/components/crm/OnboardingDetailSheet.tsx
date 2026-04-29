@@ -112,99 +112,23 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
   const handleGerarRelatorio = async () => {
     setGenerating(true);
     try {
-      let atividades: any[] = [];
-      if (op?.id) {
-        const { data } = await supabase
-          .from("crm_atividades" as any)
-          .select("tipo, descricao, titulo, data_agendada, data_conclusao, concluida, created_at")
-          .or(`oportunidade_id.eq.${op.id}${lead?.id ? `,lead_id.eq.${lead.id}` : ""}`)
-          .order("created_at", { ascending: true })
-          .limit(80);
-        atividades = (data as any[]) ?? [];
-      }
-
-      const contexto = {
-        cliente: {
-          nome: form.cliente_nome,
-          data_inicio_contrato: form.data_inicio_contrato,
-          data_fim_contrato: form.data_fim_contrato,
-          status: form.status,
-        },
-        lead: lead
-          ? {
-              nome: lead.nome,
-              email: lead.email,
-              telefone: lead.telefone,
-              empresa: lead.empresa,
-              cargo: lead.cargo,
-              segmento: lead.segmento,
-              faturamento: lead.faturamento,
-              cidade: lead.cidade,
-              estado: lead.estado,
-              pais: lead.pais,
-              origem: lead.origem,
-              canal: lead.canal,
-              tier: lead.tier,
-              urgencia: lead.urgencia,
-              temperatura: lead.temperatura,
-              qualificacao: lead.qualificacao,
-              descricao: lead.descricao,
-              notas: lead.notas,
-              instagram: lead.instagram,
-              site: lead.site,
-              briefing_mercado: lead.briefing_mercado,
-              pesquisa_pre_qualificacao: lead.pesquisa_pre_qualificacao,
-              data_reuniao_agendada: lead.data_reuniao_agendada,
-              data_reuniao_realizada: lead.data_reuniao_realizada,
-            }
-          : null,
-        oportunidade: op
-          ? {
-              nome: op.nome_oportunidade,
-              etapa: op.etapa,
-              temperatura: op.temperatura,
-              valor_fee: op.valor_fee,
-              valor_ef: op.valor_ef,
-              valor_total: (Number(op.valor_ef) || 0) + (Number(op.valor_fee) || 0),
-              data_proposta: op.data_proposta,
-              data_fechamento_real: op.data_fechamento_real,
-              categoria_produtos: op.nivel_consciencia
-                ? CATEGORIA_PRODUTOS_LABEL[op.nivel_consciencia]
-                : null,
-              info_deal: op.info_deal,
-              oportunidades_monetizacao: op.oportunidades_monetizacao,
-              resumo_reuniao: op.resumo_reuniao,
-              transcricao_reuniao: op.transcricao_reuniao,
-              notas: op.notas,
-              motivo_perda: op.motivo_perda,
-            }
-          : null,
-        atividades: atividades.map((a) => ({
-          tipo: a.tipo,
-          titulo: a.titulo,
-          descricao: a.descricao,
-          data: a.data_agendada || a.created_at,
-          concluida: a.concluida,
-        })),
-      };
-
-      const { data, error } = await supabase.functions.invoke("meeting-ai", {
-        body: { action: "pre_growth_class", contexto, provider: "opus45" },
+      // Roteia pela edge function única que carrega tudo (incl. extração do PDF do contrato)
+      const { error } = await supabase.functions.invoke("auto-generate-pre-gc", {
+        body: { account_id: form.id, force: true },
       });
       if (error) throw error;
-      const relatorio = (data as any)?.relatorio as string | undefined;
-      if (!relatorio) throw new Error("Resposta vazia");
 
-      const agora = new Date().toISOString();
-      // Auto-salva direto no banco — não precisa esperar o usuário clicar em Salvar
-      const { error: upErr } = await supabase
+      // Recarrega o relatório atualizado
+      const { data: updated, error: selErr } = await supabase
         .from("accounts" as any)
-        .update({ pre_growth_class_relatorio: relatorio, pre_growth_class_gerado_em: agora })
-        .eq("id", form.id);
-      if (upErr) throw upErr;
+        .select("pre_growth_class_relatorio, pre_growth_class_gerado_em")
+        .eq("id", form.id)
+        .maybeSingle();
+      if (selErr) throw selErr;
+
       update({
-        pre_growth_class_relatorio: relatorio,
-        pre_growth_class_gerado_em: agora,
+        pre_growth_class_relatorio: (updated as any)?.pre_growth_class_relatorio ?? null,
+        pre_growth_class_gerado_em: (updated as any)?.pre_growth_class_gerado_em ?? null,
       });
       toast({ title: "Relatório gerado e salvo" });
     } catch (e: any) {
