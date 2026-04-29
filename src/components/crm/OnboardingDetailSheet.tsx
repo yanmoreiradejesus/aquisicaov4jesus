@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { GraduationCap, Building2, ExternalLink, FileText, Copy, RefreshCw, CheckCircle2 } from "lucide-react";
+import { GraduationCap, Building2, ExternalLink, FileText, Copy, RefreshCw, CheckCircle2, Flame } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { OnboardingCopilot } from "./OnboardingCopilot";
 import ReactMarkdown from "react-markdown";
 
 interface Props {
@@ -190,11 +191,17 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
       if (!relatorio) throw new Error("Resposta vazia");
 
       const agora = new Date().toISOString();
+      // Auto-salva direto no banco — não precisa esperar o usuário clicar em Salvar
+      const { error: upErr } = await supabase
+        .from("accounts" as any)
+        .update({ pre_growth_class_relatorio: relatorio, pre_growth_class_gerado_em: agora })
+        .eq("id", form.id);
+      if (upErr) throw upErr;
       update({
         pre_growth_class_relatorio: relatorio,
         pre_growth_class_gerado_em: agora,
       });
-      toast({ title: "Relatório gerado", description: "Revise e clique em Salvar para persistir." });
+      toast({ title: "Relatório gerado e salvo" });
     } catch (e: any) {
       toast({
         title: "Erro ao gerar relatório",
@@ -249,6 +256,9 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
             </TabsTrigger>
             <TabsTrigger value="growth">
               <GraduationCap className="h-3.5 w-3.5 mr-1.5" /> Growth Class
+            </TabsTrigger>
+            <TabsTrigger value="copilot">
+              <Flame className="h-3.5 w-3.5 mr-1.5" /> Copilot
             </TabsTrigger>
           </TabsList>
 
@@ -421,6 +431,10 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
                 Growth Class concluída
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="copilot" className="mt-4">
+            <OnboardingCopilot accountId={form.id} />
           </TabsContent>
         </Tabs>
 
