@@ -17,6 +17,30 @@ const Onboarding = () => {
   const [editing, setEditing] = useState<any | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { accountId } = useParams<{ accountId?: string }>();
+  const notFoundToastedRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!accountId) {
+      setSheetOpen(false);
+      setEditing(null);
+      return;
+    }
+    if (isLoading) return;
+    const acc = accounts.find((a: any) => a.id === accountId);
+    if (acc) {
+      setEditing(acc);
+      setSheetOpen(true);
+    } else if (notFoundToastedRef.current !== accountId) {
+      notFoundToastedRef.current = accountId;
+      toast({ title: "Contrato não encontrado", variant: "destructive" });
+      navigate("/comercial/onboarding", { replace: true });
+    }
+  }, [accountId, accounts, isLoading, navigate, toast]);
+
+  const openAcc = (id: string) => navigate(`/comercial/onboarding/${id}`);
+  const closeAcc = () => navigate("/comercial/onboarding");
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const scrollRef = useRef<HTMLDivElement>(null);
