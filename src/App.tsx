@@ -19,6 +19,9 @@ import NotFound from "./pages/NotFound";
 import CrmLeads from "./pages/CrmLeads";
 import Oportunidades from "./pages/Oportunidades";
 import Onboarding from "./pages/Onboarding";
+import LeadDetailPage from "./pages/LeadDetailPage";
+import OportunidadeDetailPage from "./pages/OportunidadeDetailPage";
+import OnboardingDetailPage from "./pages/OnboardingDetailPage";
 import ComercialPlaceholder from "./pages/ComercialPlaceholder";
 import GoogleCallback from "./pages/GoogleCallback";
 
