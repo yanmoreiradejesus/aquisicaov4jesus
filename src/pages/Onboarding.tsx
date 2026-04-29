@@ -9,10 +9,11 @@ import { OnboardingColumn } from "@/components/crm/OnboardingColumn";
 import { OnboardingCard } from "@/components/crm/OnboardingCard";
 import { OnboardingDetailSheet } from "@/components/crm/OnboardingDetailSheet";
 import { useToast } from "@/hooks/use-toast";
+import { usePersistedState } from "@/hooks/usePersistedState";
 
 const Onboarding = () => {
   const { data: accounts = [], isLoading, update, updateStatus } = useOnboarding();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = usePersistedState<string>("crm:onboarding:search", "");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
