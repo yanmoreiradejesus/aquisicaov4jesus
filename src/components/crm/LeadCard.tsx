@@ -1,10 +1,16 @@
 import { useEffect, useRef } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import { Copy, MessageCircle, Clock } from "lucide-react";
+import { Copy, MessageCircle, Clock, ExternalLink } from "lucide-react";
 import { CSS } from "@dnd-kit/utilities";
 import { formatPhone, whatsappNumber, timeAgo } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 
 interface Props {
   lead: any;
@@ -114,7 +120,7 @@ export const LeadCard = ({
     onPhoneInteract?.();
   };
 
-  return (
+  const cardInner = (
     <div ref={overlay ? undefined : setNodeRef} style={style} {...(overlay ? {} : attributes)}>
       <div
         className={cn(
