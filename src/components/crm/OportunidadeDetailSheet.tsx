@@ -329,6 +329,8 @@ export const OportunidadeDetailSheet = ({
   onSave,
   onChangeEtapa,
   onDelete,
+  fullPage = false,
+  backTo,
 }: Props) => {
   const [form, setForm] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<string>("informacoes");
