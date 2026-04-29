@@ -257,6 +257,9 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
             <TabsTrigger value="growth">
               <GraduationCap className="h-3.5 w-3.5 mr-1.5" /> Growth Class
             </TabsTrigger>
+            <TabsTrigger value="copilot">
+              <Flame className="h-3.5 w-3.5 mr-1.5" /> Copilot
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pre-gc" className="space-y-5 mt-4">
