@@ -18,11 +18,12 @@ import { DesqualificacaoDialog } from "@/components/crm/DesqualificacaoDialog";
 import { LeadsFilterPopover, EMPTY_FILTERS, type LeadFilters } from "@/components/crm/LeadsFilterPopover";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { usePersistedState } from "@/hooks/usePersistedState";
 
 const CrmLeads = () => {
   const { data: leads = [], isLoading, upsert, updateEtapa, remove } = useCrmLeads();
-  const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState<LeadFilters>(EMPTY_FILTERS);
+  const [search, setSearch] = usePersistedState<string>("crm:leads:search", "");
+  const [filters, setFilters] = usePersistedState<LeadFilters>("crm:leads:filters", EMPTY_FILTERS);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -32,7 +33,7 @@ const CrmLeads = () => {
   const [pendingMove, setPendingMove] = useState<{ lead: any; etapa: string } | null>(null);
   const [desqualOpen, setDesqualOpen] = useState(false);
   const [desqualLead, setDesqualLead] = useState<any | null>(null);
-  const [view, setView] = useState<"kanban" | "tarefas">("kanban");
+  const [view, setView] = usePersistedState<"kanban" | "tarefas">("crm:leads:view", "kanban");
   const [activeId, setActiveId] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();

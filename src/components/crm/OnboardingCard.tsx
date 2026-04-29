@@ -1,6 +1,12 @@
 import { useDraggable } from "@dnd-kit/core";
-import { Calendar, GraduationCap, Package } from "lucide-react";
+import { Calendar, GraduationCap, Package, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 
 const CATEGORIA_PRODUTOS_LABEL: Record<string, string> = {
   saber: "Saber",
@@ -77,7 +83,7 @@ export const OnboardingCard = ({ account, onClick, onOpenInNewTab, overlay = fal
   const gcPendente =
     gcAgendada && !gcRealizada && new Date(gcAgendada) < new Date();
 
-  return (
+  const cardInner = (
     <div ref={overlay ? undefined : setNodeRef} style={style} {...(overlay ? {} : attributes)}>
       <div
         className={cn(
@@ -159,5 +165,19 @@ export const OnboardingCard = ({ account, onClick, onOpenInNewTab, overlay = fal
         </div>
       </div>
     </div>
+  );
+
+  if (overlay || !onOpenInNewTab) return cardInner;
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>{cardInner}</ContextMenuTrigger>
+      <ContextMenuContent className="w-56">
+        <ContextMenuItem onSelect={() => onOpenInNewTab()}>
+          <ExternalLink className="h-3.5 w-3.5 mr-2" />
+          Abrir em nova aba
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 };

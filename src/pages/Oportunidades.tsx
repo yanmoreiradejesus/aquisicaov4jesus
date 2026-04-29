@@ -18,14 +18,15 @@ import { cn } from "@/lib/utils";
 import { OportunidadesFilterPopover, EMPTY_OP_FILTERS, type OportunidadeFilters } from "@/components/crm/OportunidadesFilterPopover";
 import { supabase } from "@/integrations/supabase/client";
 import WinCelebration from "@/components/celebrations/WinCelebration";
+import { usePersistedState } from "@/hooks/usePersistedState";
 
 const WORKFLOW_ETAPAS = new Set(["negociacao", "contrato", "follow_infinito", "fechado_ganho"]);
 
 const Oportunidades = () => {
   const { data: oportunidades = [], isLoading, upsert, updateEtapa, remove } = useCrmOportunidades();
-  const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState<OportunidadeFilters>(EMPTY_OP_FILTERS);
-  const [view, setView] = useState<"kanban" | "tarefas">("kanban");
+  const [search, setSearch] = usePersistedState<string>("crm:ops:search", "");
+  const [filters, setFilters] = usePersistedState<OportunidadeFilters>("crm:ops:filters", EMPTY_OP_FILTERS);
+  const [view, setView] = usePersistedState<"kanban" | "tarefas">("crm:ops:view", "kanban");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [perdaOpen, setPerdaOpen] = useState(false);
