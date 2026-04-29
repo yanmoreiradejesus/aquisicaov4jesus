@@ -236,31 +236,37 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
       backTo={backTo}
       contentClassName={fullPage ? "" : "w-full sm:max-w-2xl overflow-y-auto"}
     >
-        <SheetHeader className="text-left space-y-2">
-          <div className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.2em] uppercase text-muted-foreground">
-            <Building2 className="h-3 w-3" /> Contrato em Onboarding
-          </div>
-          <div className="flex items-start justify-between gap-2 pr-10">
-            <SheetTitle className="font-display text-2xl tracking-[-0.01em]">
-              {form.cliente_nome}
-            </SheetTitle>
-            {form.id && <CopyLinkButton path={`/comercial/onboarding/${form.id}`} className="mt-1" />}
-          </div>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span>{lead?.empresa || lead?.nome}</span>
-            {valorTotal > 0 && <span className="font-semibold text-foreground/80">{fmtBRL(valorTotal)}</span>}
-            {op?.id && (
-              <a
-                href={`/comercial/oportunidades/${op.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-primary hover:underline"
-              >
-                Ver oportunidade <ExternalLink className="h-3 w-3" />
-              </a>
-            )}
-          </div>
-        </SheetHeader>
+        {(() => {
+          const HeaderEl: any = fullPage ? "div" : SheetHeader;
+          const TitleEl: any = fullPage ? "h2" : SheetTitle;
+          return (
+            <HeaderEl className={fullPage ? "flex flex-col text-left space-y-2" : "text-left space-y-2"}>
+              <div className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.2em] uppercase text-muted-foreground">
+                <Building2 className="h-3 w-3" /> Contrato em Onboarding
+              </div>
+              <div className="flex items-start justify-between gap-2 pr-10">
+                <TitleEl className={fullPage ? "font-display text-2xl tracking-[-0.01em] text-foreground" : "font-display text-2xl tracking-[-0.01em]"}>
+                  {form.cliente_nome}
+                </TitleEl>
+                {form.id && <CopyLinkButton path={`/comercial/onboarding/${form.id}`} className="mt-1" />}
+              </div>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span>{lead?.empresa || lead?.nome}</span>
+                {valorTotal > 0 && <span className="font-semibold text-foreground/80">{fmtBRL(valorTotal)}</span>}
+                {op?.id && (
+                  <a
+                    href={`/comercial/oportunidades/${op.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-primary hover:underline"
+                  >
+                    Ver oportunidade <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+              </div>
+            </HeaderEl>
+          );
+        })()}
 
         <Tabs defaultValue="pre-gc" className="mt-6">
           <TabsList>
