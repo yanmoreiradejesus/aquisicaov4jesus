@@ -30,6 +30,7 @@ export type Database = {
           growth_class_oportunidades_monetizacao: string | null
           growth_class_proximos_passos: string | null
           growth_class_responsavel_id: string | null
+          growth_class_transcricao_reuniao: string | null
           health_score: number | null
           id: string
           notas: string | null
@@ -57,6 +58,7 @@ export type Database = {
           growth_class_oportunidades_monetizacao?: string | null
           growth_class_proximos_passos?: string | null
           growth_class_responsavel_id?: string | null
+          growth_class_transcricao_reuniao?: string | null
           health_score?: number | null
           id?: string
           notas?: string | null
@@ -84,6 +86,7 @@ export type Database = {
           growth_class_oportunidades_monetizacao?: string | null
           growth_class_proximos_passos?: string | null
           growth_class_responsavel_id?: string | null
+          growth_class_transcricao_reuniao?: string | null
           health_score?: number | null
           id?: string
           notas?: string | null
