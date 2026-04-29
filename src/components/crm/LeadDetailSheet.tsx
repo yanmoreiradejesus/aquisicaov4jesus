@@ -51,6 +51,10 @@ interface Props {
   fullPage?: boolean;
   /** Caminho pra onde voltar quando fullPage */
   backTo?: string;
+  /** Navegação prev/next quando fullPage */
+  onPrev?: () => void;
+  onNext?: () => void;
+  positionLabel?: string;
 }
 
 /** Deriva o Tier a partir do faturamento */
