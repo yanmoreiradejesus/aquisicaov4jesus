@@ -37,6 +37,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { X, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CopyLinkButton } from "./CopyLinkButton";
+import { DetailShell } from "./DetailShell";
 
 interface Props {
   open: boolean;
