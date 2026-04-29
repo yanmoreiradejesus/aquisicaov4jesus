@@ -151,6 +151,19 @@ Deno.serve(async (req) => {
         data: a.data_agendada || a.created_at,
         concluida: a.concluida,
       })),
+      contrato: contratoTexto
+        ? {
+            disponivel: true,
+            texto_extraido: contratoTexto,
+            obs: "Texto extraído do PDF do contrato assinado. Use como FONTE DE VERDADE para produtos, valores, prazos e escopo.",
+          }
+        : {
+            disponivel: false,
+            erro: contratoErro,
+            obs: contratoErro
+              ? `Contrato existe mas falhou na extração: ${contratoErro}. Sinalize como gap.`
+              : "Nenhum contrato anexado na oportunidade. Sinalize como gap em Riscos & Pontos de Atenção.",
+          },
     };
 
     // 3. Call meeting-ai
