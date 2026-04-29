@@ -613,14 +613,25 @@ export const OportunidadeDetailSheet = ({
       backTo={backTo}
       contentClassName={fullPage ? "" : "w-screen sm:max-w-[min(96vw,1400px)] overflow-y-auto glass-strong border-l-border/60"}
     >
-        <SheetHeader>
-          <div className="flex items-start justify-between gap-2 pr-10">
-            <SheetTitle className="tracking-tight text-[22px] font-semibold">
-              {form.nome_oportunidade || "Oportunidade"}
-            </SheetTitle>
-            {form.id && <CopyLinkButton path={`/comercial/oportunidades/${form.id}`} className="mt-1" />}
+        {fullPage ? (
+          <div className="flex flex-col space-y-2 text-center sm:text-left">
+            <div className="flex items-start justify-between gap-2 pr-10">
+              <h2 className="tracking-tight text-[22px] font-semibold text-foreground">
+                {form.nome_oportunidade || "Oportunidade"}
+              </h2>
+              {form.id && <CopyLinkButton path={`/comercial/oportunidades/${form.id}`} className="mt-1" />}
+            </div>
           </div>
-        </SheetHeader>
+        ) : (
+          <SheetHeader>
+            <div className="flex items-start justify-between gap-2 pr-10">
+              <SheetTitle className="tracking-tight text-[22px] font-semibold">
+                {form.nome_oportunidade || "Oportunidade"}
+              </SheetTitle>
+              {form.id && <CopyLinkButton path={`/comercial/oportunidades/${form.id}`} className="mt-1" />}
+            </div>
+          </SheetHeader>
+        )}
 
         {/* STEPPER */}
         <div className="mt-6 mb-6">
