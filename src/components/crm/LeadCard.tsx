@@ -209,4 +209,18 @@ export const LeadCard = ({
       </div>
     </div>
   );
+
+  if (overlay || !onOpenInNewTab) return cardInner;
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>{cardInner}</ContextMenuTrigger>
+      <ContextMenuContent className="w-56">
+        <ContextMenuItem onSelect={() => onOpenInNewTab()}>
+          <ExternalLink className="h-3.5 w-3.5 mr-2" />
+          Abrir em nova aba
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
+  );
 };
