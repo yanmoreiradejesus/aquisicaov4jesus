@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (account.pre_growth_class_relatorio) {
+    if (account.pre_growth_class_relatorio && !force) {
       return new Response(JSON.stringify({ ok: true, skipped: "já gerado" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
