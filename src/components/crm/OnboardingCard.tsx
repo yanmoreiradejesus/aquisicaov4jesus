@@ -30,11 +30,27 @@ const fmtDate = (iso?: string | null) => {
   return new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
 };
 
-export const OnboardingCard = ({ account, onClick, overlay = false }: Props) => {
+export const OnboardingCard = ({ account, onClick, onOpenInNewTab, overlay = false }: Props) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: account.id,
     disabled: overlay,
   });
+
+  const handleCardClick = (e: React.MouseEvent) => {
+    if ((e.metaKey || e.ctrlKey) && onOpenInNewTab) {
+      e.preventDefault();
+      onOpenInNewTab();
+      return;
+    }
+    onClick();
+  };
+
+  const handleAuxClick = (e: React.MouseEvent) => {
+    if (e.button === 1 && onOpenInNewTab) {
+      e.preventDefault();
+      onOpenInNewTab();
+    }
+  };
 
   const style: React.CSSProperties | undefined = overlay
     ? undefined
