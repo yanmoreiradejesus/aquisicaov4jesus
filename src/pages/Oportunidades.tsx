@@ -371,17 +371,22 @@ const Oportunidades = () => {
           )
         ) : (
           <OportunidadeTasksOverview
-            onOpenOportunidade={(opId) => {
-              const op = oportunidades.find((o: any) => o.id === opId);
-              if (op) { setEditing(op); setSheetOpen(true); }
-            }}
+            onOpenOportunidade={(id) => openOp(id)}
           />
         )}
       </main>
 
       <OportunidadeDetailSheet
         open={sheetOpen}
-        onOpenChange={setSheetOpen}
+        onOpenChange={(v) => {
+          if (!v) {
+            // Se está aberto via URL, navega de volta. Caso contrário (criação nova), só fecha.
+            if (oportunidadeId) closeOp();
+            else setSheetOpen(false);
+          } else {
+            setSheetOpen(true);
+          }
+        }}
         oportunidade={editing}
         onSave={handleSave}
         onDelete={handleDelete}
