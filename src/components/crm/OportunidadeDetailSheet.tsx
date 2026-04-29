@@ -42,6 +42,8 @@ interface Props {
   onSave: (op: any) => Promise<void> | void;
   onChangeEtapa: (id: string, etapaDestino: string, op: any) => void;
   onDelete?: (id: string) => Promise<void> | void;
+  fullPage?: boolean;
+  backTo?: string;
 }
 
 /** Deriva o Tier a partir do faturamento (mesmo critério do CRM Lead) */
