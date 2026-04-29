@@ -36,6 +36,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CopyLinkButton } from "./CopyLinkButton";
 
 interface Props {
   open: boolean;
