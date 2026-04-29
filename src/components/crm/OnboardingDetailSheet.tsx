@@ -457,7 +457,6 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
             {saving ? "Salvando..." : "Salvar"}
           </Button>
         </div>
-      </SheetContent>
-    </Sheet>
+    </DetailShell>
   );
 };
