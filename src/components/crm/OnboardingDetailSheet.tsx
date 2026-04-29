@@ -53,7 +53,7 @@ const CATEGORIA_PRODUTOS_LABEL: Record<string, string> = {
   potencializar: "Potencializar",
 };
 
-export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: Props) => {
+export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, fullPage = false, backTo }: Props) => {
   const [form, setForm] = useState<any>(null);
   const [responsaveis, setResponsaveis] = useState<{ id: string; full_name: string | null; email: string }[]>([]);
   const [saving, setSaving] = useState(false);
