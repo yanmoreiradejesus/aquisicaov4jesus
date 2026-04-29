@@ -93,7 +93,7 @@ const AppRoutes = () => {
         } />
         <Route path="/comercial/leads/:leadId" element={
           <ProtectedRoute requiredPath="/comercial/leads">
-            <PageTransition><CrmLeads /></PageTransition>
+            <PageTransition><LeadDetailPage /></PageTransition>
           </ProtectedRoute>
         } />
         <Route path="/comercial/oportunidades" element={
@@ -103,7 +103,7 @@ const AppRoutes = () => {
         } />
         <Route path="/comercial/oportunidades/:oportunidadeId" element={
           <ProtectedRoute requiredPath="/comercial/oportunidades">
-            <PageTransition><Oportunidades /></PageTransition>
+            <PageTransition><OportunidadeDetailPage /></PageTransition>
           </ProtectedRoute>
         } />
         <Route path="/comercial/onboarding" element={
@@ -113,7 +113,7 @@ const AppRoutes = () => {
         } />
         <Route path="/comercial/onboarding/:accountId" element={
           <ProtectedRoute requiredPath="/comercial/onboarding">
-            <PageTransition><Onboarding /></PageTransition>
+            <PageTransition><OnboardingDetailPage /></PageTransition>
           </ProtectedRoute>
         } />
         <Route path="/comercial/accounts" element={
