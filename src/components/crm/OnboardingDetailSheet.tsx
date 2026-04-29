@@ -432,6 +432,10 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
               </div>
             )}
           </TabsContent>
+
+          <TabsContent value="copilot" className="mt-4">
+            <OnboardingCopilot accountId={form.id} />
+          </TabsContent>
         </Tabs>
 
         <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-border/40">
