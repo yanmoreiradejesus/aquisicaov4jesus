@@ -232,15 +232,18 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave }: P
           <div className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.2em] uppercase text-muted-foreground">
             <Building2 className="h-3 w-3" /> Contrato em Onboarding
           </div>
-          <SheetTitle className="font-display text-2xl tracking-[-0.01em]">
-            {form.cliente_nome}
-          </SheetTitle>
+          <div className="flex items-start justify-between gap-2 pr-10">
+            <SheetTitle className="font-display text-2xl tracking-[-0.01em]">
+              {form.cliente_nome}
+            </SheetTitle>
+            {form.id && <CopyLinkButton path={`/comercial/onboarding/${form.id}`} className="mt-1" />}
+          </div>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <span>{lead?.empresa || lead?.nome}</span>
             {valorTotal > 0 && <span className="font-semibold text-foreground/80">{fmtBRL(valorTotal)}</span>}
             {op?.id && (
               <a
-                href={`/comercial/oportunidades?id=${op.id}`}
+                href={`/comercial/oportunidades/${op.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-primary hover:underline"
