@@ -12,6 +12,7 @@ const CATEGORIA_PRODUTOS_LABEL: Record<string, string> = {
 interface Props {
   account: any;
   onClick: () => void;
+  onOpenInNewTab?: () => void;
   overlay?: boolean;
 }
 
