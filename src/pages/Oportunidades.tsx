@@ -354,8 +354,8 @@ const Oportunidades = () => {
                     label={etapa.label}
                     color={etapa.color}
                     oportunidades={grouped[etapa.id] ?? []}
-                    onEdit={(op) => { setEditing(op); setSheetOpen(true); }}
-                    onOpenInNewTab={(op) => window.open(`/comercial/oportunidades?id=${op.id}`, "_blank", "noopener,noreferrer")}
+                    onEdit={(op) => openOp(op.id)}
+                    onOpenInNewTab={(op) => window.open(`/comercial/oportunidades/${op.id}`, "_blank", "noopener,noreferrer")}
                     defaultCollapsed={etapa.id === "fechado_perdido" || etapa.id === "follow_infinito"}
                   />
                 ))}
