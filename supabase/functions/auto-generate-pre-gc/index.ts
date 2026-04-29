@@ -68,6 +68,27 @@ Deno.serve(async (req) => {
       atividades = (data as any[]) ?? [];
     }
 
+    // 2.5 Contrato assinado (PDF) — fonte de verdade dos produtos contratados
+    let contratoTexto: string | null = null;
+    let contratoErro: string | null = null;
+    if (op?.contrato_url) {
+      try {
+        const { data: blob, error: dlErr } = await supabase.storage
+          .from("contratos-assinados")
+          .download(op.contrato_url);
+        if (dlErr) throw dlErr;
+        const buf = new Uint8Array(await blob.arrayBuffer());
+        const pdfParse = (await import("npm:pdf-parse@1.1.1")).default;
+        const result = await pdfParse(buf);
+        const raw = (result?.text ?? "").replace(/\s+\n/g, "\n").trim();
+        // Limita a ~12k caracteres p/ caber confortavelmente no contexto
+        contratoTexto = raw.length > 12000 ? raw.slice(0, 12000) + "\n\n[...truncado...]" : raw;
+      } catch (e) {
+        console.error("falha ao extrair contrato", e);
+        contratoErro = e instanceof Error ? e.message : "erro desconhecido";
+      }
+    }
+
     const contexto = {
       cliente: {
         nome: account.cliente_nome,
