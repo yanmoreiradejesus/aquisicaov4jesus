@@ -1120,7 +1120,6 @@ export const OportunidadeDetailSheet = ({
             {form.id && <OportunidadeTimeline oportunidadeId={form.id} />}
           </TabsContent>
         </Tabs>
-      </SheetContent>
-    </Sheet>
+    </DetailShell>
   );
 };
