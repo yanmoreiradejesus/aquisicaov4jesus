@@ -27,6 +27,7 @@ export const OnboardingColumn = ({
   color,
   accounts,
   onEdit,
+  onOpenInNewTab,
   defaultCollapsed = false,
 }: Props) => {
   const { setNodeRef, isOver } = useDroppable({ id });
