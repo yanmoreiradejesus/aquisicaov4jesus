@@ -286,8 +286,13 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-screen sm:max-w-[min(96vw,1400px)] overflow-y-auto glass-strong border-l-border/60">
+    <DetailShell
+      fullPage={fullPage}
+      open={open}
+      onOpenChange={onOpenChange}
+      backTo={backTo}
+      contentClassName={fullPage ? "" : "w-screen sm:max-w-[min(96vw,1400px)] overflow-y-auto glass-strong border-l-border/60"}
+    >
         <SheetHeader>
           <div className="flex items-start justify-between gap-2 pr-10">
             <SheetTitle className="tracking-tight text-[22px] font-semibold">
