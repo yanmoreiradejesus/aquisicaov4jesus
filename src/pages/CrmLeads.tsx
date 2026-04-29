@@ -293,12 +293,12 @@ const CrmLeads = () => {
 
       <LeadDetailSheet
         open={sheetOpen}
-        onOpenChange={setSheetOpen}
+        onOpenChange={(v) => { if (!v) closeLead(); else setSheetOpen(true); }}
         lead={editing}
         onSave={handleSave}
         onChangeEtapa={(id, etapa) => updateEtapa.mutateAsync({ id, etapa })}
         onDelete={handleDelete}
-        onDisqualify={(l) => { setSheetOpen(false); setDesqualLead(l); setDesqualOpen(true); }}
+        onDisqualify={(l) => { closeLead(); setDesqualLead(l); setDesqualOpen(true); }}
       />
 
       <LeadImportDialog
