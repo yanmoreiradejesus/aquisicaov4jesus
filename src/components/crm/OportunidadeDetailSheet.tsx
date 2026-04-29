@@ -34,6 +34,7 @@ import { LeadCallEventsList } from "./LeadCallEventsList";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { CopyLinkButton } from "./CopyLinkButton";
+import { DetailShell } from "./DetailShell";
 
 interface Props {
   open: boolean;
