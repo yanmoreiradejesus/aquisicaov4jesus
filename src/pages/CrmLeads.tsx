@@ -48,6 +48,9 @@ const CrmLeads = () => {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return leads.filter((l: any) => {
+      // Leads sem pipe (legado) são tratados como inbound
+      const leadPipe = l.pipe ?? "inbound";
+      if (leadPipe !== pipe) return false;
       if (q && ![l.nome, l.email, l.empresa, l.telefone].some((v) => v?.toLowerCase().includes(q))) return false;
       const dataRef = l.data_criacao_origem || l.created_at;
       if (filters.dateFrom && new Date(dataRef) < new Date(filters.dateFrom)) return false;
