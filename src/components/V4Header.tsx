@@ -127,9 +127,9 @@ const V4Header = () => {
           >
             {/* Logo — fixed dimensions so it reserves space from the first frame. */}
             <Link
-              to="/"
+              to="/apps"
               className="flex items-center pl-2 pr-2 h-8 rounded-full hover:bg-white/[0.04] transition-colors"
-              title="Hub"
+              title="Aplicações"
             >
               <img
                 src={logo}

@@ -23,27 +23,27 @@ function WireOrb() {
       <mesh>
         <icosahedronGeometry args={[1.6, 1]} />
         <meshBasicMaterial
-          color={new THREE.Color("hsl(217, 91%, 60%)")}
+          color={new THREE.Color("#E30613")}
           wireframe
           transparent
-          opacity={0.55}
+          opacity={0.6}
         />
       </mesh>
       <mesh rotation={[0.5, 0.3, 0]}>
         <icosahedronGeometry args={[1.25, 0]} />
         <meshBasicMaterial
-          color={new THREE.Color("hsl(217, 91%, 70%)")}
+          color={new THREE.Color("#FF3340")}
           wireframe
           transparent
-          opacity={0.35}
+          opacity={0.4}
         />
       </mesh>
       <mesh ref={inner}>
         <icosahedronGeometry args={[0.55, 0]} />
         <meshStandardMaterial
-          color={new THREE.Color("hsl(217, 91%, 55%)")}
-          emissive={new THREE.Color("hsl(217, 91%, 60%)")}
-          emissiveIntensity={0.8}
+          color={new THREE.Color("#C00510")}
+          emissive={new THREE.Color("#E30613")}
+          emissiveIntensity={0.9}
           roughness={0.3}
           metalness={0.7}
         />
@@ -61,8 +61,8 @@ export function HubOrb({ className = "" }: { className?: string }) {
         gl={{ antialias: true, alpha: true }}
       >
         <ambientLight intensity={0.4} />
-        <pointLight position={[3, 3, 3]} intensity={1.2} color="hsl(217, 91%, 65%)" />
-        <pointLight position={[-3, -2, 2]} intensity={0.6} color="hsl(217, 91%, 75%)" />
+        <pointLight position={[3, 3, 3]} intensity={1.4} color="#FF4452" />
+        <pointLight position={[-3, -2, 2]} intensity={0.7} color="#E30613" />
         <Suspense fallback={null}>
           <WireOrb />
         </Suspense>
