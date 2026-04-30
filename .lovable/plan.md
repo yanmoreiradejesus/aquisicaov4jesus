@@ -1,101 +1,54 @@
+## Objetivo
 
-# Hero vermelho V4 + typewriter + rota /apps curta
+Eliminar a sensação de "travamento" do header ao abrir a `/` pela primeira vez, sem prejudicar a navegação nas outras rotas.
 
-Quatro mudanças coordenadas:
+## Diagnóstico
 
-## 1. Orb 3D em vermelho V4 (#E30613)
+A barra superior (`V4Header`) executa uma animação de entrada (`scaleX 0.04 → 1` em 700ms + fade do conteúdo com delay de 550ms) toda vez que monta. Na rota `/`, isso acontece exatamente quando o navegador também está:
 
-Em `src/components/hub/HubOrb.tsx`, trocar todas as cores HSL azuis por:
-- Casca externa wireframe: `#E30613` opacity 60%
-- Casca média wireframe: `#FF3340` opacity 40%
-- Núcleo metálico: base `#C00510`, emissive `#E30613` intensity 0.9
-- Point lights: `#FF4452` (chave) e `#E30613` (fill)
+- decodificando a logo PNG,
+- inicializando o `HubOrb` 3D,
+- montando os `Typewriter`, relógio, auth e checagens de RBAC.
 
-Resultado: orb glowing vermelho, identidade V4 forte, cinemático.
+Resultado: a barra parece "presa fechada" por uma fração de segundo antes de abrir. O problema **não** é o dropdown — é a animação inicial competindo com o boot pesado da home.
 
-## 2. Componente Typewriter
+## Proposta
 
-Criar `src/components/hub/Typewriter.tsx`:
-- Props: `text`, `speed` (ms/char), `delay` (ms antes de começar), `cursor` (bool), `onDone`.
-- Renderiza letra por letra via `setTimeout` recursivo controlado por estado.
-- **Reserva largura final** com camada "ghost" invisível (`absolute` sobreposto) pra evitar layout shift enquanto digita.
-- Cursor opcional pisca quando termina (`animate-pulse`).
-- Reset automático se `text` mudar (ex: hora muda → re-digita? não — vamos manter mounted-once).
+Combinar duas mudanças (a primeira resolve o problema, a segunda é polish):
 
-## 3. Hero do Hub com bloco vermelho + cascata typewriter
+### 1. Esconder o header na rota `/` (hero/landing)
 
-Em `src/pages/Hub.tsx`, reescrever o `<header>`:
+A `/` é uma "capa editorial" de boas-vindas — quem está nela ainda não precisa do menu. O acesso ao menu acontece via clique na logo da própria home (que pode levar para `/apps`, onde o header aparece normalmente).
 
-- **Linha 1** ("Boa tarde,"): typewriter, `delay=300`, `speed=50`. Cor `text-foreground`.
-- **Linha 2** (nome): bloco retangular pleno vermelho V4 com letra branca. Aparece como bloco vazio primeiro (após linha 1 terminar), com largura animada via `clip-path` (revela da esquerda pra direita em ~500ms), depois typewriter do nome dentro com `speed=60`. Padding generoso (`px-4 py-1`), sem arredondar (bloco pleno conforme escolha).
-- **Contexto** (frase abaixo): typewriter, começa após nome terminar, `speed=25` (mais rápido por ser texto comum).
+- Em `src/components/V4Header.tsx`: se `location.pathname === "/"`, retornar `null` (sem header e sem o spacer de 68px).
+- Em `src/pages/Hub.tsx` (variant `full`): adicionar uma logo V4 discreta no canto superior (ou tornar o eyebrow "V4 Jesus · data · hora" clicável), apontando para `/apps`. Assim o usuário tem como sair da capa para o menu.
 
-Sequência visual:
-```
-t=0.0s  ┆BOA TARDE,
-t=0.6s  BOA TARDE,
-t=0.7s  BOA TARDE,
-        ▓▓▓▓ (bloco vermelho desliza)
-t=1.2s  BOA TARDE,
-        ▓RAFAEL.▓
-t=1.7s  BOA TARDE,
-        ▓RAFAEL.▓
-        Tudo no lugar...
-```
+Benefício: zero animação concorrente no primeiro paint da home. O 3D orb e o typewriter ganham todo o frame budget.
 
-Implementação do bloco: `<span>` com `bg-[#E30613] text-white px-4 py-1 inline-block` + `clip-path` animado via classe Tailwind custom inline:
-```tsx
-<span 
-  style={{ 
-    clipPath: nameRevealed ? 'inset(0 0 0 0)' : 'inset(0 100% 0 0)',
-    transition: 'clip-path 500ms cubic-bezier(0.16, 1, 0.3, 1)'
-  }}
-  className="bg-[#E30613] text-white px-4 py-1 inline-block"
->
-  <Typewriter text={firstName} delay={500} speed={60} />
-</span>
-```
+### 2. Suavizar a animação de entrada da barra (para todas as outras rotas)
 
-Estado coordenado: `useState` simples para `step` (0=nada, 1=greeting done, 2=name done, 3=context done) avançado pelos `onDone` de cada Typewriter.
+Mesmo nas outras rotas, a animação atual é levemente "pesada" porque combina `scaleX` + `overflow-hidden` + fade encadeado. Vamos simplificar:
 
-## 4. Rota /apps (versão curta) + logo aponta pra ela
+- Trocar `scaleX 0.04 → 1` por um simples `opacity 0 → 1` + `translateY(-8px) → 0`, duração 350ms, ease-out.
+- Remover o `delay: 0.55s` do conteúdo interno — ele aparece junto com a barra.
+- Manter `useReducedMotion` desligando tudo.
 
-**Arquitetura**:
-- `/` continua sendo o Hub completo (hero + orb + typewriter + apps + bento) — usado quando o usuário entra em `v4jesus.com`.
-- `/apps` é uma versão curta — mesmos cards de aplicações, mas **sem hero, sem orb, sem widgets** — só uma faixa enxuta com saudação curta + grid de apps. Usada quando o usuário clica na logo do header pra "voltar ao menu".
+Isso fica mais próximo do padrão Apple/Linear (header "desliza de cima") e roda em uma única camada de composição.
 
-**Como fica `/apps`** (compacto):
-```text
-┌─────────────────────────────────┐
-│ APLICAÇÕES         03           │  ← header curto
-│                                 │
-│ ┌────┐ ┌────┐ ┌────┐            │
-│ │ 01 │ │ 02 │ │ 03 │            │
-│ └────┘ └────┘ └────┘            │
-└─────────────────────────────────┘
-```
+### Arquivos afetados
 
-**Implementação**:
-- Refatorar `Hub.tsx`: extrair grid de apps em componente `<AppsGrid />` (reutilizado por ambas as páginas).
-- Hub recebe prop `variant: "full" | "compact"`. Em `"compact"`, omite hero/orb/widgets, renderiza só `<AppsGrid>` com padding menor (`py-12` em vez de `py-16`).
-- Adicionar rota em `App.tsx`: `/apps` → `<Hub variant="compact" />` protegida.
-- Em `V4Header.tsx` linha 130: trocar `to="/"` por `to="/apps"`. Logo agora leva direto pro menu curto. A entrada inicial em `v4jesus.com` (rota `/`) ainda dá o hero completo.
+- `src/components/V4Header.tsx` — early return em `/`, simplificação da animação.
+- `src/pages/Hub.tsx` — adicionar atalho clicável (logo ou eyebrow) para `/apps` na variante `full`, já que o header some.
 
-## Arquivos
+### Detalhes técnicos
 
-- **edita**: `src/components/hub/HubOrb.tsx` (cores vermelhas)
-- **cria**: `src/components/hub/Typewriter.tsx`
-- **cria**: `src/components/hub/AppsGrid.tsx` (extraído do Hub atual)
-- **edita**: `src/pages/Hub.tsx` (variant prop, hero com typewriter+bloco vermelho, usa AppsGrid)
-- **edita**: `src/App.tsx` (rota `/apps`)
-- **edita**: `src/components/V4Header.tsx` (logo aponta pra `/apps`)
+- O early return precisa vir **depois** dos hooks (`useState`, `useEffect`) para não quebrar a regra dos hooks do React. Padrão: calcular `const hideHeader = location.pathname === "/"` e fazer `if (hideHeader) return null;` logo antes do `return <TooltipProvider>...`.
+- Como o header é persistente (montado no layout), some/aparece automaticamente ao trocar de rota — não precisa lidar com transição entre rotas.
+- O atalho na home pode ser a própria palavra "V4 Jesus" do eyebrow virando `<Link to="/apps">` com hover sutil — mantém o visual editorial sem adicionar elementos.
 
-## Notas técnicas
+## Alternativas consideradas (e por que não)
 
-- Typewriter usa `setTimeout` por char. Para ~12 chars + 8 chars + 40 chars total ≈ 2.5s de animação completa. Aceitável.
-- `clip-path` tem ótimo suporte em browsers modernos. Sem fallback necessário.
-- Vermelho `#E30613` é hardcoded (não vai pro design system) — é cor de marca específica desse hero, não um token reutilizável. Usar inline ou via classe arbitrária do Tailwind.
-- Performance: orb 3D continua só desktop (`hidden lg:block`). Typewriter é leve (apenas renders de string crescente).
-- Acessibilidade: quem usa screen reader recebe `aria-label` no `<h1>` com o texto completo, evitando ler letra por letra.
+- **Atrasar a animação 1-2s como você sugeriu**: piora a percepção — o usuário vê a barra "esquecida" e depois aparecendo do nada. O problema é a *animação* coincidir com o boot, não a *ausência* dela.
+- **Renderizar a barra já aberta (sem animação) só em `/`**: funciona, mas a barra vermelha pesada disputando atenção com o hero "Bom dia, Ex." enfraquece o impacto editorial da capa. Tirar é mais limpo.
 
-Aprovando, executo.
+Aprovando, executo as duas mudanças juntas.
