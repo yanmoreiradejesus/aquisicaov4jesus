@@ -291,6 +291,7 @@ const CrmLeads = () => {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         lead={editing}
+        pipe={pipe}
         onSave={handleSave}
         onDelete={handleDelete}
       />
