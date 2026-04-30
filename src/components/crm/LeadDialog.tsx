@@ -236,6 +236,8 @@ export const LeadDialog = ({ open, onOpenChange, lead, pipe, onSave, onDelete }:
           </>
         )}
 
+        {!isOutbound && (
+          <>
         {/* QUALIFICAÇÃO INTERNA */}
         <div className="space-y-1 pt-4 border-t border-border">
           <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">
@@ -276,6 +278,8 @@ export const LeadDialog = ({ open, onOpenChange, lead, pipe, onSave, onDelete }:
             <Textarea rows={3} value={form.notas ?? ""} onChange={(e) => set("notas", e.target.value)} />
           </div>
         </div>
+          </>
+        )}
 
         <DialogFooter className="gap-2">
           {lead?.id && onDelete && (
