@@ -5,7 +5,7 @@ import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, u
 import { LeadCard } from "@/components/crm/LeadCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Upload, ListChecks, LayoutGrid } from "lucide-react";
+import { Plus, Search, Upload, ListChecks, LayoutGrid, Inbox, Send } from "lucide-react";
 import { TasksOverviewView } from "@/components/crm/TasksOverviewView";
 import { useCrmLeads, LEAD_ETAPAS } from "@/hooks/useCrmLeads";
 import { LeadColumn } from "@/components/crm/LeadColumn";
@@ -34,6 +34,7 @@ const CrmLeads = () => {
   const [desqualOpen, setDesqualOpen] = useState(false);
   const [desqualLead, setDesqualLead] = useState<any | null>(null);
   const [view, setView] = usePersistedState<"kanban" | "tarefas">("crm:leads:view", "kanban");
+  const [pipe, setPipe] = usePersistedState<"inbound" | "outbound">("crm:leads:pipe", "inbound");
   const [activeId, setActiveId] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -47,6 +48,9 @@ const CrmLeads = () => {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return leads.filter((l: any) => {
+      // Leads sem pipe (legado) são tratados como inbound
+      const leadPipe = l.pipe ?? "inbound";
+      if (leadPipe !== pipe) return false;
       if (q && ![l.nome, l.email, l.empresa, l.telefone].some((v) => v?.toLowerCase().includes(q))) return false;
       const dataRef = l.data_criacao_origem || l.created_at;
       if (filters.dateFrom && new Date(dataRef) < new Date(filters.dateFrom)) return false;
@@ -64,7 +68,7 @@ const CrmLeads = () => {
       if (filters.responsavel !== "all" && l.responsavel_id !== filters.responsavel) return false;
       return true;
     });
-  }, [leads, search, filters]);
+  }, [leads, search, filters, pipe]);
 
   const grouped = useMemo(() => {
     const map: Record<string, any[]> = {};
@@ -140,7 +144,9 @@ const CrmLeads = () => {
   };
 
   const handleSave = async (lead: any) => {
-    await upsert.mutateAsync(lead);
+    // Carimba o pipe ativo em leads novos; preserva em edições
+    const payload = lead.id ? lead : { ...lead, pipe: lead.pipe ?? pipe };
+    await upsert.mutateAsync(payload);
     toast({ title: lead.id ? "Lead atualizado" : "Lead criado" });
   };
 
@@ -164,6 +170,21 @@ const CrmLeads = () => {
     </button>
   );
 
+  const PipeBtn = ({ value, icon: Icon, label }: { value: "inbound" | "outbound"; icon: any; label: string }) => (
+    <button
+      onClick={() => setPipe(value)}
+      className={cn(
+        "h-8 px-3 rounded-lg text-xs font-semibold uppercase tracking-wider inline-flex items-center gap-1.5 transition-all",
+        pipe === value
+          ? "bg-foreground text-background shadow-ios-sm"
+          : "text-muted-foreground hover:text-foreground hover:bg-surface-2/60"
+      )}
+    >
+      <Icon className="h-3.5 w-3.5" />
+      {label}
+    </button>
+  );
+
   return (
     <div className="min-h-screen bg-background">
       <main className="w-full px-4 lg:px-8 py-6 lg:py-10 animate-fade-in">
@@ -176,6 +197,10 @@ const CrmLeads = () => {
               <h1 className="font-display text-[28px] lg:text-[34px] font-semibold text-foreground tracking-[-0.02em] normal-case">
                 Leads
               </h1>
+              <div className="inline-flex items-center gap-1 p-1 rounded-xl glass shadow-ios-sm">
+                <PipeBtn value="inbound" icon={Inbox} label="Inbound" />
+                <PipeBtn value="outbound" icon={Send} label="Outbound" />
+              </div>
               <div className="inline-flex items-center gap-1 p-1 rounded-xl glass shadow-ios-sm">
                 <ToggleBtn value="kanban" icon={LayoutGrid} label="CRM" />
                 <ToggleBtn value="tarefas" icon={ListChecks} label="Tarefas" />
