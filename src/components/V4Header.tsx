@@ -81,24 +81,16 @@ const V4Header = () => {
   );
 
   const prefersReducedMotion = useReducedMotion();
-  // Animation runs ONCE on first mount (the header is now persistent across routes).
-  const [barReady, setBarReady] = useState(prefersReducedMotion ? true : false);
 
-  // Smooth GPU-only animation: scaleX from a "dot" to full bar. Single content fade after.
-  const barInitial = prefersReducedMotion ? false : { scaleX: 0.04, opacity: 0 };
-  const barAnimate = { scaleX: 1, opacity: 1 };
+  // Single, lightweight slide-in. No scaleX, no overflow clip, no delayed content fade.
+  const barInitial = prefersReducedMotion ? false : { opacity: 0, y: -8 };
+  const barAnimate = { opacity: 1, y: 0 };
   const barTransition = prefersReducedMotion
     ? { duration: 0 }
-    : {
-        scaleX: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as const },
-        opacity: { duration: 0.25, ease: "easeOut" as const },
-      };
+    : { duration: 0.35, ease: [0.22, 1, 0.36, 1] as const };
 
-  const contentInitial = prefersReducedMotion ? false : { opacity: 0 };
-  const contentAnimate = { opacity: 1 };
-  const contentTransition = prefersReducedMotion
-    ? { duration: 0 }
-    : { delay: 0.55, duration: 0.3, ease: "easeOut" as const };
+  // Hide header on the editorial landing (`/`) so it doesn't compete with the hero + 3D orb on first paint.
+  if (location.pathname === "/") return null;
 
   return (
     <TooltipProvider delayDuration={200}>
