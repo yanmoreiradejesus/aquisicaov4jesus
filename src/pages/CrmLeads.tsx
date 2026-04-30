@@ -198,6 +198,10 @@ const CrmLeads = () => {
                 Leads
               </h1>
               <div className="inline-flex items-center gap-1 p-1 rounded-xl glass shadow-ios-sm">
+                <PipeBtn value="inbound" icon={Inbox} label="Inbound" />
+                <PipeBtn value="outbound" icon={Send} label="Outbound" />
+              </div>
+              <div className="inline-flex items-center gap-1 p-1 rounded-xl glass shadow-ios-sm">
                 <ToggleBtn value="kanban" icon={LayoutGrid} label="CRM" />
                 <ToggleBtn value="tarefas" icon={ListChecks} label="Tarefas" />
               </div>
