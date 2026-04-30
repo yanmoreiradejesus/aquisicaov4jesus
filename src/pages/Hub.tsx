@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { getGreeting, formatHubDate, formatHubTime } from "@/lib/greeting";
 import { getHubContextLine } from "@/lib/hubContextLine";
