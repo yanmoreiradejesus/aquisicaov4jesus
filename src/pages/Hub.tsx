@@ -1,24 +1,26 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Card } from "@/components/ui/card";
-import { TrendingUp, ArrowRight, LayoutGrid, Briefcase } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
+import { getGreeting, formatHubDate, formatHubTime } from "@/lib/greeting";
+import { getHubContextLine } from "@/lib/hubContextLine";
+import { AgendaWidget } from "@/components/hub/widgets/AgendaWidget";
+import { PendenciasWidget } from "@/components/hub/widgets/PendenciasWidget";
 
-interface AppCard {
+interface AppEntry {
   id: string;
   title: string;
   description: string;
   href: string;
   external?: boolean;
-  // The app is visible if the user has access to ANY of these paths (or is admin)
   accessPaths: string[];
-  icon: React.ComponentType<{ className?: string }>;
 }
 
-const APPS: AppCard[] = [
+const APPS: AppEntry[] = [
   {
     id: "data-analytics",
     title: "Data Analytics",
-    description: "Funil de vendas, dashboard comercial, metas e insights de aquisição.",
+    description: "Funil, dashboards, metas e insights.",
     href: "/aquisicao/funil",
     accessPaths: [
       "/aquisicao/funil",
@@ -27,12 +29,11 @@ const APPS: AppCard[] = [
       "/aquisicao/meta",
       "/aquisicao/financeiro",
     ],
-    icon: TrendingUp,
   },
   {
     id: "comercial",
     title: "Comercial",
-    description: "CRM de leads e oportunidades, gestão de contas e cobranças.",
+    description: "CRM, contas e cobranças.",
     href: "/comercial/leads",
     accessPaths: [
       "/comercial/leads",
@@ -40,7 +41,6 @@ const APPS: AppCard[] = [
       "/comercial/accounts",
       "/comercial/cobrancas",
     ],
-    icon: Briefcase,
   },
   {
     id: "app-v4",
@@ -49,74 +49,143 @@ const APPS: AppCard[] = [
     href: "https://app.v4jesus.com",
     external: true,
     accessPaths: ["/app-v4"],
-    icon: LayoutGrid,
   },
+];
+
+const WIDGETS = [
+  { id: "agenda", Component: AgendaWidget, accessPaths: ["/comercial/leads", "/comercial/oportunidades"] },
+  { id: "pendencias", Component: PendenciasWidget, accessPaths: ["/comercial/leads", "/comercial/oportunidades"] },
 ];
 
 const Hub = () => {
   const { hasPageAccess, profile } = useAuth();
+  const [now, setNow] = useState(new Date());
+  const [meetingsToday, setMeetingsToday] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
 
-  const visibleApps = APPS.filter((app) =>
-    app.accessPaths.some((p) => hasPageAccess(p))
-  );
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+
+  const visibleApps = APPS.filter((a) => a.accessPaths.some((p) => hasPageAccess(p)));
+  const visibleWidgets = WIDGETS.filter((w) => w.accessPaths.some((p) => hasPageAccess(p)));
+
+  const greeting = getGreeting(now);
+  const firstName = profile?.full_name?.split(" ")[0] ?? "";
+  const contextLine = getHubContextLine({ pendingCount, meetingsToday, date: now });
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="container mx-auto max-w-5xl px-4 lg:px-8 py-12 lg:py-20">
-        <header className="mb-10 lg:mb-16 space-y-3">
-          <p className="text-xs lg:text-sm font-medium text-muted-foreground tracking-widest uppercase">
-            V4 Jesus
+      <main className="container mx-auto max-w-7xl px-4 lg:px-10 py-10 lg:py-16">
+        {/* Eyebrow */}
+        <div className="flex items-center justify-between mb-12 lg:mb-20">
+          <p className="text-[10px] lg:text-xs font-semibold tracking-[0.25em] uppercase text-muted-foreground">
+            V4 Jesus · {formatHubDate(now)} · <span className="tabular-nums">{formatHubTime(now)}</span>
           </p>
-          <h1 className="font-heading text-3xl lg:text-5xl font-bold text-foreground">
-            Olá{profile?.full_name ? `, ${profile.full_name.split(" ")[0]}` : ""}.
+        </div>
+
+        {/* Hero editorial */}
+        <header className="mb-16 lg:mb-24">
+          <h1
+            className="font-heading uppercase text-foreground leading-[0.88] tracking-tight"
+            style={{ fontSize: "clamp(3rem, 13vw, 9rem)" }}
+          >
+            <span className="block">{greeting},</span>
+            <span className="block text-primary">
+              {firstName || "bem-vindo"}.
+            </span>
           </h1>
-          <p className="text-muted-foreground text-base lg:text-lg max-w-2xl">
-            Selecione uma aplicação para começar.
+          <p className="mt-6 lg:mt-8 text-base lg:text-xl text-muted-foreground max-w-2xl">
+            {contextLine}
           </p>
         </header>
 
+        {/* APLICAÇÕES */}
         {visibleApps.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground">
-            Você ainda não tem acesso a nenhuma aplicação. Solicite acesso ao
-            administrador.
+          <div className="text-center py-20 text-muted-foreground">
+            Você ainda não tem acesso a nenhuma aplicação. Solicite acesso ao administrador.
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
-            {visibleApps.map((app) => {
-              const Icon = app.icon;
-              const cardInner = (
-                <Card className="p-6 lg:p-8 h-full transition-all duration-300 hover:border-primary/50 hover:shadow-lg cursor-pointer">
-                  <div className="flex items-start justify-between gap-4 mb-4">
-                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Icon className="h-6 w-6 text-primary" />
+          <section className="mb-20 lg:mb-28">
+            <div className="flex items-baseline justify-between mb-6 lg:mb-8 border-b border-border/60 pb-3">
+              <h2 className="text-[10px] lg:text-xs font-semibold tracking-[0.25em] uppercase text-muted-foreground">
+                Aplicações
+              </h2>
+              <span className="text-[10px] lg:text-xs font-semibold tracking-[0.25em] uppercase text-muted-foreground tabular-nums">
+                {String(visibleApps.length).padStart(2, "0")} disponíveis
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+              {visibleApps.map((app, idx) => {
+                const num = String(idx + 1).padStart(2, "0");
+                const card = (
+                  <article className="group relative h-full overflow-hidden rounded-2xl border border-border/60 bg-[hsl(var(--surface-1))] p-6 lg:p-8 transition-all duration-500 hover:border-primary/50 hover:bg-[hsl(var(--surface-2))] hover:shadow-[var(--shadow-glow)] cursor-pointer min-h-[260px] lg:min-h-[320px] flex flex-col justify-between">
+                    {/* Number */}
+                    <div className="flex items-start justify-between">
+                      <span
+                        className="font-heading text-foreground/15 leading-none transition-all duration-500 group-hover:text-primary/40"
+                        style={{ fontSize: "clamp(3.5rem, 7vw, 5.5rem)" }}
+                      >
+                        {num}
+                      </span>
+                      <ArrowUpRight className="h-6 w-6 lg:h-7 lg:w-7 text-muted-foreground transition-all duration-500 group-hover:text-primary group-hover:-translate-y-1 group-hover:translate-x-1" />
                     </div>
-                    <ArrowRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-foreground" />
-                  </div>
-                  <h2 className="font-heading text-xl lg:text-2xl font-bold text-foreground mb-2">
-                    {app.title}
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    {app.description}
-                  </p>
-                </Card>
-              );
-              return app.external ? (
-                <a
-                  key={app.id}
-                  href={app.href}
-                  className="group"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {cardInner}
-                </a>
-              ) : (
-                <Link key={app.id} to={app.href} className="group">
-                  {cardInner}
-                </Link>
-              );
-            })}
-          </div>
+
+                    {/* Title + desc */}
+                    <div>
+                      <h3
+                        className="font-heading uppercase text-foreground leading-[0.95] tracking-tight mb-2"
+                        style={{ fontSize: "clamp(1.75rem, 3vw, 2.5rem)" }}
+                      >
+                        {app.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">{app.description}</p>
+                    </div>
+                  </article>
+                );
+
+                return app.external ? (
+                  <a
+                    key={app.id}
+                    href={app.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Abrir ${app.title}`}
+                  >
+                    {card}
+                  </a>
+                ) : (
+                  <Link key={app.id} to={app.href} aria-label={`Abrir ${app.title}`}>
+                    {card}
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* HOJE — bento */}
+        {visibleWidgets.length > 0 && (
+          <section>
+            <div className="flex items-baseline justify-between mb-6 lg:mb-8 border-b border-border/60 pb-3">
+              <h2 className="text-[10px] lg:text-xs font-semibold tracking-[0.25em] uppercase text-muted-foreground">
+                Hoje
+              </h2>
+              <span className="text-[10px] lg:text-xs font-semibold tracking-[0.25em] uppercase text-muted-foreground tabular-nums">
+                {formatHubDate(now)}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+              {visibleWidgets.map(({ id, Component }) => {
+                if (id === "agenda") return <Component key={id} onCount={setMeetingsToday} />;
+                if (id === "pendencias") return <Component key={id} onCount={setPendingCount} />;
+                return <Component key={id} />;
+              })}
+            </div>
+          </section>
         )}
       </main>
     </div>
