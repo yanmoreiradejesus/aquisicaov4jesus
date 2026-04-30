@@ -34,6 +34,7 @@ const CrmLeads = () => {
   const [desqualOpen, setDesqualOpen] = useState(false);
   const [desqualLead, setDesqualLead] = useState<any | null>(null);
   const [view, setView] = usePersistedState<"kanban" | "tarefas">("crm:leads:view", "kanban");
+  const [pipe, setPipe] = usePersistedState<"inbound" | "outbound">("crm:leads:pipe", "inbound");
   const [activeId, setActiveId] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
