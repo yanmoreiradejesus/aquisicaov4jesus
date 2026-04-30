@@ -68,7 +68,7 @@ const CrmLeads = () => {
       if (filters.responsavel !== "all" && l.responsavel_id !== filters.responsavel) return false;
       return true;
     });
-  }, [leads, search, filters]);
+  }, [leads, search, filters, pipe]);
 
   const grouped = useMemo(() => {
     const map: Record<string, any[]> = {};
