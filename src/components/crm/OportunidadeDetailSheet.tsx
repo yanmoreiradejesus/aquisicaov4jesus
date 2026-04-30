@@ -353,9 +353,19 @@ export const OportunidadeDetailSheet = ({
     [atividades],
   );
 
+  const lastResetIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (open) {
-      setForm(oportunidade);
+    if (!open) {
+      lastResetIdRef.current = null;
+      return;
+    }
+    // Mantém form sincronizado com os dados mais recentes
+    setForm(oportunidade);
+
+    // Só reseta UI (aba ativa, estados de IA, etc.) quando troca a oportunidade aberta
+    const currentId = oportunidade?.id ?? null;
+    if (currentId && lastResetIdRef.current !== currentId) {
+      lastResetIdRef.current = currentId;
       setActiveTab("informacoes");
       setAiResumo(oportunidade?.resumo_reuniao ?? "");
       setAiTarefa(null);
