@@ -58,11 +58,16 @@ const Hub = ({ variant = "full" }: HubProps) => {
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto max-w-7xl px-4 lg:px-10 py-10 lg:py-16">
-        {/* Eyebrow */}
+        {/* Eyebrow — clickable shortcut to /apps since header is hidden on / */}
         <div className="flex items-center justify-between mb-12 lg:mb-20">
-          <p className="text-[10px] lg:text-xs font-semibold tracking-[0.25em] uppercase text-muted-foreground">
-            V4 Jesus · {formatHubDate(now)} · <span className="tabular-nums">{formatHubTime(now)}</span>
-          </p>
+          <Link
+            to="/apps"
+            className="group text-[10px] lg:text-xs font-semibold tracking-[0.25em] uppercase text-muted-foreground hover:text-foreground transition-colors"
+            title="Ir para aplicações"
+          >
+            <span className="border-b border-transparent group-hover:border-foreground/40 transition-colors">V4 Jesus</span>
+            <span> · {formatHubDate(now)} · <span className="tabular-nums">{formatHubTime(now)}</span></span>
+          </Link>
         </div>
 
         {/* Hero editorial + 3D orb */}
