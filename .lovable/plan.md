@@ -1,84 +1,112 @@
-## Problema
 
-Hoje o relatório **Pré Growth Class** (gerado em `auto-generate-pre-gc` → `meeting-ai/pre_growth_class`) sofre dois problemas concretos visíveis nos prints:
+# Hub Disruptivo — Editorial + Bento Modular (agnóstico de domínio)
 
-1. **Tabelas markdown viram uma linha só** — o modelo gera `| Produto | Valor | Prazo | |---|---|---| | ... |` numa única linha, e como o renderer atual não trata tabelas, fica ilegível. Mesmo problema acontece em "Riscos & Pontos de Atenção".
-2. **"Assessoria Mensal (pré-aprovada)"** é descrita de forma genérica — não há garantia de que os produtos efetivamente listados no contrato (PDF anexado em `crm_oportunidades.contrato_url`) estejam discriminados.
+Transformar `/` (Hub) num **portal corporativo** com identidade editorial forte (Bebas Neue gigante + numeração 01/02/03) e um **bento grid de widgets modulares** que escala conforme novos domínios (Comercial, Operacional, Financeiro, RH, etc.) forem adicionados ao sistema. Nada no hub deve dar a impressão de ser "um CRM" — o hub é a porta de entrada do sistema V4 inteiro.
 
-## O que vamos fazer
+## Princípios de design
 
-### 1. Cruzar com o contrato (PDF) na geração do Pré-GC
+1. **Marca antes de dado**: o hero é tipográfico e atemporal. Funciona vazio, com 1 app, ou com 10.
+2. **Widgets opcionais e neutros**: nenhum widget é obrigatório. Cada um aparece só se o usuário tem acesso ao módulo correspondente. Se nenhum aparece, o hero + apps já bastam.
+3. **Linguagem visual única para todos os domínios**: um widget "Comercial" e um widget "Financeiro" futuro têm a mesma estrutura — eyebrow, título, número-chave, contexto. Sem cores próprias por domínio.
+4. **Pronto pra crescer**: adicionar um novo módulo (ex: "Operacional") = adicionar 1 entrada em `APPS` + opcionalmente 1 widget em `WIDGETS`. Zero refator.
 
-Na edge function `auto-generate-pre-gc`:
+## Estrutura visual
 
-- Se `op.contrato_url` existir, baixar o PDF do storage (`contratos` bucket) com a service role.
-- Extrair o texto via `pdf-parse@1.1.1` (mesma lib já usada no `closer-copilot`).
-- Truncar para ~12k caracteres (mais que suficiente p/ contratos da V4).
-- Anexar ao `contexto.contrato` enviado para `meeting-ai`.
-
-No prompt de `pre_growth_class` (`meeting-ai`), adicionar regras explícitas:
-
-- **Fonte de verdade dos produtos = contrato.** Listar TODOS os produtos discriminados no PDF (nome, valor, parcelamento, prazo de início/fim).
-- Se o contrato citar "Assessoria Mensal" sem detalhar serviços, marcar como **gap** e listar em "Riscos & Pontos de Atenção" com sugestão "validar escopo da assessoria com o cliente na GC".
-- Se houver divergência entre `valor_fee`/`valor_ef` da oportunidade e os valores do contrato, sinalizar a divergência.
-
-### 2. Reorganizar o layout — sem tabelas markdown
-
-Reescrever o template do prompt para usar **listas estruturadas** (que renderizam bem) em vez de tabelas:
-
-**Antes (atual)** — tabela markdown que vira uma linha:
 ```text
-| Produto | Valor | Prazo |
-|---------|-------|-------|
-| Estruturação | 12x R$1.499 | 30-45 dias |
+┌──────────────────────────────────────────────────────────┐
+│  V4 JESUS · QUI 30 ABR · 14:32                    [user] │
+│                                                          │
+│  BOA TARDE,                                              │  ← Bebas Neue, clamp gigante
+│  RAFAEL.                                                 │
+│                                                          │
+│  Tudo no lugar. 3 itens pedem atenção hoje.              │  ← linha contextual neutra
+├──────────────────────────────────────────────────────────┤
+│  APLICAÇÕES                                              │  ← seção 1: navegação
+│ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐       │
+│ │ 01           │ │ 02           │ │ 03           │       │
+│ │ DATA         │ │ COMERCIAL    │ │ APP V4       │       │
+│ │ ANALYTICS    │ │              │ │              │       │
+│ │              │ │              │ │              │       │
+│ │ Funil, metas │ │ CRM, contas, │ │ Sistema      │       │
+│ │ e insights   │ │ cobranças    │ │ operacional  │       │
+│ └──────────────┘ └──────────────┘ └──────────────┘       │
+├──────────────────────────────────────────────────────────┤
+│  HOJE                                                    │  ← seção 2: pulso (opcional)
+│ ┌─────────────────────┐ ┌────────────────────────────┐   │
+│ │ AGENDA              │ │ PENDÊNCIAS                 │   │
+│ │ • 15h Reunião Acme  │ │ 4 tarefas em aberto        │   │
+│ │ • 16h Follow XPTO   │ │ 2 atrasadas                │   │
+│ └─────────────────────┘ └────────────────────────────┘   │
+└──────────────────────────────────────────────────────────┘
 ```
 
-**Depois** — cards/blocos em lista:
-```text
-### 💼 Produtos Contratados
+- **Hero editorial**: saudação dinâmica em Bebas Neue (`clamp(3rem, 12vw, 9rem)`), eyebrow com data + hora ao vivo, e uma linha de contexto **neutra** (não vendista). Ex: "Tudo no lugar." / "Bom dia pra começar." / "3 itens pedem atenção hoje."
+- **Seção APLICAÇÕES**: cards numerados grandes, sem mini-stats internos (mantém neutralidade — o card de Comercial não vira "card de vendas"). Descrição curta abaixo do título.
+- **Seção HOJE (opcional)**: bento grid com widgets transversais — coisas que importam **independentemente do domínio**: agenda do usuário, pendências/tarefas, notificações. Conforme novos módulos surgem (Financeiro, Operacional), novos widgets entram aqui sob a mesma label "HOJE".
 
-**1. Estruturação Estratégica**
-- Valor: 12x R$ 1.499 (total R$ 17.984)
-- Prazo: 30-45 dias
-- Escopo: Diagnóstico completo, pesquisa de mercado, personas/PUV...
+## Por que sem mini-stats nos cards de app
 
-**2. Assessoria Mensal**
-- Valor: 12x R$ 3.136,63
-- Início: pós-estruturação
-- Escopo discriminado no contrato: ... (ou: ⚠️ não detalhado — validar na GC)
+Colocar "47 oportunidades" dentro do card "Comercial" funciona hoje, mas amanhã o card "Financeiro" precisaria mostrar "R$ X em contas a pagar" e o card "Operacional" precisaria de "X projetos ativos" — cada domínio com sua métrica vira ruído visual e enviesa o hub. **Manter os cards puramente navegacionais** mantém o hub elegante e escalável. Os números ao vivo ficam contidos na seção HOJE, que é explicitamente "o pulso do dia" e pode crescer organicamente.
+
+## Comportamento
+
+- **Saudação contextual**: "Bom dia/Boa tarde/Boa noite" + nome, em pt-BR.
+- **Linha de contexto adaptativa**: rotação simples baseada em hora ou em quantidade de pendências do usuário. Frases neutras curadas, sem jargão de vendas.
+- **Hover nos apps**: número 01 ganha opacidade, card escurece levemente, seta → translada. Sutil glow azul (`--shadow-glow`).
+- **Permissões**: cards respeitam `hasPageAccess` (já existe). Widgets idem — cada widget declara de qual módulo depende; sem acesso, não renderiza.
+- **Empty state**: se usuário não tem nenhum widget ativo, seção HOJE some inteira. Hero + apps continuam.
+- **Mobile (≤768px)**: hero `clamp(2.5rem, 14vw, 5rem)`, apps em coluna única, bento empilha. Numeração permanece.
+
+## O que muda no código
+
+### 1. `src/pages/Hub.tsx` (reescrita)
+- Remove layout atual de `Card` shadcn.
+- Hero editorial com Tailwind puro + tipografia Bebas.
+- Header com data/hora ao vivo (`useEffect` + `setInterval` 60s).
+- Cards de app como `<article>` com numeração absoluta no topo.
+- Render condicional da seção HOJE.
+
+### 2. `src/components/hub/HubBentoWidget.tsx` (novo)
+Wrapper visual neutro para qualquer widget futuro:
+- Props: `eyebrow`, `title`, `loading`, `children`, `href?` (clicável opcional).
+- Visual: `bg-surface-1`, border sutil, padding generoso, hover `surface-2`.
+- Skeleton ao carregar.
+- **Reutilizável por qualquer domínio futuro** (Financeiro, Operacional, RH).
+
+### 3. Widgets iniciais (apenas 2, transversais)
+Criar em `src/components/hub/widgets/`:
+- **`AgendaWidget.tsx`**: próximas 3 reuniões/eventos do usuário (hoje). Fonte: `crm_atividades` filtrado por `assigned_to = user.id` e `tipo='reuniao'` nas próximas 24h. Quando integrarmos Google Calendar diretamente, troca a fonte sem mexer no widget.
+- **`PendenciasWidget.tsx`**: contagem de tarefas abertas + atrasadas do usuário. Fonte: `crm_tasks` (ou tabela equivalente) com `assigned_to = user.id` e `status != concluído`.
+
+Ambos com `staleTime: 60_000`. Falha silenciosa: se a query falhar, widget não renderiza (não quebra o hub).
+
+### 4. Utilitários
+- `src/lib/greeting.ts` — `getGreeting(date)` retornando "Bom dia/Boa tarde/Boa noite".
+- `src/lib/hubContextLine.ts` — função pura que escolhe a frase de contexto (opcionalmente recebe contagem de pendências).
+
+### 5. Registro extensível de widgets
+Em `Hub.tsx`, definir um array `WIDGETS` análogo ao `APPS`:
+
+```ts
+const WIDGETS = [
+  { id: "agenda", component: AgendaWidget, accessPaths: ["/comercial/leads", "/operacional/..."] },
+  { id: "pendencias", component: PendenciasWidget, accessPaths: ["/comercial/leads"] },
+];
 ```
 
-Mesma transformação para **Riscos**:
-```text
-### ⚠️ Riscos & Pontos de Atenção
+Adicionar widget novo no futuro = 1 linha. Sem refator do Hub.
 
-**🔴 Alta — Expectativa de resultado rápido**
-"nós vai voar então ou não?" com pressão financeira real.
-**Mitigação:** gestão de expectativa cirúrgica no kickoff; roadmap claro com small wins mensais.
+## Fora do escopo (fase 2+)
 
-**🟡 Média — Capacidade de investimento limitada**
-...
-```
+- Widgets específicos de Financeiro/Operacional/RH (entram quando os módulos existirem).
+- Personalização (usuário escolhe quais widgets ver / reordenar).
+- Command palette (⌘K).
+- Animações framer-motion mais elaboradas.
+- Notificações push no header.
 
-### 3. Garantir renderização correta no front
+## Resumo dos arquivos
 
-O componente que renderiza `pre_growth_class_relatorio` precisa suportar bem o markdown (listas aninhadas, negrito, h3). Verificar se está usando `react-markdown` com `prose`. Se não estiver, ajustar.
+- **edita**: `src/pages/Hub.tsx`
+- **cria**: `src/components/hub/HubBentoWidget.tsx`, `src/components/hub/widgets/AgendaWidget.tsx`, `src/components/hub/widgets/PendenciasWidget.tsx`, `src/lib/greeting.ts`, `src/lib/hubContextLine.ts`
 
-## Arquivos afetados
-
-- `supabase/functions/auto-generate-pre-gc/index.ts` — baixar e extrair texto do contrato (`contrato_url`), passar como `contexto.contrato_texto`.
-- `supabase/functions/meeting-ai/index.ts` — reescrever o prompt do `pre_growth_class` para: (a) eliminar tabelas markdown, (b) usar contrato como fonte de verdade dos produtos, (c) detectar gaps/divergências.
-- Componente que renderiza o relatório no detalhe da Account (Onboarding) — confirmar markdown renderer com `prose`. Identificarei o arquivo exato durante a implementação.
-
-## Detalhes técnicos
-
-- Bucket dos contratos: o caminho `5de1b0ce-.../...pdf` indica path relativo. Vou inspecionar o bucket usado no upload (provavelmente `contratos`) e usar `supabase.storage.from(bucket).download(path)` com service role.
-- Modelo: mantém o atual (Anthropic Opus via `provider: "opus45"`), só muda prompt e contexto.
-- Regenerar o relatório de accounts já gerados é opcional — botão "Regenerar Pré-GC" provavelmente já existe; se não, adiciono um na tela de detalhe.
-
-## Resultado esperado
-
-- Pré-GC com produtos discriminados conforme o contrato real, valores e prazos corretos.
-- Layout legível: blocos verticais em vez de tabelas comprimidas.
-- Riscos visíveis um abaixo do outro com severidade destacada.
-- Gaps explícitos quando o contrato não detalha o escopo (ex.: "Assessoria Mensal sem serviços listados").
+Aprovando, implemento.
