@@ -40,7 +40,9 @@ const empty = {
 const formatBRL = (n: any) =>
   n == null || n === "" ? "" : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(n));
 
-export const LeadDialog = ({ open, onOpenChange, lead, onSave, onDelete }: Props) => {
+export const LeadDialog = ({ open, onOpenChange, lead, pipe, onSave, onDelete }: Props) => {
+  const isOutbound = (lead?.pipe ?? pipe) === "outbound";
+
   const [form, setForm] = useState<any>(empty);
   const [saving, setSaving] = useState(false);
 
