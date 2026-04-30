@@ -144,7 +144,9 @@ const CrmLeads = () => {
   };
 
   const handleSave = async (lead: any) => {
-    await upsert.mutateAsync(lead);
+    // Carimba o pipe ativo em leads novos; preserva em edições
+    const payload = lead.id ? lead : { ...lead, pipe: lead.pipe ?? pipe };
+    await upsert.mutateAsync(payload);
     toast({ title: lead.id ? "Lead atualizado" : "Lead criado" });
   };
 
