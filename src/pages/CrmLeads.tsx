@@ -5,7 +5,7 @@ import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, u
 import { LeadCard } from "@/components/crm/LeadCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Upload, ListChecks, LayoutGrid } from "lucide-react";
+import { Plus, Search, Upload, ListChecks, LayoutGrid, Inbox, Send } from "lucide-react";
 import { TasksOverviewView } from "@/components/crm/TasksOverviewView";
 import { useCrmLeads, LEAD_ETAPAS } from "@/hooks/useCrmLeads";
 import { LeadColumn } from "@/components/crm/LeadColumn";
