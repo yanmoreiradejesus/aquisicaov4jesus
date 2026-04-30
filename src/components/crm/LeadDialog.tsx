@@ -84,6 +84,45 @@ export const LeadDialog = ({ open, onOpenChange, lead, pipe, onSave, onDelete }:
           </DialogTitle>
         </DialogHeader>
 
+        {isOutbound ? (
+          <>
+            <div className="space-y-1 pt-2">
+              <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">
+                Dados do Lead (Outbound)
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-2">
+              <div className="space-y-1.5 md:col-span-2">
+                <Label>Nome completo *</Label>
+                <Input value={form.nome ?? ""} onChange={(e) => set("nome", e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Celular</Label>
+                <Input value={form.telefone ?? ""} onChange={(e) => set("telefone", e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Canal de aquisição</Label>
+                <Select value={form.canal ?? ""} onValueChange={(v) => set("canal", v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
+                  <SelectContent>
+                    {OUTBOUND_CANAIS.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Empresa</Label>
+                <Input value={form.empresa ?? ""} onChange={(e) => set("empresa", e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>CNPJ (opcional)</Label>
+                <Input value={form.documento_empresa ?? ""} onChange={(e) => set("documento_empresa", e.target.value)} />
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
         {/* DADOS DO LEAD BROKER */}
         <div className="space-y-1 pt-2">
           <p className="text-[11px] font-semibold tracking-widest uppercase text-muted-foreground">
@@ -194,6 +233,8 @@ export const LeadDialog = ({ open, onOpenChange, lead, pipe, onSave, onDelete }:
             <Textarea rows={3} value={form.descricao ?? ""} onChange={(e) => set("descricao", e.target.value)} />
           </div>
         </div>
+          </>
+        )}
 
         {/* QUALIFICAÇÃO INTERNA */}
         <div className="space-y-1 pt-4 border-t border-border">
