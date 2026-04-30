@@ -170,6 +170,21 @@ const CrmLeads = () => {
     </button>
   );
 
+  const PipeBtn = ({ value, icon: Icon, label }: { value: "inbound" | "outbound"; icon: any; label: string }) => (
+    <button
+      onClick={() => setPipe(value)}
+      className={cn(
+        "h-8 px-3 rounded-lg text-xs font-semibold uppercase tracking-wider inline-flex items-center gap-1.5 transition-all",
+        pipe === value
+          ? "bg-foreground text-background shadow-ios-sm"
+          : "text-muted-foreground hover:text-foreground hover:bg-surface-2/60"
+      )}
+    >
+      <Icon className="h-3.5 w-3.5" />
+      {label}
+    </button>
+  );
+
   return (
     <div className="min-h-screen bg-background">
       <main className="w-full px-4 lg:px-8 py-6 lg:py-10 animate-fade-in">
