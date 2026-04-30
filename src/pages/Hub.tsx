@@ -6,6 +6,7 @@ import { getGreeting, formatHubDate, formatHubTime } from "@/lib/greeting";
 import { getHubContextLine } from "@/lib/hubContextLine";
 import { AgendaWidget } from "@/components/hub/widgets/AgendaWidget";
 import { PendenciasWidget } from "@/components/hub/widgets/PendenciasWidget";
+import { HubOrb } from "@/components/hub/HubOrb";
 
 interface AppEntry {
   id: string;
@@ -85,20 +86,23 @@ const Hub = () => {
           </p>
         </div>
 
-        {/* Hero editorial */}
-        <header className="mb-16 lg:mb-24">
-          <h1
-            className="font-heading uppercase text-foreground leading-[0.88] tracking-tight"
-            style={{ fontSize: "clamp(3rem, 13vw, 9rem)" }}
-          >
-            <span className="block">{greeting},</span>
-            <span className="block text-primary">
-              {firstName || "bem-vindo"}.
-            </span>
-          </h1>
-          <p className="mt-6 lg:mt-8 text-base lg:text-xl text-muted-foreground max-w-2xl">
-            {contextLine}
-          </p>
+        {/* Hero editorial + 3D orb */}
+        <header className="mb-16 lg:mb-24 grid grid-cols-1 lg:grid-cols-[1fr_auto] items-center gap-8 lg:gap-12">
+          <div>
+            <h1
+              className="font-heading uppercase leading-[0.9] tracking-tight"
+              style={{ fontSize: "clamp(2.5rem, 8vw, 6rem)" }}
+            >
+              <span className="block text-foreground">{greeting},</span>
+              <span className="block bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">
+                {firstName || "bem-vindo"}.
+              </span>
+            </h1>
+            <p className="mt-6 lg:mt-8 text-base lg:text-lg text-muted-foreground max-w-2xl">
+              {contextLine}
+            </p>
+          </div>
+          <HubOrb className="hidden lg:block w-[360px] h-[360px] xl:w-[420px] xl:h-[420px]" />
         </header>
 
         {/* APLICAÇÕES */}
