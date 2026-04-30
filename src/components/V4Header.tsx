@@ -104,18 +104,11 @@ const V4Header = () => {
           initial={barInitial}
           animate={barAnimate}
           transition={barTransition}
-          onAnimationComplete={() => setBarReady(true)}
-          className={`border border-red-700/60 bg-red-600 shadow-[0_8px_32px_-8px_rgba(220,38,38,0.45),0_2px_8px_-2px_rgba(0,0,0,0.4)] rounded-full h-11 flex items-center gap-1 px-2 ${
-            barReady ? "" : "overflow-hidden"
-          } ${scrolled ? "bg-red-700" : ""}`}
-          style={{ minWidth: 44, transformOrigin: "center", willChange: "transform, opacity" }}
+          className={`border border-red-700/60 bg-red-600 shadow-[0_8px_32px_-8px_rgba(220,38,38,0.45),0_2px_8px_-2px_rgba(0,0,0,0.4)] rounded-full h-11 flex items-center gap-1 px-2 ${scrolled ? "bg-red-700" : ""}`}
+          style={{ minWidth: 44, willChange: "transform, opacity" }}
         >
-          <motion.div
-            initial={contentInitial}
-            animate={contentAnimate}
-            transition={contentTransition}
+          <div
             className="flex items-center gap-1 w-full whitespace-nowrap"
-            style={{ willChange: "opacity" }}
           >
             {/* Logo — fixed dimensions so it reserves space from the first frame. */}
             <Link
