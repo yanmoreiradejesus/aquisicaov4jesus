@@ -12,9 +12,19 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   lead: any | null;
+  pipe?: "inbound" | "outbound";
   onSave: (lead: any) => Promise<void> | void;
   onDelete?: (id: string) => Promise<void> | void;
 }
+
+const OUTBOUND_CANAIS = [
+  "Prospecção fria",
+  "Networking",
+  "Recovery",
+  "Reativação",
+  "Inside box",
+  "Eventos",
+];
 
 const empty = {
   // Lead Broker
