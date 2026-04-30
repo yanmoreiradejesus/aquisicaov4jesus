@@ -396,6 +396,7 @@ export type Database = {
           origem: string | null
           pais: string | null
           pesquisa_pre_qualificacao: Json | null
+          pipe: Database["public"]["Enums"]["lead_pipe"]
           qualificacao: string | null
           responsavel_id: string | null
           segmento: string | null
@@ -439,6 +440,7 @@ export type Database = {
           origem?: string | null
           pais?: string | null
           pesquisa_pre_qualificacao?: Json | null
+          pipe?: Database["public"]["Enums"]["lead_pipe"]
           qualificacao?: string | null
           responsavel_id?: string | null
           segmento?: string | null
@@ -482,6 +484,7 @@ export type Database = {
           origem?: string | null
           pais?: string | null
           pesquisa_pre_qualificacao?: Json | null
+          pipe?: Database["public"]["Enums"]["lead_pipe"]
           qualificacao?: string | null
           responsavel_id?: string | null
           segmento?: string | null
@@ -928,6 +931,7 @@ export type Database = {
         | "reuniao_agendada"
         | "reuniao_realizada"
         | "no_show"
+      lead_pipe: "inbound" | "outbound"
       onboarding_status: "entrada" | "atrasada" | "concluida" | "churn_m0"
       oportunidade_etapa:
         | "proposta"
@@ -1089,6 +1093,7 @@ export const Constants = {
         "reuniao_realizada",
         "no_show",
       ],
+      lead_pipe: ["inbound", "outbound"],
       onboarding_status: ["entrada", "atrasada", "concluida", "churn_m0"],
       oportunidade_etapa: [
         "proposta",
