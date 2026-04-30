@@ -42,10 +42,16 @@ const AppRoutes = () => {
         <Route path="/login" element={<PageTransition><Login /></PageTransition>} />
         <Route path="/auth/google-callback" element={<GoogleCallback />} />
 
-        {/* Hub (home) */}
+        {/* Hub (home) — full hero on landing */}
         <Route path="/" element={
           <ProtectedRoute>
-            <PageTransition><Hub /></PageTransition>
+            <PageTransition><Hub variant="full" /></PageTransition>
+          </ProtectedRoute>
+        } />
+        {/* Compact apps menu — accessed via header logo */}
+        <Route path="/apps" element={
+          <ProtectedRoute>
+            <PageTransition><Hub variant="compact" /></PageTransition>
           </ProtectedRoute>
         } />
 
