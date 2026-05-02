@@ -61,7 +61,11 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [contratoSignedUrl, setContratoSignedUrl] = useState<string | null>(null);
+  const [editingContrato, setEditingContrato] = useState(false);
+  const [contratoForm, setContratoForm] = useState<any>(null);
+  const [savingContrato, setSavingContrato] = useState(false);
   const { toast } = useToast();
+  const qc = useQueryClient();
 
   useEffect(() => {
     if (account) setForm({ ...account });
