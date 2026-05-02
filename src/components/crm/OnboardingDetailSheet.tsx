@@ -446,29 +446,106 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
 
             {/* Anexos: contrato + informações gerais */}
             <div className="space-y-3 pt-4 border-t border-border/40">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="font-display text-sm font-semibold tracking-[-0.01em] text-foreground/90">
-                  Contrato & Informações Gerais
-                </h3>
-                {!editingContrato && canEditContrato && (
-                  <Button size="sm" variant="ghost" onClick={startEditContrato}>
-                    <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                    Editar contrato
-                  </Button>
-                )}
-                {editingContrato && (
-                  <div className="flex items-center gap-1.5">
-                    <Button size="sm" variant="ghost" onClick={cancelEditContrato} disabled={savingContrato}>
-                      <X className="h-3.5 w-3.5 mr-1.5" />
-                      Cancelar
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-display text-sm font-semibold tracking-[-0.01em] text-foreground/90">
+                    Contrato & Informações Gerais
+                  </h3>
+                  {divergence.status === "loading" && (
+                    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" /> Validando…
+                    </span>
+                  )}
+                  {divergence.status === "ok" && divergence.has_divergence && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-300">
+                      <AlertTriangle className="h-3 w-3" /> Divergência
+                    </span>
+                  )}
+                  {divergence.status === "ok" && !divergence.has_divergence && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-300">
+                      <ShieldCheck className="h-3 w-3" /> Conferido
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {!editingContrato && form?.oportunidade?.contrato_url && (
+                    <Button size="sm" variant="ghost" onClick={runDivergenceCheck} disabled={divergence.status === "loading"}>
+                      <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${divergence.status === "loading" ? "animate-spin" : ""}`} />
+                      Revalidar
                     </Button>
-                    <Button size="sm" onClick={handleSaveContrato} disabled={savingContrato}>
-                      <Save className="h-3.5 w-3.5 mr-1.5" />
-                      {savingContrato ? "Salvando..." : "Salvar"}
+                  )}
+                  {!editingContrato && canEditContrato && (
+                    <Button
+                      size="sm"
+                      variant={divergence.status === "ok" && divergence.has_divergence ? "default" : "ghost"}
+                      onClick={startEditContrato}
+                      className={divergence.status === "ok" && divergence.has_divergence ? "bg-amber-500/90 hover:bg-amber-500 text-amber-950" : ""}
+                    >
+                      {divergence.status === "ok" && divergence.has_divergence ? (
+                        <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
+                      ) : (
+                        <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                      )}
+                      Editar contrato
                     </Button>
-                  </div>
-                )}
+                  )}
+                  {editingContrato && (
+                    <>
+                      <Button size="sm" variant="ghost" onClick={cancelEditContrato} disabled={savingContrato}>
+                        <X className="h-3.5 w-3.5 mr-1.5" />
+                        Cancelar
+                      </Button>
+                      <Button size="sm" onClick={handleSaveContrato} disabled={savingContrato}>
+                        <Save className="h-3.5 w-3.5 mr-1.5" />
+                        {savingContrato ? "Salvando..." : "Salvar"}
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
+
+              {divergence.status === "ok" && divergence.has_divergence && divergence.divergences && divergence.divergences.length > 0 && (
+                <Alert className="border-amber-500/40 bg-amber-500/5">
+                  <AlertTriangle className="h-4 w-4 text-amber-400" />
+                  <AlertTitle className="text-amber-200 text-sm">Divergência detectada entre contrato e CRM</AlertTitle>
+                  <AlertDescription className="text-[12px] text-foreground/80">
+                    {divergence.resumo && <p className="mb-2">{divergence.resumo}</p>}
+                    <ul className="space-y-1.5">
+                      {divergence.divergences.map((d, i) => (
+                        <li key={i} className="leading-snug">
+                          <span className="font-semibold text-amber-200">
+                            {{
+                              valor_fee: "Valor Fee",
+                              valor_ef: "Valor EF",
+                              data_inicio: "Início do contrato",
+                              data_fim: "Fim do contrato",
+                              categoria_produtos: "Categoria de produtos",
+                            }[d.campo] || d.campo}:
+                          </span>{" "}
+                          CRM = <span className="tabular-nums">{d.valor_sistema || "—"}</span> · Contrato ={" "}
+                          <span className="tabular-nums">{d.valor_contrato || "—"}</span>
+                          {d.observacao && <span className="block text-muted-foreground text-[11px] mt-0.5">{d.observacao}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                    {canEditContrato && (
+                      <p className="mt-2 text-[11px] text-amber-200/80">Use <strong>Editar contrato</strong> para alinhar os dados.</p>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {divergence.status === "extract_failed" && (
+                <p className="text-[11px] text-muted-foreground">
+                  Não foi possível extrair o PDF para validar automaticamente. Confira manualmente.
+                </p>
+              )}
+              {divergence.status === "error" && (
+                <p className="text-[11px] text-destructive">
+                  Falha na validação automática: {divergence.error}
+                </p>
+              )}
+
 
               {!editingContrato ? (
                 <div className="rounded-lg border border-border/40 bg-background/40 p-3 space-y-2 text-[13px]">
