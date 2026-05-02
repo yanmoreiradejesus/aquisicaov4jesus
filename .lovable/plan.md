@@ -1,49 +1,135 @@
-## Bug
+## Visão geral
 
-Ao arrastar um lead para **Reunião Realizada** (e às vezes outras colunas), o card pisca de volta para a etapa anterior por alguns instantes antes de assentar na coluna correta.
+Nova página **Funil CRM** sob `/comercial/funil-crm`, visualmente idêntica ao `Metas` (Data Analytics), mas:
+- Sem dependência de Google Sheets — dados direto de `crm_leads` + `crm_oportunidades`.
+- Sem metas / semáforo nesta v1 (apenas realizado e tendência mês a mês).
+- Toggles novos: **pipe** (Inbound | Outbound | Todos) e **lente de data** (Coorte | Evento).
+- Etapas em formato **híbrido**: 5 categorias principais + drill-down expansível.
 
-## Causa
+## Mapeamento das etapas
 
-`useCrmLeads.updateEtapa` faz o UPDATE no banco mas:
+5 categorias do funil, cada uma com sub-etapas que aparecem ao expandir:
 
-1. **Não atualiza o cache do React Query imediatamente** — a UI continua mostrando a etapa antiga até o `onSuccess` invalidar e o refetch retornar.
-2. O canal **realtime** (`postgres_changes` em `*`) dispara `invalidateQueries` para cada evento. Mover para "Reunião Realizada" gera múltiplos eventos em cascata (UPDATE da etapa, UPDATE de `data_reuniao_realizada`, trigger do servidor que cria a oportunidade vinculada, possível UPDATE do `briefing_mercado`). Cada refetch pode pegar um snapshot intermediário, fazendo o card oscilar.
-3. Sem optimistic update, o `DragOverlay` solta o card e o React renderiza a posição "antiga" até o servidor responder.
+| Categoria | Origem | Sub-etapas (drill-down) |
+|---|---|---|
+| **MQL — Leads** | `crm_leads` (todos do pipe selecionado) | Entrada, Tentativa de Contato |
+| **CR — Contato Realizado** | `crm_leads.etapa` ∈ contato em diante | Contato Realizado |
+| **RA — Reunião Agendada** | `crm_leads.etapa` ∈ reunião agendada em diante | Reunião Agendada, No-Show |
+| **RR — Reunião Realizada** | `crm_leads.etapa = reuniao_realizada` ou tem oportunidade | Reunião Realizada |
+| **ASS — Contrato Assinado** | `crm_oportunidades.etapa = fechado_ganho` | Proposta, Negociação, Dúvidas/Fechamento, Ganho |
 
-## Correção
+Cada categoria conta o **acumulado em diante** (quem está em RA também conta como MQL+CR+RA), igual ao funil atual.
 
-### 1. Optimistic update em `updateEtapa` (`src/hooks/useCrmLeads.ts`)
+## Lente de data
 
-Implementar o ciclo `onMutate` / `onError` / `onSettled` do React Query:
+- **Coorte**: filtra leads cuja `data_criacao_origem` (fallback `created_at`) está no mês selecionado e mostra quantos chegaram em cada etapa. Útil pra ver qualidade da safra.
+- **Evento**: cada etapa conta no mês do seu próprio evento — RA usa `data_reuniao_agendada`, RR usa `data_reuniao_realizada`, ASS usa `crm_oportunidades.data_fechamento_real`. MQL e CR caem na `data_criacao_origem`. Útil pra performance mensal do time.
 
-- **`onMutate`**: cancelar queries pendentes, snapshot do cache, atualizar otimisticamente o lead movido (set `etapa` e, se for `reuniao_realizada`, `data_reuniao_realizada` = agora). Retornar o snapshot.
-- **`onError`**: reverter pro snapshot e mostrar toast.
-- **`onSettled`**: invalidar para reconciliar com o servidor (estado autoritativo).
+Toggle persistido em `usePersistedState("funil-crm:lente", "evento")`.
 
-Isso elimina a janela em que a UI mostra a etapa antiga.
+## Pipe
 
-### 2. Debounce do realtime (`src/hooks/useCrmLeads.ts`)
+Toggle `Inbound | Outbound | Todos` persistido em `usePersistedState("funil-crm:pipe", "todos")`. Filtra `crm_leads.pipe`. Oportunidades herdam o pipe do lead via `lead_id`.
 
-O listener realtime invalida sem throttle. Agrupar invalidações em janela curta (ex.: 250ms) usando um `setTimeout` com ref, para evitar a cascata de refetches que causa o "piscar":
+## Layout (espelho do Metas)
 
-```ts
-let pending: ReturnType<typeof setTimeout> | null = null;
-.on("postgres_changes", {...}, () => {
-  if (pending) clearTimeout(pending);
-  pending = setTimeout(() => qc.invalidateQueries({ queryKey: ["crm_leads"] }), 250);
-})
+```text
+┌─────────────────────────────────────────────────────────┐
+│  Mês [Nov ▾]  Ano [2026 ▾]                              │
+│  Pipe [ Todos | Inbound | Outbound ]                    │
+│  Lente [ Evento | Coorte ]                              │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│  RESUMO DO FUNIL                                        │
+│  ┌───────┐ ┌───────┐ ┌───────┐ ┌───────┐               │
+│  │ MQL   │ │ Conv. │ │Ticket │ │Receita│               │
+│  │  142  │ │ 12.3% │ │ 18k   │ │ 320k  │               │
+│  └───────┘ └───────┘ └───────┘ └───────┘               │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│  FUNIL                                                   │
+│  ▶ MQL — Leads          142   ████████████              │
+│  ▶ CR — Contato Real.    98   ████████      69.0%       │
+│  ▼ RA — Reunião Agend.   54   █████         55.1%       │
+│      • Reunião Agendada   42                            │
+│      • No-Show            12                            │
+│  ▶ RR — Reunião Real.    31   ███           57.4%       │
+│  ▶ ASS — Contrato        17   ██            54.8%       │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│  TENDÊNCIA — ÚLTIMOS 6 MESES                            │
+│  Gráfico de linha com MQL / RR / ASS por mês            │
+└─────────────────────────────────────────────────────────┘
 ```
 
-### 3. (Opcional) Ignorar eco do próprio update no realtime
+Tipografia, cores, glass cards e animações idênticos ao `Metas.tsx` — usa `font-display`, `font-body`, `bg-gradient-to-br from-card to-muted/5`, etc.
 
-Manter um `Set` de IDs com mutações em voo no hook; se o evento realtime for de um ID que ainda está em `onMutate`/`onSettled`, ignorar (o cache local já está correto pelo optimistic). Isso é defensivo — os passos 1+2 já devem resolver o problema visível.
+## Arquivos
 
-## Arquivos afetados
+**Novos:**
+- `src/pages/FunilCrm.tsx` — página com filtros, KPIs e tendência.
+- `src/components/funil-crm/FunilCrmStages.tsx` — lista de 5 etapas com drill-down (substitui `FunnelComparison`, mas reusa o estilo das barras).
+- `src/utils/crmFunnelCalculator.ts` — função pura que recebe `(leads, oportunidades, mes, ano, lente, pipe)` e devolve `{ mql, cr, ra, rr, ass, subStages, ticketMedio, receitaTotal, conversaoGeral }`.
 
-- `src/hooks/useCrmLeads.ts` — único arquivo alterado.
+**Editados:**
+- `src/App.tsx` — nova rota `/comercial/funil-crm` dentro de `ProtectedRoute`.
+- `src/components/V4Header.tsx` — item de menu "Funil CRM" no grupo Comercial.
+- (memória) `mem://features/comercial-crm` — adicionar referência à nova página.
 
-## Validação
+## Detalhes técnicos
 
-- Arrastar lead para "Reunião Realizada" várias vezes seguidas: card deve fixar imediatamente sem voltar.
-- Arrastar para outras colunas: comportamento idêntico.
-- Se o servidor recusar o update (ex: RLS), o card volta pra etapa original e aparece toast de erro.
+**Hooks reutilizados (já existem):**
+- `useCrmLeads` → array de leads do Supabase com realtime.
+- `useCrmOportunidades` → array de oportunidades com realtime.
+
+Sem novas tabelas, sem migration, sem edge function. Tudo cliente.
+
+**Cálculo (resumo do `crmFunnelCalculator`):**
+
+```ts
+function inMonth(dateStr, mes, ano) { /* parse ISO, comparar */ }
+
+function calcFunilCrm(leads, ops, { mes, ano, lente, pipe }) {
+  // 1. filtrar pelo pipe
+  const ls = leads.filter(l => pipe === "todos" || (l.pipe ?? "inbound") === pipe);
+  const opIds = new Set(ls.map(l => l.id));
+  const os = ops.filter(o => opIds.has(o.lead_id));
+
+  // 2. para cada etapa, escolher a data conforme a lente
+  const dataParaMql  = l => l.data_criacao_origem ?? l.created_at;
+  const dataParaCr   = lente === "coorte" ? dataParaMql : dataParaMql; // CR não tem data própria
+  const dataParaRa   = lente === "coorte" ? dataParaMql : (l => l.data_reuniao_agendada ?? dataParaMql(l));
+  const dataParaRr   = lente === "coorte" ? dataParaMql : (l => l.data_reuniao_realizada);
+  const dataParaAss  = lente === "coorte"
+      ? (o => dataParaMql(leadOf(o)))
+      : (o => o.data_fechamento_real);
+
+  // 3. contagens cumulativas usando a ordem do enum lead_etapa
+  const ETAPAS_ORDER = ["entrada","tentativa_contato","contato_realizado","reuniao_agendada","no_show","reuniao_realizada"];
+  const reachedAtLeast = (lead, target) => ETAPAS_ORDER.indexOf(lead.etapa) >= ETAPAS_ORDER.indexOf(target);
+
+  // 4. contagens
+  const mql = ls.filter(l => inMonth(dataParaMql(l), mes, ano)).length;
+  const cr  = ls.filter(l => reachedAtLeast(l, "contato_realizado") && inMonth(dataParaCr(l), mes, ano)).length;
+  const ra  = ls.filter(l => reachedAtLeast(l, "reuniao_agendada") && inMonth(dataParaRa(l), mes, ano)).length;
+  const rr  = ls.filter(l => l.etapa === "reuniao_realizada" && inMonth(dataParaRr(l), mes, ano)).length;
+  const ass = os.filter(o => o.etapa === "fechado_ganho" && inMonth(dataParaAss(o), mes, ano)).length;
+
+  // 5. sub-etapas (drill-down)
+  // 6. receita = soma de valor_ef + valor_fee das oportunidades ganhas no mês
+}
+```
+
+**Tendência (últimos 6 meses):** roda `calcFunilCrm` em loop pra cada um dos 6 meses anteriores ao selecionado e plota MQL, RR, ASS num `<LineChart>` do recharts (já no projeto).
+
+**Acesso:** rota protegida via `ProtectedRoute` + `user_page_access` (segue o padrão das outras páginas comerciais — admin libera o path `/comercial/funil-crm` no painel de permissões).
+
+## O que fica para uma v2
+
+- Metas e semáforo (criar `crm_goals` quando o time tiver clareza dos targets).
+- Breakdown por responsável (closer/SDR).
+- Filtros adicionais (canal, tier, segmento) já no Funil CRM.
+- Funil completo de 8 etapas como modo alternativo do drill-down.
