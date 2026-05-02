@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -31,15 +31,23 @@ export function useCrmLeads() {
     },
   });
 
-  // Realtime
+  // Realtime — debounced para evitar cascata de refetches
+  // (mover lead p/ "reuniao_realizada" dispara múltiplos eventos: update da etapa,
+  // trigger que cria oportunidade, briefing de mercado, etc — sem debounce o card pisca)
   useEffect(() => {
+    let pending: ReturnType<typeof setTimeout> | null = null;
     const channel = supabase
       .channel("crm_leads_changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "crm_leads" }, () => {
-        qc.invalidateQueries({ queryKey: ["crm_leads"] });
+        if (pending) clearTimeout(pending);
+        pending = setTimeout(() => {
+          qc.invalidateQueries({ queryKey: ["crm_leads"] });
+          pending = null;
+        }, 300);
       })
       .subscribe();
     return () => {
+      if (pending) clearTimeout(pending);
       supabase.removeChannel(channel);
     };
   }, [qc]);
@@ -97,7 +105,33 @@ export function useCrmLeads() {
         }
       }
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["crm_leads"] }),
+    // Optimistic update — atualiza o cache imediatamente para o card não "voltar"
+    onMutate: async ({ id, etapa }: { id: string; etapa: string }) => {
+      await qc.cancelQueries({ queryKey: ["crm_leads"] });
+      const previous = qc.getQueryData<any[]>(["crm_leads"]);
+      qc.setQueryData<any[]>(["crm_leads"], (old) => {
+        if (!old) return old;
+        return old.map((l) =>
+          l.id === id
+            ? {
+                ...l,
+                etapa,
+                ...(etapa === "reuniao_realizada"
+                  ? { data_reuniao_realizada: new Date().toISOString() }
+                  : {}),
+              }
+            : l
+        );
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) qc.setQueryData(["crm_leads"], ctx.previous);
+    },
+    onSettled: () => {
+      // Reconcilia com o servidor (estado autoritativo)
+      qc.invalidateQueries({ queryKey: ["crm_leads"] });
+    },
   });
 
   const remove = useMutation({
