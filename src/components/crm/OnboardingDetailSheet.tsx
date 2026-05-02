@@ -158,6 +158,150 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
     }
   };
 
+  const startEditContrato = () => {
+    setContratoForm({
+      nivel_consciencia: op?.nivel_consciencia ?? "",
+      valor_fee: op?.valor_fee ?? 0,
+      valor_ef: op?.valor_ef ?? 0,
+      info_deal: op?.info_deal ?? "",
+      data_inicio_contrato: form.data_inicio_contrato ?? "",
+      data_fim_contrato: form.data_fim_contrato ?? "",
+    });
+    setEditingContrato(true);
+  };
+
+  const cancelEditContrato = () => {
+    setEditingContrato(false);
+    setContratoForm(null);
+  };
+
+  const handleSaveContrato = async () => {
+    if (!op?.id || !contratoForm) return;
+    setSavingContrato(true);
+    try {
+      const changed: string[] = [];
+      const opPatch: any = {};
+      if ((op.nivel_consciencia ?? "") !== contratoForm.nivel_consciencia) {
+        opPatch.nivel_consciencia = contratoForm.nivel_consciencia || null;
+        changed.push("Categoria de produtos");
+      }
+      const newFee = Number(contratoForm.valor_fee) || 0;
+      const newEf = Number(contratoForm.valor_ef) || 0;
+      const oldFee = Number(op.valor_fee) || 0;
+      const oldEf = Number(op.valor_ef) || 0;
+      if (newFee !== oldFee) {
+        opPatch.valor_fee = newFee;
+        changed.push("Valor Fee");
+      }
+      if (newEf !== oldEf) {
+        opPatch.valor_ef = newEf;
+        changed.push("Valor EF");
+      }
+      if ((op.info_deal ?? "") !== (contratoForm.info_deal ?? "")) {
+        opPatch.info_deal = contratoForm.info_deal || null;
+        changed.push("Informações do deal");
+      }
+
+      const accPatch: any = {};
+      if ((form.data_inicio_contrato ?? "") !== (contratoForm.data_inicio_contrato ?? "")) {
+        accPatch.data_inicio_contrato = contratoForm.data_inicio_contrato || null;
+        changed.push("Início do contrato");
+      }
+      if ((form.data_fim_contrato ?? "") !== (contratoForm.data_fim_contrato ?? "")) {
+        accPatch.data_fim_contrato = contratoForm.data_fim_contrato || null;
+        changed.push("Fim do contrato");
+      }
+
+      if (changed.length === 0) {
+        toast({ title: "Nada para atualizar" });
+        setEditingContrato(false);
+        setSavingContrato(false);
+        return;
+      }
+
+      // 1. Update oportunidade
+      if (Object.keys(opPatch).length > 0) {
+        const { error } = await supabase
+          .from("crm_oportunidades" as any)
+          .update(opPatch)
+          .eq("id", op.id);
+        if (error) throw error;
+      }
+
+      // 2. Update account
+      if (Object.keys(accPatch).length > 0) {
+        const { error } = await supabase
+          .from("accounts" as any)
+          .update(accPatch)
+          .eq("id", form.id);
+        if (error) throw error;
+      }
+
+      // 3. Recalcular cobranças pendentes
+      let cobrancasAtualizadas = 0;
+      if (newEf !== oldEf) {
+        const { data, error } = await supabase
+          .from("cobrancas" as any)
+          .update({ valor: newEf })
+          .eq("oportunidade_id", op.id)
+          .eq("tipo", "ef")
+          .eq("status", "pendente")
+          .select("id");
+        if (error) throw error;
+        cobrancasAtualizadas += (data as any[])?.length ?? 0;
+      }
+      if (newFee !== oldFee) {
+        const { data, error } = await supabase
+          .from("cobrancas" as any)
+          .update({ valor: newFee })
+          .eq("oportunidade_id", op.id)
+          .eq("tipo", "fee_recorrente")
+          .eq("status", "pendente")
+          .select("id");
+        if (error) throw error;
+        cobrancasAtualizadas += (data as any[])?.length ?? 0;
+      }
+
+      // 4. Log de auditoria
+      const { data: userData } = await supabase.auth.getUser();
+      await supabase.from("crm_atividades" as any).insert({
+        oportunidade_id: op.id,
+        lead_id: op.lead_id ?? null,
+        tipo: "observacao",
+        titulo: "Contrato ajustado no Pré GC",
+        descricao: `Campos alterados: ${changed.join(", ")}.${
+          cobrancasAtualizadas > 0 ? ` ${cobrancasAtualizadas} cobrança(s) pendente(s) recalculada(s).` : ""
+        }`,
+        usuario_id: userData.user?.id ?? null,
+      });
+
+      // 5. Atualiza form local + invalida queries
+      setForm((prev: any) => ({
+        ...prev,
+        ...accPatch,
+        oportunidade: { ...prev.oportunidade, ...opPatch },
+      }));
+      qc.invalidateQueries({ queryKey: ["onboarding_accounts"] });
+      qc.invalidateQueries({ queryKey: ["crm_oportunidades"] });
+      qc.invalidateQueries({ queryKey: ["cobrancas"] });
+
+      toast({
+        title: "Contrato atualizado",
+        description: `${changed.join(", ")}${
+          cobrancasAtualizadas > 0 ? ` · ${cobrancasAtualizadas} cobrança(s) pendente(s) recalculada(s)` : ""
+        }`,
+      });
+      setEditingContrato(false);
+      setContratoForm(null);
+    } catch (e: any) {
+      toast({ title: "Erro ao atualizar contrato", description: e.message, variant: "destructive" });
+    } finally {
+      setSavingContrato(false);
+    }
+  };
+
+  const canEditContrato = form.onboarding_status !== "concluida";
+
   return (
     <DetailShell
       fullPage={fullPage}
