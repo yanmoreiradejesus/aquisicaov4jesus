@@ -102,6 +102,40 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
       .then(({ data }) => setContratoSignedUrl(data?.signedUrl ?? null));
   }, [form?.oportunidade?.contrato_url]);
 
+  const runDivergenceCheck = async () => {
+    if (!form?.id) return;
+    setDivergence({ status: "loading" });
+    try {
+      const { data, error } = await supabase.functions.invoke("validate-contract-divergence", {
+        body: { account_id: form.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setDivergence({
+        status: data?.status === "no_contract" ? "no_contract" : data?.status === "extract_failed" ? "extract_failed" : "ok",
+        has_divergence: !!data?.has_divergence,
+        divergences: data?.divergences ?? [],
+        resumo: data?.resumo ?? "",
+      });
+    } catch (e: any) {
+      setDivergence({ status: "error", error: e?.message || "Falha ao validar" });
+    }
+  };
+
+  // Roda validação automaticamente ao abrir, se houver contrato anexado e ainda não validamos
+  useEffect(() => {
+    if (!open || !form?.id) return;
+    if (!form?.oportunidade?.contrato_url) return;
+    if (divergence.status !== "idle") return;
+    runDivergenceCheck();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, form?.id, form?.oportunidade?.contrato_url]);
+
+  // Reseta validação quando muda de account
+  useEffect(() => {
+    setDivergence({ status: "idle" });
+  }, [account?.id]);
+
   if (!form) return null;
 
   const op = form.oportunidade;
