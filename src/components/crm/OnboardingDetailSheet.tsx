@@ -69,8 +69,16 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
     status: "idle" | "loading" | "ok" | "error" | "no_contract" | "extract_failed";
     has_divergence?: boolean;
     divergences?: { campo: string; valor_sistema: string; valor_contrato: string; observacao: string }[];
+    valores_contrato?: {
+      valor_fee: number | null;
+      valor_ef: number | null;
+      data_inicio: string | null;
+      data_fim: string | null;
+      categoria_produtos: string | null;
+    } | null;
     resumo?: string;
     error?: string;
+    cached?: boolean;
   }>({ status: "idle" });
   const { toast } = useToast();
   const qc = useQueryClient();
