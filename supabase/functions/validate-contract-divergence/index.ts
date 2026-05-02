@@ -217,14 +217,26 @@ ${contratoTexto}
     }
     const parsed = JSON.parse(toolCall.function.arguments);
 
+    const result = {
+      has_divergence: !!parsed.has_divergence,
+      divergences: parsed.divergences ?? [],
+      valores_contrato: parsed.valores_contrato ?? null,
+      resumo: parsed.resumo ?? "",
+      validated_at: new Date().toISOString(),
+    };
+
+    // Persiste o resultado para evitar revalidação a cada abertura
+    await supabase
+      .from("accounts")
+      .update({
+        contract_validation: result,
+        contract_validation_at: result.validated_at,
+        contract_validation_url: op.contrato_url,
+      })
+      .eq("id", account_id);
+
     return new Response(
-      JSON.stringify({
-        status: "ok",
-        has_divergence: !!parsed.has_divergence,
-        divergences: parsed.divergences ?? [],
-        resumo: parsed.resumo ?? "",
-        validated_at: new Date().toISOString(),
-      }),
+      JSON.stringify({ status: "ok", ...result, cached: false }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
