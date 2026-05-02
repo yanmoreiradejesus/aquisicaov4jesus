@@ -384,7 +384,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
       setContratoForm(null);
       // Revalida divergência com os novos dados
       setDivergence({ status: "idle" });
-      setTimeout(() => runDivergenceCheck(), 300);
+      setTimeout(() => runDivergenceCheck(true), 300);
     } catch (e: any) {
       toast({ title: "Erro ao atualizar contrato", description: e.message, variant: "destructive" });
     } finally {
