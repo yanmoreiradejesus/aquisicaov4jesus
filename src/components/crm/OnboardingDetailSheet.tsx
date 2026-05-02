@@ -110,12 +110,12 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
       .then(({ data }) => setContratoSignedUrl(data?.signedUrl ?? null));
   }, [form?.oportunidade?.contrato_url]);
 
-  const runDivergenceCheck = async () => {
+  const runDivergenceCheck = async (force = false) => {
     if (!form?.id) return;
     setDivergence({ status: "loading" });
     try {
       const { data, error } = await supabase.functions.invoke("validate-contract-divergence", {
-        body: { account_id: form.id },
+        body: { account_id: form.id, force },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -123,19 +123,58 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
         status: data?.status === "no_contract" ? "no_contract" : data?.status === "extract_failed" ? "extract_failed" : "ok",
         has_divergence: !!data?.has_divergence,
         divergences: data?.divergences ?? [],
+        valores_contrato: data?.valores_contrato ?? null,
         resumo: data?.resumo ?? "",
+        cached: !!data?.cached,
       });
+      // Atualiza o form local para refletir o cache salvo
+      if (force || !form.contract_validation) {
+        setForm((prev: any) => ({
+          ...prev,
+          contract_validation: {
+            has_divergence: !!data?.has_divergence,
+            divergences: data?.divergences ?? [],
+            valores_contrato: data?.valores_contrato ?? null,
+            resumo: data?.resumo ?? "",
+            validated_at: data?.validated_at,
+          },
+          contract_validation_at: data?.validated_at,
+          contract_validation_url: prev?.oportunidade?.contrato_url,
+        }));
+      }
     } catch (e: any) {
       setDivergence({ status: "error", error: e?.message || "Falha ao validar" });
     }
   };
 
-  // Roda validação automaticamente ao abrir, se houver contrato anexado e ainda não validamos
+  // Hidrata estado de divergência a partir do cache salvo no banco
+  useEffect(() => {
+    if (!form?.id) return;
+    const cached = form?.contract_validation;
+    const cachedUrl = form?.contract_validation_url;
+    const currentUrl = form?.oportunidade?.contrato_url;
+    if (cached && cachedUrl && cachedUrl === currentUrl) {
+      setDivergence({
+        status: "ok",
+        has_divergence: !!cached.has_divergence,
+        divergences: cached.divergences ?? [],
+        valores_contrato: cached.valores_contrato ?? null,
+        resumo: cached.resumo ?? "",
+        cached: true,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form?.id]);
+
+  // Roda validação automaticamente apenas quando NÃO há cache válido
   useEffect(() => {
     if (!open || !form?.id) return;
     if (!form?.oportunidade?.contrato_url) return;
     if (divergence.status !== "idle") return;
-    runDivergenceCheck();
+    const cached = form?.contract_validation;
+    const cachedUrl = form?.contract_validation_url;
+    if (cached && cachedUrl === form.oportunidade.contrato_url) return;
+    runDivergenceCheck(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, form?.id, form?.oportunidade?.contrato_url]);
 
