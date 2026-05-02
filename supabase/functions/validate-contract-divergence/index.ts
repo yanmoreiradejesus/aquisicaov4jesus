@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { account_id } = await req.json();
+    const { account_id, force } = await req.json();
     if (!account_id || typeof account_id !== "string") {
       return new Response(JSON.stringify({ error: "account_id obrigatório" }), {
         status: 400,
@@ -56,6 +56,16 @@ Deno.serve(async (req) => {
           status: "no_contract",
           message: "Nenhum contrato anexado para validar.",
         }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Cache: se já validamos esse mesmo contrato, retorna o resultado salvo
+    const cached = (account as any).contract_validation;
+    const cachedUrl = (account as any).contract_validation_url;
+    if (!force && cached && cachedUrl === op.contrato_url) {
+      return new Response(
+        JSON.stringify({ ...cached, status: "ok", cached: true }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
@@ -157,9 +167,22 @@ ${contratoTexto}
                       additionalProperties: false,
                     },
                   },
+                  valores_contrato: {
+                    type: "object",
+                    description: "Valores extraídos do contrato (use null quando não encontrado). Datas em ISO YYYY-MM-DD. Categoria como saber|ter|executar|potencializar.",
+                    properties: {
+                      valor_fee: { type: ["number", "null"] },
+                      valor_ef: { type: ["number", "null"] },
+                      data_inicio: { type: ["string", "null"] },
+                      data_fim: { type: ["string", "null"] },
+                      categoria_produtos: { type: ["string", "null"], enum: ["saber", "ter", "executar", "potencializar", null] },
+                    },
+                    required: ["valor_fee", "valor_ef", "data_inicio", "data_fim", "categoria_produtos"],
+                    additionalProperties: false,
+                  },
                   resumo: { type: "string", description: "Resumo curto (1-2 frases) em pt-BR." },
                 },
-                required: ["has_divergence", "divergences", "resumo"],
+                required: ["has_divergence", "divergences", "valores_contrato", "resumo"],
                 additionalProperties: false,
               },
             },
@@ -194,14 +217,26 @@ ${contratoTexto}
     }
     const parsed = JSON.parse(toolCall.function.arguments);
 
+    const result = {
+      has_divergence: !!parsed.has_divergence,
+      divergences: parsed.divergences ?? [],
+      valores_contrato: parsed.valores_contrato ?? null,
+      resumo: parsed.resumo ?? "",
+      validated_at: new Date().toISOString(),
+    };
+
+    // Persiste o resultado para evitar revalidação a cada abertura
+    await supabase
+      .from("accounts")
+      .update({
+        contract_validation: result,
+        contract_validation_at: result.validated_at,
+        contract_validation_url: op.contrato_url,
+      })
+      .eq("id", account_id);
+
     return new Response(
-      JSON.stringify({
-        status: "ok",
-        has_divergence: !!parsed.has_divergence,
-        divergences: parsed.divergences ?? [],
-        resumo: parsed.resumo ?? "",
-        validated_at: new Date().toISOString(),
-      }),
+      JSON.stringify({ status: "ok", ...result, cached: false }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {

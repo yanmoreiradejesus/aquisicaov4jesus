@@ -18,6 +18,9 @@ export type Database = {
         Row: {
           account_manager_id: string | null
           cliente_nome: string
+          contract_validation: Json | null
+          contract_validation_at: string | null
+          contract_validation_url: string | null
           created_at: string
           data_fim_contrato: string | null
           data_inicio_contrato: string
@@ -46,6 +49,9 @@ export type Database = {
         Insert: {
           account_manager_id?: string | null
           cliente_nome: string
+          contract_validation?: Json | null
+          contract_validation_at?: string | null
+          contract_validation_url?: string | null
           created_at?: string
           data_fim_contrato?: string | null
           data_inicio_contrato?: string
@@ -74,6 +80,9 @@ export type Database = {
         Update: {
           account_manager_id?: string | null
           cliente_nome?: string
+          contract_validation?: Json | null
+          contract_validation_at?: string | null
+          contract_validation_url?: string | null
           created_at?: string
           data_fim_contrato?: string | null
           data_inicio_contrato?: string
