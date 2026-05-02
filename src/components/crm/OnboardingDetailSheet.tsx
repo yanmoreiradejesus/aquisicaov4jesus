@@ -248,13 +248,24 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
   };
 
   const startEditContrato = () => {
+    // Campos com divergência detectada pela IA: pré-preenche com o valor do CONTRATO.
+    const divergentes = new Set(
+      divergence.has_divergence ? (divergence.divergences ?? []).map((d) => d.campo) : []
+    );
+    const sugeridos = divergence.valores_contrato ?? null;
+    const pick = <T,>(campo: string, sugerido: T | null | undefined, atual: T): T => {
+      if (divergentes.has(campo) && sugerido !== null && sugerido !== undefined && sugerido !== ("" as any)) {
+        return sugerido as T;
+      }
+      return atual;
+    };
     setContratoForm({
-      nivel_consciencia: op?.nivel_consciencia ?? "",
-      valor_fee: op?.valor_fee ?? 0,
-      valor_ef: op?.valor_ef ?? 0,
+      nivel_consciencia: pick("categoria_produtos", sugeridos?.categoria_produtos, op?.nivel_consciencia ?? ""),
+      valor_fee: pick("valor_fee", sugeridos?.valor_fee, op?.valor_fee ?? 0),
+      valor_ef: pick("valor_ef", sugeridos?.valor_ef, op?.valor_ef ?? 0),
       info_deal: op?.info_deal ?? "",
-      data_inicio_contrato: form.data_inicio_contrato ?? "",
-      data_fim_contrato: form.data_fim_contrato ?? "",
+      data_inicio_contrato: pick("data_inicio", sugeridos?.data_inicio, form.data_inicio_contrato ?? ""),
+      data_fim_contrato: pick("data_fim", sugeridos?.data_fim, form.data_fim_contrato ?? ""),
     });
     setEditingContrato(true);
   };
