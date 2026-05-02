@@ -519,7 +519,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
                 </div>
                 <div className="flex items-center gap-1.5">
                   {!editingContrato && form?.oportunidade?.contrato_url && (
-                    <Button size="sm" variant="ghost" onClick={runDivergenceCheck} disabled={divergence.status === "loading"}>
+                    <Button size="sm" variant="ghost" onClick={() => runDivergenceCheck(true)} disabled={divergence.status === "loading"}>
                       <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${divergence.status === "loading" ? "animate-spin" : ""}`} />
                       Revalidar
                     </Button>
