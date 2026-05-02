@@ -60,6 +60,16 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Cache: se já validamos esse mesmo contrato, retorna o resultado salvo
+    const cached = (account as any).contract_validation;
+    const cachedUrl = (account as any).contract_validation_url;
+    if (!force && cached && cachedUrl === op.contrato_url) {
+      return new Response(
+        JSON.stringify({ ...cached, status: "ok", cached: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     // Extrai texto do PDF
     let contratoTexto = "";
     try {
