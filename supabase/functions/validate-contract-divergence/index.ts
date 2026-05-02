@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { account_id } = await req.json();
+    const { account_id, force } = await req.json();
     if (!account_id || typeof account_id !== "string") {
       return new Response(JSON.stringify({ error: "account_id obrigatório" }), {
         status: 400,
