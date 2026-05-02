@@ -23,6 +23,7 @@ import LeadDetailPage from "./pages/LeadDetailPage";
 import OportunidadeDetailPage from "./pages/OportunidadeDetailPage";
 import OnboardingDetailPage from "./pages/OnboardingDetailPage";
 import ComercialPlaceholder from "./pages/ComercialPlaceholder";
+import FunilCrm from "./pages/FunilCrm";
 import GoogleCallback from "./pages/GoogleCallback";
 
 // Routes that should NOT render the persistent V4Header
@@ -92,6 +93,11 @@ const AppRoutes = () => {
 
         {/* Comercial app */}
         <Route path="/comercial" element={<Navigate to="/comercial/leads" replace />} />
+        <Route path="/comercial/funil-crm" element={
+          <ProtectedRoute requiredPath="/comercial/funil-crm">
+            <PageTransition><FunilCrm /></PageTransition>
+          </ProtectedRoute>
+        } />
         <Route path="/comercial/leads" element={
           <ProtectedRoute requiredPath="/comercial/leads">
             <PageTransition><CrmLeads /></PageTransition>
