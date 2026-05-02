@@ -27,6 +27,7 @@ const V4Header = () => {
   ];
 
   const comercialItems = [
+    { path: "/comercial/funil-crm", label: "Funil CRM" },
     { path: "/comercial/leads", label: "Leads" },
     { path: "/comercial/oportunidades", label: "Oportunidades" },
     { path: "/comercial/onboarding", label: "Onboarding" },
