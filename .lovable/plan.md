@@ -1,94 +1,92 @@
 ## Objetivo
 
-Trazer o mesmo padrão de filtros do **Funil de Data Analytics** (`src/pages/Index.tsx` + `FilterBar`) para o **Funil CRM** (`/comercial/funil-crm`), incluindo a habilidade de selecionar **múltiplos meses** (na verdade, qualquer range de datas livre) e múltiplos valores categóricos.
+Permitir ajustar, dentro do card de Onboarding (aba **Pré GC**), as informações do contrato que foram preenchidas na oportunidade quando o deal foi marcado como ganho — garantindo que os dados financeiros e de prazo do CRM batam com o contrato real.
 
-## Filtros que o Funil CRM passa a ter
+## Por que aqui
 
-Hoje o Funil CRM só tem: 1 mês + 1 ano + Pipe + Lente.
-Vai passar a ter:
+Quando uma oportunidade vai para `fechado_ganho`, o trigger `auto_create_account_and_cobrancas` já gera:
+- A `account` (com `data_inicio_contrato`)
+- 1 cobrança EF + 12 cobranças de `fee_recorrente` baseadas em `valor_ef` / `valor_fee` da oportunidade
 
-1. **Range de datas livre** (`startDate` / `endDate`) com:
-   - Date picker duplo (igual `FilterBar`).
-   - Presets rápidos: Hoje, Últimos 7d, Últimos 30d, Mês atual, Mês anterior, Último trimestre, Últimos 6 meses, Ano atual.
-   - **Cobre o caso "selecionar mais que um mês"** — basta esticar o range.
-2. **Pipe** (Inbound / Outbound / Todos) — mantém o que já existe.
-3. **Lente** (Por evento / Por coorte) — mantém.
-4. **Multi-select de campos do CRM Leads** (substitui canal/tier/urgência/cargo/período do Sheets pelos campos equivalentes do `crm_leads`):
-   - **Origem** (`origem`)
-   - **Tier** (`tier`)
-   - **Urgência** (`urgencia`)
-   - **Segmento** (`segmento`)
-   - **Canal** (`canal`)
-   - **Qualificação** (`qualificacao`)
-   - **Responsável** (`responsavel_id` → resolvido pra nome via `profiles`)
-5. **Filtros avançados** (collapsible, igual o `FilterBar`):
-   - **Temperatura** (`temperatura`)
-   - **Tipo de produto** (`tipo_produto`)
-   - **Estado** / **País**
-   - **Faturamento** (faixa)
+Hoje, se o contrato assinado divergir do que foi preenchido na oportunidade, fica desalinhado. A correção precisa acontecer **antes da Growth Class** — daí a aba Pré GC.
 
-Todos persistidos em `sessionStorage` via `usePersistedState` (chaves `funil-crm:*`).
+## O que vai mudar na UI
 
-## Mudanças técnicas
+Na aba **Pré GC** do `OnboardingDetailSheet`, o bloco "Contrato & Informações Gerais" hoje é só leitura. Vai virar **editável** via um modo "Editar contrato":
 
-### 1. `src/utils/crmFunnelCalculator.ts`
-- Trocar a assinatura `{ mes, ano, lente, pipe }` por `{ startDate, endDate, lente, pipe, filters }`.
-- `inMonth(...)` vira `inRange(raw, startDate, endDate)`.
-- Aplicar filtros categóricos antes do cálculo das etapas (filtra `crm_leads` por origem/tier/urgência/segmento/canal/qualificação/responsável/temperatura/tipo_produto/estado/país/faturamento — todos arrays com semântica "OR dentro do campo, AND entre campos", igual o `FilterBar` faz).
-- Para **oportunidades**, filtra pelo lead pai já filtrado (join via `lead_id`).
-- Manter a saída (mql, cr, ra, rr, ass, drilldowns, receita, ticket etc.) intacta.
+Bloco editável (com botão "Editar" / "Salvar" / "Cancelar"):
+- Categoria de produtos (`oportunidade.nivel_consciencia`) — select Saber / Ter / Executar / Potencializar
+- Valor Fee mensal (`oportunidade.valor_fee`)
+- Valor EF (`oportunidade.valor_ef`)
+- Início do contrato (`account.data_inicio_contrato`)
+- Fim do contrato (`account.data_fim_contrato`)
+- Informações do deal (`oportunidade.info_deal`)
 
-### 2. `src/components/funil-crm/FunilCrmFilters.tsx` (novo)
-Componente espelhado no `FilterBar`, mas:
-- Lê `uniqueValues` de `crm_leads` (não de Sheets).
-- Inclui Pipe + Lente como toggles dentro do mesmo painel pra manter tudo num único cartão de filtros.
-- Date pickers + presets idênticos.
-- Multi-selects usando `@/components/ui/multi-select` (já existe).
-- Collapsible de "Filtros avançados".
+Valor total continua calculado (`valor_ef + valor_fee`).
 
-### 3. `src/pages/FunilCrm.tsx`
-- Remove os `<Select>` de mês/ano.
-- Passa a usar `startDate`/`endDate` em vez de `mes`/`ano`.
-- Computa `uniqueValues` a partir de `leads` (origem, tier, urgência, segmento, canal, qualificação, responsáveis com nome via `profiles`, temperatura, tipo_produto, estado, país, faturamento), via novo helper `getCrmUniqueValues(leads, profiles)`.
-- Tendência dos "últimos 6 meses" passa a ser calculada relativa ao **endDate** do range (mantém o gráfico útil mesmo com range custom).
-- Renderiza `<FunilCrmFilters />` no lugar do bloco de filtros atual.
+## Comportamento ao salvar
 
-### 4. `src/utils/crmFunnelCalculator.ts` — helpers
-Adiciona:
+1. Atualiza `crm_oportunidades` (campos de valor, categoria, info_deal) via update normal.
+2. Atualiza `accounts` (datas do contrato) — já coberto pelo `useOnboarding().update`.
+3. Registra atividade na timeline da oportunidade (`crm_atividades` tipo `mudanca_etapa` ou similar) com a descrição "Valores/datas ajustados no Pré GC do onboarding" listando os campos alterados — para deixar trilha de auditoria.
+4. **Recalcula cobranças pendentes** (apenas as que ainda estão `pendente`):
+   - Se `valor_ef` mudou → atualiza a cobrança EF pendente (`tipo = 'ef'`) com novo valor.
+   - Se `valor_fee` mudou → atualiza todas as cobranças `fee_recorrente` com `status = 'pendente'` para o novo valor (mantém vencimentos).
+   - Cobranças já pagas (`status = 'pago'`) **não** são alteradas.
+5. Toast de confirmação resumindo o que foi atualizado (ex.: "Contrato atualizado: Valor Fee, Início. 11 cobranças pendentes recalculadas").
+
+## Permissões
+
+- Editar contrato: usuário aprovado OU admin (mesmas regras das RLS já existentes em `crm_oportunidades` e `accounts`).
+- Disponível enquanto o onboarding **não estiver concluído** (`onboarding_status !== 'concluida'`). Após concluído, vira read-only de novo. Admin pode editar sempre.
+
+## Detalhes técnicos
+
+**Arquivos a editar:**
+- `src/components/crm/OnboardingDetailSheet.tsx`
+  - Adicionar estado `editingContrato` + form local para os campos da oportunidade.
+  - Substituir o bloco "Contrato & Informações Gerais" por versão com toggle leitura/edição.
+  - Função `handleSaveContrato`: dispara updates em `crm_oportunidades`, `accounts`, e recalcula `cobrancas` pendentes.
+  - Após salvar, invalidar query `onboarding_accounts` para atualizar o sheet.
+
+**Hook (opcional, para isolar lógica):**
+- `src/hooks/useUpdateContratoFromOnboarding.ts` (novo) — encapsula a transação lógica (3 updates + log de atividade).
+
+**Regras de update das cobranças (client-side, usando Supabase JS):**
 ```ts
-export type CrmFunnelFilters = {
-  origem?: string[]; tier?: string[]; urgencia?: string[];
-  segmento?: string[]; canal?: string[]; qualificacao?: string[];
-  responsavelId?: string[]; temperatura?: string[]; tipoProduto?: string[];
-  estado?: string[]; pais?: string[]; faturamento?: string[];
-};
-export function getCrmUniqueValues(leads, profiles): { ... }
+// Recalcular EF pendente
+if (valorEfMudou) {
+  await supabase.from('cobrancas')
+    .update({ valor: novoValorEf })
+    .eq('oportunidade_id', op.id)
+    .eq('tipo', 'ef')
+    .eq('status', 'pendente');
+}
+// Recalcular fees pendentes
+if (valorFeeMudou) {
+  await supabase.from('cobrancas')
+    .update({ valor: novoValorFee })
+    .eq('oportunidade_id', op.id)
+    .eq('tipo', 'fee_recorrente')
+    .eq('status', 'pendente');
+}
 ```
 
-### 5. Hook auxiliar
-Reutilizar `useProfiles` (se já existe — verificar; caso contrário, query simples a `profiles` pra mapear `responsavel_id → full_name`).
-
-## Layout dos filtros (texto)
-
-```text
-┌─ Filtros ────────────────────────────────────────────────────┐
-│ Período: [01/05/2026 ▾] → [31/05/2026 ▾]                     │
-│ Presets: [Hoje][7d][30d][Mês][Mês ant][Trim][6m][Ano]        │
-│                                                              │
-│ Pipe:  [Todos][Inbound][Outbound]                            │
-│ Lente: [Por evento][Por coorte]                              │
-│                                                              │
-│ Origem ▾  Tier ▾  Urgência ▾  Segmento ▾  Canal ▾            │
-│ Qualificação ▾  Responsável ▾                                │
-│                                                              │
-│ ▸ Filtros avançados (Temperatura, Tipo produto, UF, País…)   │
-└──────────────────────────────────────────────────────────────┘
+**Atividade de auditoria:**
+```ts
+await supabase.from('crm_atividades').insert({
+  oportunidade_id: op.id,
+  lead_id: op.lead_id,
+  tipo: 'observacao',
+  titulo: 'Contrato ajustado no Pré GC',
+  descricao: `Campos alterados: ${listaCampos}. Cobranças pendentes recalculadas.`,
+  usuario_id: <auth.uid()>,
+});
 ```
 
-## Arquivos afetados
+## Não inclui (para confirmar)
+- Não muda o contrato em PDF — apenas reflete os dados no CRM.
+- Não recria cobranças se o usuário ajustar `data_inicio_contrato` (apenas valor das pendentes). Se precisar regerar o cronograma de 12 fees ao mudar a data de início, é um item separado.
+- Não toca em `monthly_goals` / dashboards retroativos.
 
-- `src/utils/crmFunnelCalculator.ts` (refator de assinatura + filtros + helper)
-- `src/components/funil-crm/FunilCrmFilters.tsx` (novo)
-- `src/pages/FunilCrm.tsx` (substitui filtros antigos, novo state)
-
-Sem mudanças de banco. Sem mudanças de roteamento ou permissões.
+Confirmando, eu implemento.
