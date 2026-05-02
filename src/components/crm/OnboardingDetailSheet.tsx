@@ -404,55 +404,170 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
 
             {/* Anexos: contrato + informações gerais */}
             <div className="space-y-3 pt-4 border-t border-border/40">
-              <h3 className="font-display text-sm font-semibold tracking-[-0.01em] text-foreground/90">
-                Contrato & Informações Gerais
-              </h3>
-
-              <div className="rounded-lg border border-border/40 bg-background/40 p-3 space-y-2 text-[13px]">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">Contrato assinado</span>
-                  {contratoSignedUrl ? (
-                    <a
-                      href={contratoSignedUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-primary hover:underline font-medium"
-                    >
-                      Abrir PDF <ExternalLink className="h-3 w-3" />
-                    </a>
-                  ) : (
-                    <span className="text-foreground/60">—</span>
-                  )}
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">Categoria de produtos</span>
-                  <span className="text-foreground/90 font-medium">
-                    {op?.nivel_consciencia ? CATEGORIA_PRODUTOS_LABEL[op.nivel_consciencia] : "—"}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">Valor Fee mensal</span>
-                  <span className="text-foreground/90 font-medium tabular-nums">{fmtBRL(op?.valor_fee)}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">Valor EF</span>
-                  <span className="text-foreground/90 font-medium tabular-nums">{fmtBRL(op?.valor_ef)}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">Valor total</span>
-                  <span className="text-foreground/90 font-semibold tabular-nums">{fmtBRL(valorTotal)}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">Início do contrato</span>
-                  <span className="text-foreground/90 font-medium tabular-nums">{fmtDate(form.data_inicio_contrato)}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-muted-foreground">Fim do contrato</span>
-                  <span className="text-foreground/90 font-medium tabular-nums">{fmtDate(form.data_fim_contrato)}</span>
-                </div>
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="font-display text-sm font-semibold tracking-[-0.01em] text-foreground/90">
+                  Contrato & Informações Gerais
+                </h3>
+                {!editingContrato && canEditContrato && (
+                  <Button size="sm" variant="ghost" onClick={startEditContrato}>
+                    <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                    Editar contrato
+                  </Button>
+                )}
+                {editingContrato && (
+                  <div className="flex items-center gap-1.5">
+                    <Button size="sm" variant="ghost" onClick={cancelEditContrato} disabled={savingContrato}>
+                      <X className="h-3.5 w-3.5 mr-1.5" />
+                      Cancelar
+                    </Button>
+                    <Button size="sm" onClick={handleSaveContrato} disabled={savingContrato}>
+                      <Save className="h-3.5 w-3.5 mr-1.5" />
+                      {savingContrato ? "Salvando..." : "Salvar"}
+                    </Button>
+                  </div>
+                )}
               </div>
 
-              {op?.info_deal && (
+              {!editingContrato ? (
+                <div className="rounded-lg border border-border/40 bg-background/40 p-3 space-y-2 text-[13px]">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">Contrato assinado</span>
+                    {contratoSignedUrl ? (
+                      <a
+                        href={contratoSignedUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-primary hover:underline font-medium"
+                      >
+                        Abrir PDF <ExternalLink className="h-3 w-3" />
+                      </a>
+                    ) : (
+                      <span className="text-foreground/60">—</span>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">Categoria de produtos</span>
+                    <span className="text-foreground/90 font-medium">
+                      {op?.nivel_consciencia ? CATEGORIA_PRODUTOS_LABEL[op.nivel_consciencia] : "—"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">Valor Fee mensal</span>
+                    <span className="text-foreground/90 font-medium tabular-nums">{fmtBRL(op?.valor_fee)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">Valor EF</span>
+                    <span className="text-foreground/90 font-medium tabular-nums">{fmtBRL(op?.valor_ef)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">Valor total</span>
+                    <span className="text-foreground/90 font-semibold tabular-nums">{fmtBRL(valorTotal)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">Início do contrato</span>
+                    <span className="text-foreground/90 font-medium tabular-nums">{fmtDate(form.data_inicio_contrato)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground">Fim do contrato</span>
+                    <span className="text-foreground/90 font-medium tabular-nums">{fmtDate(form.data_fim_contrato)}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-3 text-[13px]">
+                  <p className="text-[11px] text-muted-foreground -mt-1">
+                    Ajuste para refletir o contrato assinado. Cobranças ainda <strong>pendentes</strong> serão recalculadas. Cobranças já pagas não são alteradas.
+                  </p>
+                  {contratoSignedUrl && (
+                    <div className="flex items-center justify-between gap-3 pb-2 border-b border-border/40">
+                      <span className="text-muted-foreground">Contrato assinado</span>
+                      <a
+                        href={contratoSignedUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-primary hover:underline font-medium"
+                      >
+                        Abrir PDF <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  )}
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Categoria de produtos</Label>
+                    <Select
+                      value={contratoForm?.nivel_consciencia || ""}
+                      onValueChange={(v) => setContratoForm((p: any) => ({ ...p, nivel_consciencia: v }))}
+                    >
+                      <SelectTrigger className="mt-1.5">
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(CATEGORIA_PRODUTOS_LABEL).map(([k, v]) => (
+                          <SelectItem key={k} value={k}>{v}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Valor Fee mensal (R$)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        className="mt-1.5"
+                        value={contratoForm?.valor_fee ?? 0}
+                        onChange={(e) => setContratoForm((p: any) => ({ ...p, valor_fee: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Valor EF (R$)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        className="mt-1.5"
+                        value={contratoForm?.valor_ef ?? 0}
+                        onChange={(e) => setContratoForm((p: any) => ({ ...p, valor_ef: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 px-1">
+                    <span className="text-muted-foreground">Valor total</span>
+                    <span className="text-foreground/90 font-semibold tabular-nums">
+                      {fmtBRL((Number(contratoForm?.valor_ef) || 0) + (Number(contratoForm?.valor_fee) || 0))}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Início do contrato</Label>
+                      <Input
+                        type="date"
+                        className="mt-1.5"
+                        value={contratoForm?.data_inicio_contrato ?? ""}
+                        onChange={(e) => setContratoForm((p: any) => ({ ...p, data_inicio_contrato: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Fim do contrato</Label>
+                      <Input
+                        type="date"
+                        className="mt-1.5"
+                        value={contratoForm?.data_fim_contrato ?? ""}
+                        onChange={(e) => setContratoForm((p: any) => ({ ...p, data_fim_contrato: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Informações do deal</Label>
+                    <Textarea
+                      className="mt-1.5 min-h-[80px]"
+                      value={contratoForm?.info_deal ?? ""}
+                      onChange={(e) => setContratoForm((p: any) => ({ ...p, info_deal: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {!editingContrato && op?.info_deal && (
                 <div>
                   <Label className="text-xs text-muted-foreground">Informações do deal</Label>
                   <div className="mt-1.5 rounded-lg border border-border/40 bg-background/40 p-3 text-[13px] text-foreground/85 whitespace-pre-wrap">
