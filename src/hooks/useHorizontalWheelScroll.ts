@@ -18,6 +18,11 @@ export function useHorizontalWheelScroll<T extends HTMLElement>(ref: RefObject<T
       if (e.deltaX !== 0) return;
       if (e.deltaY === 0) return;
 
+      // Só sequestrar quando o usuário segura Shift (convenção padrão para
+      // scroll horizontal com mouse de roda). Sem isso, gestos de trackpad
+      // (arrastar pra baixo/cima) eram convertidos em scroll lateral.
+      if (!e.shiftKey) return;
+
       const target = e.target as HTMLElement | null;
       if (target?.closest("[data-no-wheel-hijack]")) return;
 
