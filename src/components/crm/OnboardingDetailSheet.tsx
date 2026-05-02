@@ -65,6 +65,13 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
   const [editingContrato, setEditingContrato] = useState(false);
   const [contratoForm, setContratoForm] = useState<any>(null);
   const [savingContrato, setSavingContrato] = useState(false);
+  const [divergence, setDivergence] = useState<{
+    status: "idle" | "loading" | "ok" | "error" | "no_contract" | "extract_failed";
+    has_divergence?: boolean;
+    divergences?: { campo: string; valor_sistema: string; valor_contrato: string; observacao: string }[];
+    resumo?: string;
+    error?: string;
+  }>({ status: "idle" });
   const { toast } = useToast();
   const qc = useQueryClient();
 
