@@ -1,18 +1,25 @@
-import { useMemo } from "react";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { useMemo, useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useCrmLeads } from "@/hooks/useCrmLeads";
 import { useCrmOportunidades } from "@/hooks/useCrmOportunidades";
 import { usePersistedState } from "@/hooks/usePersistedState";
-import { calcFunilCrm, type Pipe, type Lente } from "@/utils/crmFunnelCalculator";
+import {
+  calcFunilCrm,
+  getCrmUniqueValues,
+  type CrmFunnelFilters,
+  type Lente,
+  type Pipe,
+} from "@/utils/crmFunnelCalculator";
 import FunilCrmStages from "@/components/funil-crm/FunilCrmStages";
-import { cn } from "@/lib/utils";
-import { Inbox, Send, Users, Calendar, Activity, TrendingUp, DollarSign } from "lucide-react";
+import FunilCrmFilters, {
+  type FunilCrmFiltersState,
+} from "@/components/funil-crm/FunilCrmFilters";
+import {
+  Users,
+  Activity,
+  TrendingUp,
+  DollarSign,
+} from "lucide-react";
 import {
   LineChart,
   Line,
@@ -24,98 +31,95 @@ import {
   Legend,
 } from "recharts";
 
-const monthsSelect = [
-  { value: "1", label: "Janeiro" },
-  { value: "2", label: "Fevereiro" },
-  { value: "3", label: "Março" },
-  { value: "4", label: "Abril" },
-  { value: "5", label: "Maio" },
-  { value: "6", label: "Junho" },
-  { value: "7", label: "Julho" },
-  { value: "8", label: "Agosto" },
-  { value: "9", label: "Setembro" },
-  { value: "10", label: "Outubro" },
-  { value: "11", label: "Novembro" },
-  { value: "12", label: "Dezembro" },
-];
-const years = ["2024", "2025", "2026"];
-
 const formatBRL = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
-const FunilCrm = () => {
+const ymd = (d: Date) => d.toISOString().split("T")[0];
+
+const monthLabels = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+const getCurrentMonthRange = () => {
   const now = new Date();
-  const [selectedMonth, setSelectedMonth] = usePersistedState<string>(
-    "funil-crm:mes",
-    String(now.getMonth() + 1),
-  );
-  const [selectedYear, setSelectedYear] = usePersistedState<string>(
-    "funil-crm:ano",
-    String(now.getFullYear()),
-  );
+  return {
+    start: ymd(new Date(now.getFullYear(), now.getMonth(), 1)),
+    end: ymd(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+  };
+};
+
+const FunilCrm = () => {
+  const initial = getCurrentMonthRange();
+
+  const [startDate, setStartDate] = usePersistedState<string>("funil-crm:start", initial.start);
+  const [endDate, setEndDate] = usePersistedState<string>("funil-crm:end", initial.end);
   const [pipe, setPipe] = usePersistedState<Pipe>("funil-crm:pipe", "todos");
   const [lente, setLente] = usePersistedState<Lente>("funil-crm:lente", "evento");
+  const [filters, setFilters] = usePersistedState<CrmFunnelFilters>("funil-crm:filters", {});
 
   const { data: leads = [], isLoading: leadsLoading } = useCrmLeads();
   const { data: oportunidades = [], isLoading: opsLoading } = useCrmOportunidades();
   const isLoading = leadsLoading || opsLoading;
 
-  const mes = parseInt(selectedMonth);
-  const ano = parseInt(selectedYear);
+  // Mapa responsavel_id -> nome
+  const [profileNameById, setProfileNameById] = useState<Map<string, string>>(new Map());
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from("profiles").select("id, full_name, email");
+      const map = new Map<string, string>();
+      (data ?? []).forEach((p: any) => {
+        map.set(p.id, p.full_name || p.email || p.id);
+      });
+      setProfileNameById(map);
+    })();
+  }, []);
 
-  // Cálculo principal
-  const funilData = useMemo(
-    () => calcFunilCrm({ leads, oportunidades, mes, ano, lente, pipe }),
-    [leads, oportunidades, mes, ano, lente, pipe],
+  const uniqueValues = useMemo(
+    () => getCrmUniqueValues(leads, profileNameById),
+    [leads, profileNameById],
   );
 
-  // Tendência: roda o calculador para os últimos 6 meses
+  const funilData = useMemo(
+    () => calcFunilCrm({ leads, oportunidades, startDate, endDate, lente, pipe, filters }),
+    [leads, oportunidades, startDate, endDate, lente, pipe, filters],
+  );
+
+  // Tendência: últimos 6 meses ancorados no endDate (mantém filtros aplicados)
   const trendData = useMemo(() => {
+    const anchor = new Date(endDate + "T00:00:00");
     const result: { mes: string; MQL: number; RR: number; ASS: number }[] = [];
     for (let i = 5; i >= 0; i--) {
-      const d = new Date(ano, mes - 1 - i, 1);
-      const m = d.getMonth() + 1;
-      const y = d.getFullYear();
-      const r = calcFunilCrm({ leads, oportunidades, mes: m, ano: y, lente, pipe });
+      const d = new Date(anchor.getFullYear(), anchor.getMonth() - i, 1);
+      const mStart = ymd(d);
+      const mEnd = ymd(new Date(d.getFullYear(), d.getMonth() + 1, 0));
+      const r = calcFunilCrm({
+        leads,
+        oportunidades,
+        startDate: mStart,
+        endDate: mEnd,
+        lente,
+        pipe,
+        filters,
+      });
       result.push({
-        mes: monthsSelect[m - 1].label.slice(0, 3),
+        mes: monthLabels[d.getMonth()],
         MQL: r.mql,
         RR: r.rr,
         ASS: r.ass,
       });
     }
     return result;
-  }, [leads, oportunidades, mes, ano, lente, pipe]);
+  }, [leads, oportunidades, endDate, lente, pipe, filters]);
 
-  const PipeBtn = ({ value, icon: Icon, label }: { value: Pipe; icon: any; label: string }) => (
-    <button
-      onClick={() => setPipe(value)}
-      className={cn(
-        "h-9 px-3 rounded-lg text-xs font-semibold uppercase tracking-wider inline-flex items-center gap-1.5 transition-all",
-        pipe === value
-          ? "bg-foreground text-background shadow-ios-sm"
-          : "text-muted-foreground hover:text-foreground hover:bg-surface-2/60",
-      )}
-    >
-      <Icon className="h-3.5 w-3.5" />
-      {label}
-    </button>
-  );
-
-  const LenteBtn = ({ value, label, hint }: { value: Lente; label: string; hint: string }) => (
-    <button
-      onClick={() => setLente(value)}
-      title={hint}
-      className={cn(
-        "h-9 px-3 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 transition-all",
-        lente === value
-          ? "bg-primary text-primary-foreground shadow-ios-sm"
-          : "text-muted-foreground hover:text-foreground hover:bg-surface-2/60",
-      )}
-    >
-      {label}
-    </button>
-  );
+  const filtersState: FunilCrmFiltersState = { startDate, endDate, pipe, lente, filters };
+  const setState = (patch: Partial<FunilCrmFiltersState>) => {
+    if (patch.startDate !== undefined) setStartDate(patch.startDate);
+    if (patch.endDate !== undefined) setEndDate(patch.endDate);
+    if (patch.pipe !== undefined) setPipe(patch.pipe);
+    if (patch.lente !== undefined) setLente(patch.lente);
+    if (patch.filters !== undefined) setFilters(patch.filters);
+  };
+  const setFilter = <K extends keyof CrmFunnelFilters>(key: K, value: CrmFunnelFilters[K]) => {
+    setFilters({ ...filters, [key]: value });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -132,59 +136,12 @@ const FunilCrm = () => {
           </p>
         </header>
 
-        {/* Filtros */}
-        <section className="rounded-lg border border-border/50 bg-gradient-to-br from-card to-muted/5 p-6">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="font-body text-xs text-muted-foreground uppercase tracking-wider">
-                Período
-              </label>
-              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger className="w-36 border-border/50 bg-background">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-card border-border z-50">
-                  {monthsSelect.map((m) => (
-                    <SelectItem key={m.value} value={m.value}>
-                      {m.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={selectedYear} onValueChange={setSelectedYear}>
-                <SelectTrigger className="w-24 border-border/50 bg-background">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-card border-border z-50">
-                  {years.map((y) => (
-                    <SelectItem key={y} value={y}>
-                      {y}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="inline-flex items-center gap-1 p-1 rounded-xl glass shadow-ios-sm">
-              <PipeBtn value="todos" icon={Users} label="Todos" />
-              <PipeBtn value="inbound" icon={Inbox} label="Inbound" />
-              <PipeBtn value="outbound" icon={Send} label="Outbound" />
-            </div>
-
-            <div className="inline-flex items-center gap-1 p-1 rounded-xl glass shadow-ios-sm">
-              <LenteBtn
-                value="evento"
-                label="Por evento"
-                hint="Cada etapa conta no mês do seu próprio evento (RA na agendada, RR na realizada, ASS no fechamento)"
-              />
-              <LenteBtn
-                value="coorte"
-                label="Por coorte"
-                hint="Conta a safra de leads que entraram no mês selecionado, mostrando quantos chegaram em cada etapa"
-              />
-            </div>
-          </div>
-        </section>
+        <FunilCrmFilters
+          state={filtersState}
+          setState={setState}
+          setFilter={setFilter}
+          uniqueValues={uniqueValues}
+        />
 
         {isLoading ? (
           <div className="space-y-4">
@@ -193,7 +150,6 @@ const FunilCrm = () => {
           </div>
         ) : (
           <>
-            {/* KPIs */}
             <section className="space-y-4">
               <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">
                 RESUMO DO FUNIL
@@ -226,15 +182,11 @@ const FunilCrm = () => {
               </div>
             </section>
 
-            {/* Funil */}
             <section className="space-y-4">
-              <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">
-                FUNIL
-              </h2>
+              <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">FUNIL</h2>
               <FunilCrmStages data={funilData} />
             </section>
 
-            {/* Tendência */}
             <section className="space-y-4">
               <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">
                 TENDÊNCIA — ÚLTIMOS 6 MESES
@@ -284,9 +236,7 @@ const KpiCard = ({
       <p className="font-body text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
       <Icon className="h-4 w-4 text-muted-foreground" />
     </div>
-    <p className="font-display text-2xl lg:text-3xl font-bold text-foreground tabular-nums">
-      {value}
-    </p>
+    <p className="font-display text-2xl lg:text-3xl font-bold text-foreground tabular-nums">{value}</p>
     {hint && <p className="font-body text-[11px] text-muted-foreground/70 mt-2 leading-snug">{hint}</p>}
   </div>
 );
