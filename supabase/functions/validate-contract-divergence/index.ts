@@ -175,12 +175,15 @@ ${contratoTexto}
                   },
                   valores_contrato: {
                     type: "object",
-                    description: "Valores extraídos do bloco CONDIÇÕES DA CONTRATAÇÃO (use null quando não encontrado). Datas em ISO YYYY-MM-DD. Categoria como saber|ter|executar|potencializar.",
+                    description: "Valores extraídos do bloco CONDIÇÕES DA CONTRATAÇÃO (use null/array vazio quando não encontrado). Datas em ISO YYYY-MM-DD. categoria_produtos é uma LISTA com saber|ter|executar|potencializar.",
                     properties: {
                       valor_fee: { type: ["number", "null"] },
                       valor_ef: { type: ["number", "null"] },
                       data_inicio: { type: ["string", "null"] },
-                      categoria_produtos: { type: ["string", "null"], enum: ["saber", "ter", "executar", "potencializar", null] },
+                      categoria_produtos: {
+                        type: "array",
+                        items: { type: "string", enum: ["saber", "ter", "executar", "potencializar"] },
+                      },
                     },
                     required: ["valor_fee", "valor_ef", "data_inicio", "categoria_produtos"],
                     additionalProperties: false,
