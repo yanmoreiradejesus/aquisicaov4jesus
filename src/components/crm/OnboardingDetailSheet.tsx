@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GraduationCap, Building2, ExternalLink, FileText, Copy, RefreshCw, CheckCircle2, Flame, Pencil, X, Save, AlertTriangle, ShieldCheck, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MultiSelect } from "@/components/ui/multi-select";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -56,6 +57,13 @@ const CATEGORIA_PRODUTOS_LABEL: Record<string, string> = {
   potencializar: "Potencializar",
 };
 
+const formatCategorias = (val?: string | null): string => {
+  if (!val) return "—";
+  const parts = String(val).split(",").map((s) => s.trim()).filter(Boolean);
+  if (!parts.length) return "—";
+  return parts.map((p) => CATEGORIA_PRODUTOS_LABEL[p] ?? p).join(" + ");
+};
+
 export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, fullPage = false, backTo }: Props) => {
   const [form, setForm] = useState<any>(null);
   const [responsaveis, setResponsaveis] = useState<{ id: string; full_name: string | null; email: string }[]>([]);
@@ -73,7 +81,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
       valor_fee: number | null;
       valor_ef: number | null;
       data_inicio: string | null;
-      categoria_produtos: string | null;
+      categoria_produtos: string[] | string | null;
     } | null;
     resumo?: string;
     error?: string;
@@ -249,6 +257,12 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
     }
   };
 
+  const normalizeCategorias = (val: any): string => {
+    if (!val) return "";
+    if (Array.isArray(val)) return val.filter(Boolean).join(",");
+    return String(val);
+  };
+
   const startEditContrato = () => {
     // Campos com divergência detectada pela IA: pré-preenche com o valor do CONTRATO.
     const divergentes = new Set(
@@ -261,15 +275,41 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
       }
       return atual;
     };
+    const categoriaSugerida = normalizeCategorias(sugeridos?.categoria_produtos);
     setContratoForm({
-      nivel_consciencia: pick("categoria_produtos", sugeridos?.categoria_produtos, op?.nivel_consciencia ?? ""),
+      nivel_consciencia: pick(
+        "categoria_produtos",
+        categoriaSugerida || null,
+        op?.nivel_consciencia ?? "",
+      ),
       valor_fee: pick("valor_fee", sugeridos?.valor_fee, op?.valor_fee ?? 0),
       valor_ef: pick("valor_ef", sugeridos?.valor_ef, op?.valor_ef ?? 0),
-      info_deal: op?.info_deal ?? "",
       data_inicio_contrato: pick("data_inicio", sugeridos?.data_inicio, form.data_inicio_contrato ?? ""),
-      data_fim_contrato: form.data_fim_contrato ?? "",
     });
     setEditingContrato(true);
+  };
+
+  const acceptDivergence = (campo: string) => {
+    const sugeridos = divergence.valores_contrato ?? null;
+    if (!sugeridos) return;
+    setContratoForm((p: any) => {
+      const base = p ?? {
+        nivel_consciencia: op?.nivel_consciencia ?? "",
+        valor_fee: op?.valor_fee ?? 0,
+        valor_ef: op?.valor_ef ?? 0,
+        data_inicio_contrato: form.data_inicio_contrato ?? "",
+      };
+      const next = { ...base };
+      if (campo === "valor_fee" && sugeridos.valor_fee != null) next.valor_fee = sugeridos.valor_fee;
+      if (campo === "valor_ef" && sugeridos.valor_ef != null) next.valor_ef = sugeridos.valor_ef;
+      if (campo === "data_inicio" && sugeridos.data_inicio) next.data_inicio_contrato = sugeridos.data_inicio;
+      if (campo === "categoria_produtos") {
+        const cat = normalizeCategorias(sugeridos.categoria_produtos);
+        if (cat) next.nivel_consciencia = cat;
+      }
+      return next;
+    });
+    if (!editingContrato) setEditingContrato(true);
   };
 
   const cancelEditContrato = () => {
@@ -299,19 +339,11 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
         opPatch.valor_ef = newEf;
         changed.push("Valor EF");
       }
-      if ((op.info_deal ?? "") !== (contratoForm.info_deal ?? "")) {
-        opPatch.info_deal = contratoForm.info_deal || null;
-        changed.push("Informações do deal");
-      }
 
       const accPatch: any = {};
       if ((form.data_inicio_contrato ?? "") !== (contratoForm.data_inicio_contrato ?? "")) {
         accPatch.data_inicio_contrato = contratoForm.data_inicio_contrato || null;
         changed.push("Início do contrato");
-      }
-      if ((form.data_fim_contrato ?? "") !== (contratoForm.data_fim_contrato ?? "")) {
-        accPatch.data_fim_contrato = contratoForm.data_fim_contrato || null;
-        changed.push("Fim do contrato");
       }
 
       if (changed.length === 0) {
@@ -573,25 +605,49 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
                   <AlertTitle className="text-amber-200 text-sm">Divergência detectada entre contrato e CRM</AlertTitle>
                   <AlertDescription className="text-[12px] text-foreground/80">
                     {divergence.resumo && <p className="mb-2">{divergence.resumo}</p>}
-                    <ul className="space-y-1.5">
-                      {divergence.divergences.map((d, i) => (
-                        <li key={i} className="leading-snug">
-                          <span className="font-semibold text-amber-200">
-                            {{
-                              valor_fee: "Valor mensal do projeto",
-                              valor_ef: "Valor de implementação",
-                              data_inicio: "Data de início do projeto",
-                              categoria_produtos: "Categoria de produtos",
-                            }[d.campo] || d.campo}:
-                          </span>{" "}
-                          CRM = <span className="tabular-nums">{d.valor_sistema || "—"}</span> · Contrato ={" "}
-                          <span className="tabular-nums">{d.valor_contrato || "—"}</span>
-                          {d.observacao && <span className="block text-muted-foreground text-[11px] mt-0.5">{d.observacao}</span>}
-                        </li>
-                      ))}
+                    <ul className="space-y-2">
+                      {divergence.divergences.map((d, i) => {
+                        const sugeridos = divergence.valores_contrato;
+                        let suggested: string | number | null = null;
+                        if (sugeridos) {
+                          if (d.campo === "valor_fee") suggested = sugeridos.valor_fee;
+                          else if (d.campo === "valor_ef") suggested = sugeridos.valor_ef;
+                          else if (d.campo === "data_inicio") suggested = sugeridos.data_inicio;
+                          else if (d.campo === "categoria_produtos") suggested = normalizeCategorias(sugeridos.categoria_produtos) || null;
+                        }
+                        const hasSuggestion = suggested !== null && suggested !== undefined && suggested !== "";
+                        return (
+                          <li key={i} className="leading-snug flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <span className="font-semibold text-amber-200">
+                                {{
+                                  valor_fee: "Valor mensal do projeto",
+                                  valor_ef: "Valor de implementação",
+                                  data_inicio: "Data de início do projeto",
+                                  categoria_produtos: "Categoria de produtos",
+                                }[d.campo] || d.campo}:
+                              </span>{" "}
+                              CRM = <span className="tabular-nums">{d.valor_sistema || "—"}</span> · Contrato ={" "}
+                              <span className="tabular-nums">{d.valor_contrato || "—"}</span>
+                              {d.observacao && <span className="block text-muted-foreground text-[11px] mt-0.5">{d.observacao}</span>}
+                            </div>
+                            {canEditContrato && hasSuggestion && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 px-2 text-[11px] text-emerald-300 hover:text-emerald-200 hover:bg-emerald-500/10 shrink-0"
+                                onClick={() => acceptDivergence(d.campo)}
+                                title="Aplicar valor do contrato no formulário de edição"
+                              >
+                                <CheckCircle2 className="h-3 w-3 mr-1" /> Aceitar
+                              </Button>
+                            )}
+                          </li>
+                        );
+                      })}
                     </ul>
                     {canEditContrato && (
-                      <p className="mt-2 text-[11px] text-amber-200/80">Use <strong>Editar contrato</strong> para alinhar os dados.</p>
+                      <p className="mt-2 text-[11px] text-amber-200/80">Use <strong>Aceitar</strong> para aplicar o valor do contrato e depois <strong>Salvar</strong>, ou clique em <strong>Editar contrato</strong> para ajustar manualmente.</p>
                     )}
                   </AlertDescription>
                 </Alert>
@@ -629,7 +685,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-muted-foreground">Categoria de produtos</span>
                     <span className="text-foreground/90 font-medium">
-                      {op?.nivel_consciencia ? CATEGORIA_PRODUTOS_LABEL[op.nivel_consciencia] : "—"}
+                      {formatCategorias(op?.nivel_consciencia)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-3">
@@ -647,10 +703,6 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-muted-foreground">Início do contrato</span>
                     <span className="text-foreground/90 font-medium tabular-nums">{fmtDate(form.data_inicio_contrato)}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground">Fim do contrato</span>
-                    <span className="text-foreground/90 font-medium tabular-nums">{fmtDate(form.data_fim_contrato)}</span>
                   </div>
                 </div>
               ) : (
@@ -672,20 +724,17 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
                     </div>
                   )}
                   <div>
-                    <Label className="text-xs text-muted-foreground">Categoria de produtos</Label>
-                    <Select
-                      value={contratoForm?.nivel_consciencia || ""}
-                      onValueChange={(v) => setContratoForm((p: any) => ({ ...p, nivel_consciencia: v }))}
-                    >
-                      <SelectTrigger className="mt-1.5">
-                        <SelectValue placeholder="Selecione..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(CATEGORIA_PRODUTOS_LABEL).map(([k, v]) => (
-                          <SelectItem key={k} value={k}>{v}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-xs text-muted-foreground">Categoria de produtos (pode selecionar mais de uma)</Label>
+                    <div className="mt-1.5">
+                      <MultiSelect
+                        options={Object.entries(CATEGORIA_PRODUTOS_LABEL).map(([value, label]) => ({ value, label }))}
+                        selected={String(contratoForm?.nivel_consciencia ?? "").split(",").map((s) => s.trim()).filter(Boolean)}
+                        onChange={(values) =>
+                          setContratoForm((p: any) => ({ ...p, nivel_consciencia: values.join(",") }))
+                        }
+                        placeholder="Selecione..."
+                      />
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -717,32 +766,13 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
                       {fmtBRL((Number(contratoForm?.valor_ef) || 0) + (Number(contratoForm?.valor_fee) || 0))}
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Início do contrato</Label>
-                      <Input
-                        type="date"
-                        className="mt-1.5"
-                        value={contratoForm?.data_inicio_contrato ?? ""}
-                        onChange={(e) => setContratoForm((p: any) => ({ ...p, data_inicio_contrato: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Fim do contrato</Label>
-                      <Input
-                        type="date"
-                        className="mt-1.5"
-                        value={contratoForm?.data_fim_contrato ?? ""}
-                        onChange={(e) => setContratoForm((p: any) => ({ ...p, data_fim_contrato: e.target.value }))}
-                      />
-                    </div>
-                  </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">Informações do deal</Label>
-                    <Textarea
-                      className="mt-1.5 min-h-[80px]"
-                      value={contratoForm?.info_deal ?? ""}
-                      onChange={(e) => setContratoForm((p: any) => ({ ...p, info_deal: e.target.value }))}
+                    <Label className="text-xs text-muted-foreground">Início do contrato</Label>
+                    <Input
+                      type="date"
+                      className="mt-1.5"
+                      value={contratoForm?.data_inicio_contrato ?? ""}
+                      onChange={(e) => setContratoForm((p: any) => ({ ...p, data_inicio_contrato: e.target.value }))}
                     />
                   </div>
                 </div>

@@ -151,12 +151,17 @@ export const OnboardingCard = ({ account, onClick, onOpenInNewTab, overlay = fal
                 GC {fmtDate(gcAgendada)}
               </span>
             ) : null}
-            {op?.nivel_consciencia && CATEGORIA_PRODUTOS_LABEL[op.nivel_consciencia] && (
-              <span className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide inline-flex items-center gap-1 bg-primary/10 text-primary border-primary/30">
-                <Package className="h-2.5 w-2.5" />
-                {CATEGORIA_PRODUTOS_LABEL[op.nivel_consciencia]}
-              </span>
-            )}
+            {op?.nivel_consciencia &&
+              String(op.nivel_consciencia)
+                .split(",")
+                .map((s: string) => s.trim())
+                .filter((c: string) => CATEGORIA_PRODUTOS_LABEL[c])
+                .map((c: string) => (
+                  <span key={c} className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide inline-flex items-center gap-1 bg-primary/10 text-primary border-primary/30">
+                    <Package className="h-2.5 w-2.5" />
+                    {CATEGORIA_PRODUTOS_LABEL[c]}
+                  </span>
+                ))}
             {account.data_inicio_contrato && (
               <span className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide inline-flex items-center gap-1 tabular-nums bg-foreground/5 text-foreground/70 border-border/40">
                 <Calendar className="h-2.5 w-2.5" />

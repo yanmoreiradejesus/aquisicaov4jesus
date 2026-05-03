@@ -93,8 +93,14 @@ Deno.serve(async (req) => {
       );
     }
 
+    const categoriasSistema = String(op.nivel_consciencia ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
     const sistemaDados = {
-      categoria_produtos: op.nivel_consciencia ? CATEGORIA_LABEL[op.nivel_consciencia] : null,
+      categoria_produtos: categoriasSistema.length
+        ? categoriasSistema.map((c) => CATEGORIA_LABEL[c] ?? c)
+        : null,
       valor_fee_mensal_brl: Number(op.valor_fee) || 0,
       valor_ef_brl: Number(op.valor_ef) || 0,
       data_inicio_contrato: account.data_inicio_contrato,
@@ -107,13 +113,14 @@ IMPORTANTE: Olhe APENAS o bloco "CONDIÇÕES DA CONTRATAÇÃO" do contrato. Igno
 Campos a comparar (e onde encontrá-los no contrato):
 - valor_fee  ↔ "Valor mensal do projeto"
 - valor_ef   ↔ "Valor de implementação (pontual)"
-- data_inicio ↔ "Data de início do projeto"
-- categoria_produtos ↔ Saber / Ter / Executar / Potencializar
+- data_inicio ↔ SEMPRE a PRIMEIRA "Data de início" que aparece no bloco (normalmente "Data de início do projeto"). Se houver outras datas de início (ex.: "Data de início do escopo fechado"), IGNORE-as.
+- categoria_produtos ↔ Saber / Ter / Executar / Potencializar (pode haver MAIS DE UMA categoria contratada — retorne TODAS as que constarem no contrato)
 
 Regras:
 - Tolere diferenças de formato (R$ 5.000,00 vs 5000) e arredondamento de até R$ 1.
 - Se um campo NÃO aparece claramente no bloco "CONDIÇÕES DA CONTRATAÇÃO", marque como "nao_encontrado" (não é divergência).
 - NUNCA reporte divergência sobre data de fim de contrato, prazo, duração, número de parcelas ou cláusulas.
+- Para categoria_produtos, considere divergência apenas se o conjunto de categorias for diferente (ordem não importa).
 - Só sinalize divergência quando o contrato apresentar EXPLICITAMENTE um valor/data diferente do sistema.
 - Seja conservador: na dúvida, prefira "nao_encontrado".
 
@@ -168,12 +175,15 @@ ${contratoTexto}
                   },
                   valores_contrato: {
                     type: "object",
-                    description: "Valores extraídos do bloco CONDIÇÕES DA CONTRATAÇÃO (use null quando não encontrado). Datas em ISO YYYY-MM-DD. Categoria como saber|ter|executar|potencializar.",
+                    description: "Valores extraídos do bloco CONDIÇÕES DA CONTRATAÇÃO (use null/array vazio quando não encontrado). Datas em ISO YYYY-MM-DD. categoria_produtos é uma LISTA com saber|ter|executar|potencializar.",
                     properties: {
                       valor_fee: { type: ["number", "null"] },
                       valor_ef: { type: ["number", "null"] },
                       data_inicio: { type: ["string", "null"] },
-                      categoria_produtos: { type: ["string", "null"], enum: ["saber", "ter", "executar", "potencializar", null] },
+                      categoria_produtos: {
+                        type: "array",
+                        items: { type: "string", enum: ["saber", "ter", "executar", "potencializar"] },
+                      },
                     },
                     required: ["valor_fee", "valor_ef", "data_inicio", "categoria_produtos"],
                     additionalProperties: false,
