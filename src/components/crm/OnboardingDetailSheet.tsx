@@ -73,7 +73,6 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
       valor_fee: number | null;
       valor_ef: number | null;
       data_inicio: string | null;
-      data_fim: string | null;
       categoria_produtos: string | null;
     } | null;
     resumo?: string;
