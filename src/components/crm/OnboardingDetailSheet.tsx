@@ -605,25 +605,49 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
                   <AlertTitle className="text-amber-200 text-sm">Divergência detectada entre contrato e CRM</AlertTitle>
                   <AlertDescription className="text-[12px] text-foreground/80">
                     {divergence.resumo && <p className="mb-2">{divergence.resumo}</p>}
-                    <ul className="space-y-1.5">
-                      {divergence.divergences.map((d, i) => (
-                        <li key={i} className="leading-snug">
-                          <span className="font-semibold text-amber-200">
-                            {{
-                              valor_fee: "Valor mensal do projeto",
-                              valor_ef: "Valor de implementação",
-                              data_inicio: "Data de início do projeto",
-                              categoria_produtos: "Categoria de produtos",
-                            }[d.campo] || d.campo}:
-                          </span>{" "}
-                          CRM = <span className="tabular-nums">{d.valor_sistema || "—"}</span> · Contrato ={" "}
-                          <span className="tabular-nums">{d.valor_contrato || "—"}</span>
-                          {d.observacao && <span className="block text-muted-foreground text-[11px] mt-0.5">{d.observacao}</span>}
-                        </li>
-                      ))}
+                    <ul className="space-y-2">
+                      {divergence.divergences.map((d, i) => {
+                        const sugeridos = divergence.valores_contrato;
+                        let suggested: string | number | null = null;
+                        if (sugeridos) {
+                          if (d.campo === "valor_fee") suggested = sugeridos.valor_fee;
+                          else if (d.campo === "valor_ef") suggested = sugeridos.valor_ef;
+                          else if (d.campo === "data_inicio") suggested = sugeridos.data_inicio;
+                          else if (d.campo === "categoria_produtos") suggested = normalizeCategorias(sugeridos.categoria_produtos) || null;
+                        }
+                        const hasSuggestion = suggested !== null && suggested !== undefined && suggested !== "";
+                        return (
+                          <li key={i} className="leading-snug flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <span className="font-semibold text-amber-200">
+                                {{
+                                  valor_fee: "Valor mensal do projeto",
+                                  valor_ef: "Valor de implementação",
+                                  data_inicio: "Data de início do projeto",
+                                  categoria_produtos: "Categoria de produtos",
+                                }[d.campo] || d.campo}:
+                              </span>{" "}
+                              CRM = <span className="tabular-nums">{d.valor_sistema || "—"}</span> · Contrato ={" "}
+                              <span className="tabular-nums">{d.valor_contrato || "—"}</span>
+                              {d.observacao && <span className="block text-muted-foreground text-[11px] mt-0.5">{d.observacao}</span>}
+                            </div>
+                            {canEditContrato && hasSuggestion && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 px-2 text-[11px] text-emerald-300 hover:text-emerald-200 hover:bg-emerald-500/10 shrink-0"
+                                onClick={() => acceptDivergence(d.campo)}
+                                title="Aplicar valor do contrato no formulário de edição"
+                              >
+                                <CheckCircle2 className="h-3 w-3 mr-1" /> Aceitar
+                              </Button>
+                            )}
+                          </li>
+                        );
+                      })}
                     </ul>
                     {canEditContrato && (
-                      <p className="mt-2 text-[11px] text-amber-200/80">Use <strong>Editar contrato</strong> para alinhar os dados.</p>
+                      <p className="mt-2 text-[11px] text-amber-200/80">Use <strong>Aceitar</strong> para aplicar o valor do contrato e depois <strong>Salvar</strong>, ou clique em <strong>Editar contrato</strong> para ajustar manualmente.</p>
                     )}
                   </AlertDescription>
                 </Alert>
