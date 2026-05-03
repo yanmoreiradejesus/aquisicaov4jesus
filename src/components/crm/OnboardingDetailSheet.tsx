@@ -153,10 +153,13 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
     const cachedUrl = form?.contract_validation_url;
     const currentUrl = form?.oportunidade?.contrato_url;
     if (cached && cachedUrl && cachedUrl === currentUrl) {
+      // Filtra divergências de campos descontinuados (ex.: data_fim)
+      const ALLOWED = new Set(["valor_fee", "valor_ef", "data_inicio", "categoria_produtos"]);
+      const filtered = (cached.divergences ?? []).filter((d: any) => ALLOWED.has(d.campo));
       setDivergence({
         status: "ok",
-        has_divergence: !!cached.has_divergence,
-        divergences: cached.divergences ?? [],
+        has_divergence: filtered.length > 0,
+        divergences: filtered,
         valores_contrato: cached.valores_contrato ?? null,
         resumo: cached.resumo ?? "",
         cached: true,
