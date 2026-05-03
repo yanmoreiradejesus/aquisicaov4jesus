@@ -337,8 +337,6 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
         accPatch.data_inicio_contrato = contratoForm.data_inicio_contrato || null;
         changed.push("Início do contrato");
       }
-        changed.push("Fim do contrato");
-      }
 
       if (changed.length === 0) {
         toast({ title: "Nada para atualizar" });
