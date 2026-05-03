@@ -575,10 +575,9 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
                         <li key={i} className="leading-snug">
                           <span className="font-semibold text-amber-200">
                             {{
-                              valor_fee: "Valor Fee",
-                              valor_ef: "Valor EF",
-                              data_inicio: "Início do contrato",
-                              data_fim: "Fim do contrato",
+                              valor_fee: "Valor mensal do projeto",
+                              valor_ef: "Valor de implementação",
+                              data_inicio: "Data de início do projeto",
                               categoria_produtos: "Categoria de produtos",
                             }[d.campo] || d.campo}:
                           </span>{" "}
