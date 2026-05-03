@@ -97,24 +97,23 @@ Deno.serve(async (req) => {
       categoria_produtos: op.nivel_consciencia ? CATEGORIA_LABEL[op.nivel_consciencia] : null,
       valor_fee_mensal_brl: Number(op.valor_fee) || 0,
       valor_ef_brl: Number(op.valor_ef) || 0,
-      valor_total_brl: (Number(op.valor_ef) || 0) + (Number(op.valor_fee) || 0),
       data_inicio_contrato: account.data_inicio_contrato,
-      data_fim_contrato: account.data_fim_contrato,
-      info_deal: op.info_deal,
     };
 
     const systemPrompt = `Você é um auditor de contratos. Compara os dados cadastrados no CRM com o texto extraído do contrato assinado em PDF.
 
-Sua tarefa: identificar DIVERGÊNCIAS materiais entre o sistema e o contrato em:
-- Valor Fee mensal (mensalidade recorrente)
-- Valor EF / Entry Fee (taxa de entrada / setup)
-- Data de início do contrato
-- Data de fim do contrato (ou prazo/duração)
-- Categoria de produtos contratados (Saber/Ter/Executar/Potencializar)
+IMPORTANTE: Olhe APENAS o bloco "CONDIÇÕES DA CONTRATAÇÃO" do contrato. Ignore cláusulas jurídicas, prazos de duração, datas de fim/término e qualquer outra seção.
+
+Campos a comparar (e onde encontrá-los no contrato):
+- valor_fee  ↔ "Valor mensal do projeto"
+- valor_ef   ↔ "Valor de implementação (pontual)"
+- data_inicio ↔ "Data de início do projeto"
+- categoria_produtos ↔ Saber / Ter / Executar / Potencializar
 
 Regras:
-- Tolere diferenças de formato (R$ 5.000,00 vs 5000) e de arredondamento de até R$ 1.
-- Se um campo NÃO aparece claramente no contrato, marque como "nao_encontrado" (não é divergência).
+- Tolere diferenças de formato (R$ 5.000,00 vs 5000) e arredondamento de até R$ 1.
+- Se um campo NÃO aparece claramente no bloco "CONDIÇÕES DA CONTRATAÇÃO", marque como "nao_encontrado" (não é divergência).
+- NUNCA reporte divergência sobre data de fim de contrato, prazo, duração, número de parcelas ou cláusulas.
 - Só sinalize divergência quando o contrato apresentar EXPLICITAMENTE um valor/data diferente do sistema.
 - Seja conservador: na dúvida, prefira "nao_encontrado".
 
@@ -157,7 +156,7 @@ ${contratoTexto}
                       properties: {
                         campo: {
                           type: "string",
-                          enum: ["valor_fee", "valor_ef", "data_inicio", "data_fim", "categoria_produtos"],
+                          enum: ["valor_fee", "valor_ef", "data_inicio", "categoria_produtos"],
                         },
                         valor_sistema: { type: "string" },
                         valor_contrato: { type: "string" },
@@ -169,15 +168,14 @@ ${contratoTexto}
                   },
                   valores_contrato: {
                     type: "object",
-                    description: "Valores extraídos do contrato (use null quando não encontrado). Datas em ISO YYYY-MM-DD. Categoria como saber|ter|executar|potencializar.",
+                    description: "Valores extraídos do bloco CONDIÇÕES DA CONTRATAÇÃO (use null quando não encontrado). Datas em ISO YYYY-MM-DD. Categoria como saber|ter|executar|potencializar.",
                     properties: {
                       valor_fee: { type: ["number", "null"] },
                       valor_ef: { type: ["number", "null"] },
                       data_inicio: { type: ["string", "null"] },
-                      data_fim: { type: ["string", "null"] },
                       categoria_produtos: { type: ["string", "null"], enum: ["saber", "ter", "executar", "potencializar", null] },
                     },
-                    required: ["valor_fee", "valor_ef", "data_inicio", "data_fim", "categoria_produtos"],
+                    required: ["valor_fee", "valor_ef", "data_inicio", "categoria_produtos"],
                     additionalProperties: false,
                   },
                   resumo: { type: "string", description: "Resumo curto (1-2 frases) em pt-BR." },

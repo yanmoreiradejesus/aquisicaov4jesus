@@ -73,7 +73,6 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
       valor_fee: number | null;
       valor_ef: number | null;
       data_inicio: string | null;
-      data_fim: string | null;
       categoria_produtos: string | null;
     } | null;
     resumo?: string;
@@ -154,10 +153,13 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
     const cachedUrl = form?.contract_validation_url;
     const currentUrl = form?.oportunidade?.contrato_url;
     if (cached && cachedUrl && cachedUrl === currentUrl) {
+      // Filtra divergências de campos descontinuados (ex.: data_fim)
+      const ALLOWED = new Set(["valor_fee", "valor_ef", "data_inicio", "categoria_produtos"]);
+      const filtered = (cached.divergences ?? []).filter((d: any) => ALLOWED.has(d.campo));
       setDivergence({
         status: "ok",
-        has_divergence: !!cached.has_divergence,
-        divergences: cached.divergences ?? [],
+        has_divergence: filtered.length > 0,
+        divergences: filtered,
         valores_contrato: cached.valores_contrato ?? null,
         resumo: cached.resumo ?? "",
         cached: true,
@@ -265,7 +267,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
       valor_ef: pick("valor_ef", sugeridos?.valor_ef, op?.valor_ef ?? 0),
       info_deal: op?.info_deal ?? "",
       data_inicio_contrato: pick("data_inicio", sugeridos?.data_inicio, form.data_inicio_contrato ?? ""),
-      data_fim_contrato: pick("data_fim", sugeridos?.data_fim, form.data_fim_contrato ?? ""),
+      data_fim_contrato: form.data_fim_contrato ?? "",
     });
     setEditingContrato(true);
   };
@@ -576,10 +578,9 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
                         <li key={i} className="leading-snug">
                           <span className="font-semibold text-amber-200">
                             {{
-                              valor_fee: "Valor Fee",
-                              valor_ef: "Valor EF",
-                              data_inicio: "Início do contrato",
-                              data_fim: "Fim do contrato",
+                              valor_fee: "Valor mensal do projeto",
+                              valor_ef: "Valor de implementação",
+                              data_inicio: "Data de início do projeto",
                               categoria_produtos: "Categoria de produtos",
                             }[d.campo] || d.campo}:
                           </span>{" "}
