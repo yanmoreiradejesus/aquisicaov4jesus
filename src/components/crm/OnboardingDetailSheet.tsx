@@ -249,6 +249,12 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
     }
   };
 
+  const normalizeCategorias = (val: any): string => {
+    if (!val) return "";
+    if (Array.isArray(val)) return val.filter(Boolean).join(",");
+    return String(val);
+  };
+
   const startEditContrato = () => {
     // Campos com divergência detectada pela IA: pré-preenche com o valor do CONTRATO.
     const divergentes = new Set(
@@ -261,15 +267,41 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
       }
       return atual;
     };
+    const categoriaSugerida = normalizeCategorias(sugeridos?.categoria_produtos);
     setContratoForm({
-      nivel_consciencia: pick("categoria_produtos", sugeridos?.categoria_produtos, op?.nivel_consciencia ?? ""),
+      nivel_consciencia: pick(
+        "categoria_produtos",
+        categoriaSugerida || null,
+        op?.nivel_consciencia ?? "",
+      ),
       valor_fee: pick("valor_fee", sugeridos?.valor_fee, op?.valor_fee ?? 0),
       valor_ef: pick("valor_ef", sugeridos?.valor_ef, op?.valor_ef ?? 0),
-      info_deal: op?.info_deal ?? "",
       data_inicio_contrato: pick("data_inicio", sugeridos?.data_inicio, form.data_inicio_contrato ?? ""),
-      data_fim_contrato: form.data_fim_contrato ?? "",
     });
     setEditingContrato(true);
+  };
+
+  const acceptDivergence = (campo: string) => {
+    const sugeridos = divergence.valores_contrato ?? null;
+    if (!sugeridos) return;
+    setContratoForm((p: any) => {
+      const base = p ?? {
+        nivel_consciencia: op?.nivel_consciencia ?? "",
+        valor_fee: op?.valor_fee ?? 0,
+        valor_ef: op?.valor_ef ?? 0,
+        data_inicio_contrato: form.data_inicio_contrato ?? "",
+      };
+      const next = { ...base };
+      if (campo === "valor_fee" && sugeridos.valor_fee != null) next.valor_fee = sugeridos.valor_fee;
+      if (campo === "valor_ef" && sugeridos.valor_ef != null) next.valor_ef = sugeridos.valor_ef;
+      if (campo === "data_inicio" && sugeridos.data_inicio) next.data_inicio_contrato = sugeridos.data_inicio;
+      if (campo === "categoria_produtos") {
+        const cat = normalizeCategorias(sugeridos.categoria_produtos);
+        if (cat) next.nivel_consciencia = cat;
+      }
+      return next;
+    });
+    if (!editingContrato) setEditingContrato(true);
   };
 
   const cancelEditContrato = () => {
