@@ -1,92 +1,37 @@
-## Objetivo
+## Resposta à dúvida
 
-Permitir ajustar, dentro do card de Onboarding (aba **Pré GC**), as informações do contrato que foram preenchidas na oportunidade quando o deal foi marcado como ganho — garantindo que os dados financeiros e de prazo do CRM batam com o contrato real.
+No sistema, "Data de início do contrato" = campo `accounts.data_inicio_contrato`. Ele é preenchido quando a oportunidade vira Onboarding (ganho) e é o mesmo valor exibido no card do Onboarding em "Início ...". É essa data que a IA está comparando contra o "Data de início do projeto" extraído das Condições da Contratação no PDF.
 
-## Por que aqui
+No exemplo enviado:
+- Sistema (`accounts.data_inicio_contrato`): `2026-04-30`
+- Contrato (Condições da Contratação → Data de início do projeto): `29 de maio de 2026`
 
-Quando uma oportunidade vai para `fechado_ganho`, o trigger `auto_create_account_and_cobrancas` já gera:
-- A `account` (com `data_inicio_contrato`)
-- 1 cobrança EF + 12 cobranças de `fee_recorrente` baseadas em `valor_ef` / `valor_fee` da oportunidade
+## Plano de ajuste
 
-Hoje, se o contrato assinado divergir do que foi preenchido na oportunidade, fica desalinhado. A correção precisa acontecer **antes da Growth Class** — daí a aba Pré GC.
+Restringir a validação de divergência para olhar **apenas** os campos que constam no bloco "Condições da Contratação" do contrato, e remover qualquer comparação de data de fim/duração.
 
-## O que vai mudar na UI
+### Edge function `validate-contract-divergence`
 
-Na aba **Pré GC** do `OnboardingDetailSheet`, o bloco "Contrato & Informações Gerais" hoje é só leitura. Vai virar **editável** via um modo "Editar contrato":
+1. **Campos validados** (passar a ser exatamente estes):
+   - `valor_fee` ↔ "Valor mensal do projeto"
+   - `valor_ef` ↔ "Valor de implementação (pontual)"
+   - `data_inicio` ↔ "Data de início do projeto" (campo CRM: `data_inicio_contrato`)
+   - `categoria_produtos` ↔ Saber/Ter/Executar/Potencializar
+2. **Remover** `data_fim` do enum, do schema da tool, do prompt e da estrutura `valores_contrato`.
+3. Atualizar o `systemPrompt` para deixar explícito que:
+   - Deve olhar somente o bloco "Condições da Contratação".
+   - Não deve sinalizar prazo/duração/data de término como divergência.
+   - Tolerâncias de formato/arredondamento permanecem.
+4. Manter o cache por `contrato_url` e a persistência em `accounts.contract_validation`.
 
-Bloco editável (com botão "Editar" / "Salvar" / "Cancelar"):
-- Categoria de produtos (`oportunidade.nivel_consciencia`) — select Saber / Ter / Executar / Potencializar
-- Valor Fee mensal (`oportunidade.valor_fee`)
-- Valor EF (`oportunidade.valor_ef`)
-- Início do contrato (`account.data_inicio_contrato`)
-- Fim do contrato (`account.data_fim_contrato`)
-- Informações do deal (`oportunidade.info_deal`)
+### Frontend `OnboardingDetailSheet.tsx`
 
-Valor total continua calculado (`valor_ef + valor_fee`).
+1. Remover `data_fim` do tipo `divergence.valores_contrato`.
+2. Remover `data_fim` do `pick(...)` no `startEditContrato` (não pré-preencher mais a partir da IA).
+3. Remover a entrada `data_fim: "Fim do contrato"` do mapa de labels da lista de divergências.
+4. Manter o input de "Data fim" no formulário de edição (continua editável manualmente), só não é mais alvo da IA.
+5. Como o schema da resposta mudou, invalidar o cache: ao subir a nova versão, o primeiro `runDivergenceCheck` deve forçar revalidação. Faremos isso comparando a forma do cache (se vier com `data_fim` ainda) e disparando `force: true` automaticamente uma vez.
 
-## Comportamento ao salvar
+### Resumo do efeito esperado
 
-1. Atualiza `crm_oportunidades` (campos de valor, categoria, info_deal) via update normal.
-2. Atualiza `accounts` (datas do contrato) — já coberto pelo `useOnboarding().update`.
-3. Registra atividade na timeline da oportunidade (`crm_atividades` tipo `mudanca_etapa` ou similar) com a descrição "Valores/datas ajustados no Pré GC do onboarding" listando os campos alterados — para deixar trilha de auditoria.
-4. **Recalcula cobranças pendentes** (apenas as que ainda estão `pendente`):
-   - Se `valor_ef` mudou → atualiza a cobrança EF pendente (`tipo = 'ef'`) com novo valor.
-   - Se `valor_fee` mudou → atualiza todas as cobranças `fee_recorrente` com `status = 'pendente'` para o novo valor (mantém vencimentos).
-   - Cobranças já pagas (`status = 'pago'`) **não** são alteradas.
-5. Toast de confirmação resumindo o que foi atualizado (ex.: "Contrato atualizado: Valor Fee, Início. 11 cobranças pendentes recalculadas").
-
-## Permissões
-
-- Editar contrato: usuário aprovado OU admin (mesmas regras das RLS já existentes em `crm_oportunidades` e `accounts`).
-- Disponível enquanto o onboarding **não estiver concluído** (`onboarding_status !== 'concluida'`). Após concluído, vira read-only de novo. Admin pode editar sempre.
-
-## Detalhes técnicos
-
-**Arquivos a editar:**
-- `src/components/crm/OnboardingDetailSheet.tsx`
-  - Adicionar estado `editingContrato` + form local para os campos da oportunidade.
-  - Substituir o bloco "Contrato & Informações Gerais" por versão com toggle leitura/edição.
-  - Função `handleSaveContrato`: dispara updates em `crm_oportunidades`, `accounts`, e recalcula `cobrancas` pendentes.
-  - Após salvar, invalidar query `onboarding_accounts` para atualizar o sheet.
-
-**Hook (opcional, para isolar lógica):**
-- `src/hooks/useUpdateContratoFromOnboarding.ts` (novo) — encapsula a transação lógica (3 updates + log de atividade).
-
-**Regras de update das cobranças (client-side, usando Supabase JS):**
-```ts
-// Recalcular EF pendente
-if (valorEfMudou) {
-  await supabase.from('cobrancas')
-    .update({ valor: novoValorEf })
-    .eq('oportunidade_id', op.id)
-    .eq('tipo', 'ef')
-    .eq('status', 'pendente');
-}
-// Recalcular fees pendentes
-if (valorFeeMudou) {
-  await supabase.from('cobrancas')
-    .update({ valor: novoValorFee })
-    .eq('oportunidade_id', op.id)
-    .eq('tipo', 'fee_recorrente')
-    .eq('status', 'pendente');
-}
-```
-
-**Atividade de auditoria:**
-```ts
-await supabase.from('crm_atividades').insert({
-  oportunidade_id: op.id,
-  lead_id: op.lead_id,
-  tipo: 'observacao',
-  titulo: 'Contrato ajustado no Pré GC',
-  descricao: `Campos alterados: ${listaCampos}. Cobranças pendentes recalculadas.`,
-  usuario_id: <auth.uid()>,
-});
-```
-
-## Não inclui (para confirmar)
-- Não muda o contrato em PDF — apenas reflete os dados no CRM.
-- Não recria cobranças se o usuário ajustar `data_inicio_contrato` (apenas valor das pendentes). Se precisar regerar o cronograma de 12 fees ao mudar a data de início, é um item separado.
-- Não toca em `monthly_goals` / dashboards retroativos.
-
-Confirmando, eu implemento.
+A IA passa a comparar exclusivamente: Valor mensal, Valor de implementação, Data de início do projeto e Categoria. Nada de "fim do contrato" nem "duração de 12 meses" será reportado como divergência.
