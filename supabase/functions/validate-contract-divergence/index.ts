@@ -156,7 +156,7 @@ ${contratoTexto}
                       properties: {
                         campo: {
                           type: "string",
-                          enum: ["valor_fee", "valor_ef", "data_inicio", "data_fim", "categoria_produtos"],
+                          enum: ["valor_fee", "valor_ef", "data_inicio", "categoria_produtos"],
                         },
                         valor_sistema: { type: "string" },
                         valor_contrato: { type: "string" },
@@ -168,15 +168,14 @@ ${contratoTexto}
                   },
                   valores_contrato: {
                     type: "object",
-                    description: "Valores extraídos do contrato (use null quando não encontrado). Datas em ISO YYYY-MM-DD. Categoria como saber|ter|executar|potencializar.",
+                    description: "Valores extraídos do bloco CONDIÇÕES DA CONTRATAÇÃO (use null quando não encontrado). Datas em ISO YYYY-MM-DD. Categoria como saber|ter|executar|potencializar.",
                     properties: {
                       valor_fee: { type: ["number", "null"] },
                       valor_ef: { type: ["number", "null"] },
                       data_inicio: { type: ["string", "null"] },
-                      data_fim: { type: ["string", "null"] },
                       categoria_produtos: { type: ["string", "null"], enum: ["saber", "ter", "executar", "potencializar", null] },
                     },
-                    required: ["valor_fee", "valor_ef", "data_inicio", "data_fim", "categoria_produtos"],
+                    required: ["valor_fee", "valor_ef", "data_inicio", "categoria_produtos"],
                     additionalProperties: false,
                   },
                   resumo: { type: "string", description: "Resumo curto (1-2 frases) em pt-BR." },
