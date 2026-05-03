@@ -56,6 +56,13 @@ const CATEGORIA_PRODUTOS_LABEL: Record<string, string> = {
   potencializar: "Potencializar",
 };
 
+const formatCategorias = (val?: string | null): string => {
+  if (!val) return "—";
+  const parts = String(val).split(",").map((s) => s.trim()).filter(Boolean);
+  if (!parts.length) return "—";
+  return parts.map((p) => CATEGORIA_PRODUTOS_LABEL[p] ?? p).join(" + ");
+};
+
 export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, fullPage = false, backTo }: Props) => {
   const [form, setForm] = useState<any>(null);
   const [responsaveis, setResponsaveis] = useState<{ id: string; full_name: string | null; email: string }[]>([]);
