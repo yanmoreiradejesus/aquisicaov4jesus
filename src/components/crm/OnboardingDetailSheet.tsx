@@ -264,7 +264,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
       valor_ef: pick("valor_ef", sugeridos?.valor_ef, op?.valor_ef ?? 0),
       info_deal: op?.info_deal ?? "",
       data_inicio_contrato: pick("data_inicio", sugeridos?.data_inicio, form.data_inicio_contrato ?? ""),
-      data_fim_contrato: pick("data_fim", sugeridos?.data_fim, form.data_fim_contrato ?? ""),
+      data_fim_contrato: form.data_fim_contrato ?? "",
     });
     setEditingContrato(true);
   };
