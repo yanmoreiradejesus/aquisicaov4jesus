@@ -331,18 +331,12 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
         opPatch.valor_ef = newEf;
         changed.push("Valor EF");
       }
-      if ((op.info_deal ?? "") !== (contratoForm.info_deal ?? "")) {
-        opPatch.info_deal = contratoForm.info_deal || null;
-        changed.push("Informações do deal");
-      }
 
       const accPatch: any = {};
       if ((form.data_inicio_contrato ?? "") !== (contratoForm.data_inicio_contrato ?? "")) {
         accPatch.data_inicio_contrato = contratoForm.data_inicio_contrato || null;
         changed.push("Início do contrato");
       }
-      if ((form.data_fim_contrato ?? "") !== (contratoForm.data_fim_contrato ?? "")) {
-        accPatch.data_fim_contrato = contratoForm.data_fim_contrato || null;
         changed.push("Fim do contrato");
       }
 
