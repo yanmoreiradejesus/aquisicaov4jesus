@@ -685,7 +685,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-muted-foreground">Categoria de produtos</span>
                     <span className="text-foreground/90 font-medium">
-                      {op?.nivel_consciencia ? CATEGORIA_PRODUTOS_LABEL[op.nivel_consciencia] : "—"}
+                      {formatCategorias(op?.nivel_consciencia)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-3">
@@ -703,10 +703,6 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-muted-foreground">Início do contrato</span>
                     <span className="text-foreground/90 font-medium tabular-nums">{fmtDate(form.data_inicio_contrato)}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground">Fim do contrato</span>
-                    <span className="text-foreground/90 font-medium tabular-nums">{fmtDate(form.data_fim_contrato)}</span>
                   </div>
                 </div>
               ) : (
@@ -728,20 +724,17 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
                     </div>
                   )}
                   <div>
-                    <Label className="text-xs text-muted-foreground">Categoria de produtos</Label>
-                    <Select
-                      value={contratoForm?.nivel_consciencia || ""}
-                      onValueChange={(v) => setContratoForm((p: any) => ({ ...p, nivel_consciencia: v }))}
-                    >
-                      <SelectTrigger className="mt-1.5">
-                        <SelectValue placeholder="Selecione..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(CATEGORIA_PRODUTOS_LABEL).map(([k, v]) => (
-                          <SelectItem key={k} value={k}>{v}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-xs text-muted-foreground">Categoria de produtos (pode selecionar mais de uma)</Label>
+                    <div className="mt-1.5">
+                      <MultiSelect
+                        options={Object.entries(CATEGORIA_PRODUTOS_LABEL).map(([value, label]) => ({ value, label }))}
+                        selected={String(contratoForm?.nivel_consciencia ?? "").split(",").map((s) => s.trim()).filter(Boolean)}
+                        onChange={(values) =>
+                          setContratoForm((p: any) => ({ ...p, nivel_consciencia: values.join(",") }))
+                        }
+                        placeholder="Selecione..."
+                      />
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -773,32 +766,13 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
                       {fmtBRL((Number(contratoForm?.valor_ef) || 0) + (Number(contratoForm?.valor_fee) || 0))}
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Início do contrato</Label>
-                      <Input
-                        type="date"
-                        className="mt-1.5"
-                        value={contratoForm?.data_inicio_contrato ?? ""}
-                        onChange={(e) => setContratoForm((p: any) => ({ ...p, data_inicio_contrato: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Fim do contrato</Label>
-                      <Input
-                        type="date"
-                        className="mt-1.5"
-                        value={contratoForm?.data_fim_contrato ?? ""}
-                        onChange={(e) => setContratoForm((p: any) => ({ ...p, data_fim_contrato: e.target.value }))}
-                      />
-                    </div>
-                  </div>
                   <div>
-                    <Label className="text-xs text-muted-foreground">Informações do deal</Label>
-                    <Textarea
-                      className="mt-1.5 min-h-[80px]"
-                      value={contratoForm?.info_deal ?? ""}
-                      onChange={(e) => setContratoForm((p: any) => ({ ...p, info_deal: e.target.value }))}
+                    <Label className="text-xs text-muted-foreground">Início do contrato</Label>
+                    <Input
+                      type="date"
+                      className="mt-1.5"
+                      value={contratoForm?.data_inicio_contrato ?? ""}
+                      onChange={(e) => setContratoForm((p: any) => ({ ...p, data_inicio_contrato: e.target.value }))}
                     />
                   </div>
                 </div>
