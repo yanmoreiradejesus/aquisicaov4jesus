@@ -80,7 +80,6 @@ const LeadDetailPage = () => {
 
   const handleSave = async (l: any) => {
     await upsert.mutateAsync(l);
-    toast({ title: "Lead atualizado" });
   };
 
   const handleDelete = async (id: string) => {
