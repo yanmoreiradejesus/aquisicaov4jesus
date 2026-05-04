@@ -215,12 +215,22 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
       .then(({ data }) => setProfiles(data ?? []));
   }, []);
 
+  const lastLeadIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (open) {
+    if (!open) {
+      lastLeadIdRef.current = null;
+      return;
+    }
+    // Só reseta form/tab quando abre ou quando muda de lead (id diferente)
+    if (lead?.id && lastLeadIdRef.current !== lead.id) {
+      lastLeadIdRef.current = lead.id;
       setForm(lead);
       setActiveTab("informacoes");
+    } else if (!form) {
+      setForm(lead);
     }
-  }, [open, lead]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, lead?.id]);
 
   const tier = useMemo(() => tierFromFaturamento(form?.faturamento), [form?.faturamento]);
 
