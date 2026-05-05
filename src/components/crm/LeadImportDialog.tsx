@@ -128,7 +128,8 @@ export const LeadImportDialog = ({ open, onOpenChange, onOpenExport }: Props) =>
     if (!parsed) return;
     setLoading(true);
     try {
-      const r = await importLeads(parsed);
+      const respId = responsavelId !== "none" ? responsavelId : undefined;
+      const r = await importLeads(parsed, respId);
       setResult(r);
       qc.invalidateQueries({ queryKey: ["crm_leads"] });
       toast({
