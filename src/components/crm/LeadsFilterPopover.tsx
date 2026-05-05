@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Filter, X } from "lucide-react";
 import { LEAD_ETAPAS } from "@/hooks/useCrmLeads";
 import { DateRange } from "@/components/crm/OportunidadesFilterPopover";
+import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
 
 export interface LeadFilters {
   dateFrom: string;
