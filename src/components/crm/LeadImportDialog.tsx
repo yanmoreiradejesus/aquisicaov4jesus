@@ -42,7 +42,7 @@ const FIELD_LABELS: Record<UpdateField, string> = {
   data_criacao_origem: "data de cadastro original",
 };
 
-export const LeadImportDialog = ({ open, onOpenChange, onOpenExport }: Props) => {
+export const LeadImportDialog = ({ open, onOpenChange, onOpenExport, pipe = "inbound" }: Props) => {
   const [mode, setMode] = useState<Mode>("create");
   const [file, setFile] = useState<File | null>(null);
   const [parsed, setParsed] = useState<CsvLeadRow[] | null>(null);
@@ -54,6 +54,10 @@ export const LeadImportDialog = ({ open, onOpenChange, onOpenExport }: Props) =>
   const [lastImport, setLastImport] = useState<{ created_at: string; nome: string; empresa: string | null } | null>(null);
   const { profiles } = useProfilesList();
   const [responsavelId, setResponsavelId] = useState<string>("none");
+  const isOutbound = pipe === "outbound";
+  const [outboundTag, setOutboundTag] = useState<string>("");
+  const [outboundTagColor, setOutboundTagColor] = useState<string>("#3B82F6");
+  const [outboundObs, setOutboundObs] = useState<string>("");
 
   // Update mode state
   const [matchKey, setMatchKey] = useState<UpdateMatchKey>("email");
