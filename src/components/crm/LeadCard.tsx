@@ -170,6 +170,18 @@ export const LeadCard = ({
                 {temp.emoji} {lead.temperatura}
               </span>
             )}
+            {lead.pipe === "outbound" && lead.outbound_tag && (
+              <span
+                className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-bold tracking-wider uppercase"
+                style={{
+                  backgroundColor: `${lead.outbound_tag_color || "#3B82F6"}22`,
+                  color: lead.outbound_tag_color || "#3B82F6",
+                  borderColor: `${lead.outbound_tag_color || "#3B82F6"}66`,
+                }}
+              >
+                {lead.outbound_tag}
+              </span>
+            )}
             {showStageDays && stageDays > 0 && (
               <span className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide bg-amber-500/10 text-amber-300 border-amber-500/30 tabular-nums">
                 Dia {stageDays}
