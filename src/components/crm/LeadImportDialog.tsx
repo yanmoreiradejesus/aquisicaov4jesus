@@ -252,6 +252,21 @@ export const LeadImportDialog = ({ open, onOpenChange, onOpenExport }: Props) =>
 
           {!result && !updateResult && (
             <>
+              {mode === "create" && (
+                <div className="rounded-lg border border-border/50 bg-surface-2/40 p-3 space-y-1.5">
+                  <Label className="text-xs">Responsável padrão para os novos leads</Label>
+                  <Select value={responsavelId} onValueChange={setResponsavelId}>
+                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem responsável</SelectItem>
+                      {profiles.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{profileLabel(p)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-muted-foreground">Será atribuído a todos os leads desta importação.</p>
+                </div>
+              )}
               <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/40 transition-colors">
                 <FileSpreadsheet className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
                 <p className="text-sm text-muted-foreground mb-3">
