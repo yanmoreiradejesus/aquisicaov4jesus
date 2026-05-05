@@ -403,6 +403,8 @@ export type Database = {
           nome_produto: string | null
           notas: string | null
           origem: string | null
+          outbound_tag: string | null
+          outbound_tag_color: string | null
           pais: string | null
           pesquisa_pre_qualificacao: Json | null
           pipe: Database["public"]["Enums"]["lead_pipe"]
@@ -447,6 +449,8 @@ export type Database = {
           nome_produto?: string | null
           notas?: string | null
           origem?: string | null
+          outbound_tag?: string | null
+          outbound_tag_color?: string | null
           pais?: string | null
           pesquisa_pre_qualificacao?: Json | null
           pipe?: Database["public"]["Enums"]["lead_pipe"]
@@ -491,6 +495,8 @@ export type Database = {
           nome_produto?: string | null
           notas?: string | null
           origem?: string | null
+          outbound_tag?: string | null
+          outbound_tag_color?: string | null
           pais?: string | null
           pesquisa_pre_qualificacao?: Json | null
           pipe?: Database["public"]["Enums"]["lead_pipe"]
