@@ -280,7 +280,7 @@ export const LeadDialog = ({ open, onOpenChange, lead, pipe, onSave, onDelete }:
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          {form.etapa === "desqualificado" && (
             <div className="space-y-1.5 md:col-span-2">
               <Label>Motivo da desqualificação</Label>
               <Input value={form.motivo_desqualificacao ?? ""} onChange={(e) => set("motivo_desqualificacao", e.target.value)} />
