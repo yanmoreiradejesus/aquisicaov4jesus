@@ -28,6 +28,7 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onOpenExport?: () => void;
+  pipe?: "inbound" | "outbound";
 }
 
 type Mode = "create" | "update";
