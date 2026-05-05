@@ -114,6 +114,12 @@ export const LeadsFilterPopover = ({ filters, onChange, leads }: Props) => {
             options={LEAD_ETAPAS.map((e) => ({ value: e.id, label: e.label }))}
             onChange={(v) => update({ etapa: v })}
           />
+          <FilterSelect
+            label="Responsável pelo lead"
+            value={filters.responsavel}
+            options={uniques.responsavel}
+            onChange={(v) => update({ responsavel: v })}
+          />
           <FilterSelect label="Origem" value={filters.origem} options={uniques.origem} onChange={(v) => update({ origem: v })} />
           <FilterSelect label="Canal" value={filters.canal} options={uniques.canal} onChange={(v) => update({ canal: v })} />
           <FilterSelect label="Tier" value={filters.tier} options={uniques.tier} onChange={(v) => update({ tier: v })} />
