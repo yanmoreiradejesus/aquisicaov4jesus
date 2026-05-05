@@ -316,13 +316,26 @@ export function CloserCopilot({ oportunidadeId }: CloserCopilotProps) {
 
   return (
     <div
-      className="flex flex-col h-[640px] rounded-2xl overflow-hidden border border-white/5"
+      onDragEnter={onDragEnter}
+      onDragLeave={onDragLeave}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      className="relative flex flex-col h-[640px] rounded-2xl overflow-hidden border border-white/5"
       style={{
         background: "#000000",
         fontFamily:
           '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif',
       }}
     >
+      {isDragging && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#007AFF]/20 border-2 border-dashed border-[#007AFF] rounded-2xl pointer-events-none">
+          <div className="text-center">
+            <ImageIcon className="h-10 w-10 mx-auto text-[#0A84FF] mb-2" />
+            <p className="text-[14px] font-semibold text-white">Solte os arquivos aqui</p>
+            <p className="text-[11px] text-white/60">Imagens ou PDFs · até 20MB</p>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/5 bg-black/80 backdrop-blur-md">
         <div className="flex items-center gap-2.5">
