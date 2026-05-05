@@ -316,6 +316,7 @@ const CrmLeads = () => {
       <LeadImportDialog
         open={importOpen}
         onOpenChange={setImportOpen}
+        pipe={pipe}
         onOpenExport={() => { setImportOpen(false); setExportOpen(true); }}
       />
 

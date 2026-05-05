@@ -28,6 +28,7 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onOpenExport?: () => void;
+  pipe?: "inbound" | "outbound";
 }
 
 type Mode = "create" | "update";
@@ -41,7 +42,7 @@ const FIELD_LABELS: Record<UpdateField, string> = {
   data_criacao_origem: "data de cadastro original",
 };
 
-export const LeadImportDialog = ({ open, onOpenChange, onOpenExport }: Props) => {
+export const LeadImportDialog = ({ open, onOpenChange, onOpenExport, pipe = "inbound" }: Props) => {
   const [mode, setMode] = useState<Mode>("create");
   const [file, setFile] = useState<File | null>(null);
   const [parsed, setParsed] = useState<CsvLeadRow[] | null>(null);
@@ -53,6 +54,10 @@ export const LeadImportDialog = ({ open, onOpenChange, onOpenExport }: Props) =>
   const [lastImport, setLastImport] = useState<{ created_at: string; nome: string; empresa: string | null } | null>(null);
   const { profiles } = useProfilesList();
   const [responsavelId, setResponsavelId] = useState<string>("none");
+  const isOutbound = pipe === "outbound";
+  const [outboundTag, setOutboundTag] = useState<string>("");
+  const [outboundTagColor, setOutboundTagColor] = useState<string>("#3B82F6");
+  const [outboundObs, setOutboundObs] = useState<string>("");
 
   // Update mode state
   const [matchKey, setMatchKey] = useState<UpdateMatchKey>("email");
@@ -129,7 +134,15 @@ export const LeadImportDialog = ({ open, onOpenChange, onOpenExport }: Props) =>
     setLoading(true);
     try {
       const respId = responsavelId !== "none" ? responsavelId : undefined;
-      const r = await importLeads(parsed, respId);
+      const outboundExtras = isOutbound
+        ? {
+            pipe: "outbound" as const,
+            outbound_tag: outboundTag.trim() ? outboundTag.trim().slice(0, 6) : null,
+            outbound_tag_color: outboundTag.trim() ? outboundTagColor : null,
+            descricaoExtra: outboundObs.trim() || null,
+          }
+        : undefined;
+      const r = await importLeads(parsed, respId, outboundExtras);
       setResult(r);
       qc.invalidateQueries({ queryKey: ["crm_leads"] });
       toast({
@@ -265,6 +278,53 @@ export const LeadImportDialog = ({ open, onOpenChange, onOpenExport }: Props) =>
                     </SelectContent>
                   </Select>
                   <p className="text-[11px] text-muted-foreground">Será atribuído a todos os leads desta importação.</p>
+                </div>
+              )}
+
+              {mode === "create" && isOutbound && (
+                <div className="rounded-lg border border-border/50 bg-surface-2/40 p-3 space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Tag (até 6 caracteres)</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={outboundTag}
+                          maxLength={6}
+                          onChange={(e) => setOutboundTag(e.target.value.slice(0, 6))}
+                          placeholder="Ex: LIST01"
+                          className="h-9 uppercase"
+                        />
+                        <input
+                          type="color"
+                          value={outboundTagColor}
+                          onChange={(e) => setOutboundTagColor(e.target.value)}
+                          className="h-9 w-12 rounded border border-border bg-transparent cursor-pointer"
+                          title="Cor da tag"
+                        />
+                      </div>
+                      {outboundTag.trim() && (
+                        <span
+                          className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-md border"
+                          style={{
+                            backgroundColor: `${outboundTagColor}22`,
+                            color: outboundTagColor,
+                            borderColor: `${outboundTagColor}66`,
+                          }}
+                        >
+                          {outboundTag.toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Observação (vai para a descrição do lead)</Label>
+                      <Input
+                        value={outboundObs}
+                        onChange={(e) => setOutboundObs(e.target.value)}
+                        placeholder="Ex: lista importada do evento X"
+                        className="h-9"
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
               <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/40 transition-colors">

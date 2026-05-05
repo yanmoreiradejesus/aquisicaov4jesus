@@ -460,6 +460,30 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
               <HoverEditField label="Descrição" value={form.descricao ?? ""} onChange={(v) => set("descricao", v)} multiline />
               <HoverEditField label="Notas internas" value={form.notas ?? ""} onChange={(v) => set("notas", v)} multiline />
 
+              <div className="flex items-start justify-between gap-3 py-2 border-b border-border/30">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1">
+                    Responsável
+                  </p>
+                  <Select
+                    value={form.responsavel_id ?? "none"}
+                    onValueChange={(v) => set("responsavel_id", v === "none" ? null : v)}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder="Sem responsável" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem responsável</SelectItem>
+                      {profiles.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.full_name || p.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <div className="group flex items-start justify-between gap-3 py-2 border-b border-border/30 last:border-0">
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1">

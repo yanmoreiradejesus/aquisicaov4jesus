@@ -169,7 +169,16 @@ export interface ImportResult {
  * Dedupe: (lower(email), data_criacao_origem). Linhas sem email OU sem data_criacao_origem
  * não passam pelo índice único e podem cair como duplicado lógico — checamos antes.
  */
-export async function importLeads(rows: CsvLeadRow[], responsavelId?: string): Promise<ImportResult> {
+export async function importLeads(
+  rows: CsvLeadRow[],
+  responsavelId?: string,
+  outboundExtras?: {
+    pipe: "outbound";
+    outbound_tag: string | null;
+    outbound_tag_color: string | null;
+    descricaoExtra: string | null;
+  },
+): Promise<ImportResult> {
   if (rows.length === 0) {
     return { total: 0, inserted: 0, duplicates: 0, errors: 0, duplicateRows: [] };
   }
@@ -212,10 +221,24 @@ export async function importLeads(rows: CsvLeadRow[], responsavelId?: string): P
   let errors = 0;
 
   if (toInsert.length > 0) {
-    const withResp = (r: any) => (responsavelId ? { ...r, responsavel_id: responsavelId } : r);
+    const decorate = (r: any) => {
+      const out: any = { ...r };
+      if (responsavelId) out.responsavel_id = responsavelId;
+      if (outboundExtras) {
+        out.pipe = outboundExtras.pipe;
+        out.outbound_tag = outboundExtras.outbound_tag;
+        out.outbound_tag_color = outboundExtras.outbound_tag_color;
+        if (outboundExtras.descricaoExtra) {
+          out.descricao = out.descricao
+            ? `${out.descricao}\n${outboundExtras.descricaoExtra}`
+            : outboundExtras.descricaoExtra;
+        }
+      }
+      return out;
+    };
     // insere em chunks de 100; em caso de violação do índice único, conta como duplicado
     for (let i = 0; i < toInsert.length; i += 100) {
-      const chunk = toInsert.slice(i, i + 100).map(withResp);
+      const chunk = toInsert.slice(i, i + 100).map(decorate);
       const { data, error } = await supabase.from("crm_leads").insert(chunk as any).select("id");
       if (error) {
         // tenta uma a uma para identificar duplicatas vs erros reais
