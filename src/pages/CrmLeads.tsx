@@ -19,6 +19,7 @@ import { LeadsFilterPopover, EMPTY_FILTERS, type LeadFilters } from "@/component
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { usePersistedState } from "@/hooks/usePersistedState";
+import { useAuth } from "@/hooks/useAuth";
 
 const CrmLeads = () => {
   const { data: leads = [], isLoading, upsert, updateEtapa, remove } = useCrmLeads();
