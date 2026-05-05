@@ -212,9 +212,10 @@ export async function importLeads(rows: CsvLeadRow[], responsavelId?: string): P
   let errors = 0;
 
   if (toInsert.length > 0) {
+    const withResp = (r: any) => (responsavelId ? { ...r, responsavel_id: responsavelId } : r);
     // insere em chunks de 100; em caso de violação do índice único, conta como duplicado
     for (let i = 0; i < toInsert.length; i += 100) {
-      const chunk = toInsert.slice(i, i + 100);
+      const chunk = toInsert.slice(i, i + 100).map(withResp);
       const { data, error } = await supabase.from("crm_leads").insert(chunk as any).select("id");
       if (error) {
         // tenta uma a uma para identificar duplicatas vs erros reais
