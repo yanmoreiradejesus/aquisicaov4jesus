@@ -169,7 +169,7 @@ export interface ImportResult {
  * Dedupe: (lower(email), data_criacao_origem). Linhas sem email OU sem data_criacao_origem
  * não passam pelo índice único e podem cair como duplicado lógico — checamos antes.
  */
-export async function importLeads(rows: CsvLeadRow[]): Promise<ImportResult> {
+export async function importLeads(rows: CsvLeadRow[], responsavelId?: string): Promise<ImportResult> {
   if (rows.length === 0) {
     return { total: 0, inserted: 0, duplicates: 0, errors: 0, duplicateRows: [] };
   }
