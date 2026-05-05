@@ -51,6 +51,8 @@ export const LeadImportDialog = ({ open, onOpenChange, onOpenExport }: Props) =>
   const { toast } = useToast();
   const qc = useQueryClient();
   const [lastImport, setLastImport] = useState<{ created_at: string; nome: string; empresa: string | null } | null>(null);
+  const { profiles } = useProfilesList();
+  const [responsavelId, setResponsavelId] = useState<string>("none");
 
   // Update mode state
   const [matchKey, setMatchKey] = useState<UpdateMatchKey>("email");
