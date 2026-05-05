@@ -169,7 +169,7 @@ export interface ImportResult {
  * Dedupe: (lower(email), data_criacao_origem). Linhas sem email OU sem data_criacao_origem
  * não passam pelo índice único e podem cair como duplicado lógico — checamos antes.
  */
-export async function importLeads(rows: CsvLeadRow[]): Promise<ImportResult> {
+export async function importLeads(rows: CsvLeadRow[], responsavelId?: string): Promise<ImportResult> {
   if (rows.length === 0) {
     return { total: 0, inserted: 0, duplicates: 0, errors: 0, duplicateRows: [] };
   }
@@ -212,9 +212,10 @@ export async function importLeads(rows: CsvLeadRow[]): Promise<ImportResult> {
   let errors = 0;
 
   if (toInsert.length > 0) {
+    const withResp = (r: any) => (responsavelId ? { ...r, responsavel_id: responsavelId } : r);
     // insere em chunks de 100; em caso de violação do índice único, conta como duplicado
     for (let i = 0; i < toInsert.length; i += 100) {
-      const chunk = toInsert.slice(i, i + 100);
+      const chunk = toInsert.slice(i, i + 100).map(withResp);
       const { data, error } = await supabase.from("crm_leads").insert(chunk as any).select("id");
       if (error) {
         // tenta uma a uma para identificar duplicatas vs erros reais

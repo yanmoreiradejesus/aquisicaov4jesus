@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LEAD_ETAPAS } from "@/hooks/useCrmLeads";
 import { Trash2 } from "lucide-react";
+import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
 
 interface Props {
   open: boolean;
@@ -42,6 +43,7 @@ const formatBRL = (n: any) =>
 
 export const LeadDialog = ({ open, onOpenChange, lead, pipe, onSave, onDelete }: Props) => {
   const isOutbound = (lead?.pipe ?? pipe) === "outbound";
+  const { profiles } = useProfilesList();
 
   const [form, setForm] = useState<any>(empty);
   const [saving, setSaving] = useState(false);
@@ -264,6 +266,18 @@ export const LeadDialog = ({ open, onOpenChange, lead, pipe, onSave, onDelete }:
                 <SelectItem value="A">A</SelectItem>
                 <SelectItem value="B">B</SelectItem>
                 <SelectItem value="C">C</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5 md:col-span-2">
+            <Label>Responsável pelo lead</Label>
+            <Select value={form.responsavel_id ?? "none"} onValueChange={(v) => set("responsavel_id", v === "none" ? null : v)}>
+              <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sem responsável</SelectItem>
+                {profiles.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{profileLabel(p)}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

@@ -19,11 +19,27 @@ import { LeadsFilterPopover, EMPTY_FILTERS, type LeadFilters } from "@/component
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { usePersistedState } from "@/hooks/usePersistedState";
+import { useAuth } from "@/hooks/useAuth";
 
 const CrmLeads = () => {
   const { data: leads = [], isLoading, upsert, updateEtapa, remove } = useCrmLeads();
+  const { user, profile } = useAuth();
   const [search, setSearch] = usePersistedState<string>("crm:leads:search", "");
   const [filters, setFilters] = usePersistedState<LeadFilters>("crm:leads:filters", EMPTY_FILTERS);
+  const [filtersInitialized, setFiltersInitialized] = useState(false);
+
+  // Default: SDR/BDR vê apenas seus próprios leads (uma vez por sessão)
+  useEffect(() => {
+    if (filtersInitialized) return;
+    if (!user || !profile) return;
+    const cargo = (profile.cargo || "").toUpperCase();
+    const isSdr = cargo.includes("SDR") || cargo.includes("BDR");
+    if (isSdr && filters.responsavel === "all") {
+      setFilters({ ...filters, responsavel: user.id });
+    }
+    setFiltersInitialized(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, profile]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
