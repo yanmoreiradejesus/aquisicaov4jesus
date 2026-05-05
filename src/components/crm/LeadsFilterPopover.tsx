@@ -41,21 +41,32 @@ interface Props {
 }
 
 export const LeadsFilterPopover = ({ filters, onChange, leads }: Props) => {
+  const { profiles } = useProfilesList();
   const uniques = useMemo(() => {
     const get = (key: string) =>
       Array.from(new Set(leads.map((l: any) => l[key]).filter((v: any) => v && String(v).trim())))
         .sort()
         .map((v) => String(v));
+
+    const respIds = new Set<string>();
+    leads.forEach((l: any) => { if (l.responsavel_id) respIds.add(l.responsavel_id); });
+    const responsavel = Array.from(respIds)
+      .map((id) => {
+        const p = profiles.find((x) => x.id === id);
+        return { value: id, label: p ? profileLabel(p) : id };
+      })
+      .sort((a, b) => a.label.localeCompare(b.label));
+
     return {
       origem: get("origem"),
       canal: get("canal"),
       tier: get("tier"),
-      responsavel: get("responsavel_id"),
+      responsavel,
       temperatura: get("temperatura"),
       estado: get("estado"),
       segmento: get("segmento"),
     };
-  }, [leads]);
+  }, [leads, profiles]);
 
   const activeCount = Object.entries(filters).filter(([k, v]) => {
     if (k === "dateFrom" || k === "dateTo") return !!v;
