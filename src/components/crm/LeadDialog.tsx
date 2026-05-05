@@ -43,6 +43,7 @@ const formatBRL = (n: any) =>
 
 export const LeadDialog = ({ open, onOpenChange, lead, pipe, onSave, onDelete }: Props) => {
   const isOutbound = (lead?.pipe ?? pipe) === "outbound";
+  const { profiles } = useProfilesList();
 
   const [form, setForm] = useState<any>(empty);
   const [saving, setSaving] = useState(false);
