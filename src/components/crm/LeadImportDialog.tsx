@@ -134,7 +134,15 @@ export const LeadImportDialog = ({ open, onOpenChange, onOpenExport, pipe = "inb
     setLoading(true);
     try {
       const respId = responsavelId !== "none" ? responsavelId : undefined;
-      const r = await importLeads(parsed, respId);
+      const outboundExtras = isOutbound
+        ? {
+            pipe: "outbound" as const,
+            outbound_tag: outboundTag.trim() ? outboundTag.trim().slice(0, 6) : null,
+            outbound_tag_color: outboundTag.trim() ? outboundTagColor : null,
+            descricaoExtra: outboundObs.trim() || null,
+          }
+        : undefined;
+      const r = await importLeads(parsed, respId, outboundExtras);
       setResult(r);
       qc.invalidateQueries({ queryKey: ["crm_leads"] });
       toast({
