@@ -79,8 +79,8 @@ export function parseLeadsCsv(file: File): Promise<CsvLeadRow[]> {
   return new Promise((resolve, reject) => {
     Papa.parse<Record<string, string>>(file, {
       header: true,
-      delimiter: ";",
       skipEmptyLines: true,
+      delimitersToGuess: [",", ";", "\t", "|"],
       transformHeader: (h) => h.replace(/^\ufeff/, "").trim(),
       complete: (res) => {
         try {
