@@ -280,6 +280,53 @@ export const LeadImportDialog = ({ open, onOpenChange, onOpenExport, pipe = "inb
                   <p className="text-[11px] text-muted-foreground">Será atribuído a todos os leads desta importação.</p>
                 </div>
               )}
+
+              {mode === "create" && isOutbound && (
+                <div className="rounded-lg border border-border/50 bg-surface-2/40 p-3 space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Tag (até 6 caracteres)</Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={outboundTag}
+                          maxLength={6}
+                          onChange={(e) => setOutboundTag(e.target.value.slice(0, 6))}
+                          placeholder="Ex: LIST01"
+                          className="h-9 uppercase"
+                        />
+                        <input
+                          type="color"
+                          value={outboundTagColor}
+                          onChange={(e) => setOutboundTagColor(e.target.value)}
+                          className="h-9 w-12 rounded border border-border bg-transparent cursor-pointer"
+                          title="Cor da tag"
+                        />
+                      </div>
+                      {outboundTag.trim() && (
+                        <span
+                          className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-md border"
+                          style={{
+                            backgroundColor: `${outboundTagColor}22`,
+                            color: outboundTagColor,
+                            borderColor: `${outboundTagColor}66`,
+                          }}
+                        >
+                          {outboundTag.toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Observação (vai para a descrição do lead)</Label>
+                      <Input
+                        value={outboundObs}
+                        onChange={(e) => setOutboundObs(e.target.value)}
+                        placeholder="Ex: lista importada do evento X"
+                        className="h-9"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/40 transition-colors">
                 <FileSpreadsheet className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
                 <p className="text-sm text-muted-foreground mb-3">
