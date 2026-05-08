@@ -13,6 +13,7 @@ import { LeadDialog } from "@/components/crm/LeadDialog";
 import { LeadDetailSheet } from "@/components/crm/LeadDetailSheet";
 import { LeadImportDialog } from "@/components/crm/LeadImportDialog";
 import { LeadExportDialog } from "@/components/crm/LeadExportDialog";
+import { LeadActivityReportDialog } from "@/components/crm/LeadActivityReportDialog";
 import { QualificacaoDialog } from "@/components/crm/QualificacaoDialog";
 import { DesqualificacaoDialog } from "@/components/crm/DesqualificacaoDialog";
 import { LeadsFilterPopover, EMPTY_FILTERS, type LeadFilters } from "@/components/crm/LeadsFilterPopover";
@@ -28,13 +29,11 @@ const CrmLeads = () => {
   const [filters, setFilters] = usePersistedState<LeadFilters>("crm:leads:filters", EMPTY_FILTERS);
   const [filtersInitialized, setFiltersInitialized] = useState(false);
 
-  // Default: SDR/BDR vê apenas seus próprios leads (uma vez por sessão)
+  // Default: todo usuário vê apenas seus próprios leads ao abrir o CRM (pode tirar nos filtros)
   useEffect(() => {
     if (filtersInitialized) return;
     if (!user || !profile) return;
-    const cargo = (profile.cargo || "").toUpperCase();
-    const isSdr = cargo.includes("SDR") || cargo.includes("BDR");
-    if (isSdr && filters.responsavel === "all") {
+    if (filters.responsavel === "all") {
       setFilters({ ...filters, responsavel: user.id });
     }
     setFiltersInitialized(true);
@@ -44,6 +43,7 @@ const CrmLeads = () => {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [qualOpen, setQualOpen] = useState(false);
   const [pendingMove, setPendingMove] = useState<{ lead: any; etapa: string } | null>(null);
@@ -318,7 +318,10 @@ const CrmLeads = () => {
         onOpenChange={setImportOpen}
         pipe={pipe}
         onOpenExport={() => { setImportOpen(false); setExportOpen(true); }}
+        onOpenReport={() => { setImportOpen(false); setReportOpen(true); }}
       />
+
+      <LeadActivityReportDialog open={reportOpen} onOpenChange={setReportOpen} />
 
       <LeadExportDialog
         open={exportOpen}

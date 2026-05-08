@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, History, Download, RefreshCw } from "lucide-react";
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, History, Download, RefreshCw, Activity } from "lucide-react";
 import {
   parseLeadsCsv,
   importLeads,
@@ -28,6 +28,7 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onOpenExport?: () => void;
+  onOpenReport?: () => void;
   pipe?: "inbound" | "outbound";
 }
 
@@ -42,7 +43,7 @@ const FIELD_LABELS: Record<UpdateField, string> = {
   data_criacao_origem: "data de cadastro original",
 };
 
-export const LeadImportDialog = ({ open, onOpenChange, onOpenExport, pipe = "inbound" }: Props) => {
+export const LeadImportDialog = ({ open, onOpenChange, onOpenExport, onOpenReport, pipe = "inbound" }: Props) => {
   const [mode, setMode] = useState<Mode>("create");
   const [file, setFile] = useState<File | null>(null);
   const [parsed, setParsed] = useState<CsvLeadRow[] | null>(null);
@@ -187,16 +188,28 @@ export const LeadImportDialog = ({ open, onOpenChange, onOpenExport, pipe = "inb
             <DialogTitle className="font-heading text-2xl tracking-wider uppercase">
               Importar / Atualizar leads
             </DialogTitle>
-            {onOpenExport && (
-              <button
-                onClick={onOpenExport}
-                className="shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground px-2 py-1 rounded-md hover:bg-muted/40 transition-colors"
-                title="Exportar leads em CSV"
-              >
-                <Download className="h-3 w-3" />
-                Exportar
-              </button>
-            )}
+            <div className="flex items-center gap-1">
+              {onOpenReport && (
+                <button
+                  onClick={onOpenReport}
+                  className="shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground px-2 py-1 rounded-md hover:bg-muted/40 transition-colors"
+                  title="Relatório de atividades do CRM"
+                >
+                  <Activity className="h-3 w-3" />
+                  Relatório
+                </button>
+              )}
+              {onOpenExport && (
+                <button
+                  onClick={onOpenExport}
+                  className="shrink-0 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground px-2 py-1 rounded-md hover:bg-muted/40 transition-colors"
+                  title="Exportar leads em CSV"
+                >
+                  <Download className="h-3 w-3" />
+                  Exportar
+                </button>
+              )}
+            </div>
           </div>
         </DialogHeader>
 
