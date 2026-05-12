@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import { LeadCard } from "./LeadCard";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -13,6 +14,9 @@ interface Props {
   defaultCollapsed?: boolean;
   onPhoneInteract?: (lead: any) => void;
   onOpenInNewTab?: (lead: any) => void;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
+  onToggleColumn?: (ids: string[], select: boolean) => void;
 }
 
 export const LeadColumn = ({
@@ -24,9 +28,17 @@ export const LeadColumn = ({
   defaultCollapsed = false,
   onPhoneInteract,
   onOpenInNewTab,
+  selectedIds,
+  onToggleSelect,
+  onToggleColumn,
 }: Props) => {
   const { setNodeRef, isOver } = useDroppable({ id });
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
+
+  const ids = leads.map((l) => l.id);
+  const selectedInColumn = selectedIds ? ids.filter((i) => selectedIds.has(i)).length : 0;
+  const allSelected = ids.length > 0 && selectedInColumn === ids.length;
+  const someSelected = selectedInColumn > 0 && !allSelected;
 
   if (collapsed) {
     return (
@@ -79,6 +91,14 @@ export const LeadColumn = ({
           >
             <ChevronLeft className="h-3.5 w-3.5" />
           </button>
+          {onToggleColumn && ids.length > 0 && (
+            <Checkbox
+              checked={allSelected ? true : someSelected ? "indeterminate" : false}
+              onCheckedChange={(v) => onToggleColumn(ids, !!v)}
+              className="h-3.5 w-3.5 shrink-0"
+              aria-label={`Selecionar todos em ${label}`}
+            />
+          )}
           <span className="font-display text-[11px] font-semibold uppercase tracking-[0.14em] truncate">
             {label}
           </span>
@@ -107,6 +127,8 @@ export const LeadColumn = ({
             showStageDays={id === "tentativa_contato"}
             onPhoneInteract={onPhoneInteract ? () => onPhoneInteract(lead) : undefined}
             onOpenInNewTab={onOpenInNewTab ? () => onOpenInNewTab(lead) : undefined}
+            selected={selectedIds?.has(lead.id)}
+            onToggleSelect={onToggleSelect ? () => onToggleSelect(lead.id) : undefined}
           />
         ))}
         {leads.length === 0 && (

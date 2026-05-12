@@ -21,24 +21,46 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { usePersistedState } from "@/hooks/usePersistedState";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { X, UserCog } from "lucide-react";
 
 const CrmLeads = () => {
   const { data: leads = [], isLoading, upsert, updateEtapa, remove } = useCrmLeads();
   const { user, profile } = useAuth();
   const [search, setSearch] = usePersistedState<string>("crm:leads:search", "");
   const [filters, setFilters] = usePersistedState<LeadFilters>("crm:leads:filters", EMPTY_FILTERS);
-  const [filtersInitialized, setFiltersInitialized] = useState(false);
+  // Marca que o default "meus leads" já foi aplicado nesta sessão para não reaplicar ao voltar
+  const [defaultApplied, setDefaultApplied] = usePersistedState<boolean>("crm:leads:defaultApplied", false);
 
-  // Default: todo usuário vê apenas seus próprios leads ao abrir o CRM (pode tirar nos filtros)
+  // Default: todo usuário vê apenas seus próprios leads APENAS na primeira inicialização da sessão.
+  // Depois disso, qualquer alteração de filtro (inclusive remover o filtro) é respeitada ao navegar.
   useEffect(() => {
-    if (filtersInitialized) return;
+    if (defaultApplied) return;
     if (!user || !profile) return;
     if (filters.responsavel === "all") {
       setFilters({ ...filters, responsavel: user.id });
     }
-    setFiltersInitialized(true);
+    setDefaultApplied(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, profile]);
+  }, [user, profile, defaultApplied]);
+
+  // Seleção múltipla para ações em massa
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const toggleSelect = (id: string) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  const setColumnSelection = (ids: string[], select: boolean) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => (select ? next.add(id) : next.delete(id)));
+      return next;
+    });
+  const clearSelection = () => setSelectedIds(new Set());
   const [dialogOpen, setDialogOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -171,6 +193,22 @@ const CrmLeads = () => {
     toast({ title: "Lead excluído" });
   };
 
+  const { profiles } = useProfilesList();
+  const handleBulkAssign = async (responsavelId: string) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    const { error } = await supabase
+      .from("crm_leads" as any)
+      .update({ responsavel_id: responsavelId })
+      .in("id", ids);
+    if (error) {
+      toast({ title: "Erro ao atribuir responsável", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: `${ids.length} lead(s) atualizados` });
+    clearSelection();
+  };
+
   const ToggleBtn = ({ value, icon: Icon, label }: { value: "kanban" | "tarefas"; icon: any; label: string }) => (
     <button
       onClick={() => setView(value)}
@@ -278,6 +316,9 @@ const CrmLeads = () => {
                     defaultCollapsed={etapa.id === "desqualificado"}
                     onPhoneInteract={handlePhoneInteract}
                     onOpenInNewTab={(l) => window.open(`/comercial/leads/${l.id}`, "_blank", "noopener,noreferrer")}
+                    selectedIds={selectedIds}
+                    onToggleSelect={toggleSelect}
+                    onToggleColumn={setColumnSelection}
                   />
                 ))}
               </div>
@@ -302,6 +343,34 @@ const CrmLeads = () => {
           />
         )}
       </main>
+
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2.5 rounded-2xl glass shadow-ios-xl border border-border/40 animate-fade-in">
+          <span className="text-xs font-semibold text-foreground tabular-nums">
+            {selectedIds.size} lead(s) selecionado(s)
+          </span>
+          <div className="flex items-center gap-1.5">
+            <UserCog className="h-3.5 w-3.5 text-muted-foreground" />
+            <Select onValueChange={handleBulkAssign}>
+              <SelectTrigger className="h-8 w-56 rounded-lg text-xs">
+                <SelectValue placeholder="Atribuir responsável..." />
+              </SelectTrigger>
+              <SelectContent>
+                {profiles.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{profileLabel(p)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <button
+            onClick={clearSelection}
+            className="p-1 rounded-md hover:bg-muted/40 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Limpar seleção"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
 
       <LeadDialog
         open={dialogOpen}
