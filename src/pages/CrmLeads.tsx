@@ -296,6 +296,9 @@ const CrmLeads = () => {
                     defaultCollapsed={etapa.id === "desqualificado"}
                     onPhoneInteract={handlePhoneInteract}
                     onOpenInNewTab={(l) => window.open(`/comercial/leads/${l.id}`, "_blank", "noopener,noreferrer")}
+                    selectedIds={selectedIds}
+                    onToggleSelect={toggleSelect}
+                    onToggleColumn={setColumnSelection}
                   />
                 ))}
               </div>
