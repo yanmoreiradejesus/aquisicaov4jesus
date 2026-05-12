@@ -27,18 +27,36 @@ const CrmLeads = () => {
   const { user, profile } = useAuth();
   const [search, setSearch] = usePersistedState<string>("crm:leads:search", "");
   const [filters, setFilters] = usePersistedState<LeadFilters>("crm:leads:filters", EMPTY_FILTERS);
-  const [filtersInitialized, setFiltersInitialized] = useState(false);
+  // Marca que o default "meus leads" já foi aplicado nesta sessão para não reaplicar ao voltar
+  const [defaultApplied, setDefaultApplied] = usePersistedState<boolean>("crm:leads:defaultApplied", false);
 
-  // Default: todo usuário vê apenas seus próprios leads ao abrir o CRM (pode tirar nos filtros)
+  // Default: todo usuário vê apenas seus próprios leads APENAS na primeira inicialização da sessão.
+  // Depois disso, qualquer alteração de filtro (inclusive remover o filtro) é respeitada ao navegar.
   useEffect(() => {
-    if (filtersInitialized) return;
+    if (defaultApplied) return;
     if (!user || !profile) return;
     if (filters.responsavel === "all") {
       setFilters({ ...filters, responsavel: user.id });
     }
-    setFiltersInitialized(true);
+    setDefaultApplied(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, profile]);
+  }, [user, profile, defaultApplied]);
+
+  // Seleção múltipla para ações em massa
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const toggleSelect = (id: string) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  const setColumnSelection = (ids: string[], select: boolean) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => (select ? next.add(id) : next.delete(id)));
+      return next;
+    });
+  const clearSelection = () => setSelectedIds(new Set());
   const [dialogOpen, setDialogOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
