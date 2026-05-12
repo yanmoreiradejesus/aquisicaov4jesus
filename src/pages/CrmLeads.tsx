@@ -193,6 +193,22 @@ const CrmLeads = () => {
     toast({ title: "Lead excluído" });
   };
 
+  const { profiles } = useProfilesList();
+  const handleBulkAssign = async (responsavelId: string) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    const { error } = await supabase
+      .from("crm_leads" as any)
+      .update({ responsavel_id: responsavelId })
+      .in("id", ids);
+    if (error) {
+      toast({ title: "Erro ao atribuir responsável", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: `${ids.length} lead(s) atualizados` });
+    clearSelection();
+  };
+
   const ToggleBtn = ({ value, icon: Icon, label }: { value: "kanban" | "tarefas"; icon: any; label: string }) => (
     <button
       onClick={() => setView(value)}
