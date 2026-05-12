@@ -48,6 +48,8 @@ export const LeadCard = ({
   showStageDays,
   onPhoneInteract,
   onOpenInNewTab,
+  selected,
+  onToggleSelect,
   overlay = false,
 }: Props & { overlay?: boolean }) => {
   const clickTimerRef = useRef<number | null>(null);
