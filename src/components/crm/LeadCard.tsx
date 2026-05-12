@@ -131,11 +131,34 @@ export const LeadCard = ({
           "group relative overflow-hidden rounded-xl border bg-surface-1/80 backdrop-blur-sm",
           overlay
             ? "border-primary/50 shadow-ios-xl ring-1 ring-primary/30 rotate-[1.5deg] scale-[1.04] cursor-grabbing"
-            : "border-border/50 card-lift shadow-ios-sm hover:border-primary/40 hover:bg-surface-2/80"
+            : "border-border/50 card-lift shadow-ios-sm hover:border-primary/40 hover:bg-surface-2/80",
+          selected && !overlay && "ring-2 ring-primary/60 border-primary/60"
         )}
       >
         {/* Accent strip */}
         <span className={cn("absolute left-0 top-0 bottom-0 w-[3px]", accent)} />
+
+        {/* Selection checkbox — visível no hover ou quando selecionado */}
+        {!overlay && onToggleSelect && (
+          <div
+            onClick={(e) => { e.stopPropagation(); e.preventDefault(); onToggleSelect(); }}
+            onPointerDown={(e) => e.stopPropagation()}
+            className={cn(
+              "absolute top-1.5 right-1.5 z-10 h-5 w-5 rounded-md border bg-background/90 backdrop-blur-sm flex items-center justify-center transition-opacity cursor-pointer",
+              selected
+                ? "opacity-100 border-primary bg-primary text-primary-foreground"
+                : "opacity-0 group-hover:opacity-100 border-border/60 hover:border-primary"
+            )}
+            title={selected ? "Desmarcar" : "Selecionar"}
+          >
+            {selected && (
+              <svg className="h-3 w-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 8 7 12 13 4" />
+              </svg>
+            )}
+          </div>
+        )}
+
 
         <div
           {...(overlay ? {} : listeners)}
