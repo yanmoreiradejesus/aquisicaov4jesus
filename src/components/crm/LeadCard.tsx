@@ -19,6 +19,8 @@ interface Props {
   showStageDays?: boolean;
   onPhoneInteract?: () => void;
   onOpenInNewTab?: () => void;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }
 
 const tempAccent: Record<string, string> = {
