@@ -92,12 +92,32 @@ export const LeadColumn = ({
             <ChevronLeft className="h-3.5 w-3.5" />
           </button>
           {onToggleColumn && ids.length > 0 && (
-            <Checkbox
-              checked={allSelected ? true : someSelected ? "indeterminate" : false}
-              onCheckedChange={(v) => onToggleColumn(ids, !!v)}
-              className="h-3.5 w-3.5 shrink-0"
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleColumn(ids, !allSelected);
+              }}
+              className={cn(
+                "h-4 w-4 rounded-md flex items-center justify-center shrink-0 transition-colors",
+                allSelected
+                  ? "bg-primary text-primary-foreground"
+                  : someSelected
+                  ? "bg-primary/60 text-primary-foreground"
+                  : "bg-foreground/10 hover:bg-foreground/20 text-transparent"
+              )}
               aria-label={`Selecionar todos em ${label}`}
-            />
+              title={allSelected ? "Desmarcar todos" : "Selecionar todos"}
+            >
+              {allSelected && (
+                <svg className="h-2.5 w-2.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 8 7 12 13 4" />
+                </svg>
+              )}
+              {someSelected && (
+                <span className="h-0.5 w-2 rounded bg-primary-foreground" />
+              )}
+            </button>
           )}
           <span className="font-display text-[11px] font-semibold uppercase tracking-[0.14em] truncate">
             {label}
