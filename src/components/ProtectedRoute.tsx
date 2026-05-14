@@ -21,7 +21,7 @@ export const ProtectedRoute = ({ children, requiredPath }: ProtectedRouteProps) 
     return <Navigate to="/login" replace />;
   }
 
-  if (!isApproved && !isAdmin) {
+  if (!isApproved && !isAdmin && profile) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center space-y-4">
