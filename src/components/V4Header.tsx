@@ -21,13 +21,16 @@ const V4Header = () => {
   const aquisicaoItems = [
     { path: "/aquisicao/dashboard", label: "Dashboard" },
     { path: "/aquisicao/funil", label: "Funil" },
-    { path: "/aquisicao/meta", label: "Meta" },
     { path: "/aquisicao/insights", label: "Insights" },
     { path: "/aquisicao/financeiro", label: "Financeiro" },
   ];
 
+  const legadoItems = [
+    { path: "/aquisicao/legado/funil", label: "Funil (Sheets)" },
+    { path: "/aquisicao/legado/meta", label: "Meta (Sheets)" },
+  ];
+
   const comercialItems = [
-    { path: "/comercial/funil-crm", label: "Funil CRM" },
     { path: "/comercial/leads", label: "Leads" },
     { path: "/comercial/oportunidades", label: "Oportunidades" },
     { path: "/comercial/onboarding", label: "Onboarding" },
