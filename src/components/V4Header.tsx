@@ -21,13 +21,16 @@ const V4Header = () => {
   const aquisicaoItems = [
     { path: "/aquisicao/dashboard", label: "Dashboard" },
     { path: "/aquisicao/funil", label: "Funil" },
-    { path: "/aquisicao/meta", label: "Meta" },
     { path: "/aquisicao/insights", label: "Insights" },
     { path: "/aquisicao/financeiro", label: "Financeiro" },
   ];
 
+  const legadoItems = [
+    { path: "/aquisicao/legado/funil", label: "Funil (Sheets)" },
+    { path: "/aquisicao/legado/meta", label: "Meta (Sheets)" },
+  ];
+
   const comercialItems = [
-    { path: "/comercial/funil-crm", label: "Funil CRM" },
     { path: "/comercial/leads", label: "Leads" },
     { path: "/comercial/oportunidades", label: "Oportunidades" },
     { path: "/comercial/onboarding", label: "Onboarding" },
@@ -35,7 +38,10 @@ const V4Header = () => {
     { path: "/comercial/cobrancas", label: "Cobranças" },
   ];
 
-  const isAquisicaoActive = aquisicaoItems.some((item) => isActive(item.path));
+  const visibleLegadoItems = legadoItems.filter((item) => hasPageAccess(item.path));
+  const isLegadoActive = legadoItems.some((item) => isActive(item.path));
+  const isAquisicaoActive =
+    aquisicaoItems.some((item) => isActive(item.path)) || isLegadoActive;
   const visibleAquisicaoItems = aquisicaoItems.filter((item) => hasPageAccess(item.path));
   const isComercialActive = comercialItems.some((item) => isActive(item.path));
   const visibleComercialItems = comercialItems.filter((item) => hasPageAccess(item.path));
@@ -134,7 +140,7 @@ const V4Header = () => {
 
             {/* Desktop nav */}
             <nav className="hidden md:flex items-center gap-0.5">
-              {visibleAquisicaoItems.length > 0 && (
+              {(visibleAquisicaoItems.length > 0 || visibleLegadoItems.length > 0) && (
                 <div className="relative" ref={dropdownRef}>
                   <button
                     onClick={() => setAquisicaoOpen(!aquisicaoOpen)}
@@ -147,7 +153,7 @@ const V4Header = () => {
                     {isAquisicaoActive && <ActiveDot />}
                   </button>
                   {aquisicaoOpen && (
-                    <div className="absolute top-full left-0 mt-2.5 min-w-[220px] z-50 rounded-2xl border border-white/[0.08] bg-popover/80 backdrop-blur-2xl backdrop-saturate-200 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.08)] p-1.5 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150">
+                    <div className="absolute top-full left-0 mt-2.5 min-w-[240px] z-50 rounded-2xl border border-white/[0.08] bg-popover/80 backdrop-blur-2xl backdrop-saturate-200 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.08)] p-1.5 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150">
                       {visibleAquisicaoItems.map((item) => (
                         <Link
                           key={item.path}
@@ -162,6 +168,28 @@ const V4Header = () => {
                           {item.label}
                         </Link>
                       ))}
+                      {visibleLegadoItems.length > 0 && (
+                        <>
+                          <div className="my-1.5 mx-3 h-px bg-white/[0.06]" />
+                          <div className="px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-widest text-foreground/40">
+                            Legado
+                          </div>
+                          {visibleLegadoItems.map((item) => (
+                            <Link
+                              key={item.path}
+                              to={item.path}
+                              onClick={() => setAquisicaoOpen(false)}
+                              className={`block px-3 py-2 rounded-xl font-body text-[13px] font-medium tracking-tight transition-all duration-150 ${
+                                isActive(item.path)
+                                  ? "bg-white/[0.08] text-foreground"
+                                  : "text-foreground/65 hover:bg-white/[0.05] hover:text-foreground"
+                              }`}
+                            >
+                              {item.label}
+                            </Link>
+                          ))}
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -290,7 +318,7 @@ const V4Header = () => {
             </div>
 
             <nav className="flex-1 overflow-auto py-2">
-              {visibleAquisicaoItems.length > 0 && (
+              {(visibleAquisicaoItems.length > 0 || visibleLegadoItems.length > 0) && (
                 <div className="px-3 py-2">
                   <span className="px-3 text-foreground/40 text-[10px] font-semibold uppercase tracking-widest">
                     Data Analytics
@@ -309,6 +337,26 @@ const V4Header = () => {
                         {item.label}
                       </Link>
                     ))}
+                    {visibleLegadoItems.length > 0 && (
+                      <>
+                        <div className="px-3 pt-3 pb-1 text-foreground/40 text-[10px] font-semibold uppercase tracking-widest">
+                          Legado
+                        </div>
+                        {visibleLegadoItems.map((item) => (
+                          <Link
+                            key={item.path}
+                            to={item.path}
+                            className={`block px-3 py-2 rounded-xl text-[13px] font-medium transition-colors ${
+                              isActive(item.path)
+                                ? "bg-white/[0.08] text-foreground"
+                                : "text-foreground/65 hover:bg-white/[0.05] hover:text-foreground"
+                            }`}
+                          >
+                            {item.label}
+                          </Link>
+                        ))}
+                      </>
+                    )}
                   </div>
                 </div>
               )}

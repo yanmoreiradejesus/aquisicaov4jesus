@@ -23,7 +23,7 @@ import LeadDetailPage from "./pages/LeadDetailPage";
 import OportunidadeDetailPage from "./pages/OportunidadeDetailPage";
 import OnboardingDetailPage from "./pages/OnboardingDetailPage";
 import ComercialPlaceholder from "./pages/ComercialPlaceholder";
-import FunilCrm from "./pages/FunilCrm";
+import FunilAnalytics from "./pages/FunilAnalytics";
 import GoogleCallback from "./pages/GoogleCallback";
 
 // Routes that should NOT render the persistent V4Header
@@ -60,7 +60,7 @@ const AppRoutes = () => {
         <Route path="/aquisicao" element={<Navigate to="/aquisicao/funil" replace />} />
         <Route path="/aquisicao/funil" element={
           <ProtectedRoute requiredPath="/aquisicao/funil">
-            <PageTransition><Index /></PageTransition>
+            <PageTransition><FunilAnalytics /></PageTransition>
           </ProtectedRoute>
         } />
         <Route path="/aquisicao/dashboard" element={
@@ -73,31 +73,36 @@ const AppRoutes = () => {
             <PageTransition><Insights /></PageTransition>
           </ProtectedRoute>
         } />
-        <Route path="/aquisicao/meta" element={
-          <ProtectedRoute requiredPath="/aquisicao/meta">
-            <PageTransition><MixCompra /></PageTransition>
-          </ProtectedRoute>
-        } />
         <Route path="/aquisicao/financeiro" element={
           <ProtectedRoute requiredPath="/aquisicao/financeiro">
             <PageTransition><Financeiro /></PageTransition>
           </ProtectedRoute>
         } />
 
+        {/* Legado (Sheets) — submenu Data Analytics */}
+        <Route path="/aquisicao/legado/funil" element={
+          <ProtectedRoute requiredPath="/aquisicao/legado/funil">
+            <PageTransition><Index /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/aquisicao/legado/meta" element={
+          <ProtectedRoute requiredPath="/aquisicao/legado/meta">
+            <PageTransition><MixCompra /></PageTransition>
+          </ProtectedRoute>
+        } />
+
         {/* Legacy redirects — keep saved links working */}
+        <Route path="/aquisicao/meta" element={<Navigate to="/aquisicao/legado/meta" replace />} />
         <Route path="/dashboard-comercial" element={<Navigate to="/aquisicao/dashboard" replace />} />
         <Route path="/insights" element={<Navigate to="/aquisicao/insights" replace />} />
-        <Route path="/mix-compra" element={<Navigate to="/aquisicao/meta" replace />} />
-        <Route path="/metas" element={<Navigate to="/aquisicao/meta" replace />} />
+        <Route path="/mix-compra" element={<Navigate to="/aquisicao/legado/meta" replace />} />
+        <Route path="/metas" element={<Navigate to="/aquisicao/legado/meta" replace />} />
         <Route path="/financeiro" element={<Navigate to="/aquisicao/financeiro" replace />} />
 
         {/* Comercial app */}
         <Route path="/comercial" element={<Navigate to="/comercial/leads" replace />} />
-        <Route path="/comercial/funil-crm" element={
-          <ProtectedRoute requiredPath="/comercial/funil-crm">
-            <PageTransition><FunilCrm /></PageTransition>
-          </ProtectedRoute>
-        } />
+        {/* Funil CRM promovido para Data Analytics — mantém redirect */}
+        <Route path="/comercial/funil-crm" element={<Navigate to="/aquisicao/funil" replace />} />
         <Route path="/comercial/leads" element={
           <ProtectedRoute requiredPath="/comercial/leads">
             <PageTransition><CrmLeads /></PageTransition>
