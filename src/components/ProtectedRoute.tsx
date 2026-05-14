@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children, requiredPath }: ProtectedRouteProps) => {
-  const { user, loading, isApproved, isAdmin, hasPageAccess } = useAuth();
+  const { user, profile, loading, isApproved, isAdmin, hasPageAccess } = useAuth();
 
   if (loading) {
     return (
