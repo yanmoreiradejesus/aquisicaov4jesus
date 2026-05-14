@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children, requiredPath }: ProtectedRouteProps) => {
-  const { user, profile, loading, isApproved, isAdmin, hasPageAccess } = useAuth();
+  const { user, profile, loading, isApproved, isAdmin, hasPageAccess, authResolved } = useAuth();
 
   if (loading) {
     return (
@@ -21,7 +21,7 @@ export const ProtectedRoute = ({ children, requiredPath }: ProtectedRouteProps) 
     return <Navigate to="/login" replace />;
   }
 
-  if (!isApproved && !isAdmin && profile) {
+  if (authResolved && !isApproved && !isAdmin && profile) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center space-y-4">
