@@ -21,6 +21,8 @@ interface AuthState {
   isApproved: boolean;
   allowedPages: string[];
   loading: boolean;
+  /** true só após pelo menos uma busca completa e bem-sucedida */
+  authResolved: boolean;
 }
 
 const initialState: AuthState = {
@@ -30,6 +32,7 @@ const initialState: AuthState = {
   isApproved: false,
   allowedPages: [],
   loading: true,
+  authResolved: false,
 };
 
 export function useAuth() {
@@ -44,34 +47,32 @@ export function useAuth() {
         supabase.from("user_page_access").select("page_path").eq("user_id", user.id),
       ]);
 
-      // Se houve erro de rede em qualquer query, tenta novamente sem rebaixar o estado
-      const hasNetworkError =
-        (profileRes.error && profileRes.error.message?.includes("fetch")) ||
-        (rolesRes.error && rolesRes.error.message?.includes("fetch")) ||
-        (accessRes.error && accessRes.error.message?.includes("fetch"));
+      const anyError = !!(profileRes.error || rolesRes.error || accessRes.error);
 
-      if (hasNetworkError && attempt < 3) {
-        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+      // Retry em caso de qualquer erro, até 4 tentativas com backoff
+      if (anyError && attempt < 4) {
+        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
         return fetchUserData(user, attempt + 1);
+      }
+
+      // Após esgotar tentativas com erro, NÃO rebaixa o estado: preserva o anterior
+      if (anyError) {
+        setState((prev) => ({ ...prev, user, loading: false }));
+        return;
       }
 
       const profile = (profileRes.data as Profile | null) ?? null;
       const isAdmin = rolesRes.data?.some((r: any) => r.role === "admin") ?? false;
       const allowedPages = accessRes.data?.map((a: any) => a.page_path) ?? [];
 
-      setState((prev) => {
-        // Se as queries falharam mas já temos dados anteriores válidos para esse user, preserva
-        if (!profile && !rolesRes.data && prev.user?.id === user.id && prev.profile) {
-          return { ...prev, user, loading: false };
-        }
-        return {
-          user,
-          profile: profile ?? prev.profile,
-          isAdmin: isAdmin || (rolesRes.error ? prev.isAdmin : false),
-          isApproved: profile?.approved ?? (profileRes.error ? prev.isApproved : false),
-          allowedPages: accessRes.error ? prev.allowedPages : allowedPages,
-          loading: false,
-        };
+      setState({
+        user,
+        profile,
+        isAdmin,
+        isApproved: profile?.approved ?? false,
+        allowedPages,
+        loading: false,
+        authResolved: true,
       });
     },
     []
@@ -82,7 +83,6 @@ export function useAuth() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        // Evita refetch redundante para o mesmo usuário em TOKEN_REFRESHED
         if (
           event === "TOKEN_REFRESHED" &&
           fetchedForUserRef.current === session.user.id
