@@ -38,7 +38,10 @@ const V4Header = () => {
     { path: "/comercial/cobrancas", label: "Cobranças" },
   ];
 
-  const isAquisicaoActive = aquisicaoItems.some((item) => isActive(item.path));
+  const visibleLegadoItems = legadoItems.filter((item) => hasPageAccess(item.path));
+  const isLegadoActive = legadoItems.some((item) => isActive(item.path));
+  const isAquisicaoActive =
+    aquisicaoItems.some((item) => isActive(item.path)) || isLegadoActive;
   const visibleAquisicaoItems = aquisicaoItems.filter((item) => hasPageAccess(item.path));
   const isComercialActive = comercialItems.some((item) => isActive(item.path));
   const visibleComercialItems = comercialItems.filter((item) => hasPageAccess(item.path));
