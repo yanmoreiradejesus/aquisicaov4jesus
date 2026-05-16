@@ -205,9 +205,8 @@ export function LeadCallEventsList({ leadId }: Props) {
                 </div>
                 {(() => {
                   const src = audioSrc(e);
-                  const tooShort = (e.duracao_seg ?? 0) < 3;
-                  if (tooShort) return null;
-                  if (src) {
+                  const tooShort = (e.duracao_seg ?? 0) > 0 && (e.duracao_seg ?? 0) < 3;
+                  if (src && !tooShort) {
                     return (
                       <>
                         <audio
@@ -220,8 +219,9 @@ export function LeadCallEventsList({ leadId }: Props) {
                       </>
                     );
                   }
-                  // Sem gravação ainda — oferece botão para forçar busca (apenas 3cplus com call_id)
-                  if (e.provider === "3cplus" && e.call_id) {
+                  // Sem gravação ainda — oferece botão para forçar busca (apenas 3cplus com call_id),
+                  // mesmo quando duracao_seg = 0 (evento inicial sem dados completos).
+                  if (e.provider === "3cplus" && e.call_id && !src) {
                     return <FetchRecordingButton event={e} />;
                   }
                   return null;
