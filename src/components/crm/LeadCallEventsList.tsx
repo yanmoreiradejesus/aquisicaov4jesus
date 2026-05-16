@@ -144,8 +144,9 @@ export function LeadCallEventsList({ leadId }: Props) {
     return (
       <div>
         {headerControls}
-        <div className="text-xs text-muted-foreground border border-dashed border-border/40 rounded-lg px-3 py-4 text-center">
-          Nenhuma ligação registrada ainda.
+        <div className="text-xs text-muted-foreground border border-dashed border-border/40 rounded-lg px-3 py-4 text-center space-y-2">
+          <div>Nenhuma ligação registrada ainda.</div>
+          <ForceFetchByLeadButton leadId={leadId} />
         </div>
       </div>
     );
@@ -154,6 +155,9 @@ export function LeadCallEventsList({ leadId }: Props) {
   return (
     <div>
       {headerControls}
+      <div className="flex justify-end mb-2">
+        <ForceFetchByLeadButton leadId={leadId} />
+      </div>
       <div className="space-y-2">
         {history.map((e) => {
           const v = statusVariant(e.status);
@@ -205,9 +209,8 @@ export function LeadCallEventsList({ leadId }: Props) {
                 </div>
                 {(() => {
                   const src = audioSrc(e);
-                  const tooShort = (e.duracao_seg ?? 0) < 3;
-                  if (tooShort) return null;
-                  if (src) {
+                  const tooShort = (e.duracao_seg ?? 0) > 0 && (e.duracao_seg ?? 0) < 3;
+                  if (src && !tooShort) {
                     return (
                       <>
                         <audio
@@ -220,8 +223,9 @@ export function LeadCallEventsList({ leadId }: Props) {
                       </>
                     );
                   }
-                  // Sem gravação ainda — oferece botão para forçar busca (apenas 3cplus com call_id)
-                  if (e.provider === "3cplus" && e.call_id) {
+                  // Sem gravação ainda — oferece botão para forçar busca (apenas 3cplus com call_id),
+                  // mesmo quando duracao_seg = 0 (evento inicial sem dados completos).
+                  if (e.provider === "3cplus" && e.call_id && !src) {
                     return <FetchRecordingButton event={e} />;
                   }
                   return null;
@@ -367,6 +371,51 @@ function FetchRecordingButton({ event }: { event: CallEvent }) {
     >
       <RefreshCw className={`h-3 w-3 mr-1 ${loading ? "animate-spin" : ""}`} />
       {loading ? "Buscando…" : "Buscar gravação"}
+    </Button>
+  );
+}
+
+function ForceFetchByLeadButton({ leadId }: { leadId: string }) {
+  const [loading, setLoading] = useState(false);
+  const qc = useQueryClient();
+
+  const handle = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("link-3cplus-calls-to-lead", {
+        body: { lead_id: leadId },
+      });
+      if (error) throw error;
+      if (data?.ok) {
+        const linked = data.linked ?? 0;
+        const recs = data.recordings_found ?? 0;
+        const total = data.total_found ?? 0;
+        if (total === 0) {
+          toast.info("Nenhuma chamada encontrada na 3CPlus para o telefone deste lead");
+        } else {
+          toast.success(`${linked} chamada(s) vinculada(s) · ${recs} gravação(ões) recuperada(s)`);
+        }
+        qc.invalidateQueries({ queryKey: ["crm_call_events"] });
+      } else {
+        toast.error(data?.error ?? "Falha ao buscar chamadas");
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao buscar chamadas");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      className="h-7 px-2 text-[11px]"
+      onClick={handle}
+      disabled={loading}
+    >
+      <RefreshCw className={`h-3 w-3 mr-1 ${loading ? "animate-spin" : ""}`} />
+      {loading ? "Buscando na 3CPlus…" : "Forçar busca na 3CPlus"}
     </Button>
   );
 }
