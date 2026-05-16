@@ -144,8 +144,9 @@ export function LeadCallEventsList({ leadId }: Props) {
     return (
       <div>
         {headerControls}
-        <div className="text-xs text-muted-foreground border border-dashed border-border/40 rounded-lg px-3 py-4 text-center">
-          Nenhuma ligação registrada ainda.
+        <div className="text-xs text-muted-foreground border border-dashed border-border/40 rounded-lg px-3 py-4 text-center space-y-2">
+          <div>Nenhuma ligação registrada ainda.</div>
+          <ForceFetchByLeadButton leadId={leadId} />
         </div>
       </div>
     );
@@ -154,6 +155,9 @@ export function LeadCallEventsList({ leadId }: Props) {
   return (
     <div>
       {headerControls}
+      <div className="flex justify-end mb-2">
+        <ForceFetchByLeadButton leadId={leadId} />
+      </div>
       <div className="space-y-2">
         {history.map((e) => {
           const v = statusVariant(e.status);
