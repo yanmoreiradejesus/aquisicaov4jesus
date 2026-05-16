@@ -17,7 +17,8 @@ interface Props {
 }
 
 function audioSrc(e: CallEvent): string | null {
-  if (!e.gravacao_url && !e.call_id) return null;
+  // Só renderiza áudio quando confirmamos que a gravação existe (gravacao_url preenchida).
+  if (!e.gravacao_url) return null;
   // 3CPlus exige Bearer token — usar proxy backend
   if (e.provider === "3cplus" && e.call_id) {
     return `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/play-3cplus-recording?call_id=${encodeURIComponent(e.call_id)}`;
