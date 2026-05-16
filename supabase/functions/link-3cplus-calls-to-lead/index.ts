@@ -40,6 +40,13 @@ function fmtDate(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
+function readCallList(json: any): any[] {
+  if (Array.isArray(json)) return json;
+  if (Array.isArray(json?.data)) return json.data;
+  if (Array.isArray(json?.data?.data)) return json.data.data;
+  return [];
+}
+
 async function checkRecording(token: string, callId: string): Promise<string | null> {
   const url = `https://app.3c.plus/api/v1/calls/${callId}/recording`;
   try {
@@ -63,30 +70,36 @@ async function searchCallsByPhone(
   start.setDate(start.getDate() - daysBack);
 
   const all: any[] = [];
-  let page = 1;
-  // até 5 páginas pra evitar respostas gigantes
-  while (page <= 5) {
-    const url =
-      `https://app.3c.plus/api/v1/calls?start_date=${encodeURIComponent(fmtDate(start))}` +
-      `&end_date=${encodeURIComponent(fmtDate(end))}&number=${encodeURIComponent(phone)}` +
-      `&per_page=50&page=${page}`;
+  let offset = 0;
+  const limit = 100;
+  // até 10 páginas pra evitar respostas gigantes
+  while (offset < limit * 10) {
+    const url = new URL("https://app.3c.plus/api/v1/calls");
+    url.searchParams.set("api_token", token);
+    url.searchParams.set("start_date", fmtDate(start));
+    url.searchParams.set("end_date", fmtDate(end));
+    url.searchParams.set("per_page", String(limit));
+    url.searchParams.set("limit", String(limit));
+    url.searchParams.set("offset", String(offset));
+    url.searchParams.set("with_mailing", "true");
+    url.searchParams.append("numbers[]", phone);
     let res: Response;
     try {
-      res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${token}` } });
     } catch (e) {
       console.warn("[link-3cplus] fetch error", e);
       break;
     }
     if (!res.ok) {
-      console.warn("[link-3cplus] API status", res.status);
+      const body = await res.text().catch(() => "");
+      console.warn("[link-3cplus] API status", res.status, body.slice(0, 500));
       break;
     }
     const json = await res.json().catch(() => null);
-    const data: any[] = json?.data ?? [];
-    all.push(...data);
-    const totalPages = json?.meta?.pagination?.total_pages ?? 1;
-    if (page >= totalPages) break;
-    page++;
+    const data = readCallList(json);
+    all.push(...data.filter((c) => normalize(c?.number ?? c?.mailing_data?.phone ?? "").endsWith(normalize(phone).slice(-8))));
+    if (data.length < limit) break;
+    offset += limit;
   }
   return all;
 }
