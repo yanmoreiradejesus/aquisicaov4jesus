@@ -234,19 +234,25 @@ Deno.serve(async (req) => {
     const { eventType, data } = extract3CPlusEvent(payload);
     const parsed = buildCallEventRow(eventType, data, payload);
 
-    // Lookup do lead pelo telefone (últimos 10 dígitos)
+    // Lookup do lead pelo telefone. O ILIKE no campo `telefone` formatado (ex.: "+55 (65) 99981-4223")
+    // não casa com substrings contínuas dos dígitos. Por isso buscamos candidatos usando os 4 últimos
+    // dígitos (que raramente são quebrados por formatação) e validamos via normalização no código.
     let leadId: string | null = null;
     if (parsed.telefoneNorm) {
       const last10 = parsed.telefoneNorm.slice(-10);
+      const last8 = parsed.telefoneNorm.slice(-8);
+      const last4 = parsed.telefoneNorm.slice(-4);
       const { data: leads, error: leadErr } = await supabase
         .from("crm_leads")
         .select("id, telefone")
-        .ilike("telefone", `%${last10}%`)
-        .limit(5);
+        .not("telefone", "is", null)
+        .ilike("telefone", `%${last4}%`)
+        .limit(200);
       if (leadErr) console.error("[3cplus] lead lookup error:", leadErr);
       if (leads && leads.length > 0) {
         const exact = leads.find((l: any) => normalizePhone(l.telefone).endsWith(last10));
-        leadId = (exact ?? leads[0]).id;
+        const partial = leads.find((l: any) => normalizePhone(l.telefone).endsWith(last8));
+        leadId = (exact ?? partial)?.id ?? null;
       }
     }
 
@@ -285,26 +291,60 @@ Deno.serve(async (req) => {
       }
     }
 
-    const { error: insertErr } = await supabase
-      .from("crm_call_events")
-      .insert({
-        lead_id: leadId,
-        user_id: userId,
+    // Upsert por (provider, call_id) para que eventos posteriores da mesma chamada
+    // (com duração, status final, gravação) atualizem a mesma linha em vez de duplicar.
+    let upsertErr: any = null;
+    if (parsed.callId) {
+      // Carrega linha existente para mesclar campos (preferindo o que for "mais informativo")
+      const { data: existing } = await supabase
+        .from("crm_call_events")
+        .select("id, lead_id, user_id, duracao_seg, status, gravacao_url, telefone, telefone_normalizado, operador, created_at")
+        .eq("provider", "3cplus")
+        .eq("call_id", parsed.callId)
+        .maybeSingle();
+
+      const merged = {
+        lead_id: leadId ?? existing?.lead_id ?? null,
+        user_id: userId ?? existing?.user_id ?? null,
         provider: "3cplus",
         event_type: parsed.eventType,
         call_id: parsed.callId,
-        telefone: parsed.telefoneRaw,
-        telefone_normalizado: parsed.telefoneNorm || null,
-        operador: parsed.operador,
-        duracao_seg: parsed.duracao,
-        status: parsed.status,
-        gravacao_url: gravacaoUrl,
+        telefone: parsed.telefoneRaw ?? existing?.telefone ?? null,
+        telefone_normalizado: (parsed.telefoneNorm || null) ?? existing?.telefone_normalizado ?? null,
+        operador: parsed.operador ?? existing?.operador ?? null,
+        duracao_seg: Math.max(parsed.duracao ?? 0, existing?.duracao_seg ?? 0) || parsed.duracao || existing?.duracao_seg || null,
+        status: parsed.status ?? existing?.status ?? null,
+        gravacao_url: gravacaoUrl ?? existing?.gravacao_url ?? null,
         raw_payload: payload,
-      });
+      };
 
-    if (insertErr) {
-      console.error("[3cplus] insert error:", insertErr);
-      return new Response(JSON.stringify({ ok: false, error: insertErr.message }), {
+      const { error } = await supabase
+        .from("crm_call_events")
+        .upsert(merged, { onConflict: "provider,call_id" });
+      upsertErr = error;
+    } else {
+      const { error } = await supabase
+        .from("crm_call_events")
+        .insert({
+          lead_id: leadId,
+          user_id: userId,
+          provider: "3cplus",
+          event_type: parsed.eventType,
+          call_id: parsed.callId,
+          telefone: parsed.telefoneRaw,
+          telefone_normalizado: parsed.telefoneNorm || null,
+          operador: parsed.operador,
+          duracao_seg: parsed.duracao,
+          status: parsed.status,
+          gravacao_url: gravacaoUrl,
+          raw_payload: payload,
+        });
+      upsertErr = error;
+    }
+
+    if (upsertErr) {
+      console.error("[3cplus] upsert error:", upsertErr);
+      return new Response(JSON.stringify({ ok: false, error: upsertErr.message }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

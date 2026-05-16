@@ -1,103 +1,75 @@
-## Objetivo
+## Diagnóstico
 
-Trocar a fonte de dados padrão do funil (Sheets → CRM) sem perder o legado:
+Investiguei o caso da Casa Rosada e do mecanismo geral. Tem **três problemas** combinados:
 
-1. **Promover** o `FunilCrm` (hoje em Revenue) para virar o **novo Funil** dentro de **Data Analytics**, adaptado visualmente para ficar igual ao funil legado (filtros à la `FilterBar`, etapas estilo `ConversionFunnel`, KPI cards no mesmo padrão).
-2. **Criar submenu "Legado"** dentro de Data Analytics contendo os painéis antigos (Funil Sheets e Meta Sheets) — intactos, só renomeados de rota.
-3. **Meta com CRM fica para uma próxima rodada** (precisa mapear `mix_goals` para etapas do CRM — assunto separado).
+### 1. Match de lead falha quando o telefone tem formatação
+- Lead Casa Rosada: `telefone = "+55 (65) 99981-4223"`.
+- 3CPlus envia `5565999814223` → normalizado `65999814223` → últimos 10 dígitos `5999814223`.
+- O webhook faz `crm_leads.telefone ILIKE '%5999814223%'`. No texto formatado essa sequência não existe (há `) ` no meio), então **não casa** e o evento é descartado silenciosamente como `no_lead_match`.
+- Confirmado por query: `'+55 (65) 99981-4223' ILIKE '%5999814223%'` = false.
+- **É por isso que não existe NENHUMA ligação registrada para esse lead.**
 
----
+### 2. Webhook só registra `call-history-was-created` (antes da gravação existir)
+- Esse evento dispara logo que a 3CPlus cria o registro da chamada, com `duracao_seg = 0` e `recorded = false`. Os 1860 eventos 3cplus na base estão quase todos assim (duração 0, sem gravação).
+- Os eventos posteriores (`call-was-finished` etc.) chegariam com a gravação, mas hoje o webhook **insere uma nova linha** em vez de atualizar a existente pelo `call_id`. E mesmo assim os filtros do front (`FINAL_EVENTS = ["call-history-was-created","ended"]`) só mostram o primeiro evento, que não tem gravação.
 
-## Mudanças no menu (V4Header)
+### 3. Sem retry quando a gravação ainda não está pronta
+- Mesmo no fluxo correto, a 3CPlus leva alguns minutos pra publicar o áudio. Hoje a única tentativa é dentro do webhook (HEAD imediato). Se falhar, nunca mais é tentado automaticamente.
 
-**Data Analytics** passa a ser:
+## Solução
 
-```text
-Data Analytics ▾
-├─ Dashboard
-├─ Funil               ← NOVO (CRM, visual do legado)
-├─ Insights
-├─ Financeiro
-└─ Legado ▸
-   ├─ Funil (Sheets)
-   └─ Meta  (Sheets)
-```
+### A. Corrigir o lookup de lead no webhook
+- Em `voip-webhook-3cplus`, trocar o `ILIKE` por uma busca robusta: pegar uma janela de candidatos e comparar via `normalizePhone(lead.telefone).endsWith(last10)` no código (mesmo padrão do `backfill-3cplus-calls`).
+- Aplicar a mesma correção em `voip-webhook-api4com` (mesmo bug provável).
 
-**Revenue** perde o item "Funil CRM" (vira o Funil principal de Data Analytics). A rota antiga `/comercial/funil-crm` redireciona para `/aquisicao/funil` para não quebrar links salvos.
+### B. Upsert por `call_id` em vez de insert sempre
+- Quando o evento tem `call_id`, fazer `upsert` em `crm_call_events` por `(provider, call_id)`:
+  - Atualiza `duracao_seg`, `status`, `gravacao_url`, `event_type`, `telefone_normalizado`, `operador`, `user_id` quando o novo valor for "melhor" (não-nulo / maior duração / gravação presente).
+  - Mantém o `created_at` original.
+- Requer índice único `(provider, call_id) WHERE call_id IS NOT NULL`. **Migration nova.**
+- Atualizar `FINAL_EVENTS` no `LeadCallEventsList.tsx` para considerar também `call-was-finished`, `call-was-qualified` etc., dedupando por `call_id` (a linha já estará consolidada após o upsert).
 
-Mobile: o submenu Legado vira uma sub-seção dentro do bloco Data Analytics.
+### C. Cron job: varredura automática a cada 5 min
+- Nova edge function `recheck-3cplus-recordings`:
+  - Busca eventos `provider='3cplus'`, `gravacao_url IS NULL`, `call_id IS NOT NULL`, `created_at >= now() - interval '24 hours'`, limite 100 por execução.
+  - Para cada um: HEAD na API da 3CPlus; se 200/302, grava `gravacao_url`.
+- Agendado via `pg_cron` a cada 5 minutos (insert direto, não migration — contém URL+anon key).
+- Idempotente e barato (só roda nos sem gravação).
 
----
+### D. Botão "Buscar gravação agora" no card (manual override)
+- Em `LeadCallEventsList.tsx`, para itens 3cplus sem áudio renderizado e com `call_id`:
+  - Botão pequeno "Buscar gravação" que invoca uma nova edge function `fetch-3cplus-recording` com `{ event_id }`.
+  - Estados: idle → loading → toast de sucesso (realtime atualiza o card) ou erro ("Gravação ainda não disponível na 3CPlus").
+- Útil quando o usuário não quer esperar o cron.
 
-## Rotas (App.tsx)
+### E. Backfill único do estrago atual
+- Após deploy do A+B, rodar `backfill-3cplus-calls` (já existe) uma vez para:
+  - Religar os ~1860 eventos 3cplus ao lead correto (vai pegar Casa Rosada).
+  - Reprocessar `raw_payload` e tentar HEAD para puxar gravações dos eventos recentes.
 
-| Antes | Depois |
-|---|---|
-| `/aquisicao/funil` → `Index` (Sheets) | `/aquisicao/funil` → **novo `FunilAnalytics`** (CRM, baseado no `FunilCrm`) |
-| `/aquisicao/meta` → `MixCompra` | `/aquisicao/legado/meta` → `MixCompra` |
-| (não existia) | `/aquisicao/legado/funil` → `Index` (Sheets, intacto) |
-| `/comercial/funil-crm` → `FunilCrm` | redirect → `/aquisicao/funil` |
+## Arquivos afetados
 
-Redirects de compatibilidade adicionados para `/aquisicao/funil` antigo (que tinha link salvo) e `/aquisicao/meta`.
+**Edge functions:**
+- `supabase/functions/voip-webhook-3cplus/index.ts` (fix lookup + upsert)
+- `supabase/functions/voip-webhook-api4com/index.ts` (fix lookup)
+- `supabase/functions/recheck-3cplus-recordings/index.ts` (nova)
+- `supabase/functions/fetch-3cplus-recording/index.ts` (nova)
+- `supabase/config.toml` (registrar `recheck-3cplus-recordings` como `verify_jwt = false` para cron)
 
----
+**Frontend:**
+- `src/components/crm/LeadCallEventsList.tsx` (botão + FINAL_EVENTS ampliado)
 
-## Novo componente: `src/pages/FunilAnalytics.tsx`
+**Banco:**
+- Migration: índice único parcial em `crm_call_events(provider, call_id)`.
+- Insert (não migration) do `cron.schedule` chamando `recheck-3cplus-recordings`.
 
-Reaproveita 100% da lógica de cálculo do `FunilCrm` (`useCrmLeads`, `useCrmOportunidades`, `calcFunilCrm`) **mas** com o **layout do legado** (`src/pages/Index.tsx`):
+## Fora de escopo
+- Mudar política "descartar chamada sem lead match" (segue válida).
+- Mexer em transcrição (continua disparando via trigger quando `gravacao_url` vira não-nula — bônus: o cron vai destravar várias transcrições paradas).
 
-- Header simples (sem o "Revenue / Funil CRM" atual) — usa `FUNIL DE VENDAS` em caixa alta como o legado.
-- Barra de filtros no estilo `FilterBar` (card com gradient, grid responsivo) — adaptada para os campos do CRM já existentes em `FunilCrmFilters` (período, pipe, lente, responsável, origem, tier, etc.).
-- Toggle "Por Etapa / Por Data de Criação" equivalente ao do legado, mapeando para a `lente` do `calcFunilCrm` ("evento" vs "criacao").
-- Etapas renderizadas no formato do `ConversionFunnel` (cascata visual com taxas de conversão entre estágios), recebendo os números do `calcFunilCrm` (MQL → CR → RA → RR → ASS).
-- Grid de **KPIs** no mesmo padrão visual do legado (5 cards com `TrendingUp/Down` vs período anterior):
-  - **CPMQL** — sem custo de mídia no CRM hoje → exibe "—" com tooltip "Investimento ainda não tracked no CRM"
-  - **CAC** — idem
-  - **Investimento Total** — idem
-  - **Faturamento Total** — `funilData.receitaTotal` (já existe)
-  - **Time to Close** — calcular a partir de `crm_oportunidades.data_fechamento_real - crm_leads.created_at` (média)
-- Comparação com período anterior: replica o cálculo de `previousPeriodLeads` do legado chamando `calcFunilCrm` com o range deslocado.
-- Footer "Última atualização" usando `now()` (dado é live).
-
-Os cards de CPMQL/CAC/Investimento ficam visíveis mas com placeholder — quando integrarmos custo de mídia no CRM, basta plugar.
-
-O `FunilCrm.tsx` original **fica como está** apenas internamente; o componente é reusado pela nova página. Como a rota `/comercial/funil-crm` vira redirect, a página antiga deixa de ser navegável (mas o arquivo permanece para referência até a próxima limpeza).
-
----
-
-## Permissões (RBAC)
-
-Novas page paths exigem acesso. Migração SQL:
-
-1. Para todo `user_id` que hoje tem `/aquisicao/funil` em `user_page_access`:
-   - Mantém `/aquisicao/funil` (agora aponta para o novo).
-   - Adiciona `/aquisicao/legado/funil`.
-2. Para todo `user_id` com `/aquisicao/meta`:
-   - Adiciona `/aquisicao/legado/meta`.
-   - Remove `/aquisicao/meta` (rota some do menu; só fica como redirect).
-3. Atualiza `public.handle_new_user()` para o primeiro usuário receber também `/aquisicao/legado/funil` e `/aquisicao/legado/meta`.
-4. Atualiza `role_access_templates` (qualquer template que liste `/aquisicao/funil` ou `/aquisicao/meta` recebe os correspondentes em `/aquisicao/legado/...`).
-
----
-
-## Memória do projeto
-
-Atualizar `mem://features/acquisition-funnel` notando que o funil principal agora lê do CRM e o de Sheets virou Legado. Criar referência curta no índice.
-
----
-
-## O que NÃO entra nesta rodada
-
-- Painel **Meta** lendo do CRM — depende de redesenhar `mix_goals` para usar etapas/origens do CRM. Fica como item separado.
-- Trazer custo de mídia para dentro do CRM (necessário para CPMQL/CAC reais no novo Funil).
-- Remover o arquivo `src/pages/FunilCrm.tsx` (mantemos por enquanto como histórico; remove na próxima faxina).
-
----
-
-## Validação
-
-1. Menu Data Analytics mostra: Dashboard, Funil, Insights, Financeiro, Legado (com Funil e Meta dentro). Revenue não tem mais "Funil CRM".
-2. `/aquisicao/funil` carrega o novo painel com dados do CRM, visual idêntico ao legado.
-3. `/aquisicao/legado/funil` e `/aquisicao/legado/meta` carregam exatamente o que carregavam antes.
-4. Links antigos (`/comercial/funil-crm`, `/aquisicao/meta`) redirecionam corretamente.
-5. Usuários hoje aprovados continuam vendo tudo que viam antes (sem perder acesso).
+## Ordem de execução
+1. Migration do índice único.
+2. Patch nos webhooks (A + B).
+3. Nova função `recheck-3cplus-recordings` + cron a cada 5 min.
+4. Nova função `fetch-3cplus-recording` + botão no card.
+5. Rodar `backfill-3cplus-calls` uma vez para corrigir o passado.

@@ -134,18 +134,23 @@ Deno.serve(async (req) => {
 
     const telefoneNorm = normalizePhone(telefoneRaw);
 
+    // Lookup do lead pelo telefone (busca tolerante a formatação)
     let leadId: string | null = null;
     if (telefoneNorm) {
       const last10 = telefoneNorm.slice(-10);
+      const last8 = telefoneNorm.slice(-8);
+      const last4 = telefoneNorm.slice(-4);
       const { data: leads, error: leadErr } = await supabase
         .from("crm_leads")
         .select("id, telefone")
-        .ilike("telefone", `%${last10}%`)
-        .limit(5);
+        .not("telefone", "is", null)
+        .ilike("telefone", `%${last4}%`)
+        .limit(200);
       if (leadErr) console.error("[api4com] lead lookup error:", leadErr);
       if (leads && leads.length > 0) {
         const exact = leads.find((l: any) => normalizePhone(l.telefone).endsWith(last10));
-        leadId = (exact ?? leads[0]).id;
+        const partial = leads.find((l: any) => normalizePhone(l.telefone).endsWith(last8));
+        leadId = (exact ?? partial)?.id ?? null;
       }
     }
 
@@ -162,26 +167,58 @@ Deno.serve(async (req) => {
       if (acc?.user_id) userId = acc.user_id;
     }
 
-    const { error: insertErr } = await supabase
-      .from("crm_call_events")
-      .insert({
-        lead_id: leadId,
-        user_id: userId,
+    // Upsert por (provider, call_id) — eventos posteriores (ended) atualizam a mesma linha
+    let upsertErr: any = null;
+    if (callId) {
+      const { data: existing } = await supabase
+        .from("crm_call_events")
+        .select("id, lead_id, user_id, duracao_seg, status, gravacao_url, telefone, telefone_normalizado, operador")
+        .eq("provider", "api4com")
+        .eq("call_id", callId)
+        .maybeSingle();
+
+      const merged = {
+        lead_id: leadId ?? existing?.lead_id ?? null,
+        user_id: userId ?? existing?.user_id ?? null,
         provider: "api4com",
         event_type: eventType,
         call_id: callId,
-        telefone: telefoneRaw,
-        telefone_normalizado: telefoneNorm || null,
-        operador,
-        duracao_seg: duracao,
-        status,
-        gravacao_url: gravacaoUrl,
+        telefone: telefoneRaw ?? existing?.telefone ?? null,
+        telefone_normalizado: (telefoneNorm || null) ?? existing?.telefone_normalizado ?? null,
+        operador: operador ?? existing?.operador ?? null,
+        duracao_seg: Math.max(duracao ?? 0, existing?.duracao_seg ?? 0) || duracao || existing?.duracao_seg || null,
+        status: status ?? existing?.status ?? null,
+        gravacao_url: gravacaoUrl ?? existing?.gravacao_url ?? null,
         raw_payload: payload,
-      });
+      };
 
-    if (insertErr) {
-      console.error("[api4com] insert error:", insertErr);
-      return new Response(JSON.stringify({ ok: false, error: insertErr.message }), {
+      const { error } = await supabase
+        .from("crm_call_events")
+        .upsert(merged, { onConflict: "provider,call_id" });
+      upsertErr = error;
+    } else {
+      const { error } = await supabase
+        .from("crm_call_events")
+        .insert({
+          lead_id: leadId,
+          user_id: userId,
+          provider: "api4com",
+          event_type: eventType,
+          call_id: callId,
+          telefone: telefoneRaw,
+          telefone_normalizado: telefoneNorm || null,
+          operador,
+          duracao_seg: duracao,
+          status,
+          gravacao_url: gravacaoUrl,
+          raw_payload: payload,
+        });
+      upsertErr = error;
+    }
+
+    if (upsertErr) {
+      console.error("[api4com] upsert error:", upsertErr);
+      return new Response(JSON.stringify({ ok: false, error: upsertErr.message }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

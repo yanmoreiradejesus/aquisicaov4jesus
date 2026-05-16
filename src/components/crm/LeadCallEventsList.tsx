@@ -5,7 +5,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLeadCallEvents, type CallEvent } from "@/hooks/useLeadCallEvents";
 import { useAuth } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState } from "react";
@@ -17,7 +17,8 @@ interface Props {
 }
 
 function audioSrc(e: CallEvent): string | null {
-  if (!e.gravacao_url && !e.call_id) return null;
+  // Só renderiza áudio quando confirmamos que a gravação existe (gravacao_url preenchida).
+  if (!e.gravacao_url) return null;
   // 3CPlus exige Bearer token — usar proxy backend
   if (e.provider === "3cplus" && e.call_id) {
     return `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/play-3cplus-recording?call_id=${encodeURIComponent(e.call_id)}`;
@@ -96,8 +97,16 @@ export function LeadCallEventsList({ leadId }: Props) {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Show only "final" history events in the main feed (one per call_id)
-  const FINAL_EVENTS = new Set(["call-history-was-created", "ended"]);
+  // Consolida eventos por call_id (após upsert no webhook, mesma chamada = mesma linha).
+  // Como fallback para registros antigos, dedupa também no front.
+  const FINAL_EVENTS = new Set([
+    "call-history-was-created",
+    "call-was-finished",
+    "call-was-qualified",
+    "call-was-not-answered",
+    "call-was-abandoned",
+    "ended",
+  ]);
   const history: CallEvent[] = [];
   const seen = new Set<string>();
   for (const e of events) {
@@ -197,18 +206,25 @@ export function LeadCallEventsList({ leadId }: Props) {
                 {(() => {
                   const src = audioSrc(e);
                   const tooShort = (e.duracao_seg ?? 0) < 3;
-                  if (!src || tooShort) return null;
-                  return (
-                    <>
-                      <audio
-                        controls
-                        preload="none"
-                        src={src}
-                        className="mt-2 h-7 w-full max-w-xs"
-                      />
-                      <TranscricaoBlock event={e} />
-                    </>
-                  );
+                  if (tooShort) return null;
+                  if (src) {
+                    return (
+                      <>
+                        <audio
+                          controls
+                          preload="none"
+                          src={src}
+                          className="mt-2 h-7 w-full max-w-xs"
+                        />
+                        <TranscricaoBlock event={e} />
+                      </>
+                    );
+                  }
+                  // Sem gravação ainda — oferece botão para forçar busca (apenas 3cplus com call_id)
+                  if (e.provider === "3cplus" && e.call_id) {
+                    return <FetchRecordingButton event={e} />;
+                  }
+                  return null;
                 })()}
               </div>
               {(() => {
@@ -311,6 +327,46 @@ function TranscricaoBlock({ event }: { event: CallEvent }) {
     >
       <FileText className="h-3 w-3 mr-1" />
       {retrying ? "Iniciando…" : "Transcrever"}
+    </Button>
+  );
+}
+
+function FetchRecordingButton({ event }: { event: CallEvent }) {
+  const [loading, setLoading] = useState(false);
+  const qc = useQueryClient();
+
+  const handle = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("fetch-3cplus-recording", {
+        body: { event_id: event.id },
+      });
+      if (error) throw error;
+      if (data?.ok) {
+        toast.success("Gravação encontrada");
+        qc.invalidateQueries({ queryKey: ["crm_call_events"] });
+      } else if (data?.reason === "not_ready") {
+        toast.info(data?.message ?? "Gravação ainda não disponível na 3CPlus");
+      } else {
+        toast.error(data?.error ?? "Não foi possível buscar a gravação");
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao buscar gravação");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      className="mt-2 h-6 px-2 text-[10px]"
+      onClick={handle}
+      disabled={loading}
+    >
+      <RefreshCw className={`h-3 w-3 mr-1 ${loading ? "animate-spin" : ""}`} />
+      {loading ? "Buscando…" : "Buscar gravação"}
     </Button>
   );
 }

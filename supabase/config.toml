@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.play-3cplus-recording]
 verify_jwt = false
+
+[functions.recheck-3cplus-recordings]
+verify_jwt = false
