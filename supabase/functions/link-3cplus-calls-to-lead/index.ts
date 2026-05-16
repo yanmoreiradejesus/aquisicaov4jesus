@@ -69,11 +69,11 @@ async function searchCallsByPhone(
   const start = new Date();
   start.setDate(start.getDate() - daysBack);
 
-  const all: any[] = [];
-  let offset = 0;
-  const limit = 100;
-  // até 10 páginas pra evitar respostas gigantes
-  while (offset < limit * 10) {
+  const fetchPages = async (includeNumberFilter: boolean): Promise<any[]> => {
+    const out: any[] = [];
+    let offset = 0;
+    const limit = 100;
+    while (offset < limit * 10) {
     const url = new URL("https://app.3c.plus/api/v1/calls");
     url.searchParams.set("api_token", token);
     url.searchParams.set("start_date", fmtDate(start));
@@ -82,7 +82,10 @@ async function searchCallsByPhone(
     url.searchParams.set("limit", String(limit));
     url.searchParams.set("offset", String(offset));
     url.searchParams.set("with_mailing", "true");
-    url.searchParams.append("numbers[]", phone);
+    if (includeNumberFilter) {
+      url.searchParams.append("numbers[]", phone);
+      url.searchParams.append("numbers", phone);
+    }
     let res: Response;
     try {
       res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${token}` } });
@@ -97,11 +100,16 @@ async function searchCallsByPhone(
     }
     const json = await res.json().catch(() => null);
     const data = readCallList(json);
-    all.push(...data.filter((c) => normalize(c?.number ?? c?.mailing_data?.phone ?? "").endsWith(normalize(phone).slice(-8))));
+    out.push(...data.filter((c) => normalize(c?.number ?? c?.mailing_data?.phone ?? "").endsWith(normalize(phone).slice(-8))));
     if (data.length < limit) break;
     offset += limit;
   }
-  return all;
+    return out;
+  };
+
+  const filtered = await fetchPages(true);
+  if (filtered.length > 0) return filtered;
+  return fetchPages(false);
 }
 
 Deno.serve(async (req) => {
