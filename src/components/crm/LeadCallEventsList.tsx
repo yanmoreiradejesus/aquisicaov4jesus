@@ -387,13 +387,18 @@ function ForceFetchByLeadButton({ leadId }: { leadId: string }) {
       });
       if (error) throw error;
       if (data?.ok) {
-        const linked = data.linked ?? 0;
-        const recs = data.recordings_found ?? 0;
-        const total = data.total_found ?? 0;
+        const dbLinked = data.db_linked ?? 0;
+        const apiIns = data.api_inserted ?? 0;
+        const apiUpd = data.api_updated ?? 0;
+        const apiFound = data.api_found ?? 0;
+        const recs = data.recordings_filled ?? 0;
+        const total = (data.db_found ?? 0) + apiFound;
         if (total === 0) {
           toast.info("Nenhuma chamada encontrada na 3CPlus para o telefone deste lead");
         } else {
-          toast.success(`${linked} chamada(s) vinculada(s) · ${recs} gravação(ões) recuperada(s)`);
+          toast.success(
+            `${apiIns} nova(s) · ${dbLinked + apiUpd} vinculada(s) · ${recs} gravação(ões) recuperada(s)`,
+          );
         }
         qc.invalidateQueries({ queryKey: ["crm_call_events"] });
       } else {
