@@ -69,16 +69,16 @@ async function searchCallsByPhone(
   const start = new Date();
   start.setDate(start.getDate() - daysBack);
 
-  const fetchPages = async (includeNumberFilter: boolean): Promise<any[]> => {
+  const fetchPages = async (endpoint: "/calls" | "/agent/calls", includeNumberFilter: boolean): Promise<any[]> => {
     const out: any[] = [];
     let offset = 0;
     const limit = 100;
     while (offset < limit * 10) {
-    const url = new URL("https://app.3c.plus/api/v1/calls");
+    const url = new URL(`https://app.3c.plus/api/v1${endpoint}`);
     url.searchParams.set("api_token", token);
     url.searchParams.set("start_date", fmtDate(start));
     url.searchParams.set("end_date", fmtDate(end));
-    url.searchParams.set("per_page", String(limit));
+    if (endpoint === "/calls") url.searchParams.set("per_page", String(limit));
     url.searchParams.set("limit", String(limit));
     url.searchParams.set("offset", String(offset));
     url.searchParams.set("with_mailing", "true");
@@ -107,9 +107,11 @@ async function searchCallsByPhone(
     return out;
   };
 
-  const filtered = await fetchPages(true);
-  if (filtered.length > 0) return filtered;
-  return fetchPages(false);
+  for (const endpoint of ["/calls", "/agent/calls"] as const) {
+    const filtered = await fetchPages(endpoint, endpoint === "/calls");
+    if (filtered.length > 0) return filtered;
+  }
+  return [];
 }
 
 Deno.serve(async (req) => {
