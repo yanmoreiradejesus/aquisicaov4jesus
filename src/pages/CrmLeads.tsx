@@ -103,7 +103,7 @@ const CrmLeads = () => {
       if (filters.temperatura !== "all" && l.temperatura !== filters.temperatura) return false;
       if (filters.segmento !== "all" && l.segmento !== filters.segmento) return false;
       if (filters.estado !== "all" && l.estado !== filters.estado) return false;
-      if (filters.responsavel !== "all" && l.responsavel_id !== filters.responsavel) return false;
+      if (filters.responsavel === "none" ? l.responsavel_id !== null && l.responsavel_id !== undefined : filters.responsavel !== "all" && l.responsavel_id !== filters.responsavel) return false;
       return true;
     });
   }, [leads, search, filters, pipe]);

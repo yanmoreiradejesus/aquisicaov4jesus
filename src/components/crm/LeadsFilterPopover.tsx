@@ -117,7 +117,10 @@ export const LeadsFilterPopover = ({ filters, onChange, leads }: Props) => {
           <FilterSelect
             label="Responsável pelo lead"
             value={filters.responsavel}
-            options={uniques.responsavel}
+            options={[
+              { value: "none", label: "Sem responsável" },
+              ...uniques.responsavel,
+            ]}
             onChange={(v) => update({ responsavel: v })}
           />
           <FilterSelect label="Origem" value={filters.origem} options={uniques.origem} onChange={(v) => update({ origem: v })} />
