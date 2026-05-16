@@ -330,3 +330,43 @@ function TranscricaoBlock({ event }: { event: CallEvent }) {
     </Button>
   );
 }
+
+function FetchRecordingButton({ event }: { event: CallEvent }) {
+  const [loading, setLoading] = useState(false);
+  const qc = useQueryClient();
+
+  const handle = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("fetch-3cplus-recording", {
+        body: { event_id: event.id },
+      });
+      if (error) throw error;
+      if (data?.ok) {
+        toast.success("Gravação encontrada");
+        qc.invalidateQueries({ queryKey: ["crm_call_events"] });
+      } else if (data?.reason === "not_ready") {
+        toast.info(data?.message ?? "Gravação ainda não disponível na 3CPlus");
+      } else {
+        toast.error(data?.error ?? "Não foi possível buscar a gravação");
+      }
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao buscar gravação");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      className="mt-2 h-6 px-2 text-[10px]"
+      onClick={handle}
+      disabled={loading}
+    >
+      <RefreshCw className={`h-3 w-3 mr-1 ${loading ? "animate-spin" : ""}`} />
+      {loading ? "Buscando…" : "Buscar gravação"}
+    </Button>
+  );
+}
