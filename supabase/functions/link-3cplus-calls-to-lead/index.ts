@@ -1,5 +1,8 @@
-// Procura no banco eventos 3CPlus não vinculados cujo telefone bata com o do lead
-// e os vincula. Em seguida, tenta preencher gravacao_url pela API da 3CPlus.
+// Vincula chamadas 3CPlus a um lead:
+// 1) procura eventos já existentes no banco com telefone batendo e os vincula
+// 2) consulta a API da 3CPlus por telefone (últimos 90 dias) e insere
+//    quaisquer chamadas que ainda não estejam no banco
+// 3) preenche gravacao_url quando disponível
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
@@ -18,6 +21,25 @@ function normalize(phone: string | null | undefined): string {
   return d;
 }
 
+function hmsToSeconds(v: unknown): number | null {
+  if (v == null) return null;
+  if (typeof v === "number") return Math.round(v);
+  if (typeof v === "string") {
+    if (/^\d+$/.test(v)) return parseInt(v, 10);
+    const p = v.split(":").map((x) => parseInt(x, 10));
+    if (p.every((n) => !isNaN(n))) {
+      if (p.length === 3) return p[0] * 3600 + p[1] * 60 + p[2];
+      if (p.length === 2) return p[0] * 60 + p[1];
+    }
+  }
+  return null;
+}
+
+function fmtDate(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
 async function checkRecording(token: string, callId: string): Promise<string | null> {
   const url = `https://app.3c.plus/api/v1/calls/${callId}/recording`;
   try {
@@ -27,10 +49,46 @@ async function checkRecording(token: string, callId: string): Promise<string | n
       redirect: "follow",
     });
     if (res.ok || res.status === 302) return url;
-  } catch {
-    // ignore
-  }
+  } catch { /* ignore */ }
   return null;
+}
+
+async function searchCallsByPhone(
+  token: string,
+  phone: string,
+  daysBack: number,
+): Promise<any[]> {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - daysBack);
+
+  const all: any[] = [];
+  let page = 1;
+  // até 5 páginas pra evitar respostas gigantes
+  while (page <= 5) {
+    const url =
+      `https://app.3c.plus/api/v1/calls?start_date=${encodeURIComponent(fmtDate(start))}` +
+      `&end_date=${encodeURIComponent(fmtDate(end))}&number=${encodeURIComponent(phone)}` +
+      `&per_page=50&page=${page}`;
+    let res: Response;
+    try {
+      res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    } catch (e) {
+      console.warn("[link-3cplus] fetch error", e);
+      break;
+    }
+    if (!res.ok) {
+      console.warn("[link-3cplus] API status", res.status);
+      break;
+    }
+    const json = await res.json().catch(() => null);
+    const data: any[] = json?.data ?? [];
+    all.push(...data);
+    const totalPages = json?.meta?.pagination?.total_pages ?? 1;
+    if (page >= totalPages) break;
+    page++;
+  }
+  return all;
 }
 
 Deno.serve(async (req) => {
@@ -64,6 +122,7 @@ Deno.serve(async (req) => {
   }
 
   const leadId: string | undefined = body?.lead_id;
+  const daysBack: number = Math.min(Math.max(Number(body?.days_back ?? 90), 1), 365);
   if (!leadId) {
     return new Response(JSON.stringify({ ok: false, error: "lead_id required" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -93,8 +152,8 @@ Deno.serve(async (req) => {
   const last9 = norm.slice(-9);
   const last8 = norm.slice(-8);
 
-  // Busca eventos 3CPlus que ainda não estão neste lead e cujo telefone normalizado bate
-  const { data: candidates, error: cErr } = await supabase
+  // 1) Eventos 3CPlus já existentes — vincular ao lead
+  const { data: candidates } = await supabase
     .from("crm_call_events")
     .select("id, call_id, gravacao_url, telefone_normalizado, lead_id")
     .eq("provider", "3cplus")
@@ -102,12 +161,6 @@ Deno.serve(async (req) => {
       `telefone_normalizado.ilike.%${last10},telefone_normalizado.ilike.%${last9},telefone_normalizado.ilike.%${last8}`
     )
     .limit(500);
-
-  if (cErr) {
-    return new Response(JSON.stringify({ ok: false, error: cErr.message }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
 
   const toLink = (candidates ?? []).filter((c) => c.lead_id !== leadId);
   let linked = 0;
@@ -120,10 +173,14 @@ Deno.serve(async (req) => {
     if (!updErr) linked = toLink.length;
   }
 
-  // Tenta buscar gravação para eventos ainda sem URL (limitado para não travar)
   const token = Deno.env.get("THREECPLUS_API_TOKEN");
   let recordingsFound = 0;
+  let apiFound = 0;
+  let apiInserted = 0;
+  let apiUpdated = 0;
+
   if (token) {
+    // Preenche gravação para eventos já existentes sem URL
     const pending = (candidates ?? []).filter((c) => c.call_id && !c.gravacao_url).slice(0, 25);
     for (const ev of pending) {
       const url = await checkRecording(token, ev.call_id!);
@@ -135,15 +192,103 @@ Deno.serve(async (req) => {
         if (!uErr) recordingsFound += 1;
       }
     }
+
+    // 2) Consulta a API da 3CPlus por telefone (tenta com 55 e sem)
+    const queries = [`55${norm}`, norm];
+    const seen = new Set<string>();
+    const apiCalls: any[] = [];
+    for (const q of queries) {
+      const list = await searchCallsByPhone(token, q, daysBack);
+      for (const c of list) {
+        const id = c?.id ?? c?._id;
+        if (id && !seen.has(id)) { seen.add(id); apiCalls.push(c); }
+      }
+    }
+    apiFound = apiCalls.length;
+
+    if (apiCalls.length > 0) {
+      const existingIds = new Set(
+        (candidates ?? []).map((c) => c.call_id).filter(Boolean) as string[],
+      );
+      // E também IDs que possam estar em outros leads — busca direta
+      const { data: existingByIds } = await supabase
+        .from("crm_call_events")
+        .select("id, call_id, lead_id, gravacao_url")
+        .eq("provider", "3cplus")
+        .in("call_id", apiCalls.map((c) => c.id).filter(Boolean));
+      const existingMap = new Map<string, any>();
+      for (const e of existingByIds ?? []) {
+        if (e.call_id) existingMap.set(e.call_id, e);
+      }
+
+      for (const c of apiCalls) {
+        const callId: string | undefined = c.id;
+        if (!callId) continue;
+
+        const telefone = c.number ?? null;
+        const duracao =
+          hmsToSeconds(c.speaking_with_agent_time) ??
+          hmsToSeconds(c.speaking_time) ??
+          hmsToSeconds(c.billed_time) ??
+          0;
+        const status = c.qualification && c.qualification !== "-"
+          ? c.qualification
+          : (c.readable_status_text ?? null);
+        const operador = c.agent_id && c.agent_id !== 0
+          ? String(c.agent_id)
+          : (c.agent && c.agent !== "-" ? String(c.agent) : null);
+        const gravacaoUrl = c.recorded
+          ? (c.recording ?? `https://app.3c.plus/api/v1/calls/${callId}/recording`)
+          : null;
+        const eventType = c.readable_status_text === "Finalizada"
+          ? "call-was-finished"
+          : "call-history-was-created";
+
+        const existing = existingMap.get(callId);
+        if (existing) {
+          const patch: any = {};
+          if (existing.lead_id !== leadId) patch.lead_id = leadId;
+          if (!existing.gravacao_url && gravacaoUrl) patch.gravacao_url = gravacaoUrl;
+          if (Object.keys(patch).length > 0) {
+            const { error } = await supabase
+              .from("crm_call_events")
+              .update(patch)
+              .eq("id", existing.id);
+            if (!error) apiUpdated += 1;
+          }
+        } else {
+          const { error } = await supabase
+            .from("crm_call_events")
+            .insert({
+              provider: "3cplus",
+              call_id: callId,
+              event_type: eventType,
+              telefone,
+              telefone_normalizado: normalize(telefone) || null,
+              operador,
+              duracao_seg: duracao,
+              status,
+              gravacao_url: gravacaoUrl,
+              lead_id: leadId,
+              raw_payload: { source: "api-backfill", call: c },
+            });
+          if (!error) apiInserted += 1;
+          else console.warn("[link-3cplus] insert error", error.message);
+        }
+      }
+    }
   }
 
   return new Response(
     JSON.stringify({
       ok: true,
-      total_found: candidates?.length ?? 0,
-      linked,
-      recordings_found: recordingsFound,
       lead_phone_norm: norm,
+      db_found: candidates?.length ?? 0,
+      db_linked: linked,
+      recordings_filled: recordingsFound,
+      api_found: apiFound,
+      api_inserted: apiInserted,
+      api_updated: apiUpdated,
     }),
     { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
   );
