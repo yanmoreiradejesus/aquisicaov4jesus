@@ -206,18 +206,25 @@ export function LeadCallEventsList({ leadId }: Props) {
                 {(() => {
                   const src = audioSrc(e);
                   const tooShort = (e.duracao_seg ?? 0) < 3;
-                  if (!src || tooShort) return null;
-                  return (
-                    <>
-                      <audio
-                        controls
-                        preload="none"
-                        src={src}
-                        className="mt-2 h-7 w-full max-w-xs"
-                      />
-                      <TranscricaoBlock event={e} />
-                    </>
-                  );
+                  if (tooShort) return null;
+                  if (src) {
+                    return (
+                      <>
+                        <audio
+                          controls
+                          preload="none"
+                          src={src}
+                          className="mt-2 h-7 w-full max-w-xs"
+                        />
+                        <TranscricaoBlock event={e} />
+                      </>
+                    );
+                  }
+                  // Sem gravação ainda — oferece botão para forçar busca (apenas 3cplus com call_id)
+                  if (e.provider === "3cplus" && e.call_id) {
+                    return <FetchRecordingButton event={e} />;
+                  }
+                  return null;
                 })()}
               </div>
               {(() => {
