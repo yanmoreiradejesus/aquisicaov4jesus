@@ -228,17 +228,17 @@ Deno.serve(async (req) => {
         .from("crm_call_events")
         .select("id, call_id, lead_id, gravacao_url")
         .eq("provider", "3cplus")
-        .in("call_id", apiCalls.map((c) => c.id).filter(Boolean));
+        .in("call_id", apiCalls.map((c) => c.id ?? c._id).filter(Boolean));
       const existingMap = new Map<string, any>();
       for (const e of existingByIds ?? []) {
         if (e.call_id) existingMap.set(e.call_id, e);
       }
 
       for (const c of apiCalls) {
-        const callId: string | undefined = c.id;
+        const callId: string | undefined = c.id ?? c._id;
         if (!callId) continue;
 
-        const telefone = c.number ?? null;
+        const telefone = c.number ?? c.mailing_data?.phone ?? null;
         const duracao =
           hmsToSeconds(c.speaking_with_agent_time) ??
           hmsToSeconds(c.speaking_time) ??
