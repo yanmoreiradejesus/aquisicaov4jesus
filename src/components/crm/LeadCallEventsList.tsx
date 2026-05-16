@@ -96,8 +96,16 @@ export function LeadCallEventsList({ leadId }: Props) {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Show only "final" history events in the main feed (one per call_id)
-  const FINAL_EVENTS = new Set(["call-history-was-created", "ended"]);
+  // Consolida eventos por call_id (após upsert no webhook, mesma chamada = mesma linha).
+  // Como fallback para registros antigos, dedupa também no front.
+  const FINAL_EVENTS = new Set([
+    "call-history-was-created",
+    "call-was-finished",
+    "call-was-qualified",
+    "call-was-not-answered",
+    "call-was-abandoned",
+    "ended",
+  ]);
   const history: CallEvent[] = [];
   const seen = new Set<string>();
   for (const e of events) {
