@@ -234,19 +234,20 @@ Deno.serve(async (req) => {
     const { eventType, data } = extract3CPlusEvent(payload);
     const parsed = buildCallEventRow(eventType, data, payload);
 
-    // Lookup do lead pelo telefone (últimos 10 dígitos, normalizando do lado do código
-    // porque o telefone do CRM pode ter formatação tipo "+55 (65) 99981-4223" que quebra ILIKE).
+    // Lookup do lead pelo telefone. O ILIKE no campo `telefone` formatado (ex.: "+55 (65) 99981-4223")
+    // não casa com substrings contínuas dos dígitos. Por isso buscamos candidatos usando os 4 últimos
+    // dígitos (que raramente são quebrados por formatação) e validamos via normalização no código.
     let leadId: string | null = null;
     if (parsed.telefoneNorm) {
       const last10 = parsed.telefoneNorm.slice(-10);
       const last8 = parsed.telefoneNorm.slice(-8);
-      // Busca candidatos por substring solta dos 8 dígitos finais (resiste a formatação)
+      const last4 = parsed.telefoneNorm.slice(-4);
       const { data: leads, error: leadErr } = await supabase
         .from("crm_leads")
         .select("id, telefone")
         .not("telefone", "is", null)
-        .ilike("telefone", `%${last8[0]}%${last8[1]}%${last8[2]}%${last8[3]}%${last8[4]}%${last8[5]}%${last8[6]}%${last8[7]}%`)
-        .limit(50);
+        .ilike("telefone", `%${last4}%`)
+        .limit(200);
       if (leadErr) console.error("[3cplus] lead lookup error:", leadErr);
       if (leads && leads.length > 0) {
         const exact = leads.find((l: any) => normalizePhone(l.telefone).endsWith(last10));
