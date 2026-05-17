@@ -151,6 +151,11 @@ const AppRoutes = () => {
             <PageTransition><Admin /></PageTransition>
           </ProtectedRoute>
         } />
+        <Route path="/admin/clientes" element={
+          <ProtectedRoute>
+            <PageTransition><AdminClientes /></PageTransition>
+          </ProtectedRoute>
+        } />
 
         {/* Perfil (auto-edição) */}
         <Route path="/perfil" element={
