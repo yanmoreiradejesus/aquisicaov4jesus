@@ -21,6 +21,7 @@ interface HubProps {
 
 const Hub = ({ variant = "full" }: HubProps) => {
   const { hasPageAccess, profile } = useAuth();
+  const { config } = useTenantConfig();
   const [now, setNow] = useState(new Date());
   const [meetingsToday, setMeetingsToday] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
