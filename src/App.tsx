@@ -10,6 +10,7 @@ import Hub from "./pages/Hub";
 import Index from "./pages/Index";
 import Insights from "./pages/Insights";
 import Admin from "./pages/Admin";
+import AdminClientes from "./pages/AdminClientes";
 import Perfil from "./pages/Perfil";
 import Financeiro from "./pages/Financeiro";
 import DashboardComercial from "./pages/DashboardComercial";
