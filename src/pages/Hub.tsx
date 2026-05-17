@@ -47,7 +47,7 @@ const Hub = ({ variant = "full" }: HubProps) => {
         <main className="container mx-auto max-w-7xl px-4 lg:px-10 py-8 lg:py-12">
           <div className="flex items-center justify-between mb-8 lg:mb-10">
             <p className="text-[10px] lg:text-xs font-semibold tracking-[0.25em] uppercase text-muted-foreground">
-              V4 Jesus · {formatHubDate(now)} · <span className="tabular-nums">{formatHubTime(now)}</span>
+              {config.client_name} · {formatHubDate(now)} · <span className="tabular-nums">{formatHubTime(now)}</span>
             </p>
           </div>
           <AppsGrid compact />
