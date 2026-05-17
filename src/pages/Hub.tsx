@@ -67,7 +67,7 @@ const Hub = ({ variant = "full" }: HubProps) => {
             className="group text-[10px] lg:text-xs font-semibold tracking-[0.25em] uppercase text-muted-foreground hover:text-foreground transition-colors"
             title="Ir para aplicações"
           >
-            <span className="border-b border-transparent group-hover:border-foreground/40 transition-colors">V4 Jesus</span>
+            <span className="border-b border-transparent group-hover:border-foreground/40 transition-colors">{config.client_name}</span>
             <span> · {formatHubDate(now)} · <span className="tabular-nums">{formatHubTime(now)}</span></span>
           </Link>
         </div>
