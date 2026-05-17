@@ -56,7 +56,7 @@ const Hub = ({ variant = "full" }: HubProps) => {
     );
   }
 
-  // ---------- FULL (route /, landing on v4jesus.com) ----------
+  // ---------- FULL (route /, tenant landing) ----------
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto max-w-7xl px-4 lg:px-10 py-10 lg:py-16">
