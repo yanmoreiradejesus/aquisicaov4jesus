@@ -926,7 +926,7 @@ export type Database = {
     }
     Enums: {
       account_status: "ativo" | "pausado" | "encerrado"
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "super_admin_v4"
       atividade_tipo:
         | "ligacao"
         | "email"
@@ -1086,7 +1086,7 @@ export const Constants = {
   public: {
     Enums: {
       account_status: ["ativo", "pausado", "encerrado"],
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "super_admin_v4"],
       atividade_tipo: [
         "ligacao",
         "email",
