@@ -18,6 +18,7 @@ interface AuthState {
   user: User | null;
   profile: Profile | null;
   isAdmin: boolean;
+  isSuperAdminV4: boolean;
   isApproved: boolean;
   allowedPages: string[];
   loading: boolean;
@@ -29,6 +30,7 @@ const initialState: AuthState = {
   user: null,
   profile: null,
   isAdmin: false,
+  isSuperAdminV4: false,
   isApproved: false,
   allowedPages: [],
   loading: true,
@@ -62,13 +64,16 @@ export function useAuth() {
       }
 
       const profile = (profileRes.data as Profile | null) ?? null;
-      const isAdmin = rolesRes.data?.some((r: any) => r.role === "admin") ?? false;
+      const roles = rolesRes.data?.map((r: any) => r.role as string) ?? [];
+      const isAdmin = roles.includes("admin");
+      const isSuperAdminV4 = roles.includes("super_admin_v4");
       const allowedPages = accessRes.data?.map((a: any) => a.page_path) ?? [];
 
       setState({
         user,
         profile,
         isAdmin,
+        isSuperAdminV4,
         isApproved: profile?.approved ?? false,
         allowedPages,
         loading: false,

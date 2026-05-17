@@ -40,7 +40,7 @@ export const APPS: AppEntry[] = [
   {
     id: "app-v4",
     title: "App V4",
-    description: "Sistema operacional V4 Jesus.",
+    description: "Sistema operacional do cliente.",
     href: "https://app.v4jesus.com",
     external: true,
     accessPaths: ["/app-v4"],

@@ -8,6 +8,7 @@ import { PendenciasWidget } from "@/components/hub/widgets/PendenciasWidget";
 import { HubOrb } from "@/components/hub/HubOrb";
 import { Typewriter } from "@/components/hub/Typewriter";
 import { AppsGrid } from "@/components/hub/AppsGrid";
+import { useTenantConfig } from "@/hooks/useTenantConfig";
 
 const WIDGETS = [
   { id: "agenda", Component: AgendaWidget, accessPaths: ["/comercial/leads", "/comercial/oportunidades"] },
@@ -20,6 +21,7 @@ interface HubProps {
 
 const Hub = ({ variant = "full" }: HubProps) => {
   const { hasPageAccess, profile } = useAuth();
+  const { config } = useTenantConfig();
   const [now, setNow] = useState(new Date());
   const [meetingsToday, setMeetingsToday] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
@@ -45,7 +47,7 @@ const Hub = ({ variant = "full" }: HubProps) => {
         <main className="container mx-auto max-w-7xl px-4 lg:px-10 py-8 lg:py-12">
           <div className="flex items-center justify-between mb-8 lg:mb-10">
             <p className="text-[10px] lg:text-xs font-semibold tracking-[0.25em] uppercase text-muted-foreground">
-              V4 Jesus · {formatHubDate(now)} · <span className="tabular-nums">{formatHubTime(now)}</span>
+              {config.client_name} · {formatHubDate(now)} · <span className="tabular-nums">{formatHubTime(now)}</span>
             </p>
           </div>
           <AppsGrid compact />
@@ -54,7 +56,7 @@ const Hub = ({ variant = "full" }: HubProps) => {
     );
   }
 
-  // ---------- FULL (route /, landing on v4jesus.com) ----------
+  // ---------- FULL (route /, tenant landing) ----------
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto max-w-7xl px-4 lg:px-10 py-10 lg:py-16">
@@ -65,7 +67,7 @@ const Hub = ({ variant = "full" }: HubProps) => {
             className="group text-[10px] lg:text-xs font-semibold tracking-[0.25em] uppercase text-muted-foreground hover:text-foreground transition-colors"
             title="Ir para aplicações"
           >
-            <span className="border-b border-transparent group-hover:border-foreground/40 transition-colors">V4 Jesus</span>
+            <span className="border-b border-transparent group-hover:border-foreground/40 transition-colors">{config.client_name}</span>
             <span> · {formatHubDate(now)} · <span className="tabular-nums">{formatHubTime(now)}</span></span>
           </Link>
         </div>

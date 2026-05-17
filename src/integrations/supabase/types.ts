@@ -794,6 +794,51 @@ export type Database = {
         }
         Relationships: []
       }
+      tenant_config: {
+        Row: {
+          active: boolean
+          app_base_url: string | null
+          client_logo_url: string | null
+          client_name: string
+          client_slug: string
+          created_at: string
+          id: string
+          is_singleton: boolean
+          primary_color_hsl: string | null
+          sheet_ids: Json
+          updated_at: string
+          voip_provider: string | null
+        }
+        Insert: {
+          active?: boolean
+          app_base_url?: string | null
+          client_logo_url?: string | null
+          client_name?: string
+          client_slug?: string
+          created_at?: string
+          id?: string
+          is_singleton?: boolean
+          primary_color_hsl?: string | null
+          sheet_ids?: Json
+          updated_at?: string
+          voip_provider?: string | null
+        }
+        Update: {
+          active?: boolean
+          app_base_url?: string | null
+          client_logo_url?: string | null
+          client_name?: string
+          client_slug?: string
+          created_at?: string
+          id?: string
+          is_singleton?: boolean
+          primary_color_hsl?: string | null
+          sheet_ids?: Json
+          updated_at?: string
+          voip_provider?: string | null
+        }
+        Relationships: []
+      }
       user_google_tokens: {
         Row: {
           access_token: string | null
@@ -863,6 +908,48 @@ export type Database = {
         }
         Relationships: []
       }
+      v4_hub_clients: {
+        Row: {
+          app_url: string | null
+          client_name: string
+          client_slug: string
+          created_at: string
+          id: string
+          internal_notes: string | null
+          lovable_project_id: string | null
+          provisioned_at: string | null
+          status: string
+          updated_at: string
+          v4_contact: string | null
+        }
+        Insert: {
+          app_url?: string | null
+          client_name: string
+          client_slug: string
+          created_at?: string
+          id?: string
+          internal_notes?: string | null
+          lovable_project_id?: string | null
+          provisioned_at?: string | null
+          status?: string
+          updated_at?: string
+          v4_contact?: string | null
+        }
+        Update: {
+          app_url?: string | null
+          client_name?: string
+          client_slug?: string
+          created_at?: string
+          id?: string
+          internal_notes?: string | null
+          lovable_project_id?: string | null
+          provisioned_at?: string | null
+          status?: string
+          updated_at?: string
+          v4_contact?: string | null
+        }
+        Relationships: []
+      }
       voip_accounts: {
         Row: {
           agent_id: string | null
@@ -926,7 +1013,7 @@ export type Database = {
     }
     Enums: {
       account_status: "ativo" | "pausado" | "encerrado"
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "super_admin_v4"
       atividade_tipo:
         | "ligacao"
         | "email"
@@ -1086,7 +1173,7 @@ export const Constants = {
   public: {
     Enums: {
       account_status: ["ativo", "pausado", "encerrado"],
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "super_admin_v4"],
       atividade_tipo: [
         "ligacao",
         "email",
