@@ -8,6 +8,7 @@ import { PendenciasWidget } from "@/components/hub/widgets/PendenciasWidget";
 import { HubOrb } from "@/components/hub/HubOrb";
 import { Typewriter } from "@/components/hub/Typewriter";
 import { AppsGrid } from "@/components/hub/AppsGrid";
+import { useTenantConfig } from "@/hooks/useTenantConfig";
 
 const WIDGETS = [
   { id: "agenda", Component: AgendaWidget, accessPaths: ["/comercial/leads", "/comercial/oportunidades"] },
