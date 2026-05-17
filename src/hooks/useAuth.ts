@@ -18,6 +18,7 @@ interface AuthState {
   user: User | null;
   profile: Profile | null;
   isAdmin: boolean;
+  isSuperAdminV4: boolean;
   isApproved: boolean;
   allowedPages: string[];
   loading: boolean;
@@ -29,6 +30,7 @@ const initialState: AuthState = {
   user: null,
   profile: null,
   isAdmin: false,
+  isSuperAdminV4: false,
   isApproved: false,
   allowedPages: [],
   loading: true,
