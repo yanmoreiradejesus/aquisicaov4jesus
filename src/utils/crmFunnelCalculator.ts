@@ -278,6 +278,7 @@ export function calcFunilCrm({
     inSalLeads: inSal,
     inSalLeadsByBucket: salByBucket as unknown as Record<string, any[]>,
     inAssOps: inAss,
+    inAssLeadById,
     investimentoTotal,
     mqlInbound: inMqlInbound.length,
     assInbound: inAssInbound.length,
