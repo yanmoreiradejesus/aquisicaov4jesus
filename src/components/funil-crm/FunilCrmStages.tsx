@@ -78,10 +78,10 @@ const FunilCrmStages = ({ data, onOpenLeads }: Props) => {
                       {stage.conv.toFixed(1)}%
                     </p>
                   </div>
-              </div>
-
+                )}
               </div>
             </div>
+
 
             <div className="h-2 overflow-hidden rounded-full bg-muted/30">
               <div
