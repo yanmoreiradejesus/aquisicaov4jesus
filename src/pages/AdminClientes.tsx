@@ -27,12 +27,11 @@ import {
 import { toast } from "sonner";
 import { Plus, ExternalLink, Trash2 } from "lucide-react";
 
-interface V4HubClient {
+interface Tenant {
   id: string;
   client_name: string;
   client_slug: string;
-  app_url: string | null;
-  lovable_project_id: string | null;
+  app_base_url: string | null;
   status: string;
   v4_contact: string | null;
   internal_notes: string | null;
@@ -42,9 +41,9 @@ interface V4HubClient {
 
 const STATUS_OPTIONS = [
   { value: "setup", label: "Em setup", variant: "secondary" as const },
-  { value: "ativo", label: "Ativo", variant: "default" as const },
-  { value: "pausado", label: "Pausado", variant: "outline" as const },
-  { value: "encerrado", label: "Encerrado", variant: "destructive" as const },
+  { value: "active", label: "Ativo", variant: "default" as const },
+  { value: "paused", label: "Pausado", variant: "outline" as const },
+  { value: "closed", label: "Encerrado", variant: "destructive" as const },
 ];
 
 export default function AdminClientes() {
@@ -52,26 +51,25 @@ export default function AdminClientes() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<V4HubClient | null>(null);
+  const [editing, setEditing] = useState<Tenant | null>(null);
   const [form, setForm] = useState({
     client_name: "",
     client_slug: "",
-    app_url: "",
-    lovable_project_id: "",
+    app_base_url: "",
     status: "setup",
     v4_contact: "",
     internal_notes: "",
   });
 
   const { data: clients = [], isLoading } = useQuery({
-    queryKey: ["v4_hub_clients"],
+    queryKey: ["tenants"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("v4_hub_clients")
+        .from("tenants")
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as V4HubClient[];
+      return (data ?? []) as Tenant[];
     },
     enabled: isSuperAdminV4,
   });
@@ -79,25 +77,30 @@ export default function AdminClientes() {
   const upsertMut = useMutation({
     mutationFn: async () => {
       const payload = {
-        ...form,
+        client_name: form.client_name,
+        client_slug: form.client_slug,
+        app_base_url: form.app_base_url || null,
+        status: form.status,
+        v4_contact: form.v4_contact || null,
+        internal_notes: form.internal_notes || null,
         provisioned_at:
-          form.status === "ativo" && !editing?.provisioned_at
+          form.status === "active" && !editing?.provisioned_at
             ? new Date().toISOString()
-            : editing?.provisioned_at,
+            : editing?.provisioned_at ?? null,
       };
       if (editing) {
         const { error } = await supabase
-          .from("v4_hub_clients")
+          .from("tenants")
           .update(payload)
           .eq("id", editing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("v4_hub_clients").insert(payload);
+        const { error } = await supabase.from("tenants").insert(payload);
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["v4_hub_clients"] });
+      qc.invalidateQueries({ queryKey: ["tenants"] });
       toast.success(editing ? "Cliente atualizado" : "Cliente adicionado");
       resetForm();
     },
@@ -106,11 +109,11 @@ export default function AdminClientes() {
 
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("v4_hub_clients").delete().eq("id", id);
+      const { error } = await supabase.from("tenants").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["v4_hub_clients"] });
+      qc.invalidateQueries({ queryKey: ["tenants"] });
       toast.success("Cliente removido");
     },
   });
@@ -121,21 +124,19 @@ export default function AdminClientes() {
     setForm({
       client_name: "",
       client_slug: "",
-      app_url: "",
-      lovable_project_id: "",
+      app_base_url: "",
       status: "setup",
       v4_contact: "",
       internal_notes: "",
     });
   }
 
-  function openEdit(c: V4HubClient) {
+  function openEdit(c: Tenant) {
     setEditing(c);
     setForm({
       client_name: c.client_name,
       client_slug: c.client_slug,
-      app_url: c.app_url ?? "",
-      lovable_project_id: c.lovable_project_id ?? "",
+      app_base_url: c.app_base_url ?? "",
       status: c.status,
       v4_contact: c.v4_contact ?? "",
       internal_notes: c.internal_notes ?? "",
@@ -170,7 +171,7 @@ export default function AdminClientes() {
           </p>
           <h1 className="font-heading text-4xl uppercase">Clientes V4</h1>
           <p className="text-muted-foreground mt-2">
-            Catálogo central de instâncias V4 Hub provisionadas.
+            Cada cliente é um tenant isolado dentro deste mesmo projeto. Criar = liberar acesso.
           </p>
         </div>
 
@@ -207,16 +208,8 @@ export default function AdminClientes() {
                 <Label>URL do app</Label>
                 <Input
                   placeholder="https://app.v4xyz.com"
-                  value={form.app_url}
-                  onChange={(e) => setForm({ ...form, app_url: e.target.value })}
-                />
-              </div>
-              <div>
-                <Label>ID do projeto Lovable</Label>
-                <Input
-                  placeholder="uuid do projeto duplicado"
-                  value={form.lovable_project_id}
-                  onChange={(e) => setForm({ ...form, lovable_project_id: e.target.value })}
+                  value={form.app_base_url}
+                  onChange={(e) => setForm({ ...form, app_base_url: e.target.value })}
                 />
               </div>
               <div>
@@ -261,18 +254,14 @@ export default function AdminClientes() {
         </Dialog>
       </div>
 
-      {/* Checklist de provisionamento */}
       <Card className="p-6 mb-8 bg-muted/30">
         <h2 className="font-heading uppercase text-sm tracking-wider mb-3">
-          Checklist de provisionamento
+          Como adicionar um cliente
         </h2>
         <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-          <li>Duplicar este projeto no Lovable (fork)</li>
-          <li>Ativar Lovable Cloud no fork</li>
-          <li>Atualizar <code>tenant_config</code> com nome, slug, logo e URL do cliente</li>
-          <li>Configurar secrets do fork (3CPlus, Google, etc.)</li>
-          <li>Convidar o admin do cliente</li>
-          <li>Cadastrar aqui com status “Ativo” e preencher o ID do projeto Lovable</li>
+          <li>Clicar em "Novo cliente" e preencher nome, slug e URL</li>
+          <li>Salvar — o tenant fica isolado automaticamente via RLS</li>
+          <li>Convidar o admin do cliente (próxima fase: seletor de tenant no convite)</li>
         </ol>
       </Card>
 
@@ -280,7 +269,7 @@ export default function AdminClientes() {
         <div className="text-muted-foreground">Carregando clientes...</div>
       ) : clients.length === 0 ? (
         <Card className="p-10 text-center text-muted-foreground">
-          Nenhum cliente cadastrado ainda. Clique em “Novo cliente” para começar.
+          Nenhum cliente cadastrado ainda. Clique em "Novo cliente" para começar.
         </Card>
       ) : (
         <div className="grid gap-4">
@@ -295,14 +284,14 @@ export default function AdminClientes() {
                       <Badge variant={statusCfg.variant}>{statusCfg.label}</Badge>
                       <span className="text-xs text-muted-foreground">/{c.client_slug}</span>
                     </div>
-                    {c.app_url && (
+                    {c.app_base_url && (
                       <a
-                        href={c.app_url}
+                        href={c.app_base_url}
                         target="_blank"
                         rel="noreferrer"
                         className="text-sm text-primary hover:underline inline-flex items-center gap-1"
                       >
-                        {c.app_url} <ExternalLink className="w-3 h-3" />
+                        {c.app_base_url} <ExternalLink className="w-3 h-3" />
                       </a>
                     )}
                     {c.v4_contact && (

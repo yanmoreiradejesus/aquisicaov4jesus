@@ -187,9 +187,18 @@ const Admin = () => {
   };
 
   const updateTemplate = async (cargo: string, pages: string[]) => {
+    // Fetch current user's tenant_id
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: profile } = await supabase.from("profiles").select("tenant_id").eq("id", user.id).maybeSingle();
+    const tenant_id = profile?.tenant_id;
+    if (!tenant_id) {
+      toast({ title: "Erro", description: "Tenant não identificado", variant: "destructive" });
+      return;
+    }
     const { error } = await supabase
       .from("role_access_templates")
-      .upsert({ cargo, pages, updated_at: new Date().toISOString() });
+      .upsert({ cargo, pages, tenant_id, updated_at: new Date().toISOString() }, { onConflict: "tenant_id,cargo" });
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {

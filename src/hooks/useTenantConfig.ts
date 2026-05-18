@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 export interface TenantConfig {
   id: string;
@@ -26,15 +27,17 @@ const FALLBACK: TenantConfig = {
 };
 
 /**
- * Reads the single-row tenant_config for this V4 Hub instance.
- * Each fork (V4 Jesus, V4 Xyz, etc) has exactly one row identifying the client.
+ * Reads the current user's tenant from the `tenants` table.
+ * RLS guarantees the user can only see their own tenant (or all, if super_admin_v4).
  */
 export function useTenantConfig() {
+  const { user } = useAuth();
   const { data, isLoading } = useQuery({
-    queryKey: ["tenant_config"],
+    queryKey: ["tenant_config", user?.id],
+    enabled: !!user,
     queryFn: async (): Promise<TenantConfig> => {
       const { data, error } = await supabase
-        .from("tenant_config")
+        .from("tenants")
         .select("*")
         .limit(1)
         .maybeSingle();
