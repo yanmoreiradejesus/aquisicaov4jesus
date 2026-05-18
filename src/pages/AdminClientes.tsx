@@ -74,6 +74,32 @@ export default function AdminClientes() {
     enabled: isSuperAdminV4,
   });
 
+  // Última versão de cada tenant (para mostrar badge + identificar atrasados)
+  const { data: latestVersions = {} as Record<string, { version_number: number; build_hash: string }> } = useQuery({
+    queryKey: ["tenant_versions_latest_all"],
+    enabled: isSuperAdminV4 && clients.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tenant_versions")
+        .select("tenant_id, version_number, build_hash")
+        .order("version_number", { ascending: false });
+      if (error) throw error;
+      const map: Record<string, { version_number: number; build_hash: string }> = {};
+      for (const row of data ?? []) {
+        if (!map[row.tenant_id]) {
+          map[row.tenant_id] = {
+            version_number: row.version_number,
+            build_hash: row.build_hash,
+          };
+        }
+      }
+      return map;
+    },
+  });
+
+  const jesusTenant = clients.find((c) => c.client_slug === "jesus");
+  const jesusLatest = jesusTenant ? latestVersions[jesusTenant.id] : undefined;
+
   const upsertMut = useMutation({
     mutationFn: async () => {
       const payload = {
