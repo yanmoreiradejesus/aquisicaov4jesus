@@ -1,39 +1,44 @@
-# Funil Analytics — drill-down de leads + KPIs financeiros
+## Redefinir SAL: todos os leads que passaram por Reunião Realizada
 
-## 1. Drill-down: clicar etapa/sub-etapa para ver leads
+### Nova definição
 
-Em `FunilCrmStages.tsx`:
-- Sub-etapas (Entrada, Tentativa, Reunião Agendada, No-Show, Proposta, etc.) viram **clicáveis**.
-- A etapa principal (MQL/SQL/SAL/ASS) ganha um botão **"Ver leads"** ao lado do contador.
+**SAL = lead com `data_reuniao_realizada` preenchida**, independente da `etapa` atual (proposta, negociação, contrato, follow infinito, ganho, perdido, desqualificado depois).
 
-Clique abre o novo `FunilLeadsDialog.tsx` com tabela:
-- Colunas: Nome, Empresa, Responsável, Origem, Tier, Etapa atual, Data do evento (MQL/SQL/SAL/ASS conforme lente), Valor (quando ASS), CPMQL (quando inbound).
-- Cada linha leva a `/aquisicao/crm-leads/{id}` em nova aba (preserva filtros).
+Hoje contamos apenas leads que ainda estão parados em `etapa = 'reuniao_realizada'`, o que subestima o histórico assim que o lead avança para oportunidade. O campo `data_reuniao_realizada` é escrito por trigger quando o lead chega em Reunião Realizada — é o marcador histórico confiável.
 
-Para isso, `calcFunilCrm` passa a retornar também os arrays `inMqlLeads`, `inSqlLeads`, `inSalLeads`, `inAssOps` (além dos counts). O dialog deriva as sub-listas localmente.
+### Mudanças em `src/utils/crmFunnelCalculator.ts`
 
-## 2. KPIs CPMQL, CAC, Investimento Total
+1. **`inSal`** — trocar de `etapa === 'reuniao_realizada' && data_reuniao_realizada in range` para simplesmente `data_reuniao_realizada in range` (lente evento) ou cohort por entrada (lente coorte, sem fallback artificial).
 
-**Fonte do investimento (sua regra):** soma dos CPMQL dos leads inbound do período.
+2. **`subSal`** — reorganizar as sub-etapas para refletir onde os leads SAL estão hoje, cruzando com `crm_oportunidades`:
+   - Sem oportunidade ainda
+   - Em proposta
+   - Em negociação
+   - Dúvidas e fechamento (contrato)
+   - Follow infinito
+   - Ganho
+   - Perdido
+   - Desqualificado depois (lead com etapa = `desqualificado` mas que passou por reunião)
 
-Hoje `crm_leads` **não tem** campo `cpmql` — só existe na planilha legada. Vou:
+3. **`inSalLeads`** — atualizar para retornar todos os leads SAL (não só os parados na etapa), permitindo drill-down correto no `FunilLeadsDialog`.
 
-1. **Adicionar coluna `cpmql numeric` em `crm_leads`** (nullable). Frontend permitirá editar no `LeadDetailSheet` (campo novo "CPMQL (R$)") e no `LeadImportDialog`/CSV.
-2. Cálculo no funil:
-   - **Investimento Total** = soma de `cpmql` dos leads MQL no período **com `pipe = inbound`** (ignora valores `null`).
-   - **CPMQL (KPI)** = Investimento Total ÷ MQL inbound. (Quando filtro pipe = `outbound`, esconde card e mostra "—".)
-   - **CAC** = Investimento Total ÷ ASS inbound do período.
-3. Cards passam a mostrar valores reais com tooltip explicando a fórmula.
+4. **Lente coorte** — remover o fallback que considera SAL via `created_at` quando `data_reuniao_realizada` é nulo. Agora exige o campo preenchido.
 
-Mantém: **Faturamento Total**, **Time to Close**. Adiciona **Ticket Médio** ao grid (já existe em `funilData.ticketMedio`).
+### Impacto em outros KPIs
 
-## Arquivos afetados
+- **Conversão SAL/SQL**: sobe (SAL passa a incluir todos que avançaram).
+- **CAC, ASS, MQL, SQL**: sem mudança.
+- **Tempo médio até SAL**: sem mudança (já usa `data_reuniao_realizada`).
 
-- **Migration**: `alter table crm_leads add column cpmql numeric;`
-- `src/utils/crmFunnelCalculator.ts` — retornar arrays `inMqlLeads`/`inSqlLeads`/`inSalLeads`/`inAssOps`; somar `cpmql` inbound em `investimentoTotal`.
-- `src/components/funil-crm/FunilCrmStages.tsx` — sub-etapas clicáveis + botão "Ver leads"; callback `onOpenLeads(stageId, subId?)`.
-- `src/components/funil-crm/FunilLeadsDialog.tsx` — **novo**.
-- `src/pages/FunilAnalytics.tsx` — estado do dialog; substitui 3 placeholders por cards reais; adiciona Ticket Médio.
-- `src/components/crm/LeadDetailSheet.tsx` + `src/components/crm/LeadDialog.tsx` — campo "CPMQL (R$)" editável.
-- `src/lib/leadCsvImport.ts` — mapear coluna CPMQL no import CSV (opcional).
-- `src/integrations/supabase/types.ts` — regenerado pela migration.
+### UI
+
+`FunilCrmStages.tsx` — apenas ajustar os labels das novas sub-etapas do SAL. Sem mudanças estruturais.
+
+### Sem migration
+
+`data_reuniao_realizada` já existe e é populado por trigger. Nada a alterar no banco.
+
+### Arquivos
+
+- `src/utils/crmFunnelCalculator.ts` (principal)
+- `src/components/funil-crm/FunilCrmStages.tsx` (labels das sub-etapas SAL)
