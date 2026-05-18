@@ -236,8 +236,6 @@ export default function AdminClientes() {
         </Button>
 
         <Dialog open={dialogOpen} onOpenChange={(o) => (o ? setDialogOpen(true) : resetForm())}>
-          <DialogTrigger asChild>
-            <span style={{ display: "none" }} aria-hidden />
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>{editing ? "Editar cliente" : "Novo cliente V4"}</DialogTitle>
