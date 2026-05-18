@@ -250,6 +250,8 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
       const payload = { ...form, tier };
       if (payload.valor_pago === "" || payload.valor_pago == null) payload.valor_pago = null;
       else payload.valor_pago = Number(payload.valor_pago);
+      if (payload.cpmql === "" || payload.cpmql == null) payload.cpmql = null;
+      else payload.cpmql = Number(payload.cpmql);
       if (!payload.data_aquisicao) payload.data_aquisicao = null;
       if (!payload.data_criacao_origem) payload.data_criacao_origem = null;
       Promise.resolve(onSave(payload)).catch(() => {});
