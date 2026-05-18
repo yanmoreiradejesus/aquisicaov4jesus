@@ -134,6 +134,20 @@ const FunilAnalytics = () => {
   const useCreationDate = lente === "coorte";
   const toggleLente = () => setLente(useCreationDate ? "evento" : "coorte");
 
+  // Dialog de drill-down
+  const [dialogStage, setDialogStage] = useState<"mql" | "sql" | "sal" | "ass" | null>(null);
+  const [dialogSub, setDialogSub] = useState<string | null>(null);
+  const openLeads = (stageId: "mql" | "sql" | "sal" | "ass", subId?: string) => {
+    setDialogStage(stageId);
+    setDialogSub(subId ?? null);
+  };
+  const closeLeads = (open: boolean) => {
+    if (!open) {
+      setDialogStage(null);
+      setDialogSub(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto max-w-7xl space-y-6 lg:space-y-8 px-3 sm:px-4 lg:px-8 py-4 lg:py-8">
