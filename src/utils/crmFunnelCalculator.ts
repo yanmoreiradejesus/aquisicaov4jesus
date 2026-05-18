@@ -206,7 +206,7 @@ export function calcFunilCrm({
     return (lead?.pipe ?? "inbound") === "inbound";
   });
   const investimentoTotal = inMqlInbound.reduce(
-    (sum, l) => sum + (Number(l.cpmql) || 0),
+    (sum, l) => sum + (Number(l.valor_pago) || 0),
     0,
   );
   const cpmqlMedio = inMqlInbound.length > 0 ? investimentoTotal / inMqlInbound.length : 0;
