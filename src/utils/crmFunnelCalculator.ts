@@ -94,6 +94,7 @@ export interface FunilCrmResult {
   inSalLeads: any[];
   inSalLeadsByBucket: Record<string, any[]>;
   inAssOps: any[];
+  inAssLeadById: Record<string, any>;
   // Financeiro (somente inbound)
   investimentoTotal: number;
   mqlInbound: number;
@@ -227,8 +228,14 @@ export function calcFunilCrm({
   ];
 
   const subAss: SubStage[] = [
-    { id: "fechado_ganho", label: "Ganho no período", count: inAss.length },
+    { id: "fechado_ganho", label: "Contratos assinados", count: inAss.length },
   ];
+
+  const inAssLeadById: Record<string, any> = {};
+  inAss.forEach((o) => {
+    const l = leadById.get(o.lead_id);
+    if (l) inAssLeadById[o.lead_id] = l;
+  });
 
   const receitaTotal = inAss.reduce(
     (sum, o) => sum + (Number(o.valor_ef) || 0) + (Number(o.valor_fee) || 0),
@@ -271,6 +278,7 @@ export function calcFunilCrm({
     inSalLeads: inSal,
     inSalLeadsByBucket: salByBucket as unknown as Record<string, any[]>,
     inAssOps: inAss,
+    inAssLeadById,
     investimentoTotal,
     mqlInbound: inMqlInbound.length,
     assInbound: inAssInbound.length,

@@ -117,19 +117,28 @@ const FunilLeadsDialog = ({
     }
 
     const rows = isAssBucket
-      ? baseOps.map((o) => ({
-          id: o.lead_id ?? o.id,
-          nome: "Oportunidade fechada",
-          empresa: "",
-          responsavel: profileNameById.get(o.responsavel_id) ?? "—",
-          origem: "—",
-          tier: "—",
-          etapa: "fechado_ganho",
-          dataEvento: o.data_fechamento_real,
-          valor: (Number(o.valor_ef) || 0) + (Number(o.valor_fee) || 0),
-          cpmql: null,
-          pipe: "inbound",
-        }))
+      ? baseOps.map((o) => {
+          const lead = data?.inAssLeadById?.[o.lead_id];
+          const produto =
+            lead?.tipo_produto ?? lead?.nome_produto ?? "—";
+          return {
+            id: o.lead_id ?? o.id,
+            nome:
+              o.nome_oportunidade ??
+              lead?.empresa ??
+              lead?.nome ??
+              "Oportunidade",
+            empresa: produto,
+            responsavel: profileNameById.get(o.responsavel_id) ?? "—",
+            origem: lead?.origem ?? "—",
+            tier: lead?.tier ?? "—",
+            etapa: "fechado_ganho",
+            dataEvento: o.data_fechamento_real,
+            valor: (Number(o.valor_ef) || 0) + (Number(o.valor_fee) || 0),
+            cpmql: null,
+            pipe: lead?.pipe ?? "inbound",
+          };
+        })
       : baseLeads.map((l) => ({
           id: l.id,
           nome: l.nome ?? "—",
@@ -176,7 +185,7 @@ const FunilLeadsDialog = ({
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead>Empresa</TableHead>
+                <TableHead>{isAss ? "Produto" : "Empresa"}</TableHead>
                 <TableHead>Responsável</TableHead>
                 <TableHead>Origem</TableHead>
                 <TableHead>Pipe</TableHead>
