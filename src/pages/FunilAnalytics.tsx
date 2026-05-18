@@ -14,6 +14,7 @@ import {
   type Pipe,
 } from "@/utils/crmFunnelCalculator";
 import FunilCrmStages from "@/components/funil-crm/FunilCrmStages";
+import FunilLeadsDialog from "@/components/funil-crm/FunilLeadsDialog";
 import FunilCrmFilters, {
   type FunilCrmFiltersState,
 } from "@/components/funil-crm/FunilCrmFilters";
