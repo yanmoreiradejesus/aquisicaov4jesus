@@ -274,13 +274,11 @@ export default function AdminClientes() {
 
       <Card className="p-6 mb-8 bg-muted/30">
         <h2 className="font-heading uppercase text-sm tracking-wider mb-3">
-          Como adicionar um cliente
+          Como funciona
         </h2>
-        <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-          <li>Clicar em "Novo cliente" e preencher nome, slug e URL</li>
-          <li>Salvar — o tenant fica isolado automaticamente via RLS</li>
-          <li>Convidar o admin do cliente (próxima fase: seletor de tenant no convite)</li>
-        </ol>
+        <p className="text-sm text-muted-foreground">
+          Cada cliente é um espaço isolado dentro deste mesmo app — separado por RLS no banco. Crie o tenant aqui, use <strong>"Entrar como"</strong> para inspecionar/operar como aquele cliente e, dentro do tenant, convide o admin dele em <code>/admin</code>. O seletor de tenant também fica disponível no header (visível só para o time V4).
+        </p>
       </Card>
 
       {isLoading ? (
