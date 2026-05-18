@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, ExternalLink, Trash2 } from "lucide-react";
+import { Plus, ExternalLink, Trash2, LogIn } from "lucide-react";
 
 interface Tenant {
   id: string;
@@ -47,7 +47,7 @@ const STATUS_OPTIONS = [
 ];
 
 export default function AdminClientes() {
-  const { isSuperAdminV4, loading, authResolved } = useAuth();
+  const { isSuperAdminV4, loading, authResolved, user } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -116,6 +116,24 @@ export default function AdminClientes() {
       qc.invalidateQueries({ queryKey: ["tenants"] });
       toast.success("Cliente removido");
     },
+  });
+
+  
+  const enterAsMut = useMutation({
+    mutationFn: async (tenantId: string) => {
+      if (!user) throw new Error("Sem sessão");
+      const { error } = await supabase
+        .from("profiles")
+        .update({ active_tenant_id: tenantId })
+        .eq("id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries();
+      toast.success("Tenant ativo trocado");
+      navigate("/apps");
+    },
+    onError: (e: any) => toast.error(e.message),
   });
 
   function resetForm() {
@@ -256,13 +274,11 @@ export default function AdminClientes() {
 
       <Card className="p-6 mb-8 bg-muted/30">
         <h2 className="font-heading uppercase text-sm tracking-wider mb-3">
-          Como adicionar um cliente
+          Como funciona
         </h2>
-        <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-          <li>Clicar em "Novo cliente" e preencher nome, slug e URL</li>
-          <li>Salvar — o tenant fica isolado automaticamente via RLS</li>
-          <li>Convidar o admin do cliente (próxima fase: seletor de tenant no convite)</li>
-        </ol>
+        <p className="text-sm text-muted-foreground">
+          Cada cliente é um espaço isolado dentro deste mesmo app — separado por RLS no banco. Crie o tenant aqui, use <strong>"Entrar como"</strong> para inspecionar/operar como aquele cliente e, dentro do tenant, convide o admin dele em <code>/admin</code>. O seletor de tenant também fica disponível no header (visível só para o time V4).
+        </p>
       </Card>
 
       {isLoading ? (
@@ -306,6 +322,14 @@ export default function AdminClientes() {
                     )}
                   </div>
                   <div className="flex gap-2 shrink-0">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => enterAsMut.mutate(c.id)}
+                      disabled={enterAsMut.isPending}
+                    >
+                      <LogIn className="w-3.5 h-3.5 mr-1.5" /> Entrar como
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => openEdit(c)}>
                       Editar
                     </Button>

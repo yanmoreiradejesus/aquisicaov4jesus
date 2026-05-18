@@ -5,6 +5,7 @@ import { LogOut, Shield, ChevronDown, Menu, X, User as UserIcon } from "lucide-r
 import { useState, useRef, useEffect } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { motion, useReducedMotion } from "framer-motion";
+import { TenantSwitcher } from "@/components/TenantSwitcher";
 
 const V4Header = () => {
   const location = useLocation();
@@ -234,6 +235,7 @@ const V4Header = () => {
               {(isAdmin || user) && (
                 <div className="w-px h-4 bg-white/10 mx-1" />
               )}
+              <TenantSwitcher />
               {isAdmin && (
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -383,6 +385,8 @@ const V4Header = () => {
                   </div>
                 </div>
               )}
+
+              <TenantSwitcher variant="mobile" />
 
               {isAdmin && (
                 <div className="px-3 py-2">
