@@ -136,13 +136,34 @@ export function calcFunilCrm({
   const leadById = new Map<string, any>(ls.map((l) => [l.id, l]));
   const os = oportunidades.filter((o) => leadById.has(o.lead_id));
 
+  // Mapa de todas as ops por lead (precisamos antes pra calcular SAL via 1ª op).
+  const allOpsByLeadId = new Map<string, any[]>();
+  oportunidades.forEach((o) => {
+    const arr = allOpsByLeadId.get(o.lead_id) ?? [];
+    arr.push(o);
+    allOpsByLeadId.set(o.lead_id, arr);
+  });
+  const firstOpDateFor = (leadId: string): string | null => {
+    const arr = allOpsByLeadId.get(leadId);
+    if (!arr || arr.length === 0) return null;
+    let min: string | null = null;
+    arr.forEach((o) => {
+      const c = o.created_at;
+      if (!c) return;
+      if (!min || new Date(c).getTime() < new Date(min).getTime()) min = c;
+    });
+    return min;
+  };
+
   // 3. Datas conforme lente
   const dataRa = (l: any) =>
     lente === "coorte" ? dataMql(l) : l.data_reuniao_agendada ?? dataMql(l);
-  // SAL agora = qualquer lead que passou por Reunião Realizada (data preenchida),
-  // independente da etapa atual (pode ter avançado para oportunidade, ganho, perdido, etc).
+  // SAL = lead que passou por Reunião Realizada OU já tem oportunidade
+  // (toda oportunidade implica que o lead virou SAL em algum momento).
   const dataSal = (l: any) =>
-    lente === "coorte" ? dataMql(l) : l.data_reuniao_realizada;
+    lente === "coorte"
+      ? dataMql(l)
+      : l.data_reuniao_realizada ?? firstOpDateFor(l.id);
   const dataAss = (o: any) =>
     lente === "coorte"
       ? dataMql(leadById.get(o.lead_id) ?? {})
@@ -154,10 +175,11 @@ export function calcFunilCrm({
   const inSql = ls.filter(
     (l) => reachedAtLeast(l.etapa, "reuniao_agendada") && inP(dataRa(l)),
   );
-  // SAL: exige data_reuniao_realizada preenchida (marcador histórico via trigger).
-  // Mesmo na lente "coorte", exige o campo — sem fallback artificial.
+  // SAL: data_reuniao_realizada preenchida OU possui oportunidade.
   const inSal = ls.filter(
-    (l) => !!l.data_reuniao_realizada && inP(dataSal(l)),
+    (l) =>
+      (!!l.data_reuniao_realizada || allOpsByLeadId.has(l.id)) &&
+      inP(dataSal(l)),
   );
   const inAss = os.filter(
     (o) => o.etapa === "fechado_ganho" && inP(dataAss(o)),
