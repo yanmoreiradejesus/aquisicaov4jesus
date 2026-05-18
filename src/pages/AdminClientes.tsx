@@ -322,6 +322,14 @@ export default function AdminClientes() {
                     )}
                   </div>
                   <div className="flex gap-2 shrink-0">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => enterAsMut.mutate(c.id)}
+                      disabled={enterAsMut.isPending}
+                    >
+                      <LogIn className="w-3.5 h-3.5 mr-1.5" /> Entrar como
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => openEdit(c)}>
                       Editar
                     </Button>
