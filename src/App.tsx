@@ -84,6 +84,12 @@ const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
+        <Route path="/aquisicao/meta" element={
+          <ProtectedRoute requiredPath="/aquisicao/meta">
+            <PageTransition><MetaCrm /></PageTransition>
+          </ProtectedRoute>
+        } />
+
         {/* Legado (Sheets) — submenu Data Analytics */}
         <Route path="/aquisicao/legado/funil" element={
           <ProtectedRoute requiredPath="/aquisicao/legado/funil">
@@ -97,7 +103,6 @@ const AppRoutes = () => {
         } />
 
         {/* Legacy redirects — keep saved links working */}
-        <Route path="/aquisicao/meta" element={<Navigate to="/aquisicao/legado/meta" replace />} />
         <Route path="/dashboard-comercial" element={<Navigate to="/aquisicao/dashboard" replace />} />
         <Route path="/insights" element={<Navigate to="/aquisicao/insights" replace />} />
         <Route path="/mix-compra" element={<Navigate to="/aquisicao/legado/meta" replace />} />
