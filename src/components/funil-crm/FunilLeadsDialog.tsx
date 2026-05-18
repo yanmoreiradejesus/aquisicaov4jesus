@@ -196,7 +196,7 @@ const FunilLeadsDialog = ({
                 {isAss ? (
                   <TableHead className="text-right">Valor</TableHead>
                 ) : (
-                  <TableHead className="text-right">CPMQL</TableHead>
+                  <TableHead className="text-right">Valor pago</TableHead>
                 )}
                 <TableHead className="w-10" />
               </TableRow>
