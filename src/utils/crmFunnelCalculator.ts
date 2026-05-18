@@ -88,6 +88,17 @@ export interface FunilCrmResult {
   convSqlMql: number;
   convSalSql: number;
   convAssSal: number;
+  // Arrays para drill-down
+  inMqlLeads: any[];
+  inSqlLeads: any[];
+  inSalLeads: any[];
+  inAssOps: any[];
+  // Financeiro (somente inbound)
+  investimentoTotal: number;
+  mqlInbound: number;
+  assInbound: number;
+  cpmqlMedio: number;
+  cac: number;
 }
 
 export interface CalcInput {
