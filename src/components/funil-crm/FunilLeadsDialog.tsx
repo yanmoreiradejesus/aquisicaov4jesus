@@ -60,12 +60,13 @@ const SUB_TITLE: Record<string, string> = {
   no_show: "No-Show",
   realizada: "Reunião Realizada",
   sem_oportunidade: "Sem oportunidade ainda",
-  proposta: "Proposta",
-  negociacao: "Negociação",
-  contrato: "Dúvidas e Fechamento",
-  follow_infinito: "Follow Infinito",
+  proposta: "Em proposta",
+  negociacao: "Em negociação",
+  contrato: "Dúvidas e fechamento",
+  follow_infinito: "Follow infinito",
   fechado_ganho: "Ganho",
   fechado_perdido: "Perdido",
+  desqualificado_depois: "Desqualificado depois",
 };
 
 const FunilLeadsDialog = ({
