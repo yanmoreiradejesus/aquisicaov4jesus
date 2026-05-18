@@ -225,7 +225,7 @@ const FunilLeadsDialog = ({
                     <TableCell>
                       {r.id ? (
                         <Link
-                          to={`/aquisicao/crm-leads/${r.id}`}
+                          to={`/comercial/leads/${r.id}`}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex text-muted-foreground hover:text-primary"
