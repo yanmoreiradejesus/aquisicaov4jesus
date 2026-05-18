@@ -1,61 +1,34 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Users } from "lucide-react";
 import type { FunilCrmResult, SubStage } from "@/utils/crmFunnelCalculator";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   data: FunilCrmResult;
+  onOpenLeads?: (stageId: "mql" | "sql" | "sal" | "ass", subId?: string) => void;
 }
 
 interface StageDef {
-  id: string;
+  id: "mql" | "sql" | "sal" | "ass";
   title: string;
   count: number;
-  conv?: number; // taxa de conversão da etapa anterior (em %)
+  conv?: number;
   barColor: string;
   subs: SubStage[];
 }
 
-const FunilCrmStages = ({ data }: Props) => {
+const FunilCrmStages = ({ data, onOpenLeads }: Props) => {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const stages: StageDef[] = [
-    {
-      id: "mql",
-      title: "MQL",
-      count: data.mql,
-      barColor: "bg-[hsl(217,91%,60%)]",
-      subs: data.subMql,
-    },
-    {
-      id: "sql",
-      title: "SQL",
-      count: data.sql,
-      conv: data.convSqlMql,
-      barColor: "bg-[hsl(24,95%,53%)]",
-      subs: data.subSql,
-    },
-    {
-      id: "sal",
-      title: "SAL",
-      count: data.sal,
-      conv: data.convSalSql,
-      barColor: "bg-[hsl(38,92%,50%)]",
-      subs: data.subSal,
-    },
-    {
-      id: "ass",
-      title: "ASS",
-      count: data.ass,
-      conv: data.convAssSal,
-      barColor: "bg-[hsl(142,76%,36%)]",
-      subs: data.subAss,
-    },
+    { id: "mql", title: "MQL", count: data.mql, barColor: "bg-[hsl(217,91%,60%)]", subs: data.subMql },
+    { id: "sql", title: "SQL", count: data.sql, conv: data.convSqlMql, barColor: "bg-[hsl(24,95%,53%)]", subs: data.subSql },
+    { id: "sal", title: "SAL", count: data.sal, conv: data.convSalSql, barColor: "bg-[hsl(38,92%,50%)]", subs: data.subSal },
+    { id: "ass", title: "ASS", count: data.ass, conv: data.convAssSal, barColor: "bg-[hsl(142,76%,36%)]", subs: data.subAss },
   ];
 
   const maxCount = Math.max(...stages.map((s) => s.count), 1);
-
-  const toggle = (id: string) =>
-    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+  const toggle = (id: string) => setExpanded((p) => ({ ...p, [id]: !p[id] }));
 
   return (
     <div className="space-y-4">
@@ -101,13 +74,22 @@ const FunilCrmStages = ({ data }: Props) => {
                 </div>
                 {stage.conv !== undefined && (
                   <div className="text-right min-w-[80px]">
-                    <p className="font-body text-xs text-muted-foreground">
-                      Conversão
-                    </p>
+                    <p className="font-body text-xs text-muted-foreground">Conversão</p>
                     <p className="font-display text-xl font-semibold text-foreground tabular-nums">
                       {stage.conv.toFixed(1)}%
                     </p>
                   </div>
+                )}
+                {onOpenLeads && stage.count > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onOpenLeads(stage.id)}
+                    className="gap-2 text-xs"
+                  >
+                    <Users className="h-3.5 w-3.5" />
+                    Ver leads
+                  </Button>
                 )}
               </div>
             </div>
@@ -119,18 +101,21 @@ const FunilCrmStages = ({ data }: Props) => {
               />
             </div>
 
-            {/* Drill-down */}
             {isOpen && hasSubs && (
               <div className="mt-4 pl-6 space-y-2 animate-fade-in">
                 {stage.subs
                   .filter((s) => s.count > 0)
                   .map((sub) => {
-                    const subPct =
-                      stage.count > 0 ? (sub.count / stage.count) * 100 : 0;
+                    const subPct = stage.count > 0 ? (sub.count / stage.count) * 100 : 0;
+                    const clickable = !!onOpenLeads;
                     return (
-                      <div
+                      <button
                         key={sub.id}
-                        className="flex items-center justify-between gap-3 py-1.5 border-b border-border/20 last:border-0"
+                        onClick={() => clickable && onOpenLeads!(stage.id, sub.id)}
+                        disabled={!clickable}
+                        className={`w-full flex items-center justify-between gap-3 py-1.5 border-b border-border/20 last:border-0 text-left transition-colors ${
+                          clickable ? "hover:text-primary cursor-pointer" : "cursor-default"
+                        }`}
                       >
                         <span className="font-body text-sm text-muted-foreground">
                           • {sub.label}
@@ -143,7 +128,7 @@ const FunilCrmStages = ({ data }: Props) => {
                             {sub.count.toLocaleString("pt-BR")}
                           </span>
                         </div>
-                      </div>
+                      </button>
                     );
                   })}
               </div>
