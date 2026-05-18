@@ -136,13 +136,10 @@ export function calcFunilCrm({
   const inP = (d: string | null | undefined) => inRange(d, start, end);
 
   const inMql = ls.filter((l) => inP(dataMql(l)));
-  const inCr = ls.filter(
-    (l) => reachedAtLeast(l.etapa, "contato_realizado") && inP(dataMql(l)),
-  );
-  const inRa = ls.filter(
+  const inSql = ls.filter(
     (l) => reachedAtLeast(l.etapa, "reuniao_agendada") && inP(dataRa(l)),
   );
-  const inRr = ls.filter(
+  const inSal = ls.filter(
     (l) => l.etapa === "reuniao_realizada" && inP(dataRr(l)),
   );
   const inAss = os.filter(
@@ -152,18 +149,14 @@ export function calcFunilCrm({
   const subMql: SubStage[] = [
     { id: "entrada", label: "Entrada", count: inMql.filter((l) => l.etapa === "entrada").length },
     { id: "tentativa_contato", label: "Tentativa de Contato", count: inMql.filter((l) => l.etapa === "tentativa_contato").length },
-    { id: "avancou", label: "Já avançou", count: inMql.filter((l) => reachedAtLeast(l.etapa, "contato_realizado")).length },
+    { id: "contato_realizado", label: "Contato Realizado", count: inMql.filter((l) => l.etapa === "contato_realizado").length },
+    { id: "avancou", label: "Já avançou", count: inMql.filter((l) => reachedAtLeast(l.etapa, "reuniao_agendada")).length },
   ];
 
-  const subCr: SubStage[] = [
-    { id: "contato_realizado", label: "Em Contato Realizado", count: inCr.filter((l) => l.etapa === "contato_realizado").length },
-    { id: "avancou", label: "Já avançou", count: inCr.filter((l) => reachedAtLeast(l.etapa, "reuniao_agendada")).length },
-  ];
-
-  const subRa: SubStage[] = [
-    { id: "reuniao_agendada", label: "Reunião Agendada", count: inRa.filter((l) => l.etapa === "reuniao_agendada").length },
-    { id: "no_show", label: "No-Show", count: inRa.filter((l) => l.etapa === "no_show").length },
-    { id: "realizada", label: "Reunião Realizada", count: inRa.filter((l) => l.etapa === "reuniao_realizada").length },
+  const subSql: SubStage[] = [
+    { id: "reuniao_agendada", label: "Reunião Agendada", count: inSql.filter((l) => l.etapa === "reuniao_agendada").length },
+    { id: "no_show", label: "No-Show", count: inSql.filter((l) => l.etapa === "no_show").length },
+    { id: "realizada", label: "Reunião Realizada", count: inSql.filter((l) => l.etapa === "reuniao_realizada").length },
   ];
 
   const opsByLeadId = new Map<string, any[]>();
@@ -172,15 +165,15 @@ export function calcFunilCrm({
     arr.push(o);
     opsByLeadId.set(o.lead_id, arr);
   });
-  const opsRr = inRr.flatMap((l) => opsByLeadId.get(l.id) ?? []);
-  const subRr: SubStage[] = [
-    { id: "sem_oportunidade", label: "Sem oportunidade ainda", count: inRr.filter((l) => !opsByLeadId.has(l.id)).length },
-    { id: "proposta", label: "Proposta", count: opsRr.filter((o) => o.etapa === "proposta").length },
-    { id: "negociacao", label: "Negociação", count: opsRr.filter((o) => o.etapa === "negociacao").length },
-    { id: "contrato", label: "Dúvidas e Fechamento", count: opsRr.filter((o) => o.etapa === "contrato").length },
-    { id: "follow_infinito", label: "Follow Infinito", count: opsRr.filter((o) => o.etapa === "follow_infinito").length },
-    { id: "fechado_ganho", label: "Ganho", count: opsRr.filter((o) => o.etapa === "fechado_ganho").length },
-    { id: "fechado_perdido", label: "Perdido", count: opsRr.filter((o) => o.etapa === "fechado_perdido").length },
+  const opsSal = inSal.flatMap((l) => opsByLeadId.get(l.id) ?? []);
+  const subSal: SubStage[] = [
+    { id: "sem_oportunidade", label: "Sem oportunidade ainda", count: inSal.filter((l) => !opsByLeadId.has(l.id)).length },
+    { id: "proposta", label: "Proposta", count: opsSal.filter((o) => o.etapa === "proposta").length },
+    { id: "negociacao", label: "Negociação", count: opsSal.filter((o) => o.etapa === "negociacao").length },
+    { id: "contrato", label: "Dúvidas e Fechamento", count: opsSal.filter((o) => o.etapa === "contrato").length },
+    { id: "follow_infinito", label: "Follow Infinito", count: opsSal.filter((o) => o.etapa === "follow_infinito").length },
+    { id: "fechado_ganho", label: "Ganho", count: opsSal.filter((o) => o.etapa === "fechado_ganho").length },
+    { id: "fechado_perdido", label: "Perdido", count: opsSal.filter((o) => o.etapa === "fechado_perdido").length },
   ];
 
   const subAss: SubStage[] = [
@@ -197,22 +190,19 @@ export function calcFunilCrm({
 
   return {
     mql: inMql.length,
-    cr: inCr.length,
-    ra: inRa.length,
-    rr: inRr.length,
+    sql: inSql.length,
+    sal: inSal.length,
     ass: inAss.length,
     subMql,
-    subCr,
-    subRa,
-    subRr,
+    subSql,
+    subSal,
     subAss,
     receitaTotal,
     ticketMedio,
     conversaoGeral,
-    convCrMql: inMql.length > 0 ? (inCr.length / inMql.length) * 100 : 0,
-    convRaCr: inCr.length > 0 ? (inRa.length / inCr.length) * 100 : 0,
-    convRrRa: inRa.length > 0 ? (inRr.length / inRa.length) * 100 : 0,
-    convAssRr: inRr.length > 0 ? (inAss.length / inRr.length) * 100 : 0,
+    convSqlMql: inMql.length > 0 ? (inSql.length / inMql.length) * 100 : 0,
+    convSalSql: inSql.length > 0 ? (inSal.length / inSql.length) * 100 : 0,
+    convAssSal: inSal.length > 0 ? (inAss.length / inSal.length) * 100 : 0,
   };
 }
 
