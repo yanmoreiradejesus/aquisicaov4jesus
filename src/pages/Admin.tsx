@@ -39,6 +39,7 @@ import { Shield, UserPlus, Send, Wand2, Pencil, Search, Clock, Building2, ArrowR
 import { AdminVoipAccountsCard } from "@/components/admin/AdminVoipAccountsCard";
 import { AdminFixLeadsCard } from "@/components/admin/AdminFixLeadsCard";
 import { AdminBackfill3CPlusCard } from "@/components/admin/AdminBackfill3CPlusCard";
+import { AdminVersionsPanel } from "@/components/admin/AdminVersionsPanel";
 
 interface UserWithAccess {
   id: string;
