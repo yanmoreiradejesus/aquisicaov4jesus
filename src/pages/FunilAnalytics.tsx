@@ -346,32 +346,5 @@ const KpiCard = ({
   </div>
 );
 
-const PlaceholderKpiCard = ({
-  label,
-  hint,
-  delay,
-}: {
-  label: string;
-  hint: string;
-  delay: string;
-}) => (
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <div
-        className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-dashed border-border/50 p-4 lg:p-6 transition-all duration-300 hover:border-border animate-fade-in cursor-help"
-        style={{ animationDelay: delay, animationFillMode: "backwards" }}
-      >
-        <p className="mb-2 font-body text-xs lg:text-sm text-muted-foreground">{label}</p>
-        <p className="font-heading text-2xl lg:text-3xl font-bold text-muted-foreground/40 tabular-nums">
-          —
-        </p>
-        <p className="mt-2 text-[10px] text-muted-foreground/60 leading-snug">Em breve</p>
-      </div>
-    </TooltipTrigger>
-    <TooltipContent>
-      <p className="max-w-[200px] text-xs">{hint}</p>
-    </TooltipContent>
-  </Tooltip>
-);
 
 export default FunilAnalytics;
