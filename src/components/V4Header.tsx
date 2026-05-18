@@ -386,6 +386,8 @@ const V4Header = () => {
                 </div>
               )}
 
+              <TenantSwitcher variant="mobile" />
+
               {isAdmin && (
                 <div className="px-3 py-2">
                   <Link
