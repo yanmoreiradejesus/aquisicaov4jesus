@@ -23,6 +23,7 @@ const V4Header = () => {
   const aquisicaoItems = [
     { path: "/aquisicao/dashboard", label: "Dashboard" },
     { path: "/aquisicao/funil", label: "Funil" },
+    { path: "/aquisicao/meta", label: "Meta" },
     { path: "/aquisicao/insights", label: "Insights" },
     { path: "/aquisicao/financeiro", label: "Financeiro" },
   ];
