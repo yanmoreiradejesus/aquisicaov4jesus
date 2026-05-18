@@ -203,16 +203,6 @@ export const LeadDialog = ({ open, onOpenChange, lead, pipe, onSave, onDelete }:
             />
           </div>
           <div className="space-y-1.5">
-            <Label>CPMQL (R$)</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={form.cpmql ?? ""}
-              onChange={(e) => set("cpmql", e.target.value)}
-              placeholder="Custo de aquisição deste lead"
-            />
-          </div>
-          <div className="space-y-1.5">
             <Label>Arrematador</Label>
             <Input value={form.arrematador ?? ""} onChange={(e) => set("arrematador", e.target.value)} />
           </div>
