@@ -26,6 +26,7 @@ import OnboardingDetailPage from "./pages/OnboardingDetailPage";
 import ComercialPlaceholder from "./pages/ComercialPlaceholder";
 import FunilAnalytics from "./pages/FunilAnalytics";
 import GoogleCallback from "./pages/GoogleCallback";
+import { useAppVersion } from "@/hooks/useAppVersion";
 
 // Routes that should NOT render the persistent V4Header
 const HEADERLESS_PATHS = ["/login", "/auth/google-callback"];
