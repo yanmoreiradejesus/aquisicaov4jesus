@@ -226,6 +226,8 @@ export function LeadCallEventsList({ leadId }: Props) {
                           className="mt-2 h-7 w-full max-w-xs"
                         />
                         <TranscricaoBlock event={e} />
+                        <ResumoBlock event={e} />
+
                       </>
                     );
                   }
