@@ -1,0 +1,1 @@
+ALTER TABLE public.crm_leads DROP COLUMN IF EXISTS cpmql;

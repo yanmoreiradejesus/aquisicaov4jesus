@@ -432,7 +432,6 @@ export type Database = {
           canal: string | null
           cargo: string | null
           cidade: string | null
-          cpmql: number | null
           created_at: string
           created_by: string | null
           data_aquisicao: string | null
@@ -480,7 +479,6 @@ export type Database = {
           canal?: string | null
           cargo?: string | null
           cidade?: string | null
-          cpmql?: number | null
           created_at?: string
           created_by?: string | null
           data_aquisicao?: string | null
@@ -528,7 +526,6 @@ export type Database = {
           canal?: string | null
           cargo?: string | null
           cidade?: string | null
-          cpmql?: number | null
           created_at?: string
           created_by?: string | null
           data_aquisicao?: string | null
