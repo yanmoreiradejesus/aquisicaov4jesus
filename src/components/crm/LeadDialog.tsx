@@ -61,6 +61,8 @@ export const LeadDialog = ({ open, onOpenChange, lead, pipe, onSave, onDelete }:
       const payload = { ...form };
       if (payload.valor_pago === "" || payload.valor_pago == null) payload.valor_pago = null;
       else payload.valor_pago = Number(payload.valor_pago);
+      if (payload.cpmql === "" || payload.cpmql == null) payload.cpmql = null;
+      else payload.cpmql = Number(payload.cpmql);
       if (!payload.data_aquisicao) payload.data_aquisicao = null;
       if (!payload.data_criacao_origem) payload.data_criacao_origem = null;
       // created_at: converte datetime-local para ISO; se vazio em novo lead, deixa o default do banco
@@ -200,6 +202,16 @@ export const LeadDialog = ({ open, onOpenChange, lead, pipe, onSave, onDelete }:
               value={form.valor_pago ?? ""}
               onChange={(e) => set("valor_pago", e.target.value)}
               placeholder={formatBRL(form.valor_pago)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>CPMQL (R$)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              value={form.cpmql ?? ""}
+              onChange={(e) => set("cpmql", e.target.value)}
+              placeholder="Custo de aquisição deste lead"
             />
           </div>
           <div className="space-y-1.5">

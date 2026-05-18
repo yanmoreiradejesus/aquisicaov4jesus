@@ -14,6 +14,7 @@ import {
   type Pipe,
 } from "@/utils/crmFunnelCalculator";
 import FunilCrmStages from "@/components/funil-crm/FunilCrmStages";
+import FunilLeadsDialog from "@/components/funil-crm/FunilLeadsDialog";
 import FunilCrmFilters, {
   type FunilCrmFiltersState,
 } from "@/components/funil-crm/FunilCrmFilters";
@@ -133,6 +134,20 @@ const FunilAnalytics = () => {
   const useCreationDate = lente === "coorte";
   const toggleLente = () => setLente(useCreationDate ? "evento" : "coorte");
 
+  // Dialog de drill-down
+  const [dialogStage, setDialogStage] = useState<"mql" | "sql" | "sal" | "ass" | null>(null);
+  const [dialogSub, setDialogSub] = useState<string | null>(null);
+  const openLeads = (stageId: "mql" | "sql" | "sal" | "ass", subId?: string) => {
+    setDialogStage(stageId);
+    setDialogSub(subId ?? null);
+  };
+  const closeLeads = (open: boolean) => {
+    if (!open) {
+      setDialogStage(null);
+      setDialogSub(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto max-w-7xl space-y-6 lg:space-y-8 px-3 sm:px-4 lg:px-8 py-4 lg:py-8">
@@ -176,36 +191,50 @@ const FunilAnalytics = () => {
                   </TooltipContent>
                 </Tooltip>
               </div>
-              <FunilCrmStages data={funilData} />
+              <FunilCrmStages data={funilData} onOpenLeads={openLeads} />
             </section>
 
             <section className="space-y-6">
               <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">
                 KPIS PRINCIPAIS
               </h2>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-5">
-                {/* CPMQL — placeholder enquanto custo de mídia não está no CRM */}
-                <PlaceholderKpiCard
-                  label="CPMQL"
-                  delay="900ms"
-                  hint="Investimento de mídia ainda não trackeado no CRM"
-                />
-
-                {/* CAC — placeholder */}
-                <PlaceholderKpiCard
-                  label="CAC"
-                  delay="1050ms"
-                  hint="Depende do investimento de mídia (em breve no CRM)"
-                />
-
-                {/* Investimento Total — placeholder */}
-                <PlaceholderKpiCard
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                <KpiCard
                   label="Investimento Total"
-                  delay="1200ms"
-                  hint="Depende do investimento de mídia (em breve no CRM)"
+                  value={fmtBRL0(funilData.investimentoTotal)}
+                  delay="900ms"
                 />
 
-                {/* Faturamento Total */}
+                <KpiCard
+                  label="CPMQL"
+                  value={
+                    pipe === "outbound"
+                      ? "—"
+                      : funilData.cpmqlMedio > 0
+                      ? fmtBRL0(funilData.cpmqlMedio)
+                      : "—"
+                  }
+                  delay="1050ms"
+                />
+
+                <KpiCard
+                  label="CAC"
+                  value={
+                    pipe === "outbound"
+                      ? "—"
+                      : funilData.cac > 0
+                      ? fmtBRL0(funilData.cac)
+                      : "—"
+                  }
+                  delay="1200ms"
+                />
+
+                <KpiCard
+                  label="Ticket Médio"
+                  value={funilData.ticketMedio > 0 ? fmtBRL0(funilData.ticketMedio) : "—"}
+                  delay="1275ms"
+                />
+
                 <KpiCard
                   label="Faturamento Total"
                   value={fmtBRL2(funilData.receitaTotal)}
@@ -225,7 +254,6 @@ const FunilAnalytics = () => {
                   }
                 />
 
-                {/* Time to Close */}
                 <KpiCard
                   label="Time to Close"
                   icon={<Clock className="h-4 w-4 text-muted-foreground" />}
@@ -233,6 +261,13 @@ const FunilAnalytics = () => {
                   delay="1500ms"
                 />
               </div>
+              {pipe !== "outbound" && (
+                <p className="text-xs text-muted-foreground">
+                  Investimento, CPMQL e CAC consideram somente leads inbound. O investimento
+                  é a soma do campo CPMQL de cada lead MQL no período — preencha no lead
+                  para refletir aqui.
+                </p>
+              )}
             </section>
           </>
         )}
@@ -243,6 +278,16 @@ const FunilAnalytics = () => {
           </p>
         </footer>
       </main>
+
+      <FunilLeadsDialog
+        open={dialogStage !== null}
+        onOpenChange={closeLeads}
+        data={funilData}
+        stageId={dialogStage}
+        subId={dialogSub}
+        lente={lente}
+        profileNameById={profileNameById}
+      />
     </div>
   );
 };
@@ -301,32 +346,5 @@ const KpiCard = ({
   </div>
 );
 
-const PlaceholderKpiCard = ({
-  label,
-  hint,
-  delay,
-}: {
-  label: string;
-  hint: string;
-  delay: string;
-}) => (
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <div
-        className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-dashed border-border/50 p-4 lg:p-6 transition-all duration-300 hover:border-border animate-fade-in cursor-help"
-        style={{ animationDelay: delay, animationFillMode: "backwards" }}
-      >
-        <p className="mb-2 font-body text-xs lg:text-sm text-muted-foreground">{label}</p>
-        <p className="font-heading text-2xl lg:text-3xl font-bold text-muted-foreground/40 tabular-nums">
-          —
-        </p>
-        <p className="mt-2 text-[10px] text-muted-foreground/60 leading-snug">Em breve</p>
-      </div>
-    </TooltipTrigger>
-    <TooltipContent>
-      <p className="max-w-[200px] text-xs">{hint}</p>
-    </TooltipContent>
-  </Tooltip>
-);
 
 export default FunilAnalytics;
