@@ -472,6 +472,11 @@ const Admin = () => {
           <TabsContent value="fix-leads" className="space-y-4 mt-4">
             <AdminFixLeadsCard />
           </TabsContent>
+
+          {/* ========== TAB VERSÕES ========== */}
+          <TabsContent value="versions" className="space-y-4 mt-4">
+            <AdminVersionsPanel />
+          </TabsContent>
         </Tabs>
       </div>
 
