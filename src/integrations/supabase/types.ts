@@ -835,6 +835,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          active_tenant_id: string | null
           approved: boolean
           avatar_url: string | null
           cargo: string | null
@@ -847,6 +848,7 @@ export type Database = {
           tenant_id: string
         }
         Insert: {
+          active_tenant_id?: string | null
           approved?: boolean
           avatar_url?: string | null
           cargo?: string | null
@@ -859,6 +861,7 @@ export type Database = {
           tenant_id?: string
         }
         Update: {
+          active_tenant_id?: string | null
           approved?: boolean
           avatar_url?: string | null
           cargo?: string | null
