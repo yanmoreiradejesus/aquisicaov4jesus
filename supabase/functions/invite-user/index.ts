@@ -83,14 +83,18 @@ Deno.serve(async (req) => {
 
     const newUserId = inviteData.user.id;
 
-    // Auto-approve the invited user
-    await adminClient.from("profiles").update({ approved: true }).eq("id", newUserId);
+    // Auto-approve the invited user e garante tenant_id correto
+    await adminClient
+      .from("profiles")
+      .update({ approved: true, tenant_id: callerTenantId })
+      .eq("id", newUserId);
 
     // Set page access if provided
     if (pages && pages.length > 0) {
       const pageRecords = pages.map((page_path: string) => ({
         user_id: newUserId,
         page_path,
+        tenant_id: callerTenantId,
       }));
       await adminClient.from("user_page_access").insert(pageRecords);
     }
