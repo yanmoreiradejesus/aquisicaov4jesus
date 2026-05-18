@@ -137,7 +137,9 @@ export function calcFunilCrm({
   // 3. Datas conforme lente
   const dataRa = (l: any) =>
     lente === "coorte" ? dataMql(l) : l.data_reuniao_agendada ?? dataMql(l);
-  const dataRr = (l: any) =>
+  // SAL agora = qualquer lead que passou por Reunião Realizada (data preenchida),
+  // independente da etapa atual (pode ter avançado para oportunidade, ganho, perdido, etc).
+  const dataSal = (l: any) =>
     lente === "coorte" ? dataMql(l) : l.data_reuniao_realizada;
   const dataAss = (o: any) =>
     lente === "coorte"
@@ -150,8 +152,10 @@ export function calcFunilCrm({
   const inSql = ls.filter(
     (l) => reachedAtLeast(l.etapa, "reuniao_agendada") && inP(dataRa(l)),
   );
+  // SAL: exige data_reuniao_realizada preenchida (marcador histórico via trigger).
+  // Mesmo na lente "coorte", exige o campo — sem fallback artificial.
   const inSal = ls.filter(
-    (l) => l.etapa === "reuniao_realizada" && inP(dataRr(l)),
+    (l) => !!l.data_reuniao_realizada && inP(dataSal(l)),
   );
   const inAss = os.filter(
     (o) => o.etapa === "fechado_ganho" && inP(dataAss(o)),
@@ -170,21 +174,55 @@ export function calcFunilCrm({
     { id: "realizada", label: "Reunião Realizada", count: inSql.filter((l) => l.etapa === "reuniao_realizada").length },
   ];
 
-  const opsByLeadId = new Map<string, any[]>();
-  os.forEach((o) => {
-    const arr = opsByLeadId.get(o.lead_id) ?? [];
+  // Para SAL drill-down: cruza com oportunidades do lead (a mais recente representa
+  // o status atual). Lead sem op = "sem_oportunidade". Lead com etapa = desqualificado
+  // que já teve reunião = "desqualificado_depois".
+  const allOpsByLeadId = new Map<string, any[]>();
+  oportunidades.forEach((o) => {
+    const arr = allOpsByLeadId.get(o.lead_id) ?? [];
     arr.push(o);
-    opsByLeadId.set(o.lead_id, arr);
+    allOpsByLeadId.set(o.lead_id, arr);
   });
-  const opsSal = inSal.flatMap((l) => opsByLeadId.get(l.id) ?? []);
+  const latestOpFor = (leadId: string): any | null => {
+    const arr = allOpsByLeadId.get(leadId);
+    if (!arr || arr.length === 0) return null;
+    return arr.reduce((latest, cur) => {
+      const tCur = new Date(cur.updated_at ?? cur.created_at ?? 0).getTime();
+      const tLat = new Date(latest.updated_at ?? latest.created_at ?? 0).getTime();
+      return tCur > tLat ? cur : latest;
+    });
+  };
+  const salByBucket = {
+    sem_oportunidade: [] as any[],
+    proposta: [] as any[],
+    negociacao: [] as any[],
+    contrato: [] as any[],
+    follow_infinito: [] as any[],
+    fechado_ganho: [] as any[],
+    fechado_perdido: [] as any[],
+    desqualificado_depois: [] as any[],
+  };
+  inSal.forEach((l) => {
+    const op = latestOpFor(l.id);
+    if (!op) {
+      if (l.etapa === "desqualificado") salByBucket.desqualificado_depois.push(l);
+      else salByBucket.sem_oportunidade.push(l);
+      return;
+    }
+    const key = op.etapa as keyof typeof salByBucket;
+    if (key in salByBucket) (salByBucket[key] as any[]).push(l);
+    else if (l.etapa === "desqualificado") salByBucket.desqualificado_depois.push(l);
+    else salByBucket.sem_oportunidade.push(l);
+  });
   const subSal: SubStage[] = [
-    { id: "sem_oportunidade", label: "Sem oportunidade ainda", count: inSal.filter((l) => !opsByLeadId.has(l.id)).length },
-    { id: "proposta", label: "Proposta", count: opsSal.filter((o) => o.etapa === "proposta").length },
-    { id: "negociacao", label: "Negociação", count: opsSal.filter((o) => o.etapa === "negociacao").length },
-    { id: "contrato", label: "Dúvidas e Fechamento", count: opsSal.filter((o) => o.etapa === "contrato").length },
-    { id: "follow_infinito", label: "Follow Infinito", count: opsSal.filter((o) => o.etapa === "follow_infinito").length },
-    { id: "fechado_ganho", label: "Ganho", count: opsSal.filter((o) => o.etapa === "fechado_ganho").length },
-    { id: "fechado_perdido", label: "Perdido", count: opsSal.filter((o) => o.etapa === "fechado_perdido").length },
+    { id: "sem_oportunidade", label: "Sem oportunidade ainda", count: salByBucket.sem_oportunidade.length },
+    { id: "proposta", label: "Em proposta", count: salByBucket.proposta.length },
+    { id: "negociacao", label: "Em negociação", count: salByBucket.negociacao.length },
+    { id: "contrato", label: "Dúvidas e fechamento", count: salByBucket.contrato.length },
+    { id: "follow_infinito", label: "Follow infinito", count: salByBucket.follow_infinito.length },
+    { id: "fechado_ganho", label: "Ganho", count: salByBucket.fechado_ganho.length },
+    { id: "fechado_perdido", label: "Perdido", count: salByBucket.fechado_perdido.length },
+    { id: "desqualificado_depois", label: "Desqualificado depois", count: salByBucket.desqualificado_depois.length },
   ];
 
   const subAss: SubStage[] = [
