@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Users } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import type { FunilCrmResult, SubStage } from "@/utils/crmFunnelCalculator";
-import { Button } from "@/components/ui/button";
 
 interface Props {
   data: FunilCrmResult;
