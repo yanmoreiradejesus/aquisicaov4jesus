@@ -77,6 +77,7 @@ const FunilLeadsDialog = ({
   lente,
   profileNameById,
 }: Props) => {
+  const navigate = useNavigate();
   const { rows, title, isAss } = useMemo(() => {
     if (!data || !stageId) {
       return { rows: [] as any[], title: "", isAss: false };
