@@ -450,6 +450,11 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
                 value={form.valor_pago != null ? String(form.valor_pago) : ""}
                 onChange={(v) => set("valor_pago", v)}
               />
+              <HoverEditField
+                label="CPMQL (R$)"
+                value={form.cpmql != null ? String(form.cpmql) : ""}
+                onChange={(v) => set("cpmql", v)}
+              />
               {form.etapa === "desqualificado" && (
                 <HoverEditField
                   label="Motivo da desqualificação"
