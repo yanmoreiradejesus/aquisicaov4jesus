@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, UserPlus, Send, Wand2, Pencil, Search, Clock } from "lucide-react";
+import { Shield, UserPlus, Send, Wand2, Pencil, Search, Clock, Building2, ArrowRight } from "lucide-react";
 import { AdminVoipAccountsCard } from "@/components/admin/AdminVoipAccountsCard";
 import { AdminFixLeadsCard } from "@/components/admin/AdminFixLeadsCard";
 import { AdminBackfill3CPlusCard } from "@/components/admin/AdminBackfill3CPlusCard";
@@ -107,7 +108,8 @@ const getInitials = (name: string | null, email: string) =>
     .toUpperCase();
 
 const Admin = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isSuperAdminV4 } = useAuth();
+  const navigate = useNavigate();
   const [users, setUsers] = useState<UserWithAccess[]>([]);
   const [templates, setTemplates] = useState<RoleTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -241,6 +243,26 @@ const Admin = () => {
             <UserPlus className="h-4 w-4 mr-2" /> Convidar usuário
           </Button>
         </div>
+
+        {isSuperAdminV4 && (
+          <Card
+            className="cursor-pointer hover:border-primary/50 transition-colors group"
+            onClick={() => navigate("/admin/clientes")}
+          >
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/15 flex items-center justify-center">
+                  <Building2 className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">Clientes V4</p>
+                  <p className="text-sm text-muted-foreground">Gerenciar tenants e provisionar novos clientes</p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs defaultValue="users">
           <TabsList>
