@@ -278,6 +278,16 @@ const FunilAnalytics = () => {
           </p>
         </footer>
       </main>
+
+      <FunilLeadsDialog
+        open={dialogStage !== null}
+        onOpenChange={closeLeads}
+        data={funilData}
+        stageId={dialogStage}
+        subId={dialogSub}
+        lente={lente}
+        profileNameById={profileNameById}
+      />
     </div>
   );
 };
