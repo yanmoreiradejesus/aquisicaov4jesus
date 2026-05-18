@@ -115,7 +115,6 @@ export default function AdminClienteNovo() {
     internal_notes: "",
     subdominio: "",
     client_logo_url: "",
-    primary_color_hsl: "217 91% 60%",
     voip_provider: "none",
     enabled_pages: new Set(PAGE_PRESETS.completo),
   });
@@ -252,7 +251,6 @@ export default function AdminClienteNovo() {
           v4_contact: form.v4_contact || null,
           internal_notes: form.internal_notes || null,
           client_logo_url: form.client_logo_url || null,
-          primary_color_hsl: form.primary_color_hsl || null,
           voip_provider: form.voip_provider === "none" ? null : form.voip_provider,
         })
         .select()
@@ -501,7 +499,7 @@ export default function AdminClienteNovo() {
           <div className="space-y-5">
             <div>
               <h2 className="font-heading text-xl mb-1">Branding</h2>
-              <p className="text-sm text-muted-foreground">Logo e cor primária do cliente. Ambos opcionais.</p>
+              <p className="text-sm text-muted-foreground">Logo do cliente. Opcional — pode enviar depois.</p>
             </div>
 
             <div>
@@ -549,36 +547,6 @@ export default function AdminClienteNovo() {
                   )}
                 </div>
               </div>
-            </div>
-
-            <div>
-              <Label>Cor primária</Label>
-              <div className="flex items-center gap-3 mt-2">
-                <input
-                  type="color"
-                  value={hslToHex(form.primary_color_hsl)}
-                  onChange={(e) =>
-                    setForm({ ...form, primary_color_hsl: hexToHsl(e.target.value) })
-                  }
-                  className="h-10 w-16 rounded border bg-transparent cursor-pointer"
-                />
-                <Input
-                  className="font-mono w-48"
-                  value={form.primary_color_hsl}
-                  onChange={(e) => setForm({ ...form, primary_color_hsl: e.target.value })}
-                  placeholder="217 91% 60%"
-                />
-                <Button
-                  style={{ backgroundColor: `hsl(${form.primary_color_hsl})` }}
-                  className="text-white"
-                  type="button"
-                >
-                  Preview
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Formato HSL: <code>H S% L%</code>.
-              </p>
             </div>
           </div>
         )}
@@ -696,18 +664,6 @@ export default function AdminClienteNovo() {
               <ReviewRow
                 label="Logo"
                 value={form.client_logo_url ? "Enviada" : "Sem logo (default)"}
-              />
-              <ReviewRow
-                label="Cor primária"
-                value={
-                  <span className="inline-flex items-center gap-2">
-                    <span
-                      className="w-4 h-4 rounded border"
-                      style={{ backgroundColor: `hsl(${form.primary_color_hsl})` }}
-                    />
-                    <code className="text-xs">{form.primary_color_hsl}</code>
-                  </span>
-                }
               />
               <ReviewRow
                 label="VoIP"
