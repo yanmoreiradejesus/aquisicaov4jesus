@@ -118,6 +118,24 @@ export default function AdminClientes() {
     },
   });
 
+  const { user } = useAuth();
+  const enterAsMut = useMutation({
+    mutationFn: async (tenantId: string) => {
+      if (!user) throw new Error("Sem sessão");
+      const { error } = await supabase
+        .from("profiles")
+        .update({ active_tenant_id: tenantId })
+        .eq("id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await qc.invalidateQueries();
+      toast.success("Tenant ativo trocado");
+      navigate("/apps");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   function resetForm() {
     setDialogOpen(false);
     setEditing(null);
