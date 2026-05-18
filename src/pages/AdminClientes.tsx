@@ -231,12 +231,11 @@ export default function AdminClientes() {
           </p>
         </div>
 
+        <Button onClick={() => navigate("/admin/clientes/novo")}>
+          <Plus className="w-4 h-4 mr-2" /> Novo cliente
+        </Button>
+
         <Dialog open={dialogOpen} onOpenChange={(o) => (o ? setDialogOpen(true) : resetForm())}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" /> Novo cliente
-            </Button>
-          </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>{editing ? "Editar cliente" : "Novo cliente V4"}</DialogTitle>

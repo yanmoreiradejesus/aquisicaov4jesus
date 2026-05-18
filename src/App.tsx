@@ -11,6 +11,7 @@ import Index from "./pages/Index";
 import Insights from "./pages/Insights";
 import Admin from "./pages/Admin";
 import AdminClientes from "./pages/AdminClientes";
+import AdminClienteNovo from "./pages/AdminClienteNovo";
 import Perfil from "./pages/Perfil";
 import Financeiro from "./pages/Financeiro";
 import DashboardComercial from "./pages/DashboardComercial";
@@ -156,6 +157,11 @@ const AppRoutes = () => {
         <Route path="/admin/clientes" element={
           <ProtectedRoute>
             <PageTransition><AdminClientes /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/clientes/novo" element={
+          <ProtectedRoute>
+            <PageTransition><AdminClienteNovo /></PageTransition>
           </ProtectedRoute>
         } />
 

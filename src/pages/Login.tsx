@@ -59,11 +59,37 @@ const Login = () => {
     const password = formData.get("password") as string;
     const fullName = formData.get("full_name") as string;
 
+    // Multi-tenant: descobre qual tenant esse domínio representa.
+    // Casa por hostname: se o usuário acessou xyz.v4jesus.com, ele vira admin do tenant
+    // com app_base_url=https://xyz.v4jesus.com (não do V4 Jesus por fallback).
+    let tenantId: string | null = null;
+    try {
+      const host = window.location.hostname.toLowerCase();
+      const { data: tenants } = await supabase
+        .from("tenants")
+        .select("id, app_base_url");
+      const match = (tenants ?? []).find((t: { app_base_url: string | null }) => {
+        if (!t.app_base_url) return false;
+        try {
+          const u = new URL(t.app_base_url);
+          return u.hostname.toLowerCase() === host;
+        } catch {
+          return false;
+        }
+      });
+      if (match) tenantId = (match as { id: string }).id;
+    } catch (err) {
+      console.warn("[signup] tenant lookup falhou, usando fallback:", err);
+    }
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName },
+        data: {
+          full_name: fullName,
+          ...(tenantId ? { tenant_id: tenantId } : {}),
+        },
         emailRedirectTo: window.location.origin,
       },
     });

@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenantEnabledPages } from "@/hooks/useTenantEnabledPages";
 import logo from "@/assets/v4-logo.png";
 import { LogOut, Shield, ChevronDown, Menu, X, User as UserIcon } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
@@ -39,13 +40,17 @@ const V4Header = () => {
     { path: "/comercial/cobrancas", label: "Cobranças" },
   ];
 
-  const visibleLegadoItems = legadoItems.filter((item) => hasPageAccess(item.path));
+  const { isPageEnabled } = useTenantEnabledPages();
+  // Usuário só vê item se (a) tem permissão individual E (b) tenant tem a página habilitada
+  const canSee = (path: string) => hasPageAccess(path) && isPageEnabled(path);
+
+  const visibleLegadoItems = legadoItems.filter((item) => canSee(item.path));
   const isLegadoActive = legadoItems.some((item) => isActive(item.path));
   const isAquisicaoActive =
     aquisicaoItems.some((item) => isActive(item.path)) || isLegadoActive;
-  const visibleAquisicaoItems = aquisicaoItems.filter((item) => hasPageAccess(item.path));
+  const visibleAquisicaoItems = aquisicaoItems.filter((item) => canSee(item.path));
   const isComercialActive = comercialItems.some((item) => isActive(item.path));
-  const visibleComercialItems = comercialItems.filter((item) => hasPageAccess(item.path));
+  const visibleComercialItems = comercialItems.filter((item) => canSee(item.path));
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowUpRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenantEnabledPages } from "@/hooks/useTenantEnabledPages";
 
 export interface AppEntry {
   id: string;
@@ -21,8 +22,9 @@ export const APPS: AppEntry[] = [
       "/aquisicao/funil",
       "/aquisicao/dashboard",
       "/aquisicao/insights",
-      "/aquisicao/meta",
       "/aquisicao/financeiro",
+      "/aquisicao/legado/funil",
+      "/aquisicao/legado/meta",
     ],
   },
   {
@@ -33,17 +35,10 @@ export const APPS: AppEntry[] = [
     accessPaths: [
       "/comercial/leads",
       "/comercial/oportunidades",
+      "/comercial/onboarding",
       "/comercial/accounts",
       "/comercial/cobrancas",
     ],
-  },
-  {
-    id: "app-v4",
-    title: "App V4",
-    description: "Sistema operacional do cliente.",
-    href: "https://app.v4jesus.com",
-    external: true,
-    accessPaths: ["/app-v4"],
   },
 ];
 
@@ -53,7 +48,11 @@ interface AppsGridProps {
 
 export function AppsGrid({ compact = false }: AppsGridProps) {
   const { hasPageAccess } = useAuth();
-  const visibleApps = APPS.filter((a) => a.accessPaths.some((p) => hasPageAccess(p)));
+  const { isPageEnabled } = useTenantEnabledPages();
+  // App é visível se houver pelo menos uma página onde usuário tem permissão E tenant tem habilitada
+  const visibleApps = APPS.filter((a) =>
+    a.accessPaths.some((p) => hasPageAccess(p) && isPageEnabled(p)),
+  );
 
   if (visibleApps.length === 0) {
     return (
