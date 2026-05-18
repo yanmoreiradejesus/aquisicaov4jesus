@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, ExternalLink, Trash2, LogIn } from "lucide-react";
+import { Plus, ExternalLink, Trash2, LogIn, Rocket } from "lucide-react";
 
 interface Tenant {
   id: string;
@@ -74,6 +74,32 @@ export default function AdminClientes() {
     enabled: isSuperAdminV4,
   });
 
+  // Última versão de cada tenant (para mostrar badge + identificar atrasados)
+  const { data: latestVersions = {} as Record<string, { version_number: number; build_hash: string }> } = useQuery({
+    queryKey: ["tenant_versions_latest_all"],
+    enabled: isSuperAdminV4 && clients.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tenant_versions")
+        .select("tenant_id, version_number, build_hash")
+        .order("version_number", { ascending: false });
+      if (error) throw error;
+      const map: Record<string, { version_number: number; build_hash: string }> = {};
+      for (const row of data ?? []) {
+        if (!map[row.tenant_id]) {
+          map[row.tenant_id] = {
+            version_number: row.version_number,
+            build_hash: row.build_hash,
+          };
+        }
+      }
+      return map;
+    },
+  });
+
+  const jesusTenant = clients.find((c) => c.client_slug === "jesus");
+  const jesusLatest = jesusTenant ? latestVersions[jesusTenant.id] : undefined;
+
   const upsertMut = useMutation({
     mutationFn: async () => {
       const payload = {
@@ -118,7 +144,19 @@ export default function AdminClientes() {
     },
   });
 
-  
+  const promoteMut = useMutation({
+    mutationFn: async (tenantId: string) => {
+      const { error } = await supabase.rpc("promote_jesus_version_to_tenant", {
+        p_target_tenant: tenantId,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tenant_versions_latest_all"] });
+      toast.success("Versão promovida");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
   const enterAsMut = useMutation({
     mutationFn: async (tenantId: string) => {
       if (!user) throw new Error("Sem sessão");
@@ -295,10 +333,24 @@ export default function AdminClientes() {
               <Card key={c.id} className="p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-1">
+                    <div className="flex flex-wrap items-center gap-3 mb-1">
                       <h3 className="font-heading text-xl">{c.client_name}</h3>
                       <Badge variant={statusCfg.variant}>{statusCfg.label}</Badge>
                       <span className="text-xs text-muted-foreground">/{c.client_slug}</span>
+                      {(() => {
+                        const v = latestVersions[c.id];
+                        if (!v) return <Badge variant="outline" className="text-xs">sem versão</Badge>;
+                        const isJesus = c.client_slug === "jesus";
+                        const matchesJesus = jesusLatest && v.build_hash === jesusLatest.build_hash;
+                        return (
+                          <Badge
+                            variant={isJesus || matchesJesus ? "default" : "secondary"}
+                            className={isJesus || matchesJesus ? "bg-emerald-600 hover:bg-emerald-600" : ""}
+                          >
+                            v{v.version_number}
+                          </Badge>
+                        );
+                      })()}
                     </div>
                     {c.app_base_url && (
                       <a
@@ -321,7 +373,23 @@ export default function AdminClientes() {
                       </p>
                     )}
                   </div>
-                  <div className="flex gap-2 shrink-0">
+                  <div className="flex gap-2 shrink-0 flex-wrap justify-end">
+                    {c.client_slug !== "jesus" && jesusLatest && (
+                      latestVersions[c.id]?.build_hash !== jesusLatest.build_hash
+                    ) && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          if (confirm(`Promover ${c.client_name} para v${jesusLatest.version_number} (versão atual do V4 Jesus)?`)) {
+                            promoteMut.mutate(c.id);
+                          }
+                        }}
+                        disabled={promoteMut.isPending}
+                      >
+                        <Rocket className="w-3.5 h-3.5 mr-1.5" /> Promover p/ v{jesusLatest.version_number}
+                      </Button>
+                    )}
                     <Button
                       variant="default"
                       size="sm"

@@ -1,64 +1,72 @@
-## Fase 3 — Seletor de tenant + UX de gestão de clientes
+## Versões por tenant — automático para V4 Jesus, manual para os demais
 
-Hoje o `super_admin_v4` enxerga dados de todos os tenants ao mesmo tempo (RLS faz bypass). Falta uma forma simples dele **"entrar como" um cliente específico** para inspecionar/operar — e o `/admin/clientes` precisa parar de prometer fluxos que ainda não existem (convite por tenant).
-
----
-
-### O que muda
-
-**1. Banco (migration pequena)**
-
-- Adicionar coluna `profiles.active_tenant_id uuid` (nullable).
-- Atualizar `current_tenant_id()` para retornar `coalesce(active_tenant_id, tenant_id)`.
-  - Para usuário comum: `active_tenant_id` fica sempre NULL → comportamento idêntico ao de hoje.
-  - Para `super_admin_v4`: ele troca esse campo via UI para "entrar como" um tenant — RLS passa a filtrar automaticamente em todas as tabelas, sem precisar mexer em hook nenhum.
-- RLS de `profiles.update`: permitir o próprio usuário atualizar **apenas** seu `active_tenant_id` (sem precisar ser admin).
-
-**2. Header (`src/components/V4Header.tsx`)**
-
-- Quando `isSuperAdminV4`, mostrar um pill discreto à esquerda do ícone Admin com o nome do tenant ativo + dropdown listando todos os tenants.
-- Trocar = `update profiles set active_tenant_id = X where id = me` + invalidar `["tenant_config"]` e `["tenants"]` no React Query → app inteiro reflete o novo tenant.
-- Visual: pill pequeno, mesma linguagem do header vermelho atual, mobile cabe no menu lateral.
-
-**3. `src/hooks/useTenantConfig.ts`**
-
-- Continua igual (lê o tenant atual via RLS). Como RLS agora respeita `active_tenant_id`, o config muda sozinho ao trocar de tenant.
-
-**4. `src/pages/AdminClientes.tsx`**
-
-- Trocar o card "Como adicionar um cliente" por um bloco mais útil:
-  - Resumo curto: "Cada cliente é um espaço isolado neste app. Crie o tenant, troque para ele no seletor do header, e convide o admin de dentro do tenant."
-- Em cada card de cliente, botão **"Entrar como"** que seta `active_tenant_id` e navega para `/apps`.
-- Manter Novo cliente / Editar / Remover como já está.
-- Remover o item "(próxima fase: seletor de tenant no convite)" — passa a ser realidade.
-
-**5. Memória do projeto**
-
-- Atualizar `mem://index.md` (Core) para deixar claro: super_admin_v4 troca de tenant via seletor no header; `current_tenant_id()` respeita `active_tenant_id`.
+V4 Jesus é o canário: toda publicação cria uma nova versão automaticamente para ele. Os outros tenants ficam "atrasados" até serem promovidos manualmente para a versão atual do V4 Jesus.
 
 ---
 
-### Fora de escopo (continuam para Fase 4)
+### Modelo
 
-- Roteamento de webhooks VoIP por tenant (3CPlus / api4com).
-- Edge functions com lógica de tenant explícita (continuam usando service role + default V4 Jesus).
-- Tenant-aware no `invite-user` para super_admin convidar admin em outro tenant sem precisar trocar antes (hoje precisa: trocar via seletor → convidar).
+**Tabela `tenant_versions`**
+
+| coluna | tipo | descrição |
+|---|---|---|
+| `id` | uuid pk | |
+| `tenant_id` | uuid | tenant dono da versão |
+| `version_number` | int | autoincrement por tenant (v1, v2, v3...) |
+| `build_hash` | text | hash/timestamp do build atual (vem do bundle) |
+| `notes` | text nullable | notas de release (edit no admin) |
+| `created_at` | timestamptz | |
+
+Unique constraint: `(tenant_id, build_hash)` → evita duplicar a mesma build no mesmo tenant.
+
+RLS: leitura para `current_tenant_id()` e `super_admin_v4`; insert/update só para `super_admin_v4` ou admin do tenant.
+
+---
+
+### Como o auto-bump funciona
+
+O Vite injeta um `BUILD_ID` em build-time (`vite.config.ts` → `define: { __BUILD_ID__: JSON.stringify(...) }`). Vou usar `Date.now()` no momento do build — toda nova publicação muda o ID.
+
+Hook React `useAppVersion()` roda uma vez por sessão:
+
+1. Lê o `BUILD_ID` atual.
+2. Busca a última versão do tenant ativo em `tenant_versions`.
+3. Se o tenant ativo for **V4 Jesus** e o `build_hash` da última versão != `BUILD_ID` → insere nova entrada (`version_number = last + 1`). Idempotente via unique constraint.
+4. Para outros tenants: **não** auto-incrementa. Só lê.
+
+---
+
+### UI no painel admin
+
+**`/admin/clientes` — cada card de cliente ganha:**
+- Badge `v{N}` ao lado do nome.
+- Se for V4 Jesus e estiver na última versão: badge "atualizado" verde.
+- Se for outro tenant atrasado: botão **"Promover para v{N do Jesus}"** que copia o `build_hash` e `notes` da versão atual do V4 Jesus, criando uma nova entrada para esse tenant.
+
+**Nova seção `/admin` (visível apenas para super_admin_v4) — "Versões":**
+- Lista paginada das versões do tenant ativo (mais recente primeiro).
+- Cada linha: `v3 — 18/05/2026 14:32 — [notas]`.
+- Notas editáveis inline (textarea + save).
+- Sem botão "Criar versão manualmente" (modo é automático).
 
 ---
 
 ### Detalhes técnicos
 
-```sql
-ALTER TABLE public.profiles ADD COLUMN active_tenant_id uuid;
+- `vite.config.ts`: `define: { __BUILD_ID__: JSON.stringify(String(Date.now())) }` + `vite-env.d.ts` declara `const __BUILD_ID__: string`.
+- Hook `useAppVersion()` em `src/hooks/useAppVersion.ts` — chamado uma vez no `App.tsx`, depende de `useAuth` + `useTenantConfig` para identificar tenant atual.
+- Auto-bump usa RPC SECURITY DEFINER `register_version_if_new(p_build_hash text)` que internamente:
+  - Faz nada se o tenant ativo != V4 Jesus.
+  - INSERT ON CONFLICT DO NOTHING com `version_number = (select coalesce(max(version_number),0)+1 from tenant_versions where tenant_id = current_tenant_id())`.
+  - Race condition é mitigada pela unique constraint.
+- Página `/admin` ganha uma aba/seção "Versões" sem precisar de nova rota.
 
-CREATE OR REPLACE FUNCTION public.current_tenant_id()
-RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT coalesce(active_tenant_id, tenant_id) FROM public.profiles WHERE id = auth.uid()
-$$;
-```
+---
 
-`prevent_sensitive_profile_changes` precisa permitir mudança de `active_tenant_id` por qualquer usuário (na prática só super_admin terá outros tenants visíveis pra escolher, então é seguro).
+### Fora de escopo
 
-Frontend usa o `useTenantConfig` já existente para mostrar o nome do tenant ativo no pill.
+- Notificação visível para o admin do cliente ("nova versão disponível").
+- Rollback (já que código é compartilhado, não tem sentido real).
+- Changelog automático a partir de commits.
 
 Confirma que posso seguir?

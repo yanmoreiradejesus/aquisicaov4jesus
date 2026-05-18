@@ -912,6 +912,33 @@ export type Database = {
           },
         ]
       }
+      tenant_versions: {
+        Row: {
+          build_hash: string
+          created_at: string
+          id: string
+          notes: string | null
+          tenant_id: string
+          version_number: number
+        }
+        Insert: {
+          build_hash: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          tenant_id: string
+          version_number: number
+        }
+        Update: {
+          build_hash?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          tenant_id?: string
+          version_number?: number
+        }
+        Relationships: []
+      }
       tenants: {
         Row: {
           active: boolean
@@ -1140,6 +1167,40 @@ export type Database = {
       is_approved: { Args: { _user_id: string }; Returns: boolean }
       marcar_cobrancas_atrasadas: { Args: never; Returns: undefined }
       normalize_phone_br: { Args: { phone: string }; Returns: string }
+      promote_jesus_version_to_tenant: {
+        Args: { p_target_tenant: string }
+        Returns: {
+          build_hash: string
+          created_at: string
+          id: string
+          notes: string | null
+          tenant_id: string
+          version_number: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tenant_versions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      register_version_if_new: {
+        Args: { p_build_hash: string }
+        Returns: {
+          build_hash: string
+          created_at: string
+          id: string
+          notes: string | null
+          tenant_id: string
+          version_number: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tenant_versions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       account_status: "ativo" | "pausado" | "encerrado"

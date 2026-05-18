@@ -39,6 +39,7 @@ import { Shield, UserPlus, Send, Wand2, Pencil, Search, Clock, Building2, ArrowR
 import { AdminVoipAccountsCard } from "@/components/admin/AdminVoipAccountsCard";
 import { AdminFixLeadsCard } from "@/components/admin/AdminFixLeadsCard";
 import { AdminBackfill3CPlusCard } from "@/components/admin/AdminBackfill3CPlusCard";
+import { AdminVersionsPanel } from "@/components/admin/AdminVersionsPanel";
 
 interface UserWithAccess {
   id: string;
@@ -286,6 +287,7 @@ const Admin = () => {
             <TabsTrigger value="templates">Templates de cargo</TabsTrigger>
             <TabsTrigger value="voip">Contas VoIP</TabsTrigger>
             <TabsTrigger value="fix-leads">Corrigir Leads</TabsTrigger>
+            <TabsTrigger value="versions">Versões</TabsTrigger>
           </TabsList>
 
           {/* ========== TAB USUÁRIOS ========== */}
@@ -469,6 +471,11 @@ const Admin = () => {
           {/* ========== TAB CORRIGIR LEADS ========== */}
           <TabsContent value="fix-leads" className="space-y-4 mt-4">
             <AdminFixLeadsCard />
+          </TabsContent>
+
+          {/* ========== TAB VERSÕES ========== */}
+          <TabsContent value="versions" className="space-y-4 mt-4">
+            <AdminVersionsPanel />
           </TabsContent>
         </Tabs>
       </div>
