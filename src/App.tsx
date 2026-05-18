@@ -34,6 +34,7 @@ const HEADERLESS_PATHS = ["/login", "/auth/google-callback"];
 const AppRoutes = () => {
   const location = useLocation();
   const showHeader = !HEADERLESS_PATHS.some((p) => location.pathname.startsWith(p));
+  useAppVersion();
 
   return (
     <>
