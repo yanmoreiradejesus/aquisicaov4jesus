@@ -102,7 +102,7 @@ const FunilCrm = () => {
       result.push({
         mes: monthLabels[d.getMonth()],
         MQL: r.mql,
-        RR: r.rr,
+        RR: r.sal,
         ASS: r.ass,
       });
     }
