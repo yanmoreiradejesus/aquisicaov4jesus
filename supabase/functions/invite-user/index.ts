@@ -53,6 +53,14 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Tenant do convidante (será replicado para o convidado)
+    const { data: callerProfile } = await adminClient
+      .from("profiles")
+      .select("tenant_id")
+      .eq("id", caller.id)
+      .single();
+    const callerTenantId = callerProfile?.tenant_id ?? null;
+
     const { email, full_name, pages } = await req.json();
     if (!email) {
       return new Response(JSON.stringify({ error: "Email é obrigatório" }), {
@@ -63,7 +71,7 @@ Deno.serve(async (req) => {
 
     // Invite user via Supabase Auth (sends magic link email)
     const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(email, {
-      data: { full_name: full_name || "" },
+      data: { full_name: full_name || "", tenant_id: callerTenantId },
     });
 
     if (inviteError) {
@@ -75,14 +83,18 @@ Deno.serve(async (req) => {
 
     const newUserId = inviteData.user.id;
 
-    // Auto-approve the invited user
-    await adminClient.from("profiles").update({ approved: true }).eq("id", newUserId);
+    // Auto-approve the invited user e garante tenant_id correto
+    await adminClient
+      .from("profiles")
+      .update({ approved: true, tenant_id: callerTenantId })
+      .eq("id", newUserId);
 
     // Set page access if provided
     if (pages && pages.length > 0) {
       const pageRecords = pages.map((page_path: string) => ({
         user_id: newUserId,
         page_path,
+        tenant_id: callerTenantId,
       }));
       await adminClient.from("user_page_access").insert(pageRecords);
     }
