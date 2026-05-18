@@ -432,3 +432,71 @@ function ForceFetchByLeadButton({ leadId }: { leadId: string }) {
     </Button>
   );
 }
+
+function ResumoBlock({ event }: { event: CallEvent }) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const qc = useQueryClient();
+  const status = event.resumo_status;
+  const hasTranscricao = !!event.transcricao;
+
+  const generate = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("summarize-call-recording", {
+        body: { event_id: event.id },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success("Resumo gerado");
+      qc.invalidateQueries({ queryKey: ["crm_call_events"] });
+      setOpen(true);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao gerar resumo");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!hasTranscricao) return null;
+
+  if (event.resumo) {
+    return (
+      <Collapsible open={open} onOpenChange={setOpen} className="mt-1">
+        <CollapsibleTrigger asChild>
+          <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px]">
+            <Sparkles className="h-3 w-3 mr-1" />
+            {open ? "Ocultar resumo" : "Ver resumo"}
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="mt-1.5 p-2 rounded-md bg-primary/5 border border-primary/20 text-[11px] whitespace-pre-wrap leading-relaxed max-h-64 overflow-y-auto">
+            {event.resumo}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    );
+  }
+
+  if (status === "processando") {
+    return (
+      <div className="mt-1 inline-flex items-center gap-1.5 text-[10px] text-muted-foreground">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        Resumindo gravação…
+      </div>
+    );
+  }
+
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      className="mt-1 h-6 px-2 text-[10px]"
+      onClick={generate}
+      disabled={loading}
+    >
+      <Sparkles className="h-3 w-3 mr-1" />
+      {loading ? "Gerando…" : "Resumir"}
+    </Button>
+  );
+}
