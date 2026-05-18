@@ -108,7 +108,7 @@ const getInitials = (name: string | null, email: string) =>
     .toUpperCase();
 
 const Admin = () => {
-  const { isAdmin, roles } = useAuth();
+  const { isAdmin, isSuperAdminV4 } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState<UserWithAccess[]>([]);
   const [templates, setTemplates] = useState<RoleTemplate[]>([]);
@@ -123,7 +123,6 @@ const Admin = () => {
   const [inviteName, setInviteName] = useState("");
   const [inviting, setInviting] = useState(false);
   const { toast } = useToast();
-  const isSuperAdminV4 = roles.includes("super_admin_v4");
 
   const fetchAll = async () => {
     setLoading(true);
