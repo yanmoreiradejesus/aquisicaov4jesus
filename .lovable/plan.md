@@ -1,54 +1,39 @@
-## Mudanças no Funil de Aquisição (`/aquisicao/funil`)
+# Funil Analytics — drill-down de leads + KPIs financeiros
 
-Escopo: somente a página de Data Analytics (`FunilAnalytics` + `FunilCrmStages` + `crmFunnelCalculator`). O funil legado baseado em Sheets (`ConversionFunnel`/`FunnelComparison`) fica intacto.
+## 1. Drill-down: clicar etapa/sub-etapa para ver leads
 
-### Novo funil — 4 etapas
+Em `FunilCrmStages.tsx`:
+- Sub-etapas (Entrada, Tentativa, Reunião Agendada, No-Show, Proposta, etc.) viram **clicáveis**.
+- A etapa principal (MQL/SQL/SAL/ASS) ganha um botão **"Ver leads"** ao lado do contador.
 
-```text
-MQL  →  SQL  →  SAL  →  ASS
-```
+Clique abre o novo `FunilLeadsDialog.tsx` com tabela:
+- Colunas: Nome, Empresa, Responsável, Origem, Tier, Etapa atual, Data do evento (MQL/SQL/SAL/ASS conforme lente), Valor (quando ASS), CPMQL (quando inbound).
+- Cada linha leva a `/aquisicao/crm-leads/{id}` em nova aba (preserva filtros).
 
-- **MQL** — qualquer lead criado no período (igual hoje). Sub-etapas: Entrada, Tentativa de Contato, Já avançou.
-- **SQL** — lead que atingiu pelo menos `reuniao_agendada` (regra confirmada). Sub-etapas: Reunião Agendada, No-Show, Reunião Realizada.
-- **SAL** — lead em `reuniao_realizada` no período (regra atual de RR). Sub-etapas mantidas: Sem oportunidade, Proposta, Negociação, Dúvidas e Fechamento, Follow Infinito, Ganho, Perdido.
-- **ASS** — oportunidades `fechado_ganho` no período (igual hoje).
+Para isso, `calcFunilCrm` passa a retornar também os arrays `inMqlLeads`, `inSqlLeads`, `inSalLeads`, `inAssOps` (além dos counts). O dialog deriva as sub-listas localmente.
 
-A etapa **CR (Contato Realizado)** é removida do funil — mas a coluna do Kanban e o enum `contato_realizado` continuam existindo no CRM (não é mudança de banco). Leads em entrada/tentativa/contato_realizado contam apenas como MQL.
+## 2. KPIs CPMQL, CAC, Investimento Total
 
-### Títulos sem descrição lateral
+**Fonte do investimento (sua regra):** soma dos CPMQL dos leads inbound do período.
 
-Os títulos exibidos no `FunilCrmStages` passam a ser só a sigla:
+Hoje `crm_leads` **não tem** campo `cpmql` — só existe na planilha legada. Vou:
 
-- `MQL` (sem "— Leads")
-- `SQL`
-- `SAL`
-- `ASS`
+1. **Adicionar coluna `cpmql numeric` em `crm_leads`** (nullable). Frontend permitirá editar no `LeadDetailSheet` (campo novo "CPMQL (R$)") e no `LeadImportDialog`/CSV.
+2. Cálculo no funil:
+   - **Investimento Total** = soma de `cpmql` dos leads MQL no período **com `pipe = inbound`** (ignora valores `null`).
+   - **CPMQL (KPI)** = Investimento Total ÷ MQL inbound. (Quando filtro pipe = `outbound`, esconde card e mostra "—".)
+   - **CAC** = Investimento Total ÷ ASS inbound do período.
+3. Cards passam a mostrar valores reais com tooltip explicando a fórmula.
 
-### Conversões
+Mantém: **Faturamento Total**, **Time to Close**. Adiciona **Ticket Médio** ao grid (já existe em `funilData.ticketMedio`).
 
-- `SQL / MQL`
-- `SAL / SQL`
-- `ASS / SAL`
-- Geral: `ASS / MQL` (inalterada)
+## Arquivos afetados
 
-### Detalhes técnicos
-
-`src/utils/crmFunnelCalculator.ts`
-- Remover `cr`, `subCr`, `convCrMql` do `FunilCrmResult`.
-- Renomear semanticamente: manter chaves `ra`/`rr` no objeto (são internas) **ou** renomear para `sql`/`sal` e atualizar consumidor. Vou renomear para `sql`/`sal` + `subSql`/`subSal` + `convSqlMql`, `convSalSql`, `convAssSal` para alinhar com a nova nomenclatura.
-- Remover cálculo de `inCr`.
-
-`src/components/funil-crm/FunilCrmStages.tsx`
-- Remover stage `cr`.
-- Renomear stages `ra`→`sql`, `rr`→`sal`.
-- Trocar `title` para apenas a sigla (`MQL`, `SQL`, `SAL`, `ASS`).
-- Atualizar `conv` para usar os novos campos.
-
-`src/pages/FunilAnalytics.tsx`
-- Atualizar o texto "(RA, RR, ASS)" no helper da lente para "(SQL, SAL, ASS)".
-
-### Fora de escopo
-
-- `ConversionFunnel.tsx`, `FunnelComparison.tsx`, `DashboardComercial`, `Metas`, `MixCompra` — usam dados de Sheets / metas legadas e continuam com a nomenclatura antiga.
-- Enum `lead_etapa` no Postgres e Kanban do CRM — sem mudança.
-- Tabelas `monthly_goals` / `mix_goals` (`cr_rate`, `ra_rate`, `rr_rate`, `ass_rate`) — sem mudança neste escopo.
+- **Migration**: `alter table crm_leads add column cpmql numeric;`
+- `src/utils/crmFunnelCalculator.ts` — retornar arrays `inMqlLeads`/`inSqlLeads`/`inSalLeads`/`inAssOps`; somar `cpmql` inbound em `investimentoTotal`.
+- `src/components/funil-crm/FunilCrmStages.tsx` — sub-etapas clicáveis + botão "Ver leads"; callback `onOpenLeads(stageId, subId?)`.
+- `src/components/funil-crm/FunilLeadsDialog.tsx` — **novo**.
+- `src/pages/FunilAnalytics.tsx` — estado do dialog; substitui 3 placeholders por cards reais; adiciona Ticket Médio.
+- `src/components/crm/LeadDetailSheet.tsx` + `src/components/crm/LeadDialog.tsx` — campo "CPMQL (R$)" editável.
+- `src/lib/leadCsvImport.ts` — mapear coluna CPMQL no import CSV (opcional).
+- `src/integrations/supabase/types.ts` — regenerado pela migration.
