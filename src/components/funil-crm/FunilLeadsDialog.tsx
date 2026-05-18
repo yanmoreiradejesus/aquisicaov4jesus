@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -77,6 +77,7 @@ const FunilLeadsDialog = ({
   lente,
   profileNameById,
 }: Props) => {
+  const navigate = useNavigate();
   const { rows, title, isAss } = useMemo(() => {
     if (!data || !stageId) {
       return { rows: [] as any[], title: "", isAss: false };
@@ -209,33 +210,38 @@ const FunilLeadsDialog = ({
                   </TableCell>
                 </TableRow>
               ) : (
-                rows.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.nome}</TableCell>
-                    <TableCell>{r.empresa}</TableCell>
-                    <TableCell>{r.responsavel}</TableCell>
-                    <TableCell>{r.origem}</TableCell>
-                    <TableCell className="capitalize text-xs">{r.pipe}</TableCell>
-                    <TableCell>{r.tier}</TableCell>
-                    <TableCell className="text-xs">{r.etapa}</TableCell>
-                    <TableCell>{fmtDate(r.dataEvento)}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {isAss ? fmtBRL(r.valor) : fmtBRL(r.cpmql)}
-                    </TableCell>
-                    <TableCell>
-                      {r.id ? (
-                        <Link
-                          to={`/comercial/leads/${r.id}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex text-muted-foreground hover:text-primary"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </Link>
-                      ) : null}
-                    </TableCell>
-                  </TableRow>
-                ))
+                rows.map((r) => {
+                  const goTo = () => {
+                    if (!r.id) return;
+                    onOpenChange(false);
+                    navigate(`/comercial/leads/${r.id}`);
+                  };
+                  return (
+                    <TableRow
+                      key={r.id}
+                      onClick={goTo}
+                      className={r.id ? "cursor-pointer hover:bg-muted/40" : ""}
+                    >
+                      <TableCell className="font-medium">{r.nome}</TableCell>
+                      <TableCell>{r.empresa}</TableCell>
+                      <TableCell>{r.responsavel}</TableCell>
+                      <TableCell>{r.origem}</TableCell>
+                      <TableCell className="capitalize text-xs">{r.pipe}</TableCell>
+                      <TableCell>{r.tier}</TableCell>
+                      <TableCell className="text-xs">{r.etapa}</TableCell>
+                      <TableCell>{fmtDate(r.dataEvento)}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {isAss ? fmtBRL(r.valor) : fmtBRL(r.cpmql)}
+                      </TableCell>
+                      <TableCell>
+                        {r.id ? (
+                          <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                        ) : null}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+
               )}
             </TableBody>
           </Table>

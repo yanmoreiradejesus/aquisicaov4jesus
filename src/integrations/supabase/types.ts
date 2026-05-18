@@ -312,6 +312,8 @@ export type Database = {
           operador: string | null
           provider: string
           raw_payload: Json
+          resumo: string | null
+          resumo_status: string | null
           status: string | null
           telefone: string | null
           telefone_normalizado: string | null
@@ -332,6 +334,8 @@ export type Database = {
           operador?: string | null
           provider?: string
           raw_payload?: Json
+          resumo?: string | null
+          resumo_status?: string | null
           status?: string | null
           telefone?: string | null
           telefone_normalizado?: string | null
@@ -352,6 +356,8 @@ export type Database = {
           operador?: string | null
           provider?: string
           raw_payload?: Json
+          resumo?: string | null
+          resumo_status?: string | null
           status?: string | null
           telefone?: string | null
           telefone_normalizado?: string | null

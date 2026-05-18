@@ -233,6 +233,7 @@ const FunilAnalytics = () => {
                   label="Ticket Médio"
                   value={funilData.ticketMedio > 0 ? fmtBRL0(funilData.ticketMedio) : "—"}
                   delay="1275ms"
+                  onClick={funilData.inAssOps.length > 0 ? () => openLeads("ass") : undefined}
                 />
 
                 <KpiCard
@@ -301,6 +302,7 @@ const KpiCard = ({
   delay,
   trend,
   valueClassName = "text-foreground",
+  onClick,
 }: {
   label: string;
   value: string;
@@ -308,11 +310,16 @@ const KpiCard = ({
   delay: string;
   trend?: { better: boolean; pct: number; higherIsBetter: boolean };
   valueClassName?: string;
+  onClick?: () => void;
 }) => (
   <div
-    className="rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-4 lg:p-6 transition-all duration-300 hover:shadow-lg animate-fade-in"
+    onClick={onClick}
+    className={`rounded-lg bg-gradient-to-br from-card to-muted/5 border border-border/50 p-4 lg:p-6 transition-all duration-300 hover:shadow-lg animate-fade-in ${
+      onClick ? "cursor-pointer hover:border-primary/40" : ""
+    }`}
     style={{ animationDelay: delay, animationFillMode: "backwards" }}
   >
+
     <div className="flex items-center gap-2 mb-2">
       {icon}
       <p className="font-body text-xs lg:text-sm text-muted-foreground">{label}</p>

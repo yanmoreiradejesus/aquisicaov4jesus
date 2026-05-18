@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Users } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import type { FunilCrmResult, SubStage } from "@/utils/crmFunnelCalculator";
-import { Button } from "@/components/ui/button";
 
 interface Props {
   data: FunilCrmResult;
@@ -80,19 +79,9 @@ const FunilCrmStages = ({ data, onOpenLeads }: Props) => {
                     </p>
                   </div>
                 )}
-                {onOpenLeads && stage.count > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onOpenLeads(stage.id)}
-                    className="gap-2 text-xs"
-                  >
-                    <Users className="h-3.5 w-3.5" />
-                    Ver leads
-                  </Button>
-                )}
               </div>
             </div>
+
 
             <div className="h-2 overflow-hidden rounded-full bg-muted/30">
               <div

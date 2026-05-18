@@ -19,6 +19,8 @@ export interface CallEvent {
   transcricao: string | null;
   transcricao_status: string | null;
   transcricao_error: string | null;
+  resumo: string | null;
+  resumo_status: string | null;
   user_id: string | null;
 }
 
