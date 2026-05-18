@@ -264,8 +264,8 @@ const FunilAnalytics = () => {
               {pipe !== "outbound" && (
                 <p className="text-xs text-muted-foreground">
                   Investimento, CPMQL e CAC consideram somente leads inbound. O investimento
-                  é a soma do campo CPMQL de cada lead MQL no período — preencha no lead
-                  para refletir aqui.
+                  é a soma do campo "Valor pago" de cada lead MQL no período — preencha
+                  no lead para refletir aqui.
                 </p>
               )}
             </section>
