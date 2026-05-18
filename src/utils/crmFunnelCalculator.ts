@@ -92,6 +92,7 @@ export interface FunilCrmResult {
   inMqlLeads: any[];
   inSqlLeads: any[];
   inSalLeads: any[];
+  inSalLeadsByBucket: Record<string, any[]>;
   inAssOps: any[];
   // Financeiro (somente inbound)
   investimentoTotal: number;
