@@ -185,7 +185,7 @@ const FunilLeadsDialog = ({
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead>Empresa</TableHead>
+                <TableHead>{isAss ? "Produto" : "Empresa"}</TableHead>
                 <TableHead>Responsável</TableHead>
                 <TableHead>Origem</TableHead>
                 <TableHead>Pipe</TableHead>
