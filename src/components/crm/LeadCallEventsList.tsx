@@ -200,6 +200,12 @@ export function LeadCallEventsList({ leadId }: Props) {
                   <span className="text-[10px] text-muted-foreground">
                     • Duração: {formatDuration(e.duracao_seg)}
                   </span>
+                  {e.gravacao_url && (
+                    <Mic
+                      className="h-3 w-3 text-muted-foreground/70"
+                      aria-label="Possui gravação"
+                    />
+                  )}
                   {filter === "all" && vendorName && (
                     <span className="inline-flex items-center gap-1 text-[10px] text-primary/80">
                       <User className="h-2.5 w-2.5" />
