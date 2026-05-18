@@ -48,7 +48,6 @@ interface FormState {
   internal_notes: string;
   subdominio: string;
   client_logo_url: string;
-  primary_color_hsl: string;
   voip_provider: "none" | "3cplus" | "api4com";
   enabled_pages: Set<string>;
 }
