@@ -1,88 +1,85 @@
 # V4 Hub — Provisionamento de novo cliente
 
-Guia operacional para provisionar uma nova instância **V4 Hub** (ex: V4 Xyz) a partir deste projeto template.
+Guia operacional para provisionar um novo cliente **V4 Hub** (ex: V4 Xyz). Tudo acontece **dentro do mesmo projeto Lovable** — cada cliente é um tenant isolado por RLS.
 
 ## Filosofia
 
-- **V4 Hub** = nome da plataforma (este produto)
-- **V4 Jesus** = primeiro cliente, é a instância atual
-- Cada novo cliente vira um **fork independente** deste projeto, com Lovable Cloud próprio (banco, storage, auth e secrets totalmente isolados fisicamente)
-- Catálogo central dos clientes provisionados vive em `/admin/clientes` (visível só para role `super_admin_v4`)
+- **V4 Hub** = nome da plataforma
+- **V4 Jesus** = primeiro cliente (canário). Toda alteração nova passa por ele primeiro e depois é promovida.
+- **Cada cliente novo = uma linha em `tenants` + acesso por subdomínio de `v4jesus.com`**.
+- A V4 controla o DNS do `v4jesus.com`; cada cliente vira `<slug>.v4jesus.com`.
 
-## Passo a passo
+## Setup guiado (recomendado)
 
-### 1. Duplicar o projeto
+Use a página **`/admin/clientes/novo`** (apenas `super_admin_v4`). São 6 etapas:
 
-No Lovable, "Remix" / duplicar este projeto. Renomeie para `V4 Hub — <NomeCliente>` (ex: `V4 Hub — Xyz`).
+### 1. Identidade
+Nome, slug, contato V4 responsável, notas internas.
 
-### 2. Ativar Lovable Cloud no fork
+### 2. Domínio
+Subdomínio de `v4jesus.com` (default = slug). Botão "Validar DNS" consulta DNS-over-HTTPS para checar propagação. Em paralelo, **você** precisa:
 
-Settings → Lovable Cloud → Enable. Isso provisiona um Supabase isolado, com migrations replicadas automaticamente do template.
+1. **No Lovable** (este projeto): Project Settings → Domains → **Connect Domain** → `<sub>.v4jesus.com`
+2. **No DNS do `v4jesus.com`** (registrador/Cloudflare):
+   - Registro **A**: `<sub>` → `185.158.133.1`
+   - Registro **TXT**: `_lovable.<sub>` → valor fornecido pelo Lovable
+3. Aguardar propagação + SSL automático (até 72h, geralmente minutos)
 
-### 3. Configurar `tenant_config`
+### 3. Branding
+- Upload de logo (vai pro bucket `avatars/tenant-logos/`)
+- Cor primária HSL (color picker)
 
-No SQL editor do fork, atualize a linha única de `tenant_config`:
+### 4. VoIP (opcional)
+Provider 3CPlus / API4Com / Nenhum. Token vive no secret global do projeto.
 
-```sql
-UPDATE public.tenant_config SET
-  client_name      = 'V4 Xyz',
-  client_slug      = 'xyz',
-  client_logo_url  = 'https://...',
-  primary_color_hsl = '217 91% 60%',     -- opcional, customização visual
-  app_base_url     = 'https://app.v4xyz.com',
-  sheet_ids        = '{"financeiro":"<id>","comercial":"<id>"}'::jsonb,
-  voip_provider    = '3cplus'             -- ou 'api4com' ou null
-WHERE is_singleton = true;
-```
+### 5. Páginas habilitadas
+Checklist de páginas que ficam disponíveis no menu do cliente. Presets:
+- **Completo** (todas)
+- **Aquisição apenas**
+- **CRM apenas**
 
-### 4. Configurar secrets do fork
+Sempre disponíveis (não desmarcáveis): `/` (Hub), `/admin`, `/perfil`.
 
-Adicionar via Lovable Cloud → Secrets, conforme os serviços que o cliente vai usar:
+### 6. Revisão & criação
+Confere tudo e cria. Faz:
+- `INSERT` em `tenants` (status `setup`)
+- `INSERT` em `tenant_enabled_pages` para cada página marcada
 
-- `THREECPLUS_API_TOKEN` — se VoIP via 3CPlus
-- `GOOGLE_SHEETS_API_KEY` — se usa importação de planilhas
-- `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` — agenda Google
-- `ANTHROPIC_API_KEY` — copilots e transcrições
-- `LOVABLE_API_KEY` — já vem configurado
+### Pós-criação
+1. Validar DNS (botão atalho no card do cliente)
+2. Enviar `https://<sub>.v4jesus.com/login` para o cliente
+3. **Primeiro signup do cliente vira admin** automaticamente do tenant dele (graças ao hostname-matching no `Login.tsx` + trigger `handle_new_user`)
+4. Mudar status para "Ativo" em `/admin/clientes`
 
-### 5. Ajustes manuais residuais
+## Como funciona o roteamento de signup
 
-Pontos que ainda são hardcoded e precisam ser revistos por fork:
+Quando o cliente acessa `https://xyz.v4jesus.com/login` e se cadastra:
 
-- `supabase/functions/sync-task-to-google/index.ts` → `APP_BASE_URL` (atualizar para a URL do cliente)
-- `src/components/hub/AppsGrid.tsx` → card "App V4" aponta para `https://app.v4jesus.com` — ajustar ou esconder se o cliente não tiver app externo
+1. `Login.tsx` lê `window.location.hostname` (= `xyz.v4jesus.com`)
+2. Busca em `tenants` o registro com `app_base_url` casando esse hostname
+3. Passa `tenant_id` no `options.data` do `supabase.auth.signUp`
+4. Trigger `handle_new_user` lê esse `tenant_id` do `raw_user_meta_data` e cria o profile já no tenant correto
+5. Como é o primeiro usuário daquele tenant, vira admin automaticamente
 
-### 6. Convidar o admin do cliente
+Se o cliente acessar pelo domínio errado (ou fallback), cai no tenant V4 Jesus — bug. Por isso o domínio precisa estar configurado antes de mandar o link.
 
-- O **primeiro signup** vira admin automaticamente (trigger `handle_new_user`)
-- Caso queira pré-aprovar, edite manualmente `profiles.approved = true` e adicione `user_roles.role = 'admin'`
+## Como funciona a filtragem de páginas
 
-### 7. Validar end-to-end no fork
-
-Checklist mínima:
-
-- [ ] Login funciona
-- [ ] Header mostra o nome correto do cliente
-- [ ] CRM cria leads
-- [ ] Sheets carregam (se configurado)
-- [ ] VoIP recebe webhooks (se configurado)
-- [ ] Agenda Google sincroniza (se configurado)
-
-### 8. Cadastrar no catálogo (neste projeto template)
-
-Voltar para o projeto **V4 Jesus** (este), acessar `/admin/clientes` (precisa role `super_admin_v4`) e clicar em **Novo cliente**. Preencher nome, slug, URL do app, ID do projeto Lovable do fork, status = "Ativo", contato V4 responsável.
+- Tabela `tenant_enabled_pages (tenant_id, page_path)` lista o que cada cliente vê
+- Hook `useTenantEnabledPages()` carrega o set para o tenant atual
+- `ProtectedRoute` bloqueia acesso direto a páginas não-habilitadas (mostra "Página não disponível")
+- `V4Header` e `AppsGrid` filtram menus pelo mesmo set
+- Cruzamento com `user_page_access`: usuário só vê se **ambos** liberarem (tenant + RBAC)
+- `super_admin_v4` ignora o filtro de tenant (pra inspecionar tudo via "Entrar como")
 
 ## Manutenção contínua
 
-- **Nova feature** → desenvolver primeiro aqui no template (V4 Jesus). Quando estável, replicar manualmente para cada fork.
-- **Hotfix** → aplicar primeiro aqui, depois copiar arquivos modificados para cada fork.
-- **Migration nova** → rodar manualmente o mesmo SQL em cada fork pelo SQL editor da Lovable Cloud.
+- **Nova feature**: desenvolve aqui no V4 Hub. Como é um projeto único, todos os clientes recebem o código novo automaticamente. Para "promover" uma versão (carimbar oficialmente), use o botão **Promover** em `/admin/clientes` (chama `promote_jesus_version_to_tenant`).
+- **Habilitar/desabilitar página depois**: ainda não tem UI — edite via SQL na tabela `tenant_enabled_pages` (ou peça pra criar a tela).
 
-Para 2-5 clientes essa operação manual é viável. Acima disso, vale considerar automação (CI que aplica migrations em todos os forks).
+## Conceder role `super_admin_v4`
 
-## Como conceder a role `super_admin_v4`
-
-Apenas membros do time V4 devem ter essa role. Para conceder a um usuário:
+Apenas membros do time V4. Via SQL:
 
 ```sql
 INSERT INTO public.user_roles (user_id, role)
