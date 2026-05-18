@@ -244,6 +244,26 @@ const Admin = () => {
           </Button>
         </div>
 
+        {isSuperAdminV4 && (
+          <Card
+            className="cursor-pointer hover:border-primary/50 transition-colors group"
+            onClick={() => navigate("/admin/clientes")}
+          >
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/15 flex items-center justify-center">
+                  <Building2 className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">Clientes V4</p>
+                  <p className="text-sm text-muted-foreground">Gerenciar tenants e provisionar novos clientes</p>
+                </div>
+              </div>
+              <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+            </CardContent>
+          </Card>
+        )}
+
         <Tabs defaultValue="users">
           <TabsList>
             <TabsTrigger value="users">
