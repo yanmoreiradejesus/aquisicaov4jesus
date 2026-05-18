@@ -5,6 +5,7 @@ import { LogOut, Shield, ChevronDown, Menu, X, User as UserIcon } from "lucide-r
 import { useState, useRef, useEffect } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { motion, useReducedMotion } from "framer-motion";
+import { TenantSwitcher } from "@/components/TenantSwitcher";
 
 const V4Header = () => {
   const location = useLocation();
