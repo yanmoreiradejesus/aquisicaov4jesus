@@ -92,8 +92,8 @@ const MetaCrm = () => {
   ];
   const years = ["2024", "2025", "2026"];
 
-  const { query: leadsQ } = useCrmLeads();
-  const { query: opsQ } = useCrmOportunidades();
+  const leadsQ = useCrmLeads();
+  const opsQ = useCrmOportunidades();
   const allLeads = (leadsQ.data ?? []) as any[];
   const allOps = (opsQ.data ?? []) as any[];
 
