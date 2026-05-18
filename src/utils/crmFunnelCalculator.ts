@@ -199,6 +199,19 @@ export function calcFunilCrm({
   const ticketMedio = inAss.length > 0 ? receitaTotal / inAss.length : 0;
   const conversaoGeral = inMql.length > 0 ? (inAss.length / inMql.length) * 100 : 0;
 
+  // Financeiro — somente inbound
+  const inMqlInbound = inMql.filter((l) => (l.pipe ?? "inbound") === "inbound");
+  const inAssInbound = inAss.filter((o) => {
+    const lead = leadById.get(o.lead_id);
+    return (lead?.pipe ?? "inbound") === "inbound";
+  });
+  const investimentoTotal = inMqlInbound.reduce(
+    (sum, l) => sum + (Number(l.cpmql) || 0),
+    0,
+  );
+  const cpmqlMedio = inMqlInbound.length > 0 ? investimentoTotal / inMqlInbound.length : 0;
+  const cac = inAssInbound.length > 0 ? investimentoTotal / inAssInbound.length : 0;
+
   return {
     mql: inMql.length,
     sql: inSql.length,
@@ -214,6 +227,15 @@ export function calcFunilCrm({
     convSqlMql: inMql.length > 0 ? (inSql.length / inMql.length) * 100 : 0,
     convSalSql: inSql.length > 0 ? (inSal.length / inSql.length) * 100 : 0,
     convAssSal: inSal.length > 0 ? (inAss.length / inSal.length) * 100 : 0,
+    inMqlLeads: inMql,
+    inSqlLeads: inSql,
+    inSalLeads: inSal,
+    inAssOps: inAss,
+    investimentoTotal,
+    mqlInbound: inMqlInbound.length,
+    assInbound: inAssInbound.length,
+    cpmqlMedio,
+    cac,
   };
 }
 
