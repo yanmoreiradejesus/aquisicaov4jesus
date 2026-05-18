@@ -228,8 +228,14 @@ export function calcFunilCrm({
   ];
 
   const subAss: SubStage[] = [
-    { id: "fechado_ganho", label: "Ganho no período", count: inAss.length },
+    { id: "fechado_ganho", label: "Contratos assinados", count: inAss.length },
   ];
+
+  const inAssLeadById: Record<string, any> = {};
+  inAss.forEach((o) => {
+    const l = leadById.get(o.lead_id);
+    if (l) inAssLeadById[o.lead_id] = l;
+  });
 
   const receitaTotal = inAss.reduce(
     (sum, o) => sum + (Number(o.valor_ef) || 0) + (Number(o.valor_fee) || 0),
