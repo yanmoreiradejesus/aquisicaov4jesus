@@ -333,10 +333,24 @@ export default function AdminClientes() {
               <Card key={c.id} className="p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-1">
+                    <div className="flex flex-wrap items-center gap-3 mb-1">
                       <h3 className="font-heading text-xl">{c.client_name}</h3>
                       <Badge variant={statusCfg.variant}>{statusCfg.label}</Badge>
                       <span className="text-xs text-muted-foreground">/{c.client_slug}</span>
+                      {(() => {
+                        const v = latestVersions[c.id];
+                        if (!v) return <Badge variant="outline" className="text-xs">sem versão</Badge>;
+                        const isJesus = c.client_slug === "jesus";
+                        const matchesJesus = jesusLatest && v.build_hash === jesusLatest.build_hash;
+                        return (
+                          <Badge
+                            variant={isJesus || matchesJesus ? "default" : "secondary"}
+                            className={isJesus || matchesJesus ? "bg-emerald-600 hover:bg-emerald-600" : ""}
+                          >
+                            v{v.version_number}
+                          </Badge>
+                        );
+                      })()}
                     </div>
                     {c.app_base_url && (
                       <a
@@ -359,7 +373,23 @@ export default function AdminClientes() {
                       </p>
                     )}
                   </div>
-                  <div className="flex gap-2 shrink-0">
+                  <div className="flex gap-2 shrink-0 flex-wrap justify-end">
+                    {c.client_slug !== "jesus" && jesusLatest && (
+                      latestVersions[c.id]?.build_hash !== jesusLatest.build_hash
+                    ) && (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          if (confirm(`Promover ${c.client_name} para v${jesusLatest.version_number} (versão atual do V4 Jesus)?`)) {
+                            promoteMut.mutate(c.id);
+                          }
+                        }}
+                        disabled={promoteMut.isPending}
+                      >
+                        <Rocket className="w-3.5 h-3.5 mr-1.5" /> Promover p/ v{jesusLatest.version_number}
+                      </Button>
+                    )}
                     <Button
                       variant="default"
                       size="sm"
