@@ -1,44 +1,48 @@
-## Redefinir SAL: todos os leads que passaram por Reunião Realizada
+## Problema
 
-### Nova definição
+Existe uma oportunidade em **"Dúvidas e Fechamento"** no kanban, mas o lead dela não aparece no bucket SAL → Dúvidas e fechamento do funil.
 
-**SAL = lead com `data_reuniao_realizada` preenchida**, independente da `etapa` atual (proposta, negociação, contrato, follow infinito, ganho, perdido, desqualificado depois).
+Causa: o bucket exige que `data_reuniao_realizada` esteja **dentro do período selecionado**. Se o lead chegou em reunião realizada antes do período (ex.: 07/05) e o usuário está olhando "últimos 7 dias", o bucket conta 0 — e buckets com count 0 são escondidos (`FunilCrmStages.tsx:96`).
 
-Hoje contamos apenas leads que ainda estão parados em `etapa = 'reuniao_realizada'`, o que subestima o histórico assim que o lead avança para oportunidade. O campo `data_reuniao_realizada` é escrito por trigger quando o lead chega em Reunião Realizada — é o marcador histórico confiável.
+Pior: leads que **nunca passaram explicitamente por `reuniao_realizada`** (foram movidos direto para oportunidade, ou ficaram sem trigger no histórico antigo) têm `data_reuniao_realizada = NULL` e ficam invisíveis no SAL para sempre.
+
+Isso contradiz a regra "todo lead que tem oportunidade já passou por SAL".
+
+## Solução
+
+Redefinir SAL para englobar **qualquer lead que tenha pelo menos uma oportunidade**, além dos que têm `data_reuniao_realizada` preenchida.
+
+### Data de atribuição ao período
+
+Para cada lead SAL, calcular `dataSal` como:
+
+1. `data_reuniao_realizada` se preenchida
+2. caso contrário, `min(op.created_at)` da oportunidade mais antiga do lead
+3. caso contrário (lente coorte), `data_criacao_origem ?? created_at`
+
+Assim o lead aparece no período em que efetivamente "virou SAL".
 
 ### Mudanças em `src/utils/crmFunnelCalculator.ts`
 
-1. **`inSal`** — trocar de `etapa === 'reuniao_realizada' && data_reuniao_realizada in range` para simplesmente `data_reuniao_realizada in range` (lente evento) ou cohort por entrada (lente coorte, sem fallback artificial).
+1. Construir `allOpsByLeadId` **antes** do cálculo de `inSal` (hoje só é montado depois).
+2. Helper `firstOpDateFor(leadId)` que retorna a menor `created_at` entre as ops do lead.
+3. `dataSal(l)`:
+   - lente **evento**: `l.data_reuniao_realizada ?? firstOpDateFor(l.id)`
+   - lente **coorte**: como hoje (`dataMql`)
+4. Filtro `inSal`:
+   - Mantém o lead se: `(data_reuniao_realizada não nula OU tem oportunidade)` E `inP(dataSal(l))`.
+5. `convSalSql` segue como está.
+6. Nenhuma mudança em UI nem em outros KPIs (MQL, SQL, ASS, CAC).
 
-2. **`subSal`** — reorganizar as sub-etapas para refletir onde os leads SAL estão hoje, cruzando com `crm_oportunidades`:
-   - Sem oportunidade ainda
-   - Em proposta
-   - Em negociação
-   - Dúvidas e fechamento (contrato)
-   - Follow infinito
-   - Ganho
-   - Perdido
-   - Desqualificado depois (lead com etapa = `desqualificado` mas que passou por reunião)
+### Impacto
 
-3. **`inSalLeads`** — atualizar para retornar todos os leads SAL (não só os parados na etapa), permitindo drill-down correto no `FunilLeadsDialog`.
+- **SAL sobe** em períodos que pegam ops criadas mas onde a reunião realizada foi anterior.
+- **Bucket "Dúvidas e fechamento"** passa a refletir o que o kanban mostra.
+- **Conversão SAL/SQL** sobe (numerador maior).
+- **CAC/ASS** não mudam.
 
-4. **Lente coorte** — remover o fallback que considera SAL via `created_at` quando `data_reuniao_realizada` é nulo. Agora exige o campo preenchido.
+### Arquivo único
 
-### Impacto em outros KPIs
+- `src/utils/crmFunnelCalculator.ts`
 
-- **Conversão SAL/SQL**: sobe (SAL passa a incluir todos que avançaram).
-- **CAC, ASS, MQL, SQL**: sem mudança.
-- **Tempo médio até SAL**: sem mudança (já usa `data_reuniao_realizada`).
-
-### UI
-
-`FunilCrmStages.tsx` — apenas ajustar os labels das novas sub-etapas do SAL. Sem mudanças estruturais.
-
-### Sem migration
-
-`data_reuniao_realizada` já existe e é populado por trigger. Nada a alterar no banco.
-
-### Arquivos
-
-- `src/utils/crmFunnelCalculator.ts` (principal)
-- `src/components/funil-crm/FunilCrmStages.tsx` (labels das sub-etapas SAL)
+Sem migração, sem mudança de UI, sem novos campos.
