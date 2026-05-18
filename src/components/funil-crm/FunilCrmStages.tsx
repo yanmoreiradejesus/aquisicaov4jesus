@@ -78,18 +78,8 @@ const FunilCrmStages = ({ data, onOpenLeads }: Props) => {
                       {stage.conv.toFixed(1)}%
                     </p>
                   </div>
-                )}
-                {onOpenLeads && stage.count > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onOpenLeads(stage.id)}
-                    className="gap-2 text-xs"
-                  >
-                    <Users className="h-3.5 w-3.5" />
-                    Ver leads
-                  </Button>
-                )}
+              </div>
+
               </div>
             </div>
 
