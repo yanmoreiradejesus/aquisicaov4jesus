@@ -171,7 +171,7 @@ const FunilAnalytics = () => {
                     <p>
                       {useCreationDate
                         ? "Todos os estágios filtrados pela data de entrada do lead"
-                        : "Cada estágio usa sua própria data de evento (RA, RR, ASS)"}
+                        : "Cada estágio usa sua própria data de evento (SQL, SAL, ASS)"}
                     </p>
                   </TooltipContent>
                 </Tooltip>
