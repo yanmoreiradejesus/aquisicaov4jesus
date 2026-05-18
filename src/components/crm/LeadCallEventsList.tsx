@@ -1,4 +1,4 @@
-import { Phone, PhoneOff, PhoneIncoming, Play, FileText, Loader2, RefreshCw, AlertCircle, User } from "lucide-react";
+import { Phone, PhoneOff, PhoneIncoming, Play, FileText, Loader2, RefreshCw, AlertCircle, User, Mic, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
