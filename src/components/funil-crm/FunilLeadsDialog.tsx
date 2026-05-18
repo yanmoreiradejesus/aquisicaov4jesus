@@ -159,7 +159,7 @@ const FunilLeadsDialog = ({
               ? l.data_criacao_origem ?? l.created_at
               : l.data_reuniao_realizada,
           valor: null,
-          cpmql: l.cpmql,
+          cpmql: l.valor_pago,
           pipe: l.pipe ?? "inbound",
         }));
 
