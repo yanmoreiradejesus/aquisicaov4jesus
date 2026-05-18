@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, UserPlus, Send, Wand2, Pencil, Search, Clock } from "lucide-react";
+import { Shield, UserPlus, Send, Wand2, Pencil, Search, Clock, Building2, ArrowRight } from "lucide-react";
 import { AdminVoipAccountsCard } from "@/components/admin/AdminVoipAccountsCard";
 import { AdminFixLeadsCard } from "@/components/admin/AdminFixLeadsCard";
 import { AdminBackfill3CPlusCard } from "@/components/admin/AdminBackfill3CPlusCard";
