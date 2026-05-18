@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus, ExternalLink, Trash2, LogIn } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
 
 interface Tenant {
   id: string;
