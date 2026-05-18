@@ -1,5 +1,5 @@
-import { Lead } from "@/hooks/useGoogleSheetsData";
-import { isPositive } from "./dataProcessor";
+// Insights calculator — fonte de dados: CRM (crm_leads + crm_oportunidades).
+// O Sheets é usado apenas para o legado.
 
 export interface SegmentPerformance {
   segment: string;
@@ -23,183 +23,173 @@ export interface CrossPerformanceCell {
   revenue: number;
 }
 
-// Parse Brazilian currency format (R$ 1.234,56 or 1234.56)
-const parseCurrency = (value: string | undefined): number => {
-  if (!value || value.trim() === "") return 0;
-  
-  // Remove R$ and spaces
-  let cleaned = value.replace(/R\$\s*/g, "").trim();
-  
-  // Check if it's Brazilian format (1.234,56) or standard (1234.56)
-  if (cleaned.includes(",")) {
-    // Brazilian format: remove dots (thousands), replace comma with dot
-    cleaned = cleaned.replace(/\./g, "").replace(",", ".");
-  }
-  
-  const parsed = parseFloat(cleaned);
-  return isNaN(parsed) ? 0 : parsed;
+const ETAPAS_ORDER = [
+  "entrada",
+  "tentativa_contato",
+  "contato_realizado",
+  "reuniao_agendada",
+  "no_show",
+  "reuniao_realizada",
+] as const;
+
+const reachedAtLeast = (etapa: string, target: (typeof ETAPAS_ORDER)[number]) =>
+  ETAPAS_ORDER.indexOf(etapa as any) >= ETAPAS_ORDER.indexOf(target);
+
+const norm = (v: unknown): string => {
+  if (v == null) return "Não informado";
+  const s = String(v).trim();
+  if (!s || s === "-") return "Não informado";
+  return s;
 };
 
-// Determine email type (corporate vs free)
-// Note: The spreadsheet has E-MAIL field with values like "Gratuito" or "Domínio"
-const getEmailType = (email: string | undefined): string => {
-  if (!email || email.trim() === "" || email.trim() === "-") return "Não informado";
-  
-  const normalized = email.trim().toLowerCase();
-  
-  // Handle pre-categorized values from spreadsheet
-  if (normalized === "gratuito") return "E-mail Gratuito";
-  if (normalized === "domínio" || normalized === "dominio") return "E-mail Corporativo";
-  
-  // Fallback: check if it looks like an email address
-  if (email.includes("@")) {
-    const freeEmailDomains = [
-      "gmail.com", "hotmail.com", "outlook.com", "yahoo.com", 
-      "live.com", "msn.com", "icloud.com", "uol.com.br", 
-      "bol.com.br", "terra.com.br"
-    ];
-    
-    const domain = email.toLowerCase().split("@")[1];
-    if (!domain) return "Não informado";
-    
-    return freeEmailDomains.includes(domain) ? "E-mail Gratuito" : "E-mail Corporativo";
-  }
-  
-  return email.trim(); // Return the original value if it's something else
+const hasDescription = (v: unknown): string => {
+  const s = v == null ? "" : String(v).trim();
+  return s && s !== "-" ? "Com Descrição" : "Sem Descrição";
 };
 
-// Check if description is filled
-const hasDescription = (description: string | undefined): string => {
-  if (!description || description.trim() === "" || description.trim() === "-") {
-    return "Sem Descrição";
-  }
-  return "Com Descrição";
+export type CrmInsightField =
+  | "canal"
+  | "tier"
+  | "urgencia"
+  | "cargo"
+  | "origem"
+  | "tipo_produto"
+  | "segmento"
+  | "qualificacao"
+  | "temperatura"
+  | "estado"
+  | "hasDescription";
+
+const getFieldValue = (lead: any, field: CrmInsightField): string => {
+  if (field === "hasDescription") return hasDescription(lead.descricao);
+  return norm(lead[field]);
 };
 
-// Calculate performance metrics for each unique value of a field
+interface CalcCtx {
+  // mapa lead_id -> oportunidade ganha mais recente (para revenue/ASS)
+  wonByLead: Map<string, any>;
+}
+
+const buildCtx = (oportunidades: any[]): CalcCtx => {
+  const wonByLead = new Map<string, any>();
+  oportunidades.forEach((o) => {
+    if (o.etapa !== "fechado_ganho") return;
+    const prev = wonByLead.get(o.lead_id);
+    if (!prev) {
+      wonByLead.set(o.lead_id, o);
+      return;
+    }
+    const tCur = new Date(o.data_fechamento_real ?? o.updated_at ?? 0).getTime();
+    const tPrev = new Date(prev.data_fechamento_real ?? prev.updated_at ?? 0).getTime();
+    if (tCur > tPrev) wonByLead.set(o.lead_id, o);
+  });
+  return { wonByLead };
+};
+
+const leadRevenue = (lead: any, ctx: CalcCtx): number => {
+  const op = ctx.wonByLead.get(lead.id);
+  if (!op) return 0;
+  return (Number(op.valor_ef) || 0) + (Number(op.valor_fee) || 0);
+};
+
+const isAss = (lead: any, ctx: CalcCtx) => ctx.wonByLead.has(lead.id);
+
 export const calculatePerformanceByField = (
-  leads: Lead[],
-  field: keyof Lead | "emailType" | "hasDescription"
+  leads: any[],
+  field: CrmInsightField,
+  oportunidades: any[] = [],
 ): SegmentPerformance[] => {
-  // Group leads by field value
-  const groups: Record<string, Lead[]> = {};
-  
+  const ctx = buildCtx(oportunidades);
+  const groups: Record<string, any[]> = {};
+
   leads.forEach((lead) => {
-    let value: string;
-    
-    if (field === "emailType") {
-      value = getEmailType(lead["E-MAIL"]);
-    } else if (field === "hasDescription") {
-      value = hasDescription(lead.DESCRIÇÃO);
-    } else {
-      value = (lead[field] as string) || "";
-    }
-    
-    // Normalize empty values
-    if (!value || value.trim() === "" || value.trim() === "-") {
-      value = "Não informado";
-    } else {
-      value = value.trim();
-    }
-    
-    if (!groups[value]) {
-      groups[value] = [];
-    }
+    const value = getFieldValue(lead, field);
+    if (!groups[value]) groups[value] = [];
     groups[value].push(lead);
   });
-  
-  // Calculate metrics for each group
-  const results: SegmentPerformance[] = Object.entries(groups).map(([segment, groupLeads]) => {
-    const totalLeads = groupLeads.length;
-    const cr = groupLeads.filter((l) => isPositive(l["C.R"])).length;
-    const ra = groupLeads.filter((l) => isPositive(l["R.A"])).length;
-    const rr = groupLeads.filter((l) => isPositive(l["R.R"])).length;
-    const ass = groupLeads.filter((l) => isPositive(l.ASS) || (l["DATA DA ASSINATURA"] && l["DATA DA ASSINATURA"].trim() !== "")).length;
-    
-    // Calculate investment (sum of CPMQL)
-    const investment = groupLeads.reduce((sum, l) => sum + parseCurrency(l.CPMQL), 0);
-    
-    // Calculate revenue (E.F + BOOKING for signed contracts)
-    const revenue = groupLeads
-      .filter((l) => isPositive(l.ASS) || (l["DATA DA ASSINATURA"] && l["DATA DA ASSINATURA"].trim() !== ""))
-      .reduce((sum, l) => {
-        const ef = parseCurrency(l["E.F"]);
-        const booking = parseCurrency(l.BOOKING);
-        return sum + ef + booking;
-      }, 0);
-    
-    const conversionRate = totalLeads > 0 ? (ass / totalLeads) * 100 : 0;
-    const roas = investment > 0 ? revenue / investment : 0;
-    
-    return {
-      segment,
-      leads: totalLeads,
-      cr,
-      ra,
-      rr,
-      ass,
-      conversionRate,
-      investment,
-      revenue,
-      roas,
-    };
-  });
-  
-  // Sort by number of leads (descending)
+
+  const results: SegmentPerformance[] = Object.entries(groups).map(
+    ([segment, groupLeads]) => {
+      const totalLeads = groupLeads.length;
+      const cr = groupLeads.filter((l) =>
+        reachedAtLeast(l.etapa, "contato_realizado"),
+      ).length;
+      const ra = groupLeads.filter((l) =>
+        reachedAtLeast(l.etapa, "reuniao_agendada"),
+      ).length;
+      const rr = groupLeads.filter((l) => !!l.data_reuniao_realizada).length;
+      const ass = groupLeads.filter((l) => isAss(l, ctx)).length;
+
+      const investment = groupLeads.reduce(
+        (sum, l) => sum + (Number(l.valor_pago) || 0),
+        0,
+      );
+      const revenue = groupLeads.reduce(
+        (sum, l) => sum + leadRevenue(l, ctx),
+        0,
+      );
+
+      const conversionRate = totalLeads > 0 ? (ass / totalLeads) * 100 : 0;
+      const roas = investment > 0 ? revenue / investment : 0;
+
+      return {
+        segment,
+        leads: totalLeads,
+        cr,
+        ra,
+        rr,
+        ass,
+        conversionRate,
+        investment,
+        revenue,
+        roas,
+      };
+    },
+  );
+
   return results.sort((a, b) => b.leads - a.leads);
 };
 
-// Calculate cross performance between two fields
 export const calculateCrossPerformance = (
-  leads: Lead[],
-  fieldA: keyof Lead,
-  fieldB: keyof Lead
+  leads: any[],
+  fieldA: CrmInsightField,
+  fieldB: CrmInsightField,
+  oportunidades: any[] = [],
 ): CrossPerformanceCell[] => {
+  const ctx = buildCtx(oportunidades);
+  const buckets = new Map<string, any[]>();
+
+  leads.forEach((l) => {
+    const a = getFieldValue(l, fieldA);
+    const b = getFieldValue(l, fieldB);
+    const key = `${a}\u0000${b}`;
+    const arr = buckets.get(key) ?? [];
+    arr.push(l);
+    buckets.set(key, arr);
+  });
+
   const cells: CrossPerformanceCell[] = [];
-  
-  // Get unique values for both fields
-  const valuesA = [...new Set(leads.map((l) => l[fieldA] as string || "Não informado"))];
-  const valuesB = [...new Set(leads.map((l) => l[fieldB] as string || "Não informado"))];
-  
-  // Calculate metrics for each combination
-  valuesA.forEach((valueA) => {
-    valuesB.forEach((valueB) => {
-      const matchingLeads = leads.filter((l) => {
-        const lValueA = (l[fieldA] as string) || "Não informado";
-        const lValueB = (l[fieldB] as string) || "Não informado";
-        return lValueA === valueA && lValueB === valueB;
-      });
-      
-      if (matchingLeads.length > 0) {
-        const ass = matchingLeads.filter(
-          (l) => isPositive(l.ASS) || (l["DATA DA ASSINATURA"] && l["DATA DA ASSINATURA"].trim() !== "")
-        ).length;
-        
-        const revenue = matchingLeads
-          .filter((l) => isPositive(l.ASS) || (l["DATA DA ASSINATURA"] && l["DATA DA ASSINATURA"].trim() !== ""))
-          .reduce((sum, l) => {
-            const ef = parseCurrency(l["E.F"]);
-            const booking = parseCurrency(l.BOOKING);
-            return sum + ef + booking;
-          }, 0);
-        
-        cells.push({
-          fieldA: valueA,
-          fieldB: valueB,
-          leads: matchingLeads.length,
-          ass,
-          conversionRate: (ass / matchingLeads.length) * 100,
-          revenue,
-        });
-      }
+  buckets.forEach((arr, key) => {
+    const [valueA, valueB] = key.split("\u0000");
+    const ass = arr.filter((l) => isAss(l, ctx)).length;
+    const revenue = arr.reduce((sum, l) => sum + leadRevenue(l, ctx), 0);
+    cells.push({
+      fieldA: valueA,
+      fieldB: valueB,
+      leads: arr.length,
+      ass,
+      conversionRate: arr.length > 0 ? (ass / arr.length) * 100 : 0,
+      revenue,
     });
   });
-  
+
   return cells;
 };
 
-// Get unique values for a field (for matrix headers)
-export const getUniqueFieldValues = (leads: Lead[], field: keyof Lead): string[] => {
-  const values = [...new Set(leads.map((l) => (l[field] as string) || "Não informado"))];
-  return values.sort((a, b) => a.localeCompare(b, "pt-BR"));
+export const getUniqueFieldValues = (
+  leads: any[],
+  field: CrmInsightField,
+): string[] => {
+  const set = new Set(leads.map((l) => getFieldValue(l, field)));
+  return [...set].sort((a, b) => a.localeCompare(b, "pt-BR"));
 };

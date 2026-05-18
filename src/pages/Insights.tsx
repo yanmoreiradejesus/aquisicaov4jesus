@@ -1,95 +1,81 @@
 import { useState, useMemo } from "react";
-import { format, startOfYear, subYears } from "date-fns";
+import { format } from "date-fns";
 import InsightsDateFilter from "@/components/InsightsDateFilter";
 import PerformanceBarChart from "@/components/PerformanceBarChart";
 import CrossPerformanceMatrix from "@/components/CrossPerformanceMatrix";
-import { useGoogleSheetsData } from "@/hooks/useGoogleSheetsData";
+import { useCrmLeads } from "@/hooks/useCrmLeads";
+import { useCrmOportunidades } from "@/hooks/useCrmOportunidades";
 import {
   calculatePerformanceByField,
   calculateCrossPerformance,
 } from "@/utils/insightsCalculator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, RefreshCw, AlertTriangle } from "lucide-react";
+import { AlertCircle, AlertTriangle } from "lucide-react";
 
 const Insights = () => {
-  // Initialize with total period starting from Jan 1, 2025 to capture all data
   const now = new Date();
   const [startDate, setStartDate] = useState("2025-01-01T00:00:00");
   const [endDate, setEndDate] = useState(
-    format(now, "yyyy-MM-dd") + "T00:00:00"
+    format(now, "yyyy-MM-dd") + "T23:59:59",
   );
 
-  const { data: sheetsData, isLoading, error } = useGoogleSheetsData();
+  const { data: leads, isLoading: loadingLeads, error: errorLeads } = useCrmLeads();
+  const { data: oportunidades, isLoading: loadingOps, error: errorOps } = useCrmOportunidades();
 
-  // Filter leads by date range
+  const isLoading = loadingLeads || loadingOps;
+  const error = errorLeads || errorOps;
+
   const filteredLeads = useMemo(() => {
-    if (!sheetsData?.leads) return [];
-
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-
-    return sheetsData.leads.filter((lead) => {
-      if (!lead.DATA) return false;
-
-      // Parse DD/MM/YYYY format
-      const parts = lead.DATA.split("/");
-      if (parts.length !== 3) return false;
-
-      const leadDate = new Date(
-        parseInt(parts[2]),
-        parseInt(parts[1]) - 1,
-        parseInt(parts[0])
-      );
-
-      return leadDate >= start && leadDate <= end;
+    if (!leads) return [];
+    const start = new Date(startDate).getTime();
+    const end = new Date(endDate).getTime();
+    return leads.filter((l: any) => {
+      const raw = l.data_criacao_origem ?? l.created_at;
+      if (!raw) return false;
+      const t = new Date(raw).getTime();
+      if (isNaN(t)) return false;
+      return t >= start && t <= end;
     });
-  }, [sheetsData?.leads, startDate, endDate]);
+  }, [leads, startDate, endDate]);
 
-  // Calculate performance metrics for each segment
+  const ops = oportunidades ?? [];
+
   const canalPerformance = useMemo(
-    () => calculatePerformanceByField(filteredLeads, "CANAL"),
-    [filteredLeads]
+    () => calculatePerformanceByField(filteredLeads, "canal", ops),
+    [filteredLeads, ops],
   );
-
   const tierPerformance = useMemo(
-    () => calculatePerformanceByField(filteredLeads, "TIER"),
-    [filteredLeads]
+    () => calculatePerformanceByField(filteredLeads, "tier", ops),
+    [filteredLeads, ops],
   );
-
   const urgenciaPerformance = useMemo(
-    () => calculatePerformanceByField(filteredLeads, "URGÊNCIA"),
-    [filteredLeads]
+    () => calculatePerformanceByField(filteredLeads, "urgencia", ops),
+    [filteredLeads, ops],
   );
-
   const cargoPerformance = useMemo(
-    () => calculatePerformanceByField(filteredLeads, "CARGO"),
-    [filteredLeads]
+    () => calculatePerformanceByField(filteredLeads, "cargo", ops),
+    [filteredLeads, ops],
   );
-
-  const periodoPerformance = useMemo(
-    () => calculatePerformanceByField(filteredLeads, "PERÍODO DE COMPRA"),
-    [filteredLeads]
+  const tipoProdutoPerformance = useMemo(
+    () => calculatePerformanceByField(filteredLeads, "tipo_produto", ops),
+    [filteredLeads, ops],
   );
-
-  const emailPerformance = useMemo(
-    () => calculatePerformanceByField(filteredLeads, "emailType"),
-    [filteredLeads]
+  const origemPerformance = useMemo(
+    () => calculatePerformanceByField(filteredLeads, "origem", ops),
+    [filteredLeads, ops],
   );
-
   const descricaoPerformance = useMemo(
-    () => calculatePerformanceByField(filteredLeads, "hasDescription"),
-    [filteredLeads]
+    () => calculatePerformanceByField(filteredLeads, "hasDescription", ops),
+    [filteredLeads, ops],
   );
 
-  // Calculate cross performance matrices
-  const periodoXCanalCross = useMemo(
-    () => calculateCrossPerformance(filteredLeads, "PERÍODO DE COMPRA", "CANAL"),
-    [filteredLeads]
+  const canalXTierCross = useMemo(
+    () => calculateCrossPerformance(filteredLeads, "canal", "tier", ops),
+    [filteredLeads, ops],
   );
-
   const urgenciaXCargoCross = useMemo(
-    () => calculateCrossPerformance(filteredLeads, "URGÊNCIA", "CARGO"),
-    [filteredLeads]
+    () => calculateCrossPerformance(filteredLeads, "urgencia", "cargo", ops),
+    [filteredLeads, ops],
   );
 
   const handleDateChange = (newStartDate: string, newEndDate: string) => {
@@ -97,7 +83,6 @@ const Insights = () => {
     setEndDate(newEndDate);
   };
 
-  // Loading skeleton
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -117,7 +102,6 @@ const Insights = () => {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className="min-h-screen bg-background">
@@ -129,7 +113,7 @@ const Insights = () => {
                 Erro ao carregar dados
               </h2>
               <p className="text-muted-foreground">
-                Não foi possível carregar os dados da planilha.
+                Não foi possível carregar os dados do CRM.
               </p>
             </div>
           </div>
@@ -140,85 +124,48 @@ const Insights = () => {
 
   return (
     <div className="min-h-screen bg-background">
-
       <main className="mx-auto max-w-7xl space-y-8 p-4 lg:p-8">
-        {/* Page Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="font-heading text-3xl font-bold text-foreground md:text-4xl">
               INSIGHTS
             </h1>
             <p className="text-muted-foreground">
-              Análise de performance por segmento • {filteredLeads.length} leads no período
+              Análise de performance por segmento • {filteredLeads.length} leads no período • Fonte: CRM
             </p>
           </div>
-          {sheetsData?.lastUpdated && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <RefreshCw className="h-3 w-3" />
-              Atualizado: {sheetsData.lastUpdated}
-            </div>
-          )}
         </div>
 
-
-        {/* Date Filter */}
         <InsightsDateFilter
           startDate={startDate}
           endDate={endDate}
           onDateChange={handleDateChange}
         />
 
-        {/* Low data warning */}
         {filteredLeads.length < 10 && filteredLeads.length > 0 && (
           <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-warning" />
             <span className="text-sm text-warning">
-              Apenas {filteredLeads.length} leads no período selecionado. 
+              Apenas {filteredLeads.length} leads no período selecionado.
               Considere expandir o intervalo de datas para uma análise mais significativa.
             </span>
           </div>
         )}
 
-        {/* Performance by Segment Section */}
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-6">
             Performance por Segmento
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <PerformanceBarChart
-              title="Performance por Canal"
-              data={canalPerformance}
-              metric="conversionRate"
-            />
-            <PerformanceBarChart
-              title="Performance por Tier"
-              data={tierPerformance}
-              metric="conversionRate"
-            />
-            <PerformanceBarChart
-              title="Performance por Urgência"
-              data={urgenciaPerformance}
-              metric="conversionRate"
-            />
-            <PerformanceBarChart
-              title="Performance por Cargo"
-              data={cargoPerformance}
-              metric="conversionRate"
-            />
-            <PerformanceBarChart
-              title="Performance por Período"
-              data={periodoPerformance}
-              metric="conversionRate"
-            />
-            <PerformanceBarChart
-              title="Performance por Tipo de E-mail"
-              data={emailPerformance}
-              metric="conversionRate"
-            />
+            <PerformanceBarChart title="Performance por Canal" data={canalPerformance} metric="conversionRate" />
+            <PerformanceBarChart title="Performance por Tier" data={tierPerformance} metric="conversionRate" />
+            <PerformanceBarChart title="Performance por Urgência" data={urgenciaPerformance} metric="conversionRate" />
+            <PerformanceBarChart title="Performance por Cargo" data={cargoPerformance} metric="conversionRate" />
+            <PerformanceBarChart title="Performance por Tipo de Produto" data={tipoProdutoPerformance} metric="conversionRate" />
+            <PerformanceBarChart title="Performance por Origem" data={origemPerformance} metric="conversionRate" />
           </div>
         </section>
 
-        {/* Description Performance */}
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-6">
             Descrição × Conversão
@@ -232,17 +179,16 @@ const Insights = () => {
           </div>
         </section>
 
-        {/* Cross Performance Matrices */}
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-6">
             Cruzamento de Dados
           </h2>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <CrossPerformanceMatrix
-              title="Período de Compra × Canal"
-              cells={periodoXCanalCross}
-              fieldALabel="Período"
-              fieldBLabel="Canal"
+              title="Canal × Tier"
+              cells={canalXTierCross}
+              fieldALabel="Canal"
+              fieldBLabel="Tier"
             />
             <CrossPerformanceMatrix
               title="Urgência × Cargo"
