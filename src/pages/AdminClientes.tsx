@@ -47,7 +47,7 @@ const STATUS_OPTIONS = [
 ];
 
 export default function AdminClientes() {
-  const { isSuperAdminV4, loading, authResolved } = useAuth();
+  const { isSuperAdminV4, loading, authResolved, user } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
