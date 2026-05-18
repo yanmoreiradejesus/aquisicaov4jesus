@@ -912,6 +912,24 @@ export type Database = {
           },
         ]
       }
+      tenant_enabled_pages: {
+        Row: {
+          created_at: string
+          page_path: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          page_path: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          page_path?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
       tenant_versions: {
         Row: {
           build_hash: string
