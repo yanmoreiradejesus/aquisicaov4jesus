@@ -144,7 +144,19 @@ export default function AdminClientes() {
     },
   });
 
-  
+  const promoteMut = useMutation({
+    mutationFn: async (tenantId: string) => {
+      const { error } = await supabase.rpc("promote_jesus_version_to_tenant", {
+        p_target_tenant: tenantId,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tenant_versions_latest_all"] });
+      toast.success("Versão promovida");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
   const enterAsMut = useMutation({
     mutationFn: async (tenantId: string) => {
       if (!user) throw new Error("Sem sessão");
