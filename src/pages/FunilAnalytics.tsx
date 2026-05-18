@@ -233,6 +233,7 @@ const FunilAnalytics = () => {
                   label="Ticket Médio"
                   value={funilData.ticketMedio > 0 ? fmtBRL0(funilData.ticketMedio) : "—"}
                   delay="1275ms"
+                  onClick={funilData.inAssOps.length > 0 ? () => openLeads("ass") : undefined}
                 />
 
                 <KpiCard
