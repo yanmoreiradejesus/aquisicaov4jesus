@@ -191,36 +191,50 @@ const FunilAnalytics = () => {
                   </TooltipContent>
                 </Tooltip>
               </div>
-              <FunilCrmStages data={funilData} />
+              <FunilCrmStages data={funilData} onOpenLeads={openLeads} />
             </section>
 
             <section className="space-y-6">
               <h2 className="font-body text-xl lg:text-2xl font-semibold text-foreground">
                 KPIS PRINCIPAIS
               </h2>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-5">
-                {/* CPMQL — placeholder enquanto custo de mídia não está no CRM */}
-                <PlaceholderKpiCard
-                  label="CPMQL"
-                  delay="900ms"
-                  hint="Investimento de mídia ainda não trackeado no CRM"
-                />
-
-                {/* CAC — placeholder */}
-                <PlaceholderKpiCard
-                  label="CAC"
-                  delay="1050ms"
-                  hint="Depende do investimento de mídia (em breve no CRM)"
-                />
-
-                {/* Investimento Total — placeholder */}
-                <PlaceholderKpiCard
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                <KpiCard
                   label="Investimento Total"
-                  delay="1200ms"
-                  hint="Depende do investimento de mídia (em breve no CRM)"
+                  value={fmtBRL0(funilData.investimentoTotal)}
+                  delay="900ms"
                 />
 
-                {/* Faturamento Total */}
+                <KpiCard
+                  label="CPMQL"
+                  value={
+                    pipe === "outbound"
+                      ? "—"
+                      : funilData.cpmqlMedio > 0
+                      ? fmtBRL0(funilData.cpmqlMedio)
+                      : "—"
+                  }
+                  delay="1050ms"
+                />
+
+                <KpiCard
+                  label="CAC"
+                  value={
+                    pipe === "outbound"
+                      ? "—"
+                      : funilData.cac > 0
+                      ? fmtBRL0(funilData.cac)
+                      : "—"
+                  }
+                  delay="1200ms"
+                />
+
+                <KpiCard
+                  label="Ticket Médio"
+                  value={funilData.ticketMedio > 0 ? fmtBRL0(funilData.ticketMedio) : "—"}
+                  delay="1275ms"
+                />
+
                 <KpiCard
                   label="Faturamento Total"
                   value={fmtBRL2(funilData.receitaTotal)}
@@ -240,7 +254,6 @@ const FunilAnalytics = () => {
                   }
                 />
 
-                {/* Time to Close */}
                 <KpiCard
                   label="Time to Close"
                   icon={<Clock className="h-4 w-4 text-muted-foreground" />}
@@ -248,6 +261,13 @@ const FunilAnalytics = () => {
                   delay="1500ms"
                 />
               </div>
+              {pipe !== "outbound" && (
+                <p className="text-xs text-muted-foreground">
+                  Investimento, CPMQL e CAC consideram somente leads inbound. O investimento
+                  é a soma do campo CPMQL de cada lead MQL no período — preencha no lead
+                  para refletir aqui.
+                </p>
+              )}
             </section>
           </>
         )}
