@@ -159,7 +159,7 @@ const FunilLeadsDialog = ({
               ? l.data_criacao_origem ?? l.created_at
               : l.data_reuniao_realizada,
           valor: null,
-          cpmql: l.cpmql,
+          cpmql: l.valor_pago,
           pipe: l.pipe ?? "inbound",
         }));
 
@@ -196,7 +196,7 @@ const FunilLeadsDialog = ({
                 {isAss ? (
                   <TableHead className="text-right">Valor</TableHead>
                 ) : (
-                  <TableHead className="text-right">CPMQL</TableHead>
+                  <TableHead className="text-right">Valor pago</TableHead>
                 )}
                 <TableHead className="w-10" />
               </TableRow>
