@@ -60,12 +60,13 @@ const SUB_TITLE: Record<string, string> = {
   no_show: "No-Show",
   realizada: "Reunião Realizada",
   sem_oportunidade: "Sem oportunidade ainda",
-  proposta: "Proposta",
-  negociacao: "Negociação",
-  contrato: "Dúvidas e Fechamento",
-  follow_infinito: "Follow Infinito",
+  proposta: "Em proposta",
+  negociacao: "Em negociação",
+  contrato: "Dúvidas e fechamento",
+  follow_infinito: "Follow infinito",
   fechado_ganho: "Ganho",
   fechado_perdido: "Perdido",
+  desqualificado_depois: "Desqualificado depois",
 };
 
 const FunilLeadsDialog = ({
@@ -107,20 +108,8 @@ const FunilLeadsDialog = ({
       else if (subId === "realizada") baseLeads = baseLeads.filter((l) => l.etapa === "reuniao_realizada");
     } else if (stageId === "sal") {
       baseLeads = data.inSalLeads;
-      if (subId && subId !== "sem_oportunidade") {
-        // sub é etapa de oportunidade
-        const opsByLead = new Map<string, any[]>();
-        data.inAssOps.forEach((o) => {
-          const arr = opsByLead.get(o.lead_id) ?? [];
-          arr.push(o);
-          opsByLead.set(o.lead_id, arr);
-        });
-        // Para sub-etapas, precisamos olhar as oportunidades de cada lead SAL
-        // Mas as oportunidades estão fora de inAssOps; vamos filtrar pelos leads que têm uma op naquela etapa
-        // Como o calculator não expõe inSalOps, mantemos: mostra leads SAL.
-        // Já filtrar por sub aqui exigiria opsByLeadId — simplificação: mostra todos os leads SAL.
-      } else if (subId === "sem_oportunidade") {
-        // não temos a info aqui sem opsByLeadId; deixa todos
+      if (subId && data.inSalLeadsByBucket?.[subId]) {
+        baseLeads = data.inSalLeadsByBucket[subId];
       }
     } else if (stageId === "ass") {
       baseOps = data.inAssOps;
