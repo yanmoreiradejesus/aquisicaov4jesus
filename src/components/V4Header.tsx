@@ -235,6 +235,7 @@ const V4Header = () => {
               {(isAdmin || user) && (
                 <div className="w-px h-4 bg-white/10 mx-1" />
               )}
+              <TenantSwitcher />
               {isAdmin && (
                 <Tooltip>
                   <TooltipTrigger asChild>
