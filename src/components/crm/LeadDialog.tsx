@@ -61,8 +61,6 @@ export const LeadDialog = ({ open, onOpenChange, lead, pipe, onSave, onDelete }:
       const payload = { ...form };
       if (payload.valor_pago === "" || payload.valor_pago == null) payload.valor_pago = null;
       else payload.valor_pago = Number(payload.valor_pago);
-      if (payload.cpmql === "" || payload.cpmql == null) payload.cpmql = null;
-      else payload.cpmql = Number(payload.cpmql);
       if (!payload.data_aquisicao) payload.data_aquisicao = null;
       if (!payload.data_criacao_origem) payload.data_criacao_origem = null;
       // created_at: converte datetime-local para ISO; se vazio em novo lead, deixa o default do banco
