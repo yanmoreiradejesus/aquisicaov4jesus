@@ -198,15 +198,7 @@ export function calcFunilCrm({
     { id: "realizada", label: "Reunião Realizada", count: inSql.filter((l) => l.etapa === "reuniao_realizada").length },
   ];
 
-  // Para SAL drill-down: cruza com oportunidades do lead (a mais recente representa
-  // o status atual). Lead sem op = "sem_oportunidade". Lead com etapa = desqualificado
-  // que já teve reunião = "desqualificado_depois".
-  const allOpsByLeadId = new Map<string, any[]>();
-  oportunidades.forEach((o) => {
-    const arr = allOpsByLeadId.get(o.lead_id) ?? [];
-    arr.push(o);
-    allOpsByLeadId.set(o.lead_id, arr);
-  });
+  // Para SAL drill-down: usa o mapa allOpsByLeadId já construído acima.
   const latestOpFor = (leadId: string): any | null => {
     const arr = allOpsByLeadId.get(leadId);
     if (!arr || arr.length === 0) return null;
