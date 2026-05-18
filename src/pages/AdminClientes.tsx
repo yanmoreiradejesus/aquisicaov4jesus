@@ -118,7 +118,7 @@ export default function AdminClientes() {
     },
   });
 
-  const { user } = useAuth();
+  
   const enterAsMut = useMutation({
     mutationFn: async (tenantId: string) => {
       if (!user) throw new Error("Sem sessão");
