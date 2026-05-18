@@ -75,22 +75,19 @@ export interface SubStage {
 
 export interface FunilCrmResult {
   mql: number;
-  cr: number;
-  ra: number;
-  rr: number;
+  sql: number;
+  sal: number;
   ass: number;
   subMql: SubStage[];
-  subCr: SubStage[];
-  subRa: SubStage[];
-  subRr: SubStage[];
+  subSql: SubStage[];
+  subSal: SubStage[];
   subAss: SubStage[];
   receitaTotal: number;
   ticketMedio: number;
   conversaoGeral: number;
-  convCrMql: number;
-  convRaCr: number;
-  convRrRa: number;
-  convAssRr: number;
+  convSqlMql: number;
+  convSalSql: number;
+  convAssSal: number;
 }
 
 export interface CalcInput {
