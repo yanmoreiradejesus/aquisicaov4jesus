@@ -96,15 +96,15 @@ const getInitials = (name: string | null, email: string) =>
 const Admin = () => {
   const { user: currentUser, isAdmin, isSuperAdminV4 } = useAuth();
   const { config } = useTenantConfig();
-  const { enabledPages } = useTenantEnabledPages();
+  const { pages: enabledPagesSet } = useTenantEnabledPages();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   // Páginas disponíveis para este tenant — usado em todos os checkboxes de acesso
   const tenantPages = useMemo(() => {
-    if (!enabledPages || enabledPages.length === 0) return AVAILABLE_PAGES;
-    return AVAILABLE_PAGES.filter((p) => enabledPages.includes(p.path));
-  }, [enabledPages]);
+    if (!enabledPagesSet || enabledPagesSet.size === 0) return AVAILABLE_PAGES;
+    return AVAILABLE_PAGES.filter((p) => enabledPagesSet.has(p.path));
+  }, [enabledPagesSet]);
   const tenantPageGroups = useMemo(
     () => PAGE_GROUPS.filter((g) => tenantPages.some((p) => p.group === g)),
     [tenantPages],
