@@ -295,6 +295,64 @@ export default function AdminClientes() {
                 />
               </div>
               <div>
+                <Label>Logo do cliente</Label>
+                <div className="mt-2 flex items-center gap-4">
+                  {form.client_logo_url ? (
+                    <img
+                      src={form.client_logo_url}
+                      alt="Logo"
+                      className="h-16 w-16 object-contain rounded border bg-muted/30 p-1"
+                    />
+                  ) : (
+                    <div className="h-16 w-16 rounded border border-dashed bg-muted/30 flex items-center justify-center text-muted-foreground">
+                      <Upload className="w-5 h-5" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      id="edit-logo-upload"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) onLogoSelected(f);
+                        e.target.value = "";
+                      }}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => document.getElementById("edit-logo-upload")?.click()}
+                        disabled={logoUploading || !form.client_slug}
+                      >
+                        {logoUploading ? (
+                          <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Enviando</>
+                        ) : (
+                          <>Escolher arquivo</>
+                        )}
+                      </Button>
+                      {form.client_logo_url && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={removeLogo}
+                          disabled={logoUploading}
+                        >
+                          <Trash2 className="w-3 h-3 mr-1" /> Remover
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Padrão = logo V4 Jesus. Envie uma imagem só se este cliente tem branding próprio.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div>
                 <Label>URL do app</Label>
                 <Input
                   placeholder="https://app.v4xyz.com"
