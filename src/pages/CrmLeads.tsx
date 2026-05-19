@@ -420,6 +420,19 @@ const CrmLeads = () => {
         onOpenChange={(v) => { setDesqualOpen(v); if (!v) setDesqualLead(null); }}
         onConfirm={handleConfirmDesqualificacao}
       />
+
+      <ResponsavelPickerDialog
+        open={respOpen}
+        onOpenChange={(v) => { setRespOpen(v); if (!v) setPendingRespMove(null); }}
+        title={pendingRespMove?.etapa === "reuniao_realizada" ? "Confirme o closer da reunião" : "Defina o closer para o agendamento"}
+        description="Apenas usuários do depto Receitas. Este será o responsável pela oportunidade quando a reunião for realizada."
+        onConfirm={async (responsavelId) => {
+          if (!pendingRespMove) return;
+          await upsert.mutateAsync({ ...pendingRespMove.lead, responsavel_id: responsavelId });
+          moveLead(pendingRespMove.lead.id, pendingRespMove.etapa);
+          setPendingRespMove(null);
+        }}
+      />
     </div>
   );
 };
