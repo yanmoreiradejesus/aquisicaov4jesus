@@ -154,6 +154,12 @@ const CrmLeads = () => {
       setQualOpen(true);
       return;
     }
+    // Exige closer responsável antes de agendar/realizar reunião
+    if ((over.id === "reuniao_agendada" || over.id === "reuniao_realizada") && !lead.responsavel_id) {
+      setPendingRespMove({ lead, etapa: String(over.id) });
+      setRespOpen(true);
+      return;
+    }
     moveLead(lead.id, String(over.id));
   };
 
