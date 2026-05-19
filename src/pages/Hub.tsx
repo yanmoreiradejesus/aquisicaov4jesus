@@ -80,16 +80,20 @@ const Hub = ({ variant = "full" }: HubProps) => {
             <h1
               className="font-heading uppercase leading-[0.95] tracking-tight"
               style={{ fontSize: "clamp(2.5rem, 8vw, 6rem)" }}
-              aria-label={`${greeting}, ${firstName}.`}
+              aria-label={heroReady ? `${greeting}, ${firstName}.` : greeting}
             >
               {/* Line 1: greeting */}
               <span className="block text-foreground">
-                <Typewriter
-                  text={`${greeting},`}
-                  delay={300}
-                  speed={50}
-                  onDone={() => setStep((s) => (s < 1 ? 1 : s))}
-                />
+                {heroReady ? (
+                  <Typewriter
+                    text={`${greeting},`}
+                    delay={300}
+                    speed={50}
+                    onDone={() => setStep((s) => (s < 1 ? 1 : s))}
+                  />
+                ) : (
+                  <span className="invisible">{greeting},</span>
+                )}
               </span>
 
               {/* Line 2: name in red block */}
@@ -101,7 +105,7 @@ const Hub = ({ variant = "full" }: HubProps) => {
                     transition: "clip-path 500ms cubic-bezier(0.16, 1, 0.3, 1)",
                   }}
                 >
-                  {step >= 1 ? (
+                  {heroReady && step >= 1 && firstName ? (
                     <Typewriter
                       text={`${firstName}.`}
                       delay={500}
@@ -110,7 +114,7 @@ const Hub = ({ variant = "full" }: HubProps) => {
                     />
                   ) : (
                     <span aria-hidden="true" className="invisible">
-                      {firstName}.
+                      {firstName ?? "Bem-vindo"}.
                     </span>
                   )}
                 </span>
@@ -121,7 +125,7 @@ const Hub = ({ variant = "full" }: HubProps) => {
               className="mt-6 lg:mt-8 text-base lg:text-lg text-muted-foreground max-w-2xl min-h-[1.75em]"
               aria-label={contextLine}
             >
-              {step >= 2 ? (
+              {heroReady && step >= 2 ? (
                 <Typewriter
                   text={contextLine}
                   speed={25}
