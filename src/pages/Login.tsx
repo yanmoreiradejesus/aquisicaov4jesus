@@ -203,6 +203,15 @@ const Login = () => {
             <form onSubmit={handleLogin} className="space-y-3">
               <Field id="login-email" label="Email" name="email" type="email" required placeholder="seu@email.com" />
               <Field id="login-password" label="Senha" name="password" type="password" required placeholder="••••••••" />
+              <div className="flex justify-end -mt-1">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-xs text-muted-foreground hover:text-foreground transition underline-offset-4 hover:underline"
+                >
+                  Esqueci minha senha
+                </button>
+              </div>
               <SubmitButton loading={loading} label="Entrar" loadingLabel="Entrando..." />
             </form>
           ) : (
