@@ -5,6 +5,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import defaultLogo from "@/assets/v4-logo.png";
 import { useTenantConfig } from "@/hooks/useTenantConfig";
@@ -12,8 +19,40 @@ import { cn } from "@/lib/utils";
 
 type Mode = "login" | "signup";
 
+const CARGOS = [
+  "Account Manager",
+  "Analista de Tech",
+  "Analista Financeira",
+  "BDR",
+  "Closer",
+  "Consultor",
+  "Coordenador de PE&G",
+  "Coordenadora ADM",
+  "Copywriter",
+  "Designer",
+  "Gestor de Tráfego",
+  "HRBP",
+  "Líder de Expansão",
+  "SDR",
+  "Social Media",
+] as const;
+
+const DEPARTAMENTOS = [
+  "Comercial",
+  "Aquisição",
+  "Receitas",
+  "Financeiro",
+  "Operações",
+  "Tecnologia",
+  "RH",
+  "Outro",
+] as const;
+
 const fieldClass =
   "h-12 rounded-2xl border-0 bg-white/[0.06] backdrop-blur-xl px-4 text-base text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-0 transition";
+
+const selectTriggerClass =
+  "h-12 rounded-2xl border-0 bg-white/[0.06] backdrop-blur-xl px-4 text-base text-foreground data-[placeholder]:text-muted-foreground/60 focus:ring-2 focus:ring-primary/40 focus:ring-offset-0 transition";
 
 const Login = () => {
   const { user, loading: authLoading } = useAuth();
@@ -23,6 +62,8 @@ const Login = () => {
   const [mode, setMode] = useState<Mode>("login");
   const [loading, setLoading] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
+  const [cargo, setCargo] = useState<string>("");
+  const [departamento, setDepartamento] = useState<string>("");
   const { toast } = useToast();
 
   if (authLoading || tenantLoading) {
@@ -63,13 +104,19 @@ const Login = () => {
 
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!cargo || !departamento) {
+      toast({
+        title: "Preencha cargo e departamento",
+        description: "Selecione as duas opções para continuar.",
+        variant: "destructive",
+      });
+      return;
+    }
     setLoading(true);
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     const fullName = formData.get("full_name") as string;
-    const cargo = (formData.get("cargo") as string)?.trim() || null;
-    const departamento = (formData.get("departamento") as string)?.trim() || null;
 
     let tenantId: string | null = null;
     try {
@@ -172,8 +219,22 @@ const Login = () => {
               <Field id="signup-name" label="Nome completo" name="full_name" required placeholder="Seu nome" />
               <Field id="signup-email" label="Email" name="email" type="email" required placeholder="seu@email.com" />
               <div className="grid grid-cols-2 gap-3">
-                <Field id="signup-cargo" label="Cargo" name="cargo" required placeholder="Ex.: Closer" />
-                <Field id="signup-dep" label="Departamento" name="departamento" required placeholder="Ex.: Comercial" />
+                <SelectField
+                  id="signup-cargo"
+                  label="Cargo"
+                  placeholder="Selecione"
+                  value={cargo}
+                  onChange={setCargo}
+                  options={CARGOS as unknown as string[]}
+                />
+                <SelectField
+                  id="signup-dep"
+                  label="Departamento"
+                  placeholder="Selecione"
+                  value={departamento}
+                  onChange={setDepartamento}
+                  options={DEPARTAMENTOS as unknown as string[]}
+                />
               </div>
               <Field
                 id="signup-password"
@@ -203,6 +264,40 @@ const Login = () => {
     </div>
   );
 };
+
+const SelectField = ({
+  id,
+  label,
+  placeholder,
+  value,
+  onChange,
+  options,
+}: {
+  id: string;
+  label: string;
+  placeholder: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+}) => (
+  <div className="space-y-1.5">
+    <Label htmlFor={id} className="text-xs font-medium text-muted-foreground pl-1">
+      {label}
+    </Label>
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger id={id} className={selectTriggerClass}>
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent className="rounded-2xl border-white/10 bg-popover/95 backdrop-blur-xl max-h-72">
+        {options.map((opt) => (
+          <SelectItem key={opt} value={opt} className="rounded-xl text-sm">
+            {opt}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+);
 
 const Field = ({
   id,
