@@ -18,8 +18,8 @@ All colors MUST be HSL.
     --popover: 240 10% 3.9%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 217 91% 60%; /* Vibrant blue */
-    --primary-foreground: 0 0% 98%;
+    --primary: 240 5% 90%; /* iOS neutral light accent */
+    --primary-foreground: 240 10% 8%;
 
     --secondary: 240 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;
@@ -27,15 +27,15 @@ All colors MUST be HSL.
     --muted: 240 3.7% 15.9%;
     --muted-foreground: 240 5% 64.9%; /* Medium gray */
 
-    --accent: 217 91% 60%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 240 5% 90%;
+    --accent-foreground: 240 10% 8%;
 
     --destructive: 0 84.2% 60.2%; /* Red */
     --destructive-foreground: 0 0% 98%;
 
     --border: 240 3.7% 15.9%; /* Dark gray */
     --input: 240 3.7% 15.9%;
-    --ring: 217 91% 60%;
+    --ring: 240 5% 90%;
 
     --success: 142 76% 36%; /* Green */
     --success-foreground: 0 0% 98%;
@@ -43,8 +43,8 @@ All colors MUST be HSL.
     --warning: 38 92% 50%; /* Yellow */
     --warning-foreground: 0 0% 98%;
 
-    --info: 217 91% 60%; /* Blue */
-    --info-foreground: 0 0% 98%;
+    --info: 240 5% 90%;
+    --info-foreground: 240 10% 8%;
 
     --radius: 0.75rem; /* Rounded corners */
 
@@ -59,18 +59,18 @@ All colors MUST be HSL.
     --temp-cold: 200 90% 60%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(217 91% 45%));
+    --gradient-primary: linear-gradient(135deg, hsl(240 5% 95%), hsl(240 5% 80%));
     --gradient-success: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 28%));
     --gradient-card: linear-gradient(145deg, hsl(240 10% 5%), hsl(240 8% 8%));
     --gradient-warning: linear-gradient(135deg, hsl(38 92% 50%), hsl(38 92% 40%));
-    --gradient-primary-glow: linear-gradient(135deg, hsl(217 91% 65%), hsl(217 91% 50%));
+    --gradient-primary-glow: linear-gradient(135deg, hsl(240 5% 98%), hsl(240 5% 85%));
 
     /* Shadows — two-layer Apple style (ambient + key light) */
     --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.18), 0 1px 1px hsl(0 0% 0% / 0.12);
     --shadow-md: 0 4px 8px -2px hsl(0 0% 0% / 0.25), 0 2px 4px -2px hsl(0 0% 0% / 0.15);
     --shadow-lg: 0 16px 32px -8px hsl(0 0% 0% / 0.45), 0 4px 8px -4px hsl(0 0% 0% / 0.25);
     --shadow-xl: 0 24px 48px -12px hsl(0 0% 0% / 0.55), 0 8px 16px -8px hsl(0 0% 0% / 0.3);
-    --shadow-glow: 0 0 0 1px hsl(217 91% 60% / 0.25), 0 8px 24px -4px hsl(217 91% 60% / 0.35);
+    --shadow-glow: 0 0 0 1px hsl(240 5% 90% / 0.25), 0 8px 24px -4px hsl(240 5% 90% / 0.35);
     --shadow-card: 0 4px 6px -1px hsl(0 0% 0% / 0.2);
 
     /* Easing curves */
