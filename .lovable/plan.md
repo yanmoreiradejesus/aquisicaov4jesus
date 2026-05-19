@@ -1,95 +1,62 @@
-# Plano de revisão da gestão de usuários e CRM
+# Por que aparece esse flash
 
-## 1. Sincronizar lista de cargos (fonte única)
+Esse "Boa noite, bem-vindo… / Você ainda não tem acesso a nenhuma aplicação" não é a tela de login carregando — é o **Hub renderizando com estado vazio enquanto a autenticação ainda está sendo resolvida**.
 
-Hoje a constante `CARGOS_BY_AREA` em `src/pages/Admin.tsx` está **desatualizada** — não tem `Coordenador de Receitas`, por isso o cargo do Matheus aparece em branco no select e some do filtro. O banco já tem `Coordenador de Receitas` salvo em `profiles.cargo`.
+A causa raiz são dois problemas que se somam:
 
-Ação:
-- Extrair `CARGOS_BY_AREA`, `DEPARTAMENTO_OPTIONS` e `AVAILABLE_PAGES` para `src/lib/cargos.ts` (fonte única reutilizada por Admin, LeadDialog, filtros).
-- Receitas passa a listar: `SDR`, `Closer`, `BDR`, `Coordenador de Receitas`, `Líder de Expansão`.
-- Adicionar utilitário `isReceitas(profile)` para uso nos selects de responsável.
+### 1. `useAuth` é um hook com estado local, não um Context
 
-## 2. "Acessos individuais" só deve mostrar páginas habilitadas no tenant
+Hoje `src/hooks/useAuth.ts` declara `useState` dentro do próprio hook. Cada componente que chama `useAuth()` (são ~24 hoje: V4Header, Hub, AppsGrid, ProtectedRoute, TenantSwitcher, AdminClientes, MetaCrm, MixCompra, widgets…) **monta sua própria cópia do estado, sua própria subscription do Supabase e dispara seu próprio `fetchUserData`**.
 
-No sheet de edição (e nos templates de cargo), `AVAILABLE_PAGES` é mostrado por inteiro — por isso "Financeiro" aparece como opção mesmo na Kloh, que não tem essa página habilitada.
+Resultado: a cada troca de rota, todo componente novo entra com `loading:true / allowedPages:[] / isAdmin:false` por algumas centenas de ms até o `getSession()` + `profiles` + `user_roles` + `user_page_access` resolverem — de novo. Por isso "fica alguns segundos toda vez".
 
-Ação: no `UserEditSheet` e na aba **Templates**, filtrar `AVAILABLE_PAGES` por `tenant_enabled_pages` do tenant ativo (via `useTenantEnabledPages`). Páginas não habilitadas nem aparecem como possibilidade.
+### 2. `AppsGrid` renderiza o vazio antes da auth resolver
 
-## 3. Admin = acesso total + super admin promove admins
-
-Hoje admin é tratado como "tem todas as roles", mas a UI ainda força granularidade. Vamos:
-- Garantir que `hasPageAccess` e `isPageEnabled` retornem `true` para `admin` em qualquer rota do tenant (já parcialmente assim — auditar `useAuth`).
-- No `UserEditSheet`, adicionar (visível só para `super_admin_v4`) um toggle **"Tornar administrador"** que faz upsert/delete em `user_roles (user_id, role='admin', tenant_id)`.
-- Quando o usuário é admin, esconder a seção de páginas individuais (já é o comportamento), mas mostrar badge "Acesso total".
-
-## 4. Aprovar/Reprovar direto na listagem (status Pendente)
-
-Hoje a única forma de aprovar é abrir o sheet e marcar checkbox. Ação:
-- Em cada linha da tabela com status **Pendente**, mostrar dois botões na coluna Ações: **Aprovar** (✓) e **Recusar** (✗).
-- "Aprovar" → `update profiles set approved=true`; "Recusar" → abre o mesmo diálogo de exclusão (item 5).
-- Para usuários já aprovados, mantém só o botão **Editar**.
-- Melhorar o sheet de edição: header com avatar maior + dados de contato em grid, separar visualmente "Status & papel", "Dados", "Cargo", "Acessos".
-
-## 5. Excluir usuário com reatribuição de pendências
-
-Admin e super admin poderão excluir qualquer usuário do tenant (exceto a si mesmo).
-
-Fluxo:
-1. Botão **Excluir** no sheet de edição (e na ação de "Recusar" do pendente).
-2. Abre **`DeleteUserDialog`** que faz `count` em:
-   - `crm_leads.responsavel_id`
-   - `crm_oportunidades.responsavel_id`
-   - `crm_atividades.usuario_id`
-   - `accounts.account_manager_id`
-3. Se houver registros, exige escolher um **substituto** num select (somente usuários do depto Receitas, aprovados, ativos).
-4. Confirma → edge function `delete-user`:
-   - Reatribui todas as referências para o substituto.
-   - Deleta `user_roles`, `user_page_access`, `voip_accounts`, `user_google_tokens` do usuário.
-   - Deleta `profiles` row.
-   - Chama `supabase.auth.admin.deleteUser(id)` (service role).
-
-## 6. Listagens de atribuição só com depto Receitas
-
-Hoje `useProfilesList` retorna todos os aprovados, então a Coordenadora ADM aparece como opção de responsável por lead.
-
-Ação:
-- Adicionar param opcional `useProfilesList({ departamento?: 'Receitas' })`.
-- Usar `departamento: 'Receitas'` nos selects de **responsável** em:
-  - `LeadDialog`, `LeadDetailSheet`, `LeadImportDialog`
-  - `LeadsFilterPopover`, `OportunidadesFilterPopover`
-  - `FunilLeadsDialog`, `LeadActivityReportDialog`
-  - Select de **closer no agendamento de reunião** (lead.responsavel_id quando etapa = reuniao_agendada).
-- Listagens administrativas (Admin, AdminClientes, perfis) continuam mostrando todos.
-
-## 7. Responsável obrigatório na reunião e na oportunidade
-
-Estado atual: trigger `auto_create_oportunidade` já copia `lead.responsavel_id` para `oportunidade.responsavel_id` quando lead vai para `reuniao_realizada` — então o conceito de "closer do agendamento = responsável da oportunidade" já existe no backend. O que falta é **obrigatoriedade** no frontend.
-
-Ações:
-1. **Ao agendar reunião** (mover lead para `reuniao_agendada`): exigir `responsavel_id` preenchido — bloquear a transição se vazio e mostrar toast pedindo selecionar o closer.
-2. **Ao marcar reunião realizada** (mover para `reuniao_realizada`): validar de novo que `responsavel_id` está presente; se não, abrir um dialog mínimo "Confirmar closer responsável" antes de aplicar a etapa.
-3. **`OportunidadeDetailSheet` / `OportunidadeDialog`**: tornar campo Responsável obrigatório (validar antes de salvar; placeholder já existe).
-4. **Migration leve**: tornar `crm_oportunidades.responsavel_id` `NOT NULL` apenas para novas linhas — usar trigger BEFORE INSERT que rejeita NULL se a etapa for diferente de proposta inicial vinda do trigger automático. Alternativa mais simples: validação só no client + check trigger leve que exige `responsavel_id IS NOT NULL` em qualquer UPDATE futuro. (Preferimos validação client + check em UPDATE.)
-
-## Detalhes técnicos
-
-```text
-src/
-  lib/cargos.ts                     ← novo (fonte única)
-  hooks/useProfilesList.ts          ← aceita { departamento }
-  components/admin/
-    DeleteUserDialog.tsx            ← novo
-    UserRowActions.tsx              ← aprovar/recusar/editar inline
-  pages/Admin.tsx                   ← refator UserEditSheet + filtro de páginas por tenant
-supabase/
-  functions/delete-user/index.ts    ← novo (service role, reatribui + apaga)
-  migrations/...                    ← trigger validate_oportunidade_responsavel
+```tsx
+const visibleApps = APPS.filter(a => a.accessPaths.some(p => hasPageAccess(p) && isPageEnabled(p)));
+if (visibleApps.length === 0) return <div>Você ainda não tem acesso...</div>;
 ```
 
-Edge function `delete-user` usa `SUPABASE_SERVICE_ROLE_KEY` (já disponível) e valida no header que o caller tem role `admin` ou `super_admin_v4` no tenant do alvo.
+Como `allowedPages` começa `[]` e `isAdmin` começa `false`, `hasPageAccess` retorna false para tudo no primeiro render → o componente cospe a mensagem de "sem acesso" antes mesmo das queries terminarem.
 
-## O que NÃO entra agora
+O mesmo padrão (estado vazio antes de resolver) existe no greeting "Hora de f…" do Hub, que renderiza com `profile` ainda `null`.
 
-- Auditoria/log de exclusão de usuários (pode virar tabela `user_audit_log` depois).
-- Reatribuição parcial (todas as referências vão para o mesmo substituto).
-- Histórico de quem aprovou cada usuário.
+---
+
+# Plano de correção
+
+## 1. Transformar `useAuth` em Context global (única fonte de verdade)
+
+- Criar `src/contexts/AuthContext.tsx` com `AuthProvider` que faz **uma única** subscription do `onAuthStateChange` e **um único** `fetchUserData` por sessão.
+- `useAuth()` passa a ser um `useContext(AuthContext)` — mesma API pública (`user`, `profile`, `isAdmin`, `isSuperAdminV4`, `allowedPages`, `loading`, `authResolved`, `hasPageAccess`, `signOut`), então nenhum consumidor precisa mudar.
+- Envolver a árvore em `src/App.tsx` com `<AuthProvider>` logo dentro do `QueryClientProvider`.
+
+Impacto: navegação entre rotas deixa de redisparar `getSession + 3 selects`. Estado já está pronto no Provider, componentes renderizam com dados imediatamente.
+
+## 2. Bloquear o estado vazio até a auth resolver
+
+- Em `AppsGrid`: só mostrar "Você ainda não tem acesso…" quando `authResolved === true` **E** `useTenantEnabledPages().isLoading === false`. Antes disso, renderizar um skeleton sutil (3 cards placeholder) ou simplesmente `null`.
+- No `Hub` (greeting "Hora de…"): aguardar `profile` antes de renderizar o texto contextual; mostrar só o saudação genérica enquanto carrega.
+
+## 3. Pequenas higienizações de re-fetch
+
+- Em `useAuth`, dentro do `onAuthStateChange`, ignorar também os eventos `INITIAL_SESSION` quando já temos `fetchedForUserRef.current === session.user.id` (hoje só `TOKEN_REFRESHED` é ignorado). Evita um fetch duplicado no boot.
+- Manter `staleTime` razoáveis nas queries de `tenant_enabled_pages` (já está em 60s) e `tenant_config`.
+
+---
+
+# Arquivos afetados
+
+- **Criar:** `src/contexts/AuthContext.tsx`
+- **Modificar:** `src/hooks/useAuth.ts` (vira um wrapper finíssimo sobre o context), `src/App.tsx` (montar `<AuthProvider>`), `src/components/hub/AppsGrid.tsx` (guard de empty-state), `src/pages/Hub.tsx` (guard do greeting).
+
+# Fora do escopo
+
+- Não vou mexer em `useTenantConfig` nem nas RLS — eles já estão corretos; o flash some quando o estado de auth para de ser duplicado.
+- Não vou alterar a estética da tela de boas-vindas em si.
+
+# Resultado esperado
+
+- Login → Hub: aparece já com os apps corretos, sem piscar "sem acesso".
+- Troca de rota (`/apps` → `/comercial/leads` → `/admin`): instantânea, sem reflash da saudação.
+- Apenas o primeiríssimo carregamento do app continua com um pequeno skeleton (~200ms) enquanto a sessão é restaurada.

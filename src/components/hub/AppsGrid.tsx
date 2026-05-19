@@ -47,14 +47,32 @@ interface AppsGridProps {
 }
 
 export function AppsGrid({ compact = false }: AppsGridProps) {
-  const { hasPageAccess } = useAuth();
-  const { isPageEnabled } = useTenantEnabledPages();
+  const { hasPageAccess, authResolved } = useAuth();
+  const { isPageEnabled, isLoading: tenantPagesLoading } = useTenantEnabledPages();
   // App é visível se houver pelo menos uma página onde usuário tem permissão E tenant tem habilitada
   const visibleApps = APPS.filter((a) =>
     a.accessPaths.some((p) => hasPageAccess(p) && isPageEnabled(p)),
   );
 
+  // Enquanto auth/tenant ainda não resolveram, NÃO renderiza a mensagem de "sem acesso"
+  // (evita o flash de "Você ainda não tem acesso..." no boot e em trocas de rota).
+  const stillResolving = !authResolved || tenantPagesLoading;
+
   if (visibleApps.length === 0) {
+    if (stillResolving) {
+      return (
+        <section className={compact ? "" : "mb-20 lg:mb-28"}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className={`rounded-2xl border border-border/40 bg-[hsl(var(--surface-1))]/40 ${compact ? "min-h-[200px] lg:min-h-[240px]" : "min-h-[260px] lg:min-h-[320px]"} animate-pulse`}
+              />
+            ))}
+          </div>
+        </section>
+      );
+    }
     return (
       <div className="text-center py-20 text-muted-foreground">
         Você ainda não tem acesso a nenhuma aplicação. Solicite acesso ao administrador.
