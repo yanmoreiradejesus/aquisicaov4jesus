@@ -26,16 +26,68 @@ const FALLBACK: TenantConfig = {
   active: true,
 };
 
+const getFallbackConfig = (): TenantConfig => {
+  if (typeof window === "undefined") return FALLBACK;
+  const host = window.location.hostname.toLowerCase();
+  const isV4JesusRoot = host === "v4jesus.com" || host === "www.v4jesus.com";
+  const isLovableOrLocal = host === "localhost" || host.endsWith(".lovable.app");
+
+  if (isV4JesusRoot || isLovableOrLocal) return FALLBACK;
+
+  const slug = host.split(".")[0] || "cliente";
+  const name = slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+  return {
+    ...FALLBACK,
+    client_name: name,
+    client_slug: slug,
+    app_base_url: window.location.origin,
+  };
+};
+
+type DomainTenantConfig = Omit<TenantConfig, "sheet_ids"> & { sheet_ids: unknown };
+
+const resolveTenantByHostname = async (hostname: string): Promise<DomainTenantConfig | null> => {
+  const rpcClient = supabase as unknown as {
+    rpc: (
+      fn: "resolve_tenant_by_hostname",
+      args: { _hostname: string },
+    ) => Promise<{ data: DomainTenantConfig[] | null }>;
+  };
+
+  const { data } = await rpcClient.rpc("resolve_tenant_by_hostname", {
+    _hostname: hostname,
+  });
+
+  return data?.[0] ?? null;
+};
+
 /**
  * Reads the current user's tenant from the `tenants` table.
  * RLS guarantees the user can only see their own tenant (or all, if super_admin_v4).
  */
 export function useTenantConfig() {
   const { user } = useAuth();
+  const fallback = getFallbackConfig();
   const { data, isLoading } = useQuery({
     queryKey: ["tenant_config", user?.id],
     enabled: !!user,
     queryFn: async (): Promise<TenantConfig> => {
+      // Em domínio customizado de cliente, o domínio manda. Isso impede abrir Jesus
+      // dentro de kloh.v4jesus.com mesmo que o perfil ainda esteja com outro tenant ativo.
+      const host = window.location.hostname.toLowerCase();
+      if (host !== "localhost" && !host.endsWith(".lovable.app")) {
+        const domainTenant = await resolveTenantByHostname(host);
+
+        if (domainTenant) {
+          return {
+            ...FALLBACK,
+            ...domainTenant,
+            sheet_ids: (domainTenant.sheet_ids as Record<string, string>) ?? {},
+          };
+        }
+      }
+
       // 1. Resolve o tenant ATIVO do usuário (respeita active_tenant_id do super_admin_v4)
       const { data: prof } = await supabase
         .from("profiles")
@@ -44,7 +96,7 @@ export function useTenantConfig() {
         .maybeSingle();
 
       const tenantId = prof?.active_tenant_id ?? prof?.tenant_id;
-      if (!tenantId) return FALLBACK;
+      if (!tenantId) return fallback;
 
       // 2. Busca exatamente o tenant ativo (sem depender de .limit(1), que para super_admin
       //    retornaria qualquer tenant da lista)
@@ -54,9 +106,9 @@ export function useTenantConfig() {
         .eq("id", tenantId)
         .maybeSingle();
 
-      if (error || !data) return FALLBACK;
+      if (error || !data) return fallback;
       return {
-        ...FALLBACK,
+        ...fallback,
         ...data,
         sheet_ids: (data.sheet_ids as Record<string, string>) ?? {},
       };
@@ -64,5 +116,5 @@ export function useTenantConfig() {
     staleTime: 5 * 60_000,
   });
 
-  return { config: data ?? FALLBACK, isLoading };
+  return { config: data ?? fallback, isLoading };
 }

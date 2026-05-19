@@ -1225,6 +1225,20 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      resolve_tenant_by_hostname: {
+        Args: { _hostname: string }
+        Returns: {
+          active: boolean
+          app_base_url: string
+          client_logo_url: string
+          client_name: string
+          client_slug: string
+          id: string
+          primary_color_hsl: string
+          sheet_ids: Json
+          voip_provider: string
+        }[]
+      }
     }
     Enums: {
       account_status: "ativo" | "pausado" | "encerrado"

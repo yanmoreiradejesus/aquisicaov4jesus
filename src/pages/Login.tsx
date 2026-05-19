@@ -59,25 +59,21 @@ const Login = () => {
     const password = formData.get("password") as string;
     const fullName = formData.get("full_name") as string;
 
-    // Multi-tenant: descobre qual tenant esse domínio representa.
-    // Casa por hostname: se o usuário acessou xyz.v4jesus.com, ele vira admin do tenant
-    // com app_base_url=https://xyz.v4jesus.com (não do V4 Jesus por fallback).
+    // Multi-tenant: descobre qual tenant esse domínio representa sem depender
+    // do fallback Jesus para cadastros em subdomínios de clientes.
     let tenantId: string | null = null;
     try {
       const host = window.location.hostname.toLowerCase();
-      const { data: tenants } = await supabase
-        .from("tenants")
-        .select("id, app_base_url");
-      const match = (tenants ?? []).find((t: { app_base_url: string | null }) => {
-        if (!t.app_base_url) return false;
-        try {
-          const u = new URL(t.app_base_url);
-          return u.hostname.toLowerCase() === host;
-        } catch {
-          return false;
-        }
+      const rpcClient = supabase as unknown as {
+        rpc: (
+          fn: "resolve_tenant_by_hostname",
+          args: { _hostname: string },
+        ) => Promise<{ data: Array<{ id: string }> | null }>;
+      };
+      const { data: domainTenant } = await rpcClient.rpc("resolve_tenant_by_hostname", {
+        _hostname: host,
       });
-      if (match) tenantId = (match as { id: string }).id;
+      tenantId = domainTenant?.[0]?.id ?? null;
     } catch (err) {
       console.warn("[signup] tenant lookup falhou, usando fallback:", err);
     }

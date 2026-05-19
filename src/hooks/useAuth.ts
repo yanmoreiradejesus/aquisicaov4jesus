@@ -12,6 +12,8 @@ interface Profile {
   departamento: string | null;
   telefone: string | null;
   avatar_url: string | null;
+  tenant_id: string;
+  active_tenant_id: string | null;
 }
 
 interface AuthState {
@@ -41,10 +43,44 @@ export function useAuth() {
   const [state, setState] = useState<AuthState>(initialState);
   const fetchedForUserRef = useRef<string | null>(null);
 
+  const resolveDomainTenantId = async (): Promise<string | null> => {
+    if (typeof window === "undefined") return null;
+    const host = window.location.hostname.toLowerCase();
+    if (host === "localhost" || host.endsWith(".lovable.app")) return null;
+
+    const rpcClient = supabase as unknown as {
+      rpc: (
+        fn: "resolve_tenant_by_hostname",
+        args: { _hostname: string },
+      ) => Promise<{ data: Array<{ id: string }> | null }>;
+    };
+    const { data } = await rpcClient.rpc("resolve_tenant_by_hostname", {
+      _hostname: host,
+    });
+    return data?.[0]?.id ?? null;
+  };
+
   const fetchUserData = useCallback(
     async (user: User, attempt = 0): Promise<void> => {
-      const [profileRes, rolesRes, accessRes] = await Promise.all([
-        supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+      const domainTenantId = await resolveDomainTenantId();
+      let profileRes = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
+
+      if (
+        domainTenantId &&
+        profileRes.data &&
+        (profileRes.data.active_tenant_id ?? profileRes.data.tenant_id) !== domainTenantId
+      ) {
+        const updateRes = await supabase
+          .from("profiles")
+          .update({ active_tenant_id: domainTenantId })
+          .eq("id", user.id)
+          .select("*")
+          .maybeSingle();
+
+        if (!updateRes.error) profileRes = updateRes;
+      }
+
+      const [rolesRes, accessRes] = await Promise.all([
         supabase.from("user_roles").select("role").eq("user_id", user.id),
         supabase.from("user_page_access").select("page_path").eq("user_id", user.id),
       ]);
@@ -64,10 +100,16 @@ export function useAuth() {
       }
 
       const profile = (profileRes.data as Profile | null) ?? null;
-      const roles = rolesRes.data?.map((r: any) => r.role as string) ?? [];
+      const roles = rolesRes.data?.map((r) => String(r.role)) ?? [];
       const isAdmin = roles.includes("admin");
       const isSuperAdminV4 = roles.includes("super_admin_v4");
-      const allowedPages = accessRes.data?.map((a: any) => a.page_path) ?? [];
+      const allowedPages = accessRes.data?.map((a) => a.page_path) ?? [];
+
+      if (domainTenantId && profile && profile.tenant_id !== domainTenantId && !isSuperAdminV4) {
+        await supabase.auth.signOut();
+        setState({ ...initialState, loading: false });
+        return;
+      }
 
       setState({
         user,
