@@ -36,6 +36,23 @@ export function useTenantConfig() {
     queryKey: ["tenant_config", user?.id],
     enabled: !!user,
     queryFn: async (): Promise<TenantConfig> => {
+      // Em domínio customizado de cliente, o domínio manda. Isso impede abrir Jesus
+      // dentro de kloh.v4jesus.com mesmo que o perfil ainda esteja com outro tenant ativo.
+      const host = window.location.hostname.toLowerCase();
+      if (host !== "localhost" && !host.endsWith(".lovable.app")) {
+        const { data: domainTenant } = await (supabase as any).rpc("resolve_tenant_by_hostname", {
+          _hostname: host,
+        });
+
+        if (domainTenant?.[0]) {
+          return {
+            ...FALLBACK,
+            ...domainTenant[0],
+            sheet_ids: (domainTenant[0].sheet_ids as Record<string, string>) ?? {},
+          };
+        }
+      }
+
       // 1. Resolve o tenant ATIVO do usuário (respeita active_tenant_id do super_admin_v4)
       const { data: prof } = await supabase
         .from("profiles")
