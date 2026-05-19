@@ -15,6 +15,7 @@ import { LeadImportDialog } from "@/components/crm/LeadImportDialog";
 import { LeadExportDialog } from "@/components/crm/LeadExportDialog";
 import { LeadActivityReportDialog } from "@/components/crm/LeadActivityReportDialog";
 import { QualificacaoDialog } from "@/components/crm/QualificacaoDialog";
+import { ResponsavelPickerDialog } from "@/components/crm/ResponsavelPickerDialog";
 import { DesqualificacaoDialog } from "@/components/crm/DesqualificacaoDialog";
 import { LeadsFilterPopover, EMPTY_FILTERS, type LeadFilters } from "@/components/crm/LeadsFilterPopover";
 import { useToast } from "@/hooks/use-toast";
@@ -69,6 +70,8 @@ const CrmLeads = () => {
   const [editing, setEditing] = useState<any | null>(null);
   const [qualOpen, setQualOpen] = useState(false);
   const [pendingMove, setPendingMove] = useState<{ lead: any; etapa: string } | null>(null);
+  const [respOpen, setRespOpen] = useState(false);
+  const [pendingRespMove, setPendingRespMove] = useState<{ lead: any; etapa: string } | null>(null);
   const [desqualOpen, setDesqualOpen] = useState(false);
   const [desqualLead, setDesqualLead] = useState<any | null>(null);
   const [view, setView] = usePersistedState<"kanban" | "tarefas">("crm:leads:view", "kanban");
@@ -151,6 +154,12 @@ const CrmLeads = () => {
       setQualOpen(true);
       return;
     }
+    // Exige closer responsável antes de agendar/realizar reunião
+    if ((over.id === "reuniao_agendada" || over.id === "reuniao_realizada") && !lead.responsavel_id) {
+      setPendingRespMove({ lead, etapa: String(over.id) });
+      setRespOpen(true);
+      return;
+    }
     moveLead(lead.id, String(over.id));
   };
 
@@ -193,7 +202,7 @@ const CrmLeads = () => {
     toast({ title: "Lead excluído" });
   };
 
-  const { profiles } = useProfilesList();
+  const { profiles } = useProfilesList({ departamento: "Receitas" });
   const handleBulkAssign = async (responsavelId: string) => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
@@ -410,6 +419,19 @@ const CrmLeads = () => {
         open={desqualOpen}
         onOpenChange={(v) => { setDesqualOpen(v); if (!v) setDesqualLead(null); }}
         onConfirm={handleConfirmDesqualificacao}
+      />
+
+      <ResponsavelPickerDialog
+        open={respOpen}
+        onOpenChange={(v) => { setRespOpen(v); if (!v) setPendingRespMove(null); }}
+        title={pendingRespMove?.etapa === "reuniao_realizada" ? "Confirme o closer da reunião" : "Defina o closer para o agendamento"}
+        description="Apenas usuários do depto Receitas. Este será o responsável pela oportunidade quando a reunião for realizada."
+        onConfirm={async (responsavelId) => {
+          if (!pendingRespMove) return;
+          await upsert.mutateAsync({ ...pendingRespMove.lead, responsavel_id: responsavelId });
+          moveLead(pendingRespMove.lead.id, pendingRespMove.etapa);
+          setPendingRespMove(null);
+        }}
       />
     </div>
   );
