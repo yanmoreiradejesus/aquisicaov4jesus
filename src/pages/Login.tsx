@@ -265,6 +265,40 @@ const Login = () => {
   );
 };
 
+const SelectField = ({
+  id,
+  label,
+  placeholder,
+  value,
+  onChange,
+  options,
+}: {
+  id: string;
+  label: string;
+  placeholder: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+}) => (
+  <div className="space-y-1.5">
+    <Label htmlFor={id} className="text-xs font-medium text-muted-foreground pl-1">
+      {label}
+    </Label>
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger id={id} className={selectTriggerClass}>
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent className="rounded-2xl border-white/10 bg-popover/95 backdrop-blur-xl max-h-72">
+        {options.map((opt) => (
+          <SelectItem key={opt} value={opt} className="rounded-xl text-sm">
+            {opt}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+);
+
 const Field = ({
   id,
   label,
