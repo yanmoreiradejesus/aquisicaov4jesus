@@ -145,7 +145,22 @@ export function useAuth() {
   }, [fetchUserData]);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    // Tenta signOut local (não falha se a sessão já não existe no servidor)
+    try {
+      await supabase.auth.signOut({ scope: "local" });
+    } catch (err) {
+      console.warn("[signOut] falhou, limpando manualmente:", err);
+    }
+    // Garante limpeza de qualquer token Supabase remanescente
+    try {
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith("sb-") && k.endsWith("-auth-token"))
+        .forEach((k) => localStorage.removeItem(k));
+    } catch {
+      // ignore
+    }
+    setState({ ...initialState, loading: false });
+    window.location.href = "/login";
   };
 
   const hasPageAccess = (path: string) => {
