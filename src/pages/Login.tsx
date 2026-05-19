@@ -5,6 +5,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import defaultLogo from "@/assets/v4-logo.png";
 import { useTenantConfig } from "@/hooks/useTenantConfig";
@@ -12,8 +19,40 @@ import { cn } from "@/lib/utils";
 
 type Mode = "login" | "signup";
 
+const CARGOS = [
+  "Account Manager",
+  "Analista de Tech",
+  "Analista Financeira",
+  "BDR",
+  "Closer",
+  "Consultor",
+  "Coordenador de PE&G",
+  "Coordenadora ADM",
+  "Copywriter",
+  "Designer",
+  "Gestor de Tráfego",
+  "HRBP",
+  "Líder de Expansão",
+  "SDR",
+  "Social Media",
+] as const;
+
+const DEPARTAMENTOS = [
+  "Comercial",
+  "Aquisição",
+  "Receitas",
+  "Financeiro",
+  "Operações",
+  "Tecnologia",
+  "RH",
+  "Outro",
+] as const;
+
 const fieldClass =
   "h-12 rounded-2xl border-0 bg-white/[0.06] backdrop-blur-xl px-4 text-base text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-0 transition";
+
+const selectTriggerClass =
+  "h-12 rounded-2xl border-0 bg-white/[0.06] backdrop-blur-xl px-4 text-base text-foreground data-[placeholder]:text-muted-foreground/60 focus:ring-2 focus:ring-primary/40 focus:ring-offset-0 transition";
 
 const Login = () => {
   const { user, loading: authLoading } = useAuth();
