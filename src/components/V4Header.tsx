@@ -21,10 +21,9 @@ const V4Header = () => {
   const isActive = (path: string) => location.pathname === path;
 
   const aquisicaoItems = [
-    { path: "/aquisicao/dashboard", label: "Dashboard" },
     { path: "/aquisicao/funil", label: "Funil" },
     { path: "/aquisicao/meta", label: "Meta" },
-    { path: "/aquisicao/insights", label: "Insights" },
+    { path: "/aquisicao/insights", label: "Insights Broker" },
     { path: "/aquisicao/financeiro", label: "Financeiro" },
   ];
 
