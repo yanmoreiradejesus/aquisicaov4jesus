@@ -30,7 +30,7 @@ interface LeadLite { id: string; nome: string; empresa: string | null }
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
 export const LeadActivityReportDialog = ({ open, onOpenChange }: Props) => {
-  const { profiles } = useProfilesList();
+  const { profiles } = useProfilesList({ departamento: "Receitas" });
   const [dateFrom, setDateFrom] = useState<string>(todayISO());
   const [dateTo, setDateTo] = useState<string>(todayISO());
   const [usuarioId, setUsuarioId] = useState<string>("all");

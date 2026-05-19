@@ -193,7 +193,7 @@ const CrmLeads = () => {
     toast({ title: "Lead excluído" });
   };
 
-  const { profiles } = useProfilesList();
+  const { profiles } = useProfilesList({ departamento: "Receitas" });
   const handleBulkAssign = async (responsavelId: string) => {
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;

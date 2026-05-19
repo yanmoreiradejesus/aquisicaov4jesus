@@ -41,7 +41,7 @@ interface Props {
 }
 
 export const LeadsFilterPopover = ({ filters, onChange, leads }: Props) => {
-  const { profiles } = useProfilesList();
+  const { profiles } = useProfilesList({ departamento: "Receitas" });
   const uniques = useMemo(() => {
     const get = (key: string) =>
       Array.from(new Set(leads.map((l: any) => l[key]).filter((v: any) => v && String(v).trim())))

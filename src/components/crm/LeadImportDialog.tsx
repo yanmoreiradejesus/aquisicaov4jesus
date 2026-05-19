@@ -53,7 +53,7 @@ export const LeadImportDialog = ({ open, onOpenChange, onOpenExport, onOpenRepor
   const { toast } = useToast();
   const qc = useQueryClient();
   const [lastImport, setLastImport] = useState<{ created_at: string; nome: string; empresa: string | null } | null>(null);
-  const { profiles } = useProfilesList();
+  const { profiles } = useProfilesList({ departamento: "Receitas" });
   const [responsavelId, setResponsavelId] = useState<string>("none");
   const isOutbound = pipe === "outbound";
   const [outboundTag, setOutboundTag] = useState<string>("");
