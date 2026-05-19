@@ -2,12 +2,15 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenantConfig } from "@/hooks/useTenantConfig";
+import { useTenantEnabledPages } from "@/hooks/useTenantEnabledPages";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -35,11 +38,32 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, UserPlus, Send, Wand2, Pencil, Search, Clock, Building2, ArrowRight } from "lucide-react";
+import {
+  Shield,
+  UserPlus,
+  Send,
+  Wand2,
+  Pencil,
+  Search,
+  Clock,
+  Building2,
+  ArrowRight,
+  Check,
+  X,
+  Trash2,
+} from "lucide-react";
 import { AdminVoipAccountsCard } from "@/components/admin/AdminVoipAccountsCard";
 import { AdminFixLeadsCard } from "@/components/admin/AdminFixLeadsCard";
 import { AdminBackfill3CPlusCard } from "@/components/admin/AdminBackfill3CPlusCard";
 import { AdminVersionsPanel } from "@/components/admin/AdminVersionsPanel";
+import { DeleteUserDialog } from "@/components/admin/DeleteUserDialog";
+import {
+  CARGOS_BY_AREA,
+  CARGO_OPTIONS,
+  DEPARTAMENTO_OPTIONS,
+  AVAILABLE_PAGES,
+  PAGE_GROUPS,
+} from "@/lib/cargos";
 
 interface UserWithAccess {
   id: string;
@@ -60,45 +84,6 @@ interface RoleTemplate {
   pages: string[];
 }
 
-const AVAILABLE_PAGES = [
-  { path: "/aquisicao/funil", label: "Funil", group: "Data Analytics" },
-  { path: "/aquisicao/dashboard", label: "Dashboard", group: "Data Analytics" },
-  { path: "/aquisicao/insights", label: "Insights", group: "Data Analytics" },
-  { path: "/aquisicao/meta", label: "Meta", group: "Data Analytics" },
-  { path: "/aquisicao/financeiro", label: "Financeiro", group: "Data Analytics" },
-  { path: "/comercial/leads", label: "CRM Leads", group: "Comercial" },
-  { path: "/comercial/oportunidades", label: "CRM Oportunidades", group: "Comercial" },
-  { path: "/comercial/onboarding", label: "Onboarding", group: "Comercial" },
-  { path: "/comercial/accounts", label: "Accounts", group: "Comercial" },
-  { path: "/comercial/cobrancas", label: "Cobranças", group: "Comercial" },
-  { path: "/app-v4", label: "App V4", group: "Outros" },
-];
-
-const PAGE_GROUPS = ["Data Analytics", "Comercial", "Outros"];
-
-const CARGOS_BY_AREA: Record<string, string[]> = {
-  Receitas: ["SDR", "Closer", "BDR", "Líder de Expansão"],
-  "PE&G": [
-    "Coordenador de PE&G",
-    "Account Manager",
-    "Gestor de Tráfego",
-    "Designer",
-    "Copywriter",
-    "Social Media",
-    "Consultor",
-    "Analista de Tech",
-  ],
-  ADM: ["Coordenadora ADM", "HRBP", "Analista Financeira"],
-};
-
-const CARGO_OPTIONS = [
-  ...CARGOS_BY_AREA.Receitas,
-  ...CARGOS_BY_AREA["PE&G"],
-  ...CARGOS_BY_AREA.ADM,
-  "Outro",
-];
-const DEPARTAMENTO_OPTIONS = ["Receitas", "PE&G", "ADM", "Outro"];
-
 const getInitials = (name: string | null, email: string) =>
   (name || email)
     .split(" ")
@@ -109,12 +94,27 @@ const getInitials = (name: string | null, email: string) =>
     .toUpperCase();
 
 const Admin = () => {
-  const { isAdmin, isSuperAdminV4 } = useAuth();
+  const { user: currentUser, isAdmin, isSuperAdminV4 } = useAuth();
+  const { config } = useTenantConfig();
+  const { enabledPages } = useTenantEnabledPages();
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // Páginas disponíveis para este tenant — usado em todos os checkboxes de acesso
+  const tenantPages = useMemo(() => {
+    if (!enabledPages || enabledPages.length === 0) return AVAILABLE_PAGES;
+    return AVAILABLE_PAGES.filter((p) => enabledPages.includes(p.path));
+  }, [enabledPages]);
+  const tenantPageGroups = useMemo(
+    () => PAGE_GROUPS.filter((g) => tenantPages.some((p) => p.group === g)),
+    [tenantPages],
+  );
+
   const [users, setUsers] = useState<UserWithAccess[]>([]);
   const [templates, setTemplates] = useState<RoleTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filterCargo, setFilterCargo] = useState<string>("__all__");
   const [filterDepto, setFilterDepto] = useState<string>("__all__");
@@ -123,7 +123,6 @@ const Admin = () => {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteName, setInviteName] = useState("");
   const [inviting, setInviting] = useState(false);
-  const { toast } = useToast();
 
   const fetchAll = async () => {
     setLoading(true);
@@ -188,11 +187,10 @@ const Admin = () => {
   };
 
   const updateTemplate = async (cargo: string, pages: string[]) => {
-    // Fetch current user's tenant_id
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data: profile } = await supabase.from("profiles").select("tenant_id").eq("id", user.id).maybeSingle();
-    const tenant_id = profile?.tenant_id;
+    const { data: profile } = await supabase.from("profiles").select("tenant_id, active_tenant_id").eq("id", user.id).maybeSingle();
+    const tenant_id = profile?.active_tenant_id ?? profile?.tenant_id;
     if (!tenant_id) {
       toast({ title: "Erro", description: "Tenant não identificado", variant: "destructive" });
       return;
@@ -214,6 +212,17 @@ const Admin = () => {
     updateTemplate(cargo, next);
   };
 
+  // Aprovar inline
+  const handleApproveInline = async (id: string) => {
+    const { error } = await supabase.from("profiles").update({ approved: true }).eq("id", id);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Usuário aprovado" });
+    fetchAll();
+  };
+
   const filteredUsers = useMemo(() => {
     return users.filter((u) => {
       if (search) {
@@ -232,6 +241,7 @@ const Admin = () => {
   }, [users, search, filterCargo, filterDepto, filterStatus]);
 
   const editingUser = users.find((u) => u.id === editingUserId) ?? null;
+  const deletingUser = users.find((u) => u.id === deletingUserId) ?? null;
   const pendingCount = users.filter((u) => !u.approved && !u.roles.includes("admin")).length;
 
   if (!isAdmin) {
@@ -321,7 +331,7 @@ const Admin = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                <div className="md:col-span-4 flex gap-2">
+                <div className="md:col-span-4 flex gap-2 flex-wrap">
                   {[
                     { v: "__all__", label: "Todos" },
                     { v: "pending", label: `Pendentes (${pendingCount})` },
@@ -362,6 +372,8 @@ const Admin = () => {
                       {filteredUsers.map((user) => {
                         const initials = getInitials(user.full_name, user.email);
                         const isUserAdmin = user.roles.includes("admin");
+                        const isSelf = currentUser?.id === user.id;
+                        const isPending = !user.approved && !isUserAdmin;
                         return (
                           <TableRow key={user.id}>
                             <TableCell>
@@ -394,9 +406,44 @@ const Admin = () => {
                               )}
                             </TableCell>
                             <TableCell className="text-right">
-                              <Button size="sm" variant="ghost" onClick={() => setEditingUserId(user.id)}>
-                                <Pencil className="h-4 w-4 mr-1" /> Editar
-                              </Button>
+                              <div className="inline-flex items-center gap-1">
+                                {isPending && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-8 px-2 text-green-500 hover:text-green-400 hover:bg-green-500/10"
+                                      onClick={() => handleApproveInline(user.id)}
+                                      title="Aprovar"
+                                    >
+                                      <Check className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-8 px-2 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                      onClick={() => setDeletingUserId(user.id)}
+                                      title="Recusar e excluir"
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </>
+                                )}
+                                <Button size="sm" variant="ghost" onClick={() => setEditingUserId(user.id)}>
+                                  <Pencil className="h-4 w-4 mr-1" /> Editar
+                                </Button>
+                                {!isSelf && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 px-2 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                    onClick={() => setDeletingUserId(user.id)}
+                                    title="Excluir usuário"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
@@ -412,6 +459,7 @@ const Admin = () => {
           <TabsContent value="templates" className="space-y-6 mt-4">
             <p className="text-sm text-muted-foreground">
               Define quais páginas cada cargo recebe ao aplicar o template no usuário.
+              Apenas páginas habilitadas para <strong>{config?.client_name ?? "este cliente"}</strong> aparecem aqui.
             </p>
             {Object.entries(CARGOS_BY_AREA).map(([area, cargos]) => (
               <div key={area} className="space-y-3">
@@ -429,8 +477,9 @@ const Admin = () => {
                           </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-3">
-                          {PAGE_GROUPS.map((group) => {
-                            const groupPages = AVAILABLE_PAGES.filter((p) => p.group === group);
+                          {tenantPageGroups.map((group) => {
+                            const groupPages = tenantPages.filter((p) => p.group === group);
+                            if (groupPages.length === 0) return null;
                             return (
                               <div key={group} className="space-y-1.5">
                                 <p className="text-xs text-muted-foreground font-medium">{group}</p>
@@ -468,12 +517,10 @@ const Admin = () => {
             <AdminBackfill3CPlusCard />
           </TabsContent>
 
-          {/* ========== TAB CORRIGIR LEADS ========== */}
           <TabsContent value="fix-leads" className="space-y-4 mt-4">
             <AdminFixLeadsCard />
           </TabsContent>
 
-          {/* ========== TAB VERSÕES ========== */}
           <TabsContent value="versions" className="space-y-4 mt-4">
             <AdminVersionsPanel />
           </TabsContent>
@@ -486,7 +533,23 @@ const Admin = () => {
         open={!!editingUser}
         onOpenChange={(open) => !open && setEditingUserId(null)}
         templates={templates}
+        tenantPages={tenantPages}
+        tenantPageGroups={tenantPageGroups}
+        isSuperAdminV4={isSuperAdminV4}
+        currentUserId={currentUser?.id ?? null}
         onSaved={fetchAll}
+        onRequestDelete={(id) => {
+          setEditingUserId(null);
+          setDeletingUserId(id);
+        }}
+      />
+
+      {/* Dialog de exclusão */}
+      <DeleteUserDialog
+        open={!!deletingUser}
+        onOpenChange={(open) => !open && setDeletingUserId(null)}
+        user={deletingUser}
+        onDeleted={fetchAll}
       />
 
       {/* Sheet de convite */}
@@ -527,16 +590,33 @@ interface UserEditSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   templates: RoleTemplate[];
+  tenantPages: typeof AVAILABLE_PAGES;
+  tenantPageGroups: string[];
+  isSuperAdminV4: boolean;
+  currentUserId: string | null;
   onSaved: () => void;
+  onRequestDelete: (id: string) => void;
 }
 
-const UserEditSheet = ({ user, open, onOpenChange, templates, onSaved }: UserEditSheetProps) => {
+const UserEditSheet = ({
+  user,
+  open,
+  onOpenChange,
+  templates,
+  tenantPages,
+  tenantPageGroups,
+  isSuperAdminV4,
+  currentUserId,
+  onSaved,
+  onRequestDelete,
+}: UserEditSheetProps) => {
   const { toast } = useToast();
   const [cargo, setCargo] = useState<string>("");
   const [departamento, setDepartamento] = useState<string>("");
   const [telefone, setTelefone] = useState<string>("");
   const [fullName, setFullName] = useState<string>("");
   const [approved, setApproved] = useState(false);
+  const [makeAdmin, setMakeAdmin] = useState(false);
   const [pages, setPages] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -547,14 +627,16 @@ const UserEditSheet = ({ user, open, onOpenChange, templates, onSaved }: UserEdi
       setTelefone(user.telefone ?? "");
       setFullName(user.full_name ?? "");
       setApproved(user.approved);
+      setMakeAdmin(user.roles.includes("admin"));
       setPages(user.pages);
     }
   }, [user]);
 
   if (!user) return null;
 
-  const isUserAdmin = user.roles.includes("admin");
+  const isSelf = currentUserId === user.id;
   const initials = getInitials(user.full_name, user.email);
+  const willBeAdmin = makeAdmin;
 
   const togglePage = (path: string) => {
     setPages((prev) => (prev.includes(path) ? prev.filter((p) => p !== path) : [...prev, path]));
@@ -570,8 +652,10 @@ const UserEditSheet = ({ user, open, onOpenChange, templates, onSaved }: UserEdi
       toast({ title: "Sem template", description: `Não há template para "${cargo}"`, variant: "destructive" });
       return;
     }
-    setPages(tpl.pages);
-    toast({ title: "Template aplicado", description: `${tpl.pages.length} página(s) selecionada(s). Clique em Salvar para confirmar.` });
+    // Aplica apenas páginas habilitadas no tenant
+    const enabled = tpl.pages.filter((p) => tenantPages.some((tp) => tp.path === p));
+    setPages(enabled);
+    toast({ title: "Template aplicado", description: `${enabled.length} página(s) selecionada(s). Clique em Salvar para confirmar.` });
   };
 
   const handleSave = async () => {
@@ -585,18 +669,43 @@ const UserEditSheet = ({ user, open, onOpenChange, templates, onSaved }: UserEdi
           cargo: cargo || null,
           departamento: departamento || null,
           telefone: telefone.trim() || null,
-          approved,
+          approved: willBeAdmin ? true : approved,
         })
         .eq("id", user.id);
       if (profErr) throw profErr;
 
-      // 2. Sync page_access (delete all, re-insert)
-      const { error: delErr } = await supabase.from("user_page_access").delete().eq("user_id", user.id);
-      if (delErr) throw delErr;
-      if (pages.length > 0) {
-        const rows = pages.map((p) => ({ user_id: user.id, page_path: p }));
-        const { error: insErr } = await supabase.from("user_page_access").insert(rows);
-        if (insErr) throw insErr;
+      // 2. Sync admin role (apenas super_admin pode mudar)
+      if (isSuperAdminV4) {
+        const wasAdmin = user.roles.includes("admin");
+        if (willBeAdmin && !wasAdmin) {
+          const { data: prof } = await supabase
+            .from("profiles")
+            .select("tenant_id")
+            .eq("id", user.id)
+            .maybeSingle();
+          if (prof?.tenant_id) {
+            await supabase
+              .from("user_roles")
+              .insert({ user_id: user.id, role: "admin", tenant_id: prof.tenant_id });
+          }
+        } else if (!willBeAdmin && wasAdmin) {
+          await supabase
+            .from("user_roles")
+            .delete()
+            .eq("user_id", user.id)
+            .eq("role", "admin");
+        }
+      }
+
+      // 3. Sync page_access (apenas se NÃO for admin — admin tem tudo)
+      if (!willBeAdmin) {
+        const { error: delErr } = await supabase.from("user_page_access").delete().eq("user_id", user.id);
+        if (delErr) throw delErr;
+        if (pages.length > 0) {
+          const rows = pages.map((p) => ({ user_id: user.id, page_path: p }));
+          const { error: insErr } = await supabase.from("user_page_access").insert(rows);
+          if (insErr) throw insErr;
+        }
       }
 
       toast({ title: "Salvo", description: "Alterações aplicadas com sucesso" });
@@ -614,28 +723,50 @@ const UserEditSheet = ({ user, open, onOpenChange, templates, onSaved }: UserEdi
       <SheetContent className="sm:max-w-lg overflow-y-auto">
         <SheetHeader>
           <div className="flex items-center gap-3">
-            <Avatar className="h-12 w-12">
+            <Avatar className="h-14 w-14">
               {user.avatar_url && <AvatarImage src={user.avatar_url} alt={user.full_name ?? ""} />}
-              <AvatarFallback className="bg-primary/15 text-primary">{initials || "?"}</AvatarFallback>
+              <AvatarFallback className="bg-primary/15 text-primary text-base">{initials || "?"}</AvatarFallback>
             </Avatar>
-            <div className="text-left">
-              <SheetTitle>{user.full_name || "Sem nome"}</SheetTitle>
-              <SheetDescription>{user.email}</SheetDescription>
+            <div className="text-left min-w-0">
+              <SheetTitle className="truncate">{user.full_name || "Sem nome"}</SheetTitle>
+              <SheetDescription className="truncate">{user.email}</SheetDescription>
+              {user.cargo && (
+                <div className="flex gap-1.5 mt-1">
+                  <Badge variant="outline" className="text-[10px]">{user.cargo}</Badge>
+                  {user.departamento && <Badge variant="secondary" className="text-[10px]">{user.departamento}</Badge>}
+                </div>
+              )}
             </div>
           </div>
         </SheetHeader>
 
         <div className="space-y-6 py-6">
-          {/* STATUS */}
+          {/* STATUS & PAPEL */}
           <section className="space-y-3">
-            <h3 className="text-sm font-semibold text-foreground">Status</h3>
-            {isUserAdmin ? (
-              <Badge className="bg-primary/20 text-primary border-primary/30">Administrador</Badge>
-            ) : (
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <Checkbox checked={approved} onCheckedChange={(v) => setApproved(!!v)} />
-                Usuário aprovado (pode acessar o sistema)
+            <h3 className="text-sm font-semibold text-foreground">Status & papel</h3>
+            <label className="flex items-center justify-between gap-3 text-sm cursor-pointer rounded-md border border-border/50 p-3">
+              <div>
+                <p className="font-medium">Usuário aprovado</p>
+                <p className="text-xs text-muted-foreground">Pode acessar o sistema</p>
+              </div>
+              <Switch checked={willBeAdmin || approved} onCheckedChange={(v) => setApproved(v)} disabled={willBeAdmin} />
+            </label>
+            {isSuperAdminV4 && (
+              <label className="flex items-center justify-between gap-3 text-sm cursor-pointer rounded-md border border-border/50 p-3">
+                <div>
+                  <p className="font-medium flex items-center gap-1.5">
+                    <Shield className="h-3.5 w-3.5 text-primary" />
+                    Administrador
+                  </p>
+                  <p className="text-xs text-muted-foreground">Acesso total: todas as páginas, todos os usuários</p>
+                </div>
+                <Switch checked={makeAdmin} onCheckedChange={setMakeAdmin} disabled={isSelf} />
               </label>
+            )}
+            {willBeAdmin && (
+              <p className="text-xs text-muted-foreground">
+                Administradores têm acesso a todas as páginas. A seleção individual abaixo é ignorada.
+              </p>
             )}
           </section>
 
@@ -644,62 +775,66 @@ const UserEditSheet = ({ user, open, onOpenChange, templates, onSaved }: UserEdi
           {/* PERFIL */}
           <section className="space-y-3">
             <h3 className="text-sm font-semibold text-foreground">Dados do perfil</h3>
-            <div className="space-y-2">
-              <Label className="text-xs">Nome completo</Label>
-              <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Telefone</Label>
-              <Input value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(11) 99999-9999" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-2 sm:col-span-2">
+                <Label className="text-xs">Nome completo</Label>
+                <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Telefone</Label>
+                <Input value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(11) 99999-9999" />
+              </div>
             </div>
           </section>
 
           <Separator />
 
-          {/* CARGO */}
-          {!isUserAdmin && (
+          {/* CARGO & DEPTO */}
+          <section className="space-y-3">
+            <h3 className="text-sm font-semibold text-foreground">Cargo & departamento</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-xs">Cargo</Label>
+                <Select value={cargo} onValueChange={setCargo}>
+                  <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(CARGOS_BY_AREA).map(([area, cargos]) => (
+                      <div key={area}>
+                        <div className="px-2 py-1 text-xs text-muted-foreground font-semibold">{area}</div>
+                        {cargos.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                      </div>
+                    ))}
+                    <SelectItem value="Outro">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs">Departamento</Label>
+                <Select value={departamento} onValueChange={setDepartamento}>
+                  <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
+                  <SelectContent>
+                    {DEPARTAMENTO_OPTIONS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {!willBeAdmin && (
+              <Button size="sm" variant="outline" onClick={handleApplyTemplate} disabled={!cargo} className="w-full">
+                <Wand2 className="h-3.5 w-3.5 mr-2" />
+                Aplicar template do cargo
+              </Button>
+            )}
+          </section>
+
+          {!willBeAdmin && (
             <>
-              <section className="space-y-3">
-                <h3 className="text-sm font-semibold text-foreground">Cargo & departamento</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label className="text-xs">Cargo</Label>
-                    <Select value={cargo} onValueChange={setCargo}>
-                      <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(CARGOS_BY_AREA).map(([area, cargos]) => (
-                          <div key={area}>
-                            <div className="px-2 py-1 text-xs text-muted-foreground font-semibold">{area}</div>
-                            {cargos.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                          </div>
-                        ))}
-                        <SelectItem value="Outro">Outro</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs">Departamento</Label>
-                    <Select value={departamento} onValueChange={setDepartamento}>
-                      <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
-                      <SelectContent>
-                        {DEPARTAMENTO_OPTIONS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <Button size="sm" variant="outline" onClick={handleApplyTemplate} disabled={!cargo} className="w-full">
-                  <Wand2 className="h-3.5 w-3.5 mr-2" />
-                  Aplicar template do cargo
-                </Button>
-              </section>
-
               <Separator />
-
               {/* ACESSOS */}
               <section className="space-y-3">
                 <h3 className="text-sm font-semibold text-foreground">Acessos individuais</h3>
-                {PAGE_GROUPS.map((group) => {
-                  const groupPages = AVAILABLE_PAGES.filter((p) => p.group === group);
+                {tenantPageGroups.map((group) => {
+                  const groupPages = tenantPages.filter((p) => p.group === group);
+                  if (groupPages.length === 0) return null;
                   return (
                     <div key={group} className="space-y-2">
                       <p className="text-xs text-muted-foreground font-medium">{group}</p>
@@ -722,11 +857,25 @@ const UserEditSheet = ({ user, open, onOpenChange, templates, onSaved }: UserEdi
           )}
         </div>
 
-        <SheetFooter className="gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Salvando..." : "Salvar alterações"}
-          </Button>
+        <SheetFooter className="gap-2 flex sm:justify-between">
+          {!isSelf ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+              onClick={() => onRequestDelete(user.id)}
+              disabled={saving}
+            >
+              <Trash2 className="h-4 w-4 mr-1.5" />
+              Excluir usuário
+            </Button>
+          ) : <div />}
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? "Salvando..." : "Salvar alterações"}
+            </Button>
+          </div>
         </SheetFooter>
       </SheetContent>
     </Sheet>
