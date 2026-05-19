@@ -77,7 +77,17 @@ export function useAuth() {
           .select("*")
           .maybeSingle();
 
-        if (!updateRes.error) profileRes = updateRes;
+        if (!updateRes.error) {
+          profileRes = updateRes;
+          // Garante estado limpo após mudança de tenant ativo: faz UM reload por sessão
+          // pra invalidar todos os caches do React Query e refetch com a RLS correta.
+          const flagKey = `tenant_sync_reloaded_${domainTenantId}`;
+          if (typeof window !== "undefined" && !sessionStorage.getItem(flagKey)) {
+            sessionStorage.setItem(flagKey, "1");
+            window.location.reload();
+            return;
+          }
+        }
       }
 
       const [rolesRes, accessRes] = await Promise.all([
