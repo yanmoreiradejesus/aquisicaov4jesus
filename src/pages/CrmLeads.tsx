@@ -15,6 +15,7 @@ import { LeadImportDialog } from "@/components/crm/LeadImportDialog";
 import { LeadExportDialog } from "@/components/crm/LeadExportDialog";
 import { LeadActivityReportDialog } from "@/components/crm/LeadActivityReportDialog";
 import { QualificacaoDialog } from "@/components/crm/QualificacaoDialog";
+import { ResponsavelPickerDialog } from "@/components/crm/ResponsavelPickerDialog";
 import { DesqualificacaoDialog } from "@/components/crm/DesqualificacaoDialog";
 import { LeadsFilterPopover, EMPTY_FILTERS, type LeadFilters } from "@/components/crm/LeadsFilterPopover";
 import { useToast } from "@/hooks/use-toast";
