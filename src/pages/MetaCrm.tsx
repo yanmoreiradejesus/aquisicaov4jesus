@@ -560,10 +560,9 @@ const MetaCrm = () => {
                     { key: "cpmql_target", label: "CPMQL Target (R$)" },
                     { key: "ef_target", label: "Meta (R$)" },
                     { key: "ef_avg", label: "E.F Médio por Fechamento (R$)" },
-                    { key: "cr_rate", label: "MQL→CR (%)" },
-                    { key: "ra_rate", label: "CR→RA (%)" },
-                    { key: "rr_rate", label: "RA→RR (%)" },
-                    { key: "ass_rate", label: "RR→ASS (%)" },
+                    { key: "cr_rate", label: "MQL→SQL (%)" },
+                    { key: "ra_rate", label: "SQL→SAL (%)" },
+                    { key: "ass_rate", label: "SAL→ASS (%)" },
                     { key: "pace_q1_pct", label: "Pace % 1ª quinzena" },
                     { key: "pace_q1_dia_limite", label: "Pace dia limite" },
                   ].map((f) => (
