@@ -70,6 +70,8 @@ const CrmLeads = () => {
   const [editing, setEditing] = useState<any | null>(null);
   const [qualOpen, setQualOpen] = useState(false);
   const [pendingMove, setPendingMove] = useState<{ lead: any; etapa: string } | null>(null);
+  const [respOpen, setRespOpen] = useState(false);
+  const [pendingRespMove, setPendingRespMove] = useState<{ lead: any; etapa: string } | null>(null);
   const [desqualOpen, setDesqualOpen] = useState(false);
   const [desqualLead, setDesqualLead] = useState<any | null>(null);
   const [view, setView] = usePersistedState<"kanban" | "tarefas">("crm:leads:view", "kanban");
