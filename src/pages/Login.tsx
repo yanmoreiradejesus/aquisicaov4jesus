@@ -93,6 +93,34 @@ const Login = () => {
     setLoading(false);
   };
 
+  const handleForgotPassword = async () => {
+    const emailInput = document.getElementById("login-email") as HTMLInputElement | null;
+    const email = emailInput?.value?.trim();
+    if (!email) {
+      toast({
+        title: "Informe seu email",
+        description: "Digite seu email no campo acima antes de pedir a redefinição.",
+        variant: "destructive",
+      });
+      emailInput?.focus();
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setLoading(false);
+    if (error) {
+      toast({ title: "Erro ao enviar email", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({
+      title: "Email enviado",
+      description: "Verifique sua caixa de entrada para redefinir sua senha.",
+    });
+  };
+
+
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!cargo || !departamento) {
