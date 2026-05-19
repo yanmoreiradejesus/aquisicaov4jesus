@@ -97,7 +97,7 @@ const Login = () => {
     e.preventDefault();
     if (!cargo || !departamento) {
       toast({
-        title: "Preencha cargo e departamento",
+        title: "Preencha cargo e área",
         description: "Selecione as duas opções para continuar.",
         variant: "destructive",
       });
@@ -220,7 +220,7 @@ const Login = () => {
                 />
                 <SelectField
                   id="signup-dep"
-                  label="Departamento"
+                  label="Área"
                   placeholder="Selecione"
                   value={departamento}
                   onChange={setDepartamento}
