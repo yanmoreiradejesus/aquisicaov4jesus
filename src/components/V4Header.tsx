@@ -12,7 +12,7 @@ import { motion, useReducedMotion } from "framer-motion";
 const V4Header = () => {
   const location = useLocation();
   const { user, isAdmin, hasPageAccess, signOut } = useAuth();
-  const { config } = useTenantConfig();
+  const { config, isResolved: tenantResolved } = useTenantConfig();
   const logo = config.client_logo_url || defaultLogo;
   const [aquisicaoOpen, setAquisicaoOpen] = useState(false);
   const [comercialOpen, setComercialOpen] = useState(false);

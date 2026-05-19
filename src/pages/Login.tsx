@@ -13,13 +13,13 @@ import { useTenantConfig } from "@/hooks/useTenantConfig";
 
 const Login = () => {
   const { user, loading: authLoading } = useAuth();
-  const { config } = useTenantConfig();
+  const { config, isLoading: tenantLoading } = useTenantConfig();
   const logo = config.client_logo_url || defaultLogo;
   const [loading, setLoading] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
   const { toast } = useToast();
 
-  if (authLoading) {
+  if (authLoading || tenantLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
