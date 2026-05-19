@@ -100,15 +100,24 @@ const Login = () => {
     setLoading(false);
   };
 
+  const [cargo, setCargo] = useState<string>("");
+  const [departamento, setDepartamento] = useState<string>("");
+
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!cargo || !departamento) {
+      toast({
+        title: "Preencha cargo e departamento",
+        description: "Selecione as duas opções para continuar.",
+        variant: "destructive",
+      });
+      return;
+    }
     setLoading(true);
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     const fullName = formData.get("full_name") as string;
-    const cargo = (formData.get("cargo") as string)?.trim() || null;
-    const departamento = (formData.get("departamento") as string)?.trim() || null;
 
     let tenantId: string | null = null;
     try {
