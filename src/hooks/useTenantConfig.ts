@@ -36,10 +36,22 @@ export function useTenantConfig() {
     queryKey: ["tenant_config", user?.id],
     enabled: !!user,
     queryFn: async (): Promise<TenantConfig> => {
+      // 1. Resolve o tenant ATIVO do usuário (respeita active_tenant_id do super_admin_v4)
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("active_tenant_id, tenant_id")
+        .eq("id", user!.id)
+        .maybeSingle();
+
+      const tenantId = prof?.active_tenant_id ?? prof?.tenant_id;
+      if (!tenantId) return FALLBACK;
+
+      // 2. Busca exatamente o tenant ativo (sem depender de .limit(1), que para super_admin
+      //    retornaria qualquer tenant da lista)
       const { data, error } = await supabase
         .from("tenants")
         .select("*")
-        .limit(1)
+        .eq("id", tenantId)
         .maybeSingle();
 
       if (error || !data) return FALLBACK;

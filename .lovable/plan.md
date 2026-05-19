@@ -1,48 +1,68 @@
-## Problema
+## Problema 1 — Super admin troca pra Kloh mas continua vendo V4 Jesus
 
-Existe uma oportunidade em **"Dúvidas e Fechamento"** no kanban, mas o lead dela não aparece no bucket SAL → Dúvidas e fechamento do funil.
+**Causa raiz:** `src/hooks/useTenantConfig.ts` faz:
 
-Causa: o bucket exige que `data_reuniao_realizada` esteja **dentro do período selecionado**. Se o lead chegou em reunião realizada antes do período (ex.: 07/05) e o usuário está olhando "últimos 7 dias", o bucket conta 0 — e buckets com count 0 são escondidos (`FunilCrmStages.tsx:96`).
+```ts
+supabase.from("tenants").select("*").limit(1).maybeSingle()
+```
 
-Pior: leads que **nunca passaram explicitamente por `reuniao_realizada`** (foram movidos direto para oportunidade, ou ficaram sem trigger no histórico antigo) têm `data_reuniao_realizada = NULL` e ficam invisíveis no SAL para sempre.
+Para um `super_admin_v4`, a RLS da tabela `tenants` retorna **todos** os tenants (política `Authenticated read own tenant` libera tudo pra esse role). O `.limit(1)` então pega um tenant arbitrário — normalmente o primeiro inserido (V4 Jesus) — **ignorando** o `active_tenant_id` que o switcher acabou de gravar em `profiles`.
 
-Isso contradiz a regra "todo lead que tem oportunidade já passou por SAL".
+A função SQL `current_tenant_id()` já faz `coalesce(active_tenant_id, tenant_id)` corretamente, mas o hook não a consulta.
 
-## Solução
+**Fix:** trocar a query do hook para resolver o tenant ativo via `profiles` antes de buscar a linha em `tenants`:
 
-Redefinir SAL para englobar **qualquer lead que tenha pelo menos uma oportunidade**, além dos que têm `data_reuniao_realizada` preenchida.
+```ts
+// 1. pega o id do tenant ativo do próprio usuário
+const { data: prof } = await supabase
+  .from("profiles")
+  .select("active_tenant_id, tenant_id")
+  .eq("id", user.id)
+  .maybeSingle();
 
-### Data de atribuição ao período
+const tenantId = prof?.active_tenant_id ?? prof?.tenant_id;
+if (!tenantId) return FALLBACK;
 
-Para cada lead SAL, calcular `dataSal` como:
+// 2. busca exatamente esse tenant
+const { data } = await supabase
+  .from("tenants")
+  .select("*")
+  .eq("id", tenantId)
+  .maybeSingle();
+```
 
-1. `data_reuniao_realizada` se preenchida
-2. caso contrário, `min(op.created_at)` da oportunidade mais antiga do lead
-3. caso contrário (lente coorte), `data_criacao_origem ?? created_at`
+E incluir `user.id` na `queryKey` (já está), garantindo invalidação após `switchTo`.
 
-Assim o lead aparece no período em que efetivamente "virou SAL".
+Resultado: switcher do super admin passa a refletir de fato o tenant escolhido — header, sheets, branding, RLS de leituras, tudo passa a apontar pra Kloh.
 
-### Mudanças em `src/utils/crmFunnelCalculator.ts`
+---
 
-1. Construir `allOpsByLeadId` **antes** do cálculo de `inSal` (hoje só é montado depois).
-2. Helper `firstOpDateFor(leadId)` que retorna a menor `created_at` entre as ops do lead.
-3. `dataSal(l)`:
-   - lente **evento**: `l.data_reuniao_realizada ?? firstOpDateFor(l.id)`
-   - lente **coorte**: como hoje (`dataMql`)
-4. Filtro `inSal`:
-   - Mantém o lead se: `(data_reuniao_realizada não nula OU tem oportunidade)` E `inP(dataSal(l))`.
-5. `convSalSql` segue como está.
-6. Nenhuma mudança em UI nem em outros KPIs (MQL, SQL, ASS, CAC).
+## Problema 2 — `kloh.v4jesus.com` redireciona pra `v4jesus.com`
 
-### Impacto
+Isso **não é bug de código** — é configuração de domínio no Lovable. Os dois domínios estão listados no projeto (`v4jesus.com` e `kloh.v4jesus.com`), mas um deles está como **alias** do outro, ou o `kloh` ainda está como **Verifying / Setting up** e o Lovable cai pro primary.
 
-- **SAL sobe** em períodos que pegam ops criadas mas onde a reunião realizada foi anterior.
-- **Bucket "Dúvidas e fechamento"** passa a refletir o que o kanban mostra.
-- **Conversão SAL/SQL** sobe (numerador maior).
-- **CAC/ASS** não mudam.
+### O que checar (Project Settings → Domains)
 
-### Arquivo único
+1. `kloh.v4jesus.com` precisa estar com status **Active** (verde). Se estiver `Verifying`, `Setting up`, `Action required` ou `Offline` → DNS ainda não propagou ou A/TXT estão errados.
+2. Não pode estar marcado como **alias / redirect** de `v4jesus.com`. Cada subdomínio de cliente precisa ser uma entrada **independente**, não filha do root.
+3. Se houver opção "Primary domain" agrupando os dois, desagrupar — `kloh` deve ter o próprio primary = ele mesmo.
 
-- `src/utils/crmFunnelCalculator.ts`
+### Como confirmar pela CLI
 
-Sem migração, sem mudança de UI, sem novos campos.
+Posso (na próxima rodada, fora do plan mode) rodar a edge function `check-domain-dns` que já existe pra ver se o A record do `kloh.v4jesus.com` está resolvendo pra `185.158.133.1`. Se resolver e mesmo assim redirecionar, é 100% config do Lovable Domains, não DNS.
+
+### Ação do usuário
+
+- Abrir Lovable → Project Settings → Domains
+- Confirmar status de `kloh.v4jesus.com`
+- Se estiver listado como alias do root, remover e reconectar como domínio independente
+
+---
+
+## Escopo da implementação
+
+Só toco em **1 arquivo** nesta passada:
+
+- `src/hooks/useTenantConfig.ts` — corrigir a resolução do tenant ativo
+
+Nada mais muda. O Problema 2 é resolvido na UI do Lovable, sem código.
