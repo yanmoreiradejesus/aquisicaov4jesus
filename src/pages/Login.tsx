@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 type Mode = "login" | "signup";
 
 const fieldClass =
-  "h-12 rounded-2xl border-0 bg-white/[0.06] backdrop-blur-xl px-4 text-base text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-0 transition";
+  "h-12 rounded-2xl border-0 bg-white/[0.06] backdrop-blur-xl px-4 text-base text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:ring-offset-0 transition";
 
 const Login = () => {
   const { user, loading: authLoading } = useAuth();
@@ -28,7 +28,7 @@ const Login = () => {
   if (authLoading || tenantLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+        <div className="animate-spin h-8 w-8 border-4 border-emerald-500 border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -229,7 +229,7 @@ const SubmitButton = ({
   <Button
     type="submit"
     disabled={loading}
-    className="w-full h-12 rounded-2xl text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-[0_10px_30px_-10px_hsl(var(--primary)/0.6)] transition-all active:scale-[0.98]"
+    className="w-full h-12 rounded-2xl text-base font-semibold bg-emerald-500 hover:bg-emerald-500/90 text-white shadow-[0_10px_30px_-10px_rgba(16,185,129,0.6)] transition-all active:scale-[0.98]"
   >
     {loading ? loadingLabel : label}
   </Button>
