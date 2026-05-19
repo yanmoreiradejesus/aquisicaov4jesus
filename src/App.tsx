@@ -18,6 +18,7 @@ import DashboardComercial from "./pages/DashboardComercial";
 import MixCompra from "./pages/MixCompra";
 import MetaCrm from "./pages/MetaCrm";
 import Login from "./pages/Login";
+import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import CrmLeads from "./pages/CrmLeads";
 import Oportunidades from "./pages/Oportunidades";
@@ -46,6 +47,7 @@ const AppRoutes = () => {
 
       <Routes location={location} key={location.pathname}>
         <Route path="/login" element={<PageTransition><Login /></PageTransition>} />
+        <Route path="/reset-password" element={<PageTransition><ResetPassword /></PageTransition>} />
         <Route path="/auth/google-callback" element={<GoogleCallback />} />
 
         {/* Hub (home) — full hero on landing */}

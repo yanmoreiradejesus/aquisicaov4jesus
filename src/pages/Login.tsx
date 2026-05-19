@@ -93,6 +93,34 @@ const Login = () => {
     setLoading(false);
   };
 
+  const handleForgotPassword = async () => {
+    const emailInput = document.getElementById("login-email") as HTMLInputElement | null;
+    const email = emailInput?.value?.trim();
+    if (!email) {
+      toast({
+        title: "Informe seu email",
+        description: "Digite seu email no campo acima antes de pedir a redefinição.",
+        variant: "destructive",
+      });
+      emailInput?.focus();
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setLoading(false);
+    if (error) {
+      toast({ title: "Erro ao enviar email", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({
+      title: "Email enviado",
+      description: "Verifique sua caixa de entrada para redefinir sua senha.",
+    });
+  };
+
+
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!cargo || !departamento) {
@@ -203,6 +231,15 @@ const Login = () => {
             <form onSubmit={handleLogin} className="space-y-3">
               <Field id="login-email" label="Email" name="email" type="email" required placeholder="seu@email.com" />
               <Field id="login-password" label="Senha" name="password" type="password" required placeholder="••••••••" />
+              <div className="flex justify-end -mt-1">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-xs text-muted-foreground hover:text-foreground transition underline-offset-4 hover:underline"
+                >
+                  Esqueci minha senha
+                </button>
+              </div>
               <SubmitButton loading={loading} label="Entrar" loadingLabel="Entrando..." />
             </form>
           ) : (
