@@ -219,8 +219,22 @@ const Login = () => {
               <Field id="signup-name" label="Nome completo" name="full_name" required placeholder="Seu nome" />
               <Field id="signup-email" label="Email" name="email" type="email" required placeholder="seu@email.com" />
               <div className="grid grid-cols-2 gap-3">
-                <Field id="signup-cargo" label="Cargo" name="cargo" required placeholder="Ex.: Closer" />
-                <Field id="signup-dep" label="Departamento" name="departamento" required placeholder="Ex.: Comercial" />
+                <SelectField
+                  id="signup-cargo"
+                  label="Cargo"
+                  placeholder="Selecione"
+                  value={cargo}
+                  onChange={setCargo}
+                  options={CARGOS as unknown as string[]}
+                />
+                <SelectField
+                  id="signup-dep"
+                  label="Departamento"
+                  placeholder="Selecione"
+                  value={departamento}
+                  onChange={setDepartamento}
+                  options={DEPARTAMENTOS as unknown as string[]}
+                />
               </div>
               <Field
                 id="signup-password"
