@@ -237,8 +237,8 @@ const SubmitButton = ({
 
 const BackgroundAurora = () => (
   <>
-    <div className="pointer-events-none absolute -top-32 -left-24 h-[420px] w-[420px] rounded-full bg-primary/20 blur-[120px]" />
-    <div className="pointer-events-none absolute -bottom-32 -right-24 h-[420px] w-[420px] rounded-full bg-primary/10 blur-[120px]" />
+    <div className="pointer-events-none absolute -top-32 -left-24 h-[420px] w-[420px] rounded-full bg-[hsl(0_85%_55%/0.18)] blur-[120px]" />
+    <div className="pointer-events-none absolute -bottom-32 -right-24 h-[420px] w-[420px] rounded-full bg-[hsl(12_80%_50%/0.12)] blur-[120px]" />
   </>
 );
 
