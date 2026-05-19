@@ -30,6 +30,7 @@ import ComercialPlaceholder from "./pages/ComercialPlaceholder";
 import FunilAnalytics from "./pages/FunilAnalytics";
 import GoogleCallback from "./pages/GoogleCallback";
 import { useAppVersion } from "@/hooks/useAppVersion";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 // Routes that should NOT render the persistent V4Header
 const HEADERLESS_PATHS = ["/login", "/auth/google-callback"];
