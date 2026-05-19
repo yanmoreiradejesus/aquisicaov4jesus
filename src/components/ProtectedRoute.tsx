@@ -43,7 +43,7 @@ export const ProtectedRoute = ({ children, requiredPath }: ProtectedRouteProps) 
   }
 
   // 1) Tenant precisa ter a página habilitada (super_admin_v4 ignora)
-  if (requiredPath && !isSuperAdminV4 && !isPageEnabled(requiredPath)) {
+  if (requiredPath && !isPageEnabled(requiredPath)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center space-y-2 max-w-md">
