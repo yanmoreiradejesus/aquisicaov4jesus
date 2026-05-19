@@ -87,6 +87,8 @@ export function useTenantConfig() {
         }
       }
 
+      if (!user) return fallback;
+
       // 1. Resolve o tenant ATIVO do usuário (respeita active_tenant_id do super_admin_v4)
       const { data: prof } = await supabase
         .from("profiles")
