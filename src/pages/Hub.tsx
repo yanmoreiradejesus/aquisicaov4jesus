@@ -20,7 +20,7 @@ interface HubProps {
 }
 
 const Hub = ({ variant = "full" }: HubProps) => {
-  const { hasPageAccess, profile } = useAuth();
+  const { hasPageAccess, profile, authResolved } = useAuth();
   const { config } = useTenantConfig();
   const [now, setNow] = useState(new Date());
   const [meetingsToday, setMeetingsToday] = useState(0);
@@ -37,7 +37,9 @@ const Hub = ({ variant = "full" }: HubProps) => {
   const visibleWidgets = WIDGETS.filter((w) => w.accessPaths.some((p) => hasPageAccess(p)));
 
   const greeting = getGreeting(now);
-  const firstName = profile?.full_name?.split(" ")[0] ?? "Bem-vindo";
+  // Só revela o nome quando o profile já chegou — evita "Bem-vindo." piscando antes do nome real.
+  const firstName = profile?.full_name?.split(" ")[0] ?? null;
+  const heroReady = authResolved && !!profile;
   const contextLine = getHubContextLine({ pendingCount, meetingsToday, date: now });
 
   // ---------- COMPACT (route /apps, accessed via header logo) ----------
