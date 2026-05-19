@@ -15,6 +15,7 @@ import { useCrmOportunidades } from "@/hooks/useCrmOportunidades";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import FunnelSkeleton from "@/components/FunnelSkeleton";
+import { calcFunilCrm } from "@/utils/crmFunnelCalculator";
 
 // ── helpers ──
 const fmtCurrency = (v: number) =>
@@ -114,40 +115,42 @@ const MetaCrm = () => {
   const m = parseInt(selectedMonth);
   const y = parseInt(selectedYear);
 
-  // Inbound leads (mantém paridade com a meta de sheets, que é ad-spend driven)
-  const inboundLeads = useMemo(() => allLeads.filter((l) => (l.pipe ?? "inbound") === "inbound"), [allLeads]);
+  // Funil MQL → SQL → SAL → ASS (alinhado com /aquisicao/funil)
+  const monthRange = useMemo(() => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const last = new Date(y, m, 0).getDate();
+    return { start: `${y}-${pad(m)}-01`, end: `${y}-${pad(m)}-${pad(last)}` };
+  }, [m, y]);
 
-  // Leads do mês (data MQL = data_criacao_origem ?? created_at)
-  const monthLeads = useMemo(
-    () => inboundLeads.filter((l) => inMonth(l.data_criacao_origem ?? l.created_at, m, y)),
-    [inboundLeads, m, y]
+  const funilResult = useMemo(
+    () =>
+      calcFunilCrm({
+        leads: allLeads,
+        oportunidades: allOps,
+        startDate: monthRange.start,
+        endDate: monthRange.end,
+        lente: "evento",
+        pipe: "inbound",
+      }),
+    [allLeads, allOps, monthRange],
   );
 
-  // Funnel "por etapa" — cada estágio com sua própria data de evento
-  const stage = useMemo(() => {
-    const mql = monthLeads;
-    const cr = inboundLeads.filter((l) => reached(l.etapa, "contato_realizado") && inMonth(l.data_criacao_origem ?? l.created_at, m, y));
-    const ra = inboundLeads.filter((l) => reached(l.etapa, "reuniao_agendada") && inMonth(l.data_reuniao_agendada ?? l.data_criacao_origem ?? l.created_at, m, y));
-    const rr = inboundLeads.filter((l) => l.data_reuniao_realizada && inMonth(l.data_reuniao_realizada, m, y));
-    const ass = allOps.filter((o) => o.etapa === "fechado_ganho" && inMonth(o.data_fechamento_real, m, y));
-    return { mql, cr, ra, rr, ass };
-  }, [inboundLeads, monthLeads, allOps, m, y]);
-
   const funnel = {
-    mql: stage.mql.length,
-    cr: stage.cr.length,
-    ra: stage.ra.length,
-    rr: stage.rr.length,
-    ass: stage.ass.length,
+    mql: funilResult.mql,
+    sql: funilResult.sql,
+    sal: funilResult.sal,
+    ass: funilResult.ass,
   };
+
+  // Leads do mês p/ mix tables (inbound, datados por MQL)
+  const monthLeads = funilResult.inMqlLeads;
 
   const getLeadsByStage = (k: string) => {
     switch (k) {
-      case "mql": return stage.mql;
-      case "cr": return stage.cr;
-      case "ra": return stage.ra;
-      case "rr": return stage.rr;
-      case "ass": return stage.ass;
+      case "mql": return funilResult.inMqlLeads;
+      case "sql": return funilResult.inSqlLeads;
+      case "sal": return funilResult.inSalLeads;
+      case "ass": return funilResult.inAssOps;
       default: return [];
     }
   };
@@ -159,12 +162,9 @@ const MetaCrm = () => {
   };
 
   // KPI calcs
-  const investimento = useMemo(() => monthLeads.reduce((s, l) => s + (Number(l.valor_pago) || 0), 0), [monthLeads]);
-  const cpmqlMedio = funnel.mql > 0 ? investimento / funnel.mql : 0;
-  const metaRevenue = useMemo(
-    () => stage.ass.reduce((s, o) => s + (Number(o.valor_ef) || 0) + (Number(o.valor_fee) || 0), 0),
-    [stage.ass]
-  );
+  const investimento = funilResult.investimentoTotal;
+  const cpmqlMedio = funilResult.cpmqlMedio;
+  const metaRevenue = funilResult.receitaTotal;
 
   const leadsTarget = goals?.leads_target ?? 0;
   const cpmqlTarget = goals?.cpmql_target ?? 0;
@@ -183,14 +183,17 @@ const MetaCrm = () => {
   const metaPct = Number(metaTarget) > 0 ? (metaRevenue / Number(metaTarget)) * 100 : 0;
   const metaStatus = metaPct >= 100 ? "green" : metaPct >= 70 ? "yellow" : "red";
 
+  // Conversões esperadas:
+  // cr_rate  → MQL→SQL
+  // ra_rate  → SQL→SAL
+  // ass_rate → SAL→ASS
   const funnelExpected = useMemo(() => {
-    if (!goals) return { mql: 0, cr: 0, ra: 0, rr: 0, ass: 0 };
+    if (!goals) return { mql: 0, sql: 0, sal: 0, ass: 0 };
     const mqlE = expectedLeads;
-    const crE = Math.round(mqlE * Number(goals.cr_rate ?? 0));
-    const raE = Math.round(crE * Number(goals.ra_rate ?? 0));
-    const rrE = Math.round(raE * Number(goals.rr_rate ?? 0));
-    const assE = Math.round(rrE * Number(goals.ass_rate ?? 0));
-    return { mql: mqlE, cr: crE, ra: raE, rr: rrE, ass: assE };
+    const sqlE = Math.round(mqlE * Number(goals.cr_rate ?? 0));
+    const salE = Math.round(sqlE * Number(goals.ra_rate ?? 0));
+    const assE = Math.round(salE * Number(goals.ass_rate ?? 0));
+    return { mql: mqlE, sql: sqlE, sal: salE, ass: assE };
   }, [goals, expectedLeads]);
 
   // Mix tables
