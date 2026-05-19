@@ -99,6 +99,12 @@ export function useAuth() {
       const isSuperAdminV4 = roles.includes("super_admin_v4");
       const allowedPages = accessRes.data?.map((a: any) => a.page_path) ?? [];
 
+      if (domainTenantId && profile && profile.tenant_id !== domainTenantId && !isSuperAdminV4) {
+        await supabase.auth.signOut();
+        setState({ ...initialState, loading: false });
+        return;
+      }
+
       setState({
         user,
         profile,
