@@ -1,7 +1,8 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantEnabledPages } from "@/hooks/useTenantEnabledPages";
-import logo from "@/assets/v4-logo.png";
+import { useTenantConfig } from "@/hooks/useTenantConfig";
+import defaultLogo from "@/assets/v4-logo.png";
 import { LogOut, Shield, ChevronDown, Menu, X, User as UserIcon } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -11,6 +12,8 @@ import { motion, useReducedMotion } from "framer-motion";
 const V4Header = () => {
   const location = useLocation();
   const { user, isAdmin, hasPageAccess, signOut } = useAuth();
+  const { config } = useTenantConfig();
+  const logo = config.client_logo_url || defaultLogo;
   const [aquisicaoOpen, setAquisicaoOpen] = useState(false);
   const [comercialOpen, setComercialOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

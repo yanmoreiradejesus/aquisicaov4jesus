@@ -8,10 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import logo from "@/assets/v4-logo.png";
+import defaultLogo from "@/assets/v4-logo.png";
+import { useTenantConfig } from "@/hooks/useTenantConfig";
 
 const Login = () => {
   const { user, loading: authLoading } = useAuth();
+  const { config } = useTenantConfig();
+  const logo = config.client_logo_url || defaultLogo;
   const [loading, setLoading] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
   const { toast } = useToast();

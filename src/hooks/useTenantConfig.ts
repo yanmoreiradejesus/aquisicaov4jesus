@@ -70,8 +70,7 @@ export function useTenantConfig() {
   const { user } = useAuth();
   const fallback = getFallbackConfig();
   const { data, isLoading } = useQuery({
-    queryKey: ["tenant_config", user?.id],
-    enabled: !!user,
+    queryKey: ["tenant_config", user?.id ?? "anon", typeof window !== "undefined" ? window.location.hostname : ""],
     queryFn: async (): Promise<TenantConfig> => {
       // Em domínio customizado de cliente, o domínio manda. Isso impede abrir Jesus
       // dentro de kloh.v4jesus.com mesmo que o perfil ainda esteja com outro tenant ativo.
@@ -87,6 +86,8 @@ export function useTenantConfig() {
           };
         }
       }
+
+      if (!user) return fallback;
 
       // 1. Resolve o tenant ATIVO do usuário (respeita active_tenant_id do super_admin_v4)
       const { data: prof } = await supabase
