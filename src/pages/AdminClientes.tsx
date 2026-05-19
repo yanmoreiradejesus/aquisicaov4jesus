@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Plus, ExternalLink, Trash2, LogIn, Rocket } from "lucide-react";
+import { Plus, ExternalLink, Trash2, LogIn, Rocket, Upload, Loader2 } from "lucide-react";
 
 interface Tenant {
   id: string;
@@ -37,6 +37,7 @@ interface Tenant {
   internal_notes: string | null;
   provisioned_at: string | null;
   created_at: string;
+  client_logo_url: string | null;
 }
 
 const STATUS_OPTIONS = [
@@ -59,7 +60,38 @@ export default function AdminClientes() {
     status: "setup",
     v4_contact: "",
     internal_notes: "",
+    client_logo_url: "",
   });
+  const [logoUploading, setLogoUploading] = useState(false);
+
+  const onLogoSelected = async (file: File) => {
+    if (!form.client_slug) {
+      toast.error("Defina o slug do cliente antes de subir a logo.");
+      return;
+    }
+    setLogoUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `tenant-logos/${form.client_slug}-${Date.now()}.${ext}`;
+      const { error } = await supabase.storage.from("avatars").upload(path, file, {
+        upsert: true,
+        contentType: file.type,
+      });
+      if (error) throw error;
+      const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+      setForm((f) => ({ ...f, client_logo_url: data.publicUrl }));
+      toast.success("Logo enviada");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Falha no upload");
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
+  const removeLogo = () => {
+    setForm((f) => ({ ...f, client_logo_url: "" }));
+    toast.info("Logo removida — salve para confirmar");
+  };
 
   const { data: clients = [], isLoading } = useQuery({
     queryKey: ["tenants"],
@@ -109,6 +141,7 @@ export default function AdminClientes() {
         status: form.status,
         v4_contact: form.v4_contact || null,
         internal_notes: form.internal_notes || null,
+        client_logo_url: form.client_logo_url || null,
         provisioned_at:
           form.status === "active" && !editing?.provisioned_at
             ? new Date().toISOString()
@@ -184,6 +217,7 @@ export default function AdminClientes() {
       status: "setup",
       v4_contact: "",
       internal_notes: "",
+      client_logo_url: "",
     });
   }
 
@@ -196,6 +230,7 @@ export default function AdminClientes() {
       status: c.status,
       v4_contact: c.v4_contact ?? "",
       internal_notes: c.internal_notes ?? "",
+      client_logo_url: c.client_logo_url ?? "",
     });
     setDialogOpen(true);
   }
@@ -258,6 +293,64 @@ export default function AdminClientes() {
                     setForm({ ...form, client_slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })
                   }
                 />
+              </div>
+              <div>
+                <Label>Logo do cliente</Label>
+                <div className="mt-2 flex items-center gap-4">
+                  {form.client_logo_url ? (
+                    <img
+                      src={form.client_logo_url}
+                      alt="Logo"
+                      className="h-16 w-16 object-contain rounded border bg-muted/30 p-1"
+                    />
+                  ) : (
+                    <div className="h-16 w-16 rounded border border-dashed bg-muted/30 flex items-center justify-center text-muted-foreground">
+                      <Upload className="w-5 h-5" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      id="edit-logo-upload"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) onLogoSelected(f);
+                        e.target.value = "";
+                      }}
+                    />
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => document.getElementById("edit-logo-upload")?.click()}
+                        disabled={logoUploading || !form.client_slug}
+                      >
+                        {logoUploading ? (
+                          <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Enviando</>
+                        ) : (
+                          <>Escolher arquivo</>
+                        )}
+                      </Button>
+                      {form.client_logo_url && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={removeLogo}
+                          disabled={logoUploading}
+                        >
+                          <Trash2 className="w-3 h-3 mr-1" /> Remover
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Padrão = logo V4 Jesus. Envie uma imagem só se este cliente tem branding próprio.
+                    </p>
+                  </div>
+                </div>
               </div>
               <div>
                 <Label>URL do app</Label>
