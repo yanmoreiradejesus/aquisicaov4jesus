@@ -64,7 +64,13 @@ const Login = () => {
     let tenantId: string | null = null;
     try {
       const host = window.location.hostname.toLowerCase();
-      const { data: domainTenant } = await (supabase as any).rpc("resolve_tenant_by_hostname", {
+      const rpcClient = supabase as unknown as {
+        rpc: (
+          fn: "resolve_tenant_by_hostname",
+          args: { _hostname: string },
+        ) => Promise<{ data: Array<{ id: string }> | null }>;
+      };
+      const { data: domainTenant } = await rpcClient.rpc("resolve_tenant_by_hostname", {
         _hostname: host,
       });
       tenantId = domainTenant?.[0]?.id ?? null;
