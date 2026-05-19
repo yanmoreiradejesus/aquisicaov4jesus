@@ -27,6 +27,7 @@ const CARGOS = [
   "Closer",
   "Consultor",
   "Coordenador de PE&G",
+  "Coordenador de Receitas",
   "Coordenadora ADM",
   "Copywriter",
   "Designer",
