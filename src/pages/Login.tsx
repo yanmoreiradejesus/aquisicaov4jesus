@@ -62,6 +62,8 @@ const Login = () => {
   const [mode, setMode] = useState<Mode>("login");
   const [loading, setLoading] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
+  const [cargo, setCargo] = useState<string>("");
+  const [departamento, setDepartamento] = useState<string>("");
   const { toast } = useToast();
 
   if (authLoading || tenantLoading) {
@@ -99,9 +101,6 @@ const Login = () => {
     }
     setLoading(false);
   };
-
-  const [cargo, setCargo] = useState<string>("");
-  const [departamento, setDepartamento] = useState<string>("");
 
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
