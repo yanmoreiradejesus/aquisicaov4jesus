@@ -27,6 +27,14 @@ export function TenantSwitcher({ variant = "header" }: Props) {
   const [switching, setSwitching] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
+  const host = typeof window !== "undefined" ? window.location.hostname.toLowerCase() : "";
+  const isClientDomainLocked =
+    host &&
+    host !== "localhost" &&
+    !host.endsWith(".lovable.app") &&
+    host !== "v4jesus.com" &&
+    host !== "www.v4jesus.com";
+
   const { data: tenants = [] } = useQuery({
     queryKey: ["tenants", "switcher"],
     enabled: !!user && isSuperAdminV4,
@@ -49,6 +57,28 @@ export function TenantSwitcher({ variant = "header" }: Props) {
   }, []);
 
   if (!isSuperAdminV4 || !user) return null;
+
+  if (isClientDomainLocked) {
+    if (variant === "mobile") {
+      return (
+        <div className="px-3 py-2">
+          <div className="px-3 text-foreground/40 text-[10px] font-semibold uppercase tracking-widest">
+            Tenant ativo
+          </div>
+          <div className="mt-1.5 px-3 py-2 rounded-xl text-[13px] font-medium bg-white/[0.08] text-foreground">
+            {config.client_name}
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-center gap-1.5 px-2.5 h-8 rounded-full text-[12px] font-medium text-white/85 bg-white/10 max-w-[180px]">
+        <Building2 className="h-3 w-3 opacity-80 shrink-0" />
+        <span className="truncate">{config.client_name}</span>
+      </div>
+    );
+  }
 
   async function switchTo(tenantId: string) {
     if (switching) return;
