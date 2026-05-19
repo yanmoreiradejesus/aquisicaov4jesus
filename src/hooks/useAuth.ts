@@ -63,32 +63,7 @@ export function useAuth() {
   const fetchUserData = useCallback(
     async (user: User, attempt = 0): Promise<void> => {
       const domainTenantId = await resolveDomainTenantId();
-      let profileRes = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
-
-      if (
-        domainTenantId &&
-        profileRes.data &&
-        (profileRes.data.active_tenant_id ?? profileRes.data.tenant_id) !== domainTenantId
-      ) {
-        const updateRes = await supabase
-          .from("profiles")
-          .update({ active_tenant_id: domainTenantId })
-          .eq("id", user.id)
-          .select("*")
-          .maybeSingle();
-
-        if (!updateRes.error) {
-          profileRes = updateRes;
-          // Garante estado limpo após mudança de tenant ativo: faz UM reload por sessão
-          // pra invalidar todos os caches do React Query e refetch com a RLS correta.
-          const flagKey = `tenant_sync_reloaded_${domainTenantId}`;
-          if (typeof window !== "undefined" && !sessionStorage.getItem(flagKey)) {
-            sessionStorage.setItem(flagKey, "1");
-            window.location.reload();
-            return;
-          }
-        }
-      }
+      const profileRes = await supabase.from("profiles").select("*").eq("id", user.id).maybeSingle();
 
       const [rolesRes, accessRes] = await Promise.all([
         supabase.from("user_roles").select("role").eq("user_id", user.id),
@@ -115,7 +90,9 @@ export function useAuth() {
       const isSuperAdminV4 = roles.includes("super_admin_v4");
       const allowedPages = accessRes.data?.map((a) => a.page_path) ?? [];
 
-      if (domainTenantId && profile && profile.tenant_id !== domainTenantId && !isSuperAdminV4) {
+      // Domínio manda: em domínio customizado de cliente, qualquer usuário
+      // (inclusive super_admin_v4) cujo tenant não bate é deslogado.
+      if (domainTenantId && profile && profile.tenant_id !== domainTenantId) {
         await supabase.auth.signOut();
         setState({ ...initialState, loading: false });
         return;
@@ -134,6 +111,7 @@ export function useAuth() {
     },
     []
   );
+
 
   useEffect(() => {
     const {
