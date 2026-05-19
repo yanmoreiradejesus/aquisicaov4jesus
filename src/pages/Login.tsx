@@ -37,16 +37,7 @@ const CARGOS = [
   "Social Media",
 ] as const;
 
-const DEPARTAMENTOS = [
-  "Comercial",
-  "Aquisição",
-  "Receitas",
-  "Financeiro",
-  "Operações",
-  "Tecnologia",
-  "RH",
-  "Outro",
-] as const;
+const DEPARTAMENTOS = ["Receitas", "Administrativo", "PE&G"] as const;
 
 const fieldClass =
   "h-12 rounded-2xl border-0 bg-white/[0.06] backdrop-blur-xl px-4 text-base text-foreground placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-0 transition";
@@ -106,7 +97,7 @@ const Login = () => {
     e.preventDefault();
     if (!cargo || !departamento) {
       toast({
-        title: "Preencha cargo e departamento",
+        title: "Preencha cargo e área",
         description: "Selecione as duas opções para continuar.",
         variant: "destructive",
       });
@@ -229,7 +220,7 @@ const Login = () => {
                 />
                 <SelectField
                   id="signup-dep"
-                  label="Departamento"
+                  label="Área"
                   placeholder="Selecione"
                   value={departamento}
                   onChange={setDepartamento}
