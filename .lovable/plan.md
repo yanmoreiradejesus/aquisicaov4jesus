@@ -1,37 +1,62 @@
+# Isolamento total de tenant por domínio
+
+## Problema
+
+Hoje, ao acessar `kloh.v4jesus.com`:
+
+- Usuário comum de outro tenant: é deslogado e cai em `/login` (correto).
+- `super_admin_v4` (ex.: Pedro): **não** é deslogado. O `useAuth` apenas atualiza `profiles.active_tenant_id` para o tenant do Kloh e dá reload, abrindo o Hub direto.
+- Como a sessão Supabase fica persistida em `localStorage` por origem, basta um login antigo em `kloh.v4jesus.com` para entrar sem nova autenticação.
+
+Isso conflita com a regra que você definiu: **"separado somente pelo domínio"** (sem alternância de tenant via header).
+
 ## Objetivo
 
-Permitir trocar/remover a logo de cada tenant direto no diálogo **Editar cliente** em `/admin/clientes`. A logo padrão segue sendo a da V4 Jesus (fallback do `useTenantConfig`) — só sobrescreve quando o cliente tem `client_logo_url` próprio (caso Kloh).
+Cada domínio de cliente é um silo independente:
 
-## Arquivo único alterado
-
-`src/pages/AdminClientes.tsx`
+- O domínio é a **única** fonte de verdade do tenant ativo.
+- Sessão de qualquer usuário (inclusive super_admin_v4) cujo `profile.tenant_id` não bate com o tenant do domínio é encerrada e cai em `/login`.
+- A coluna `active_tenant_id` deixa de ser usada para alternância automática por domínio.
 
 ## Mudanças
 
-1. **Interface `Tenant`**: adicionar `client_logo_url: string | null`.
-2. **Estado `form`**: adicionar `client_logo_url: ""`. Adicionar `logoUploading` (boolean).
-3. **`openEdit`**: hidratar `client_logo_url` a partir do tenant.
-4. **`resetForm`**: limpar `client_logo_url`.
-5. **`upsertMut.payload`**: incluir `client_logo_url: form.client_logo_url || null` (passar `null` aciona o fallback da V4 Jesus automaticamente).
-6. **`onLogoSelected(file)`**: upload pro bucket público `avatars` no path `tenant-logos/{slug}-{timestamp}.{ext}`, com `upsert: true`. Pega `publicUrl` e seta no form. Mesmo fluxo já usado em `AdminClienteNovo.tsx`.
-7. **`removeLogo()`**: zera `client_logo_url` no form (efetiva ao salvar). Toast informativo.
-8. **UI no dialog** (entre o campo "Nome" e "Slug"): bloco "Logo do cliente" com:
-   - Preview 64x64 da logo atual (ou placeholder com ícone Upload se vazio).
-   - Botão **Escolher arquivo** (input file oculto, `accept="image/*"`), desabilitado durante upload ou sem slug.
-   - Botão **Remover** (ícone Trash2) visível só quando há logo, ao lado do "Escolher arquivo".
-   - Texto de ajuda: "Padrão = logo V4 Jesus. Envie uma imagem só se este cliente tem branding próprio."
-9. **Imports**: adicionar `Upload` e `Loader2` de `lucide-react`.
+### 1. `src/hooks/useAuth.ts`
 
-## Storage
+- Remover o bloco que faz `update profiles.active_tenant_id` + reload quando o domínio difere.
+- Endurecer o check final:
+  ```ts
+  if (domainTenantId && profile && profile.tenant_id !== domainTenantId) {
+    await supabase.auth.signOut();
+    setState({ ...initialState, loading: false });
+    return;
+  }
+  ```
+  (removendo a exceção `!isSuperAdminV4`).
+- Manter `resolveDomainTenantId` apenas para esse check.
 
-Bucket `avatars` já existe e é público — sem nova migration.
+### 2. `src/hooks/useTenantConfig.ts`
 
-## Sem mudanças de schema
+- Já prioriza `resolve_tenant_by_hostname` em domínio customizado — manter.
+- Em `lovableproject.com` / `localhost` / `*.lovable.app`, continuar usando `active_tenant_id` para permitir o `TenantSwitcher` apenas no ambiente de preview (super_admin_v4 segue podendo testar tenants ali).
 
-A coluna `tenants.client_logo_url` já existe. RLS de `tenants` já permite `super_admin_v4` dar `UPDATE`.
+### 3. `src/components/V4Header.tsx`
+
+- Já não mostra `TenantSwitcher` (mudança anterior). Sem alteração.
+
+### 4. Banco — sem migração obrigatória
+
+- `active_tenant_id` permanece na tabela, mas em domínio de cliente passa a ser ignorado pelo frontend. Fica útil apenas no preview do Lovable.
 
 ## Validação
 
-- Editar Kloh → enviar PNG → preview atualiza → Salvar → `kloh.v4jesus.com` passa a mostrar a nova logo (via `useTenantConfig`).
-- Editar Kloh → Remover → Salvar → volta a mostrar logo padrão V4 Jesus (fallback).
-- V4 Jesus continua sem `client_logo_url` setado e segue usando o fallback.
+1. Logar como Pedro (super_admin_v4) em `v4jesus.com` → abrir `kloh.v4jesus.com` em nova aba → deve cair em `/login` (não entra direto no Hub do Kloh).
+2. Logar um usuário comum do tenant Jesus em `kloh.v4jesus.com` → signOut imediato + `/login`.
+3. Logar um usuário do Kloh em `kloh.v4jesus.com` → entra no Hub do Kloh normalmente.
+4. No preview `*.lovable.app`, super_admin_v4 continua podendo usar `active_tenant_id` para inspecionar dados de tenants (sem header switcher, mas via DB se necessário) — sem regressão.
+5. Sessão antiga (refresh_token inválido) já redireciona pra `/login`, sem mudanças.
+
+## Fora do escopo
+
+- Reativar o `TenantSwitcher` no header.
+- Migração de dados em `active_tenant_id`.
+- Mudanças em RLS (a função `current_tenant_id()` continua usando `coalesce(active_tenant_id, tenant_id)` para super_admin — inofensivo, pois em produção o domínio garante alinhamento).
