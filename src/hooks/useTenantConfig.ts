@@ -26,12 +26,32 @@ const FALLBACK: TenantConfig = {
   active: true,
 };
 
+const getFallbackConfig = (): TenantConfig => {
+  if (typeof window === "undefined") return FALLBACK;
+  const host = window.location.hostname.toLowerCase();
+  const isV4JesusRoot = host === "v4jesus.com" || host === "www.v4jesus.com";
+  const isLovableOrLocal = host === "localhost" || host.endsWith(".lovable.app");
+
+  if (isV4JesusRoot || isLovableOrLocal) return FALLBACK;
+
+  const slug = host.split(".")[0] || "cliente";
+  const name = slug.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+  return {
+    ...FALLBACK,
+    client_name: name,
+    client_slug: slug,
+    app_base_url: window.location.origin,
+  };
+};
+
 /**
  * Reads the current user's tenant from the `tenants` table.
  * RLS guarantees the user can only see their own tenant (or all, if super_admin_v4).
  */
 export function useTenantConfig() {
   const { user } = useAuth();
+  const fallback = getFallbackConfig();
   const { data, isLoading } = useQuery({
     queryKey: ["tenant_config", user?.id],
     enabled: !!user,
@@ -61,7 +81,7 @@ export function useTenantConfig() {
         .maybeSingle();
 
       const tenantId = prof?.active_tenant_id ?? prof?.tenant_id;
-      if (!tenantId) return FALLBACK;
+      if (!tenantId) return fallback;
 
       // 2. Busca exatamente o tenant ativo (sem depender de .limit(1), que para super_admin
       //    retornaria qualquer tenant da lista)
@@ -71,9 +91,9 @@ export function useTenantConfig() {
         .eq("id", tenantId)
         .maybeSingle();
 
-      if (error || !data) return FALLBACK;
+      if (error || !data) return fallback;
       return {
-        ...FALLBACK,
+        ...fallback,
         ...data,
         sheet_ids: (data.sheet_ids as Record<string, string>) ?? {},
       };
@@ -81,5 +101,5 @@ export function useTenantConfig() {
     staleTime: 5 * 60_000,
   });
 
-  return { config: data ?? FALLBACK, isLoading };
+  return { config: data ?? fallback, isLoading };
 }
