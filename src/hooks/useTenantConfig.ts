@@ -45,6 +45,23 @@ const getFallbackConfig = (): TenantConfig => {
   };
 };
 
+type DomainTenantConfig = Omit<TenantConfig, "sheet_ids"> & { sheet_ids: unknown };
+
+const resolveTenantByHostname = async (hostname: string): Promise<DomainTenantConfig | null> => {
+  const rpcClient = supabase as unknown as {
+    rpc: (
+      fn: "resolve_tenant_by_hostname",
+      args: { _hostname: string },
+    ) => Promise<{ data: DomainTenantConfig[] | null }>;
+  };
+
+  const { data } = await rpcClient.rpc("resolve_tenant_by_hostname", {
+    _hostname: hostname,
+  });
+
+  return data?.[0] ?? null;
+};
+
 /**
  * Reads the current user's tenant from the `tenants` table.
  * RLS guarantees the user can only see their own tenant (or all, if super_admin_v4).
@@ -60,15 +77,13 @@ export function useTenantConfig() {
       // dentro de kloh.v4jesus.com mesmo que o perfil ainda esteja com outro tenant ativo.
       const host = window.location.hostname.toLowerCase();
       if (host !== "localhost" && !host.endsWith(".lovable.app")) {
-        const { data: domainTenant } = await (supabase as any).rpc("resolve_tenant_by_hostname", {
-          _hostname: host,
-        });
+        const domainTenant = await resolveTenantByHostname(host);
 
-        if (domainTenant?.[0]) {
+        if (domainTenant) {
           return {
             ...FALLBACK,
-            ...domainTenant[0],
-            sheet_ids: (domainTenant[0].sheet_ids as Record<string, string>) ?? {},
+            ...domainTenant,
+            sheet_ids: (domainTenant.sheet_ids as Record<string, string>) ?? {},
           };
         }
       }
