@@ -12,7 +12,7 @@ import { motion, useReducedMotion } from "framer-motion";
 const V4Header = () => {
   const location = useLocation();
   const { user, isAdmin, hasPageAccess, signOut } = useAuth();
-  const { config } = useTenantConfig();
+  const { config, isResolved: tenantResolved } = useTenantConfig();
   const logo = config.client_logo_url || defaultLogo;
   const [aquisicaoOpen, setAquisicaoOpen] = useState(false);
   const [comercialOpen, setComercialOpen] = useState(false);
@@ -132,16 +132,20 @@ const V4Header = () => {
               className="flex items-center pl-2 pr-2 h-8 rounded-full hover:bg-white/[0.04] transition-colors"
               title="Aplicações"
             >
-              <img
-                src={logo}
-                alt="V4 Company"
-                width={56}
-                height={16}
-                decoding="sync"
-                fetchPriority="high"
-                className="h-4 w-auto opacity-90 select-none"
-                draggable={false}
-              />
+              {tenantResolved ? (
+                <img
+                  src={logo}
+                  alt={config.client_name}
+                  width={56}
+                  height={16}
+                  decoding="sync"
+                  fetchPriority="high"
+                  className="h-4 w-auto opacity-90 select-none"
+                  draggable={false}
+                />
+              ) : (
+                <span aria-hidden className="block h-4 w-14" />
+              )}
             </Link>
 
             {/* Divider */}
@@ -318,7 +322,11 @@ const V4Header = () => {
           />
           <div className="fixed top-3 right-3 bottom-3 w-72 rounded-2xl border border-white/[0.08] bg-gradient-to-b from-popover/85 to-popover/75 backdrop-blur-2xl backdrop-saturate-200 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7),inset_0_1px_0_0_rgba(255,255,255,0.08)] flex flex-col animate-in slide-in-from-right-4 fade-in-0 duration-200">
             <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
-              <img src={logo} alt="V4 Company" className="h-4 w-auto opacity-90" />
+              {tenantResolved ? (
+                <img src={logo} alt={config.client_name} className="h-4 w-auto opacity-90" />
+              ) : (
+                <span aria-hidden className="block h-4 w-14" />
+              )}
               <button
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center justify-center h-8 w-8 rounded-full text-foreground/70 hover:text-foreground hover:bg-white/[0.06] transition-colors"

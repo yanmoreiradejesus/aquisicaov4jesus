@@ -117,5 +117,5 @@ export function useTenantConfig() {
     staleTime: 5 * 60_000,
   });
 
-  return { config: data ?? fallback, isLoading };
+  return { config: data ?? fallback, isLoading, isResolved: !isLoading && data !== undefined };
 }
