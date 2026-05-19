@@ -29,8 +29,8 @@ export const APPS: AppEntry[] = [
   },
   {
     id: "comercial",
-    title: "Comercial",
-    description: "CRM, contas e cobranças.",
+    title: "Revenue",
+    description: "Leads, oportunidades e gestão de receitas.",
     href: "/comercial/leads",
     accessPaths: [
       "/comercial/leads",
