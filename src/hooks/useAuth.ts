@@ -48,7 +48,13 @@ export function useAuth() {
     const host = window.location.hostname.toLowerCase();
     if (host === "localhost" || host.endsWith(".lovable.app")) return null;
 
-    const { data } = await (supabase as any).rpc("resolve_tenant_by_hostname", {
+    const rpcClient = supabase as unknown as {
+      rpc: (
+        fn: "resolve_tenant_by_hostname",
+        args: { _hostname: string },
+      ) => Promise<{ data: Array<{ id: string }> | null }>;
+    };
+    const { data } = await rpcClient.rpc("resolve_tenant_by_hostname", {
       _hostname: host,
     });
     return data?.[0]?.id ?? null;
@@ -94,10 +100,10 @@ export function useAuth() {
       }
 
       const profile = (profileRes.data as Profile | null) ?? null;
-      const roles = rolesRes.data?.map((r: any) => r.role as string) ?? [];
+      const roles = rolesRes.data?.map((r) => String(r.role)) ?? [];
       const isAdmin = roles.includes("admin");
       const isSuperAdminV4 = roles.includes("super_admin_v4");
-      const allowedPages = accessRes.data?.map((a: any) => a.page_path) ?? [];
+      const allowedPages = accessRes.data?.map((a) => a.page_path) ?? [];
 
       if (domainTenantId && profile && profile.tenant_id !== domainTenantId && !isSuperAdminV4) {
         await supabase.auth.signOut();
