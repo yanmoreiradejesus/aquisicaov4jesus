@@ -1,26 +1,28 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTenantConfig } from "@/hooks/useTenantConfig";
 
 /**
- * Páginas habilitadas no sistema para o tenant atual (cliente V4).
+ * Páginas habilitadas no sistema para o tenant ATIVO.
  *
- * RLS já garante que o usuário só enxerga as páginas do seu próprio tenant
- * (ou de qualquer um, se for super_admin_v4 com tenant ativo).
- *
- * Retorna `null` enquanto carrega: nesse estado, `isPageEnabled` retorna `true`
- * (fail-open) pra evitar piscar telas em branco no primeiro paint.
+ * Filtramos explicitamente por `tenant_id` (não confiamos só na RLS) porque
+ * super_admin_v4 enxerga linhas de todos os tenants — sem o filtro, ao trocar
+ * de tenant no switcher veríamos a união das páginas de todos os clientes.
  */
 export function useTenantEnabledPages() {
   const { user } = useAuth();
+  const { config } = useTenantConfig();
+  const tenantId = config.id;
 
   const { data, isLoading } = useQuery({
-    queryKey: ["tenant_enabled_pages", user?.id],
-    enabled: !!user,
+    queryKey: ["tenant_enabled_pages", user?.id, tenantId],
+    enabled: !!user && !!tenantId,
     queryFn: async (): Promise<Set<string>> => {
       const { data, error } = await supabase
         .from("tenant_enabled_pages")
-        .select("page_path");
+        .select("page_path")
+        .eq("tenant_id", tenantId!);
       if (error) {
         console.error("[useTenantEnabledPages]", error);
         return new Set();
