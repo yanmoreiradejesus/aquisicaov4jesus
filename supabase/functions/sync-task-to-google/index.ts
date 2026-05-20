@@ -338,6 +338,8 @@ Deno.serve(async (req) => {
     const notes = [
       atividade.descricao && atividade.descricao !== tituloBase ? atividade.descricao : null,
       contextLabel ? `Contexto: ${contextLabel}` : null,
+      leadNome ? `Lead: ${leadNome}` : null,
+      leadTelefone ? `Telefone: ${leadTelefone}` : null,
       `Horário agendado no CRM: ${hora}`,
       `Abrir no CRM: ${appLink}`,
     ].filter(Boolean).join("\n\n");
