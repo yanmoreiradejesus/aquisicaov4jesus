@@ -41,7 +41,9 @@ interface Props {
 }
 
 export const LeadsFilterPopover = ({ filters, onChange, leads }: Props) => {
-  const { profiles } = useProfilesList({ departamento: "Receitas" });
+  // Lista completa (todos os aprovados) — usada apenas para resolver o NOME de cada responsavel_id,
+  // mesmo quando o responsável não pertence ao departamento Receitas (ex.: super_admin_v4).
+  const { profiles: allProfiles } = useProfilesList();
   const uniques = useMemo(() => {
     const get = (key: string) =>
       Array.from(new Set(leads.map((l: any) => l[key]).filter((v: any) => v && String(v).trim())))
@@ -52,7 +54,7 @@ export const LeadsFilterPopover = ({ filters, onChange, leads }: Props) => {
     leads.forEach((l: any) => { if (l.responsavel_id) respIds.add(l.responsavel_id); });
     const responsavel = Array.from(respIds)
       .map((id) => {
-        const p = profiles.find((x) => x.id === id);
+        const p = allProfiles.find((x) => x.id === id);
         return { value: id, label: p ? profileLabel(p) : id };
       })
       .sort((a, b) => a.label.localeCompare(b.label));
@@ -66,7 +68,7 @@ export const LeadsFilterPopover = ({ filters, onChange, leads }: Props) => {
       estado: get("estado"),
       segmento: get("segmento"),
     };
-  }, [leads, profiles]);
+  }, [leads, allProfiles]);
 
   const activeCount = Object.entries(filters).filter(([k, v]) => {
     if (k === "dateFrom" || k === "dateTo") return !!v;

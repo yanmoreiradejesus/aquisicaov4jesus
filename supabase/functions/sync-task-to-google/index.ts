@@ -213,15 +213,21 @@ Deno.serve(async (req) => {
 
     // Contexto: lead/oportunidade
     let contextLabel = "";
+    let leadNome: string | null = null;
+    let leadTelefone: string | null = null;
     let appLink = `${APP_BASE_URL}/comercial`;
     if (atividade.lead_id) {
       const { data: lead } = await admin
         .from("crm_leads")
-        .select("nome, empresa")
+        .select("nome, empresa, telefone")
         .eq("id", atividade.lead_id)
         .maybeSingle();
-      if (lead) contextLabel = lead.empresa || lead.nome || "";
-      appLink = `${APP_BASE_URL}/comercial/leads`;
+      if (lead) {
+        contextLabel = lead.empresa || lead.nome || "";
+        leadNome = lead.nome || null;
+        leadTelefone = lead.telefone || null;
+      }
+      appLink = `${APP_BASE_URL}/comercial/leads/${atividade.lead_id}`;
     } else if (atividade.oportunidade_id) {
       const { data: op } = await admin
         .from("crm_oportunidades")
@@ -233,13 +239,17 @@ Deno.serve(async (req) => {
         if (op.lead_id) {
           const { data: lead } = await admin
             .from("crm_leads")
-            .select("nome, empresa")
+            .select("nome, empresa, telefone")
             .eq("id", op.lead_id)
             .maybeSingle();
-          if (lead) contextLabel = lead.empresa || lead.nome || contextLabel;
+          if (lead) {
+            contextLabel = lead.empresa || lead.nome || contextLabel;
+            leadNome = lead.nome || null;
+            leadTelefone = lead.telefone || null;
+          }
         }
       }
-      appLink = `${APP_BASE_URL}/comercial/oportunidades`;
+      appLink = `${APP_BASE_URL}/comercial/oportunidades/${atividade.oportunidade_id}`;
     }
 
     const tituloBase = atividade.titulo || atividade.descricao || "Tarefa";
@@ -251,6 +261,8 @@ Deno.serve(async (req) => {
       const description = [
         atividade.descricao && atividade.descricao !== tituloBase ? atividade.descricao : null,
         contextLabel ? `Contexto: ${contextLabel}` : null,
+        leadNome ? `Lead: ${leadNome}` : null,
+        leadTelefone ? `Telefone: ${leadTelefone}` : null,
         `Abrir no CRM: ${appLink}`,
         atividade.concluida ? "Status: concluída ✓" : "Status: pendente",
       ].filter(Boolean).join("\n\n");
@@ -263,7 +275,8 @@ Deno.serve(async (req) => {
         description,
         start: { dateTime: start.toISOString(), timeZone: "America/Sao_Paulo" },
         end: { dateTime: end.toISOString(), timeZone: "America/Sao_Paulo" },
-        colorId: "5",
+        // 11 = Tomato (vermelho) quando concluída; 5 = Banana (amarelo) para pendente.
+        colorId: atividade.concluida ? "11" : "5",
         reminders: { useDefault: true },
       };
 
@@ -325,6 +338,8 @@ Deno.serve(async (req) => {
     const notes = [
       atividade.descricao && atividade.descricao !== tituloBase ? atividade.descricao : null,
       contextLabel ? `Contexto: ${contextLabel}` : null,
+      leadNome ? `Lead: ${leadNome}` : null,
+      leadTelefone ? `Telefone: ${leadTelefone}` : null,
       `Horário agendado no CRM: ${hora}`,
       `Abrir no CRM: ${appLink}`,
     ].filter(Boolean).join("\n\n");

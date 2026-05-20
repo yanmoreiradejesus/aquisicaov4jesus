@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useHorizontalWheelScroll } from "@/hooks/useHorizontalWheelScroll";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { LeadCard } from "@/components/crm/LeadCard";
@@ -79,6 +79,18 @@ const CrmLeads = () => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Permite atalhos externos (ex.: widget de Pendências no Hub) abrirem direto na view de Tarefas.
+  useEffect(() => {
+    const v = searchParams.get("view");
+    if (v === "tarefas" || v === "kanban") {
+      if (view !== v) setView(v);
+      searchParams.delete("view");
+      setSearchParams(searchParams, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const openLead = (id: string) => navigate(`/comercial/leads/${id}`);
 
