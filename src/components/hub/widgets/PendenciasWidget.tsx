@@ -40,6 +40,7 @@ export function PendenciasWidget({ onCount }: PendenciasWidgetProps) {
     <HubBentoWidget
       eyebrow="Pendências"
       title="ABERTAS"
+      href="/comercial/leads?view=tarefas"
       loading={isLoading}
       empty={!isLoading && total === 0}
       emptyLabel="Nenhuma pendência. Tudo em dia."
