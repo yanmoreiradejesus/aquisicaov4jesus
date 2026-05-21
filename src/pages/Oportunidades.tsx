@@ -35,6 +35,7 @@ const Oportunidades = () => {
   const [avancarOpen, setAvancarOpen] = useState(false);
   const [pendingAvanco, setPendingAvanco] = useState<{ op: any; etapa: string } | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [celebration, setCelebration] = useState<{ nome_oportunidade: string; valor_total?: number } | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
