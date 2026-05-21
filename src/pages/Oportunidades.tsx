@@ -418,6 +418,7 @@ const Oportunidades = () => {
       />
 
       <OportunidadeImportDialog open={importOpen} onOpenChange={setImportOpen} />
+      <OportunidadeExportDialog open={exportOpen} onOpenChange={setExportOpen} oportunidades={oportunidades} />
 
       {celebration && (
         <WinCelebration
