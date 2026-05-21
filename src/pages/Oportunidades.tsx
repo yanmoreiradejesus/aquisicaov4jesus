@@ -327,6 +327,13 @@ const Oportunidades = () => {
                 <Upload className="h-4 w-4 mr-1.5" /> Importar
               </Button>
               <Button
+                variant="outline"
+                onClick={() => setExportOpen(true)}
+                className="h-9 rounded-xl border-border/60 bg-surface-2/40 hover:bg-surface-2/80 transition-all"
+              >
+                <Download className="h-4 w-4 mr-1.5" /> Exportar
+              </Button>
+              <Button
                 onClick={() => { setEditing(null); setSheetOpen(true); }}
                 className="h-9 rounded-xl bg-gradient-to-b from-primary to-primary/85 shadow-ios-md hover:shadow-ios-glow active:scale-[0.98] transition-all"
               >
