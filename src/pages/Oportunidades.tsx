@@ -4,8 +4,9 @@ import { useHorizontalWheelScroll } from "@/hooks/useHorizontalWheelScroll";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, LayoutGrid, ListChecks, Upload } from "lucide-react";
+import { Plus, Search, LayoutGrid, ListChecks, Upload, Download } from "lucide-react";
 import { OportunidadeImportDialog } from "@/components/crm/OportunidadeImportDialog";
+import { OportunidadeExportDialog } from "@/components/crm/OportunidadeExportDialog";
 import { useCrmOportunidades, OPORTUNIDADE_ETAPAS } from "@/hooks/useCrmOportunidades";
 import { OportunidadeColumn } from "@/components/crm/OportunidadeColumn";
 import { OportunidadeCard } from "@/components/crm/OportunidadeCard";
@@ -34,6 +35,7 @@ const Oportunidades = () => {
   const [avancarOpen, setAvancarOpen] = useState(false);
   const [pendingAvanco, setPendingAvanco] = useState<{ op: any; etapa: string } | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [celebration, setCelebration] = useState<{ nome_oportunidade: string; valor_total?: number } | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -325,6 +327,13 @@ const Oportunidades = () => {
                 <Upload className="h-4 w-4 mr-1.5" /> Importar
               </Button>
               <Button
+                variant="outline"
+                onClick={() => setExportOpen(true)}
+                className="h-9 rounded-xl border-border/60 bg-surface-2/40 hover:bg-surface-2/80 transition-all"
+              >
+                <Download className="h-4 w-4 mr-1.5" /> Exportar
+              </Button>
+              <Button
                 onClick={() => { setEditing(null); setSheetOpen(true); }}
                 className="h-9 rounded-xl bg-gradient-to-b from-primary to-primary/85 shadow-ios-md hover:shadow-ios-glow active:scale-[0.98] transition-all"
               >
@@ -409,6 +418,7 @@ const Oportunidades = () => {
       />
 
       <OportunidadeImportDialog open={importOpen} onOpenChange={setImportOpen} />
+      <OportunidadeExportDialog open={exportOpen} onOpenChange={setExportOpen} oportunidades={oportunidades} />
 
       {celebration && (
         <WinCelebration
