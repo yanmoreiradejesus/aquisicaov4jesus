@@ -234,9 +234,31 @@ Deno.serve(async (req) => {
     const { eventType, data } = extract3CPlusEvent(payload);
     const parsed = buildCallEventRow(eventType, data, payload);
 
-    // Lookup do lead pelo telefone. O ILIKE no campo `telefone` formatado (ex.: "+55 (65) 99981-4223")
-    // não casa com substrings contínuas dos dígitos. Por isso buscamos candidatos usando os 4 últimos
-    // dígitos (que raramente são quebrados por formatação) e validamos via normalização no código.
+    // Resolve user_id E tenant_id via voip_accounts ANTES do lookup do lead.
+    let userId: string | null = null;
+    let tenantId: string | null = null;
+    if (parsed.operador) {
+      const { data: acc } = await supabase
+        .from("voip_accounts")
+        .select("user_id, tenant_id")
+        .eq("provider", "3cplus")
+        .eq("operador_id", parsed.operador)
+        .eq("ativo", true)
+        .maybeSingle();
+      if (acc?.user_id) userId = acc.user_id;
+      if (acc?.tenant_id) tenantId = acc.tenant_id;
+    }
+
+    if (!tenantId) {
+      console.warn("[3cplus] operador sem voip_account vinculado:", parsed.operador,
+        "— evento descartado (sem tenant resolvível)");
+      return new Response(
+        JSON.stringify({ ok: true, skipped: true, reason: "no_voip_account", operador: parsed.operador }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Lookup do lead pelo telefone, ESCOPADO ao tenant do operador.
     let leadId: string | null = null;
     if (parsed.telefoneNorm) {
       const last10 = parsed.telefoneNorm.slice(-10);
@@ -245,6 +267,7 @@ Deno.serve(async (req) => {
       const { data: leads, error: leadErr } = await supabase
         .from("crm_leads")
         .select("id, telefone")
+        .eq("tenant_id", tenantId)
         .not("telefone", "is", null)
         .ilike("telefone", `%${last4}%`)
         .limit(200);
@@ -257,26 +280,12 @@ Deno.serve(async (req) => {
     }
 
     // Política: descartar chamadas que não correspondem a nenhum lead do CRM.
-    // Respondemos 200 para o 3CPlus não reenviar, mas não persistimos nada.
     if (!leadId) {
       console.log("[3cplus] descartado — sem lead match:", parsed.telefoneNorm);
       return new Response(
         JSON.stringify({ ok: true, skipped: true, reason: "no_lead_match" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
-    }
-
-    // Resolver user_id via voip_accounts
-    let userId: string | null = null;
-    if (parsed.operador) {
-      const { data: acc } = await supabase
-        .from("voip_accounts")
-        .select("user_id")
-        .eq("provider", "3cplus")
-        .eq("operador_id", parsed.operador)
-        .eq("ativo", true)
-        .maybeSingle();
-      if (acc?.user_id) userId = acc.user_id;
     }
 
     // Se a chamada foi gravada e ainda não temos URL, tenta buscar via API da 3CPlus
@@ -291,19 +300,18 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Upsert por (provider, call_id) para que eventos posteriores da mesma chamada
-    // (com duração, status final, gravação) atualizem a mesma linha em vez de duplicar.
+    // Upsert por (provider, call_id)
     let upsertErr: any = null;
     if (parsed.callId) {
-      // Carrega linha existente para mesclar campos (preferindo o que for "mais informativo")
       const { data: existing } = await supabase
         .from("crm_call_events")
-        .select("id, lead_id, user_id, duracao_seg, status, gravacao_url, telefone, telefone_normalizado, operador, created_at")
+        .select("id, lead_id, user_id, tenant_id, duracao_seg, status, gravacao_url, telefone, telefone_normalizado, operador, created_at")
         .eq("provider", "3cplus")
         .eq("call_id", parsed.callId)
         .maybeSingle();
 
       const merged = {
+        tenant_id: tenantId,
         lead_id: leadId ?? existing?.lead_id ?? null,
         user_id: userId ?? existing?.user_id ?? null,
         provider: "3cplus",
@@ -326,6 +334,7 @@ Deno.serve(async (req) => {
       const { error } = await supabase
         .from("crm_call_events")
         .insert({
+          tenant_id: tenantId,
           lead_id: leadId,
           user_id: userId,
           provider: "3cplus",
@@ -341,6 +350,7 @@ Deno.serve(async (req) => {
         });
       upsertErr = error;
     }
+
 
     if (upsertErr) {
       console.error("[3cplus] upsert error:", upsertErr);
