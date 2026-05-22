@@ -29,6 +29,7 @@ export function useCrmLeads() {
       if (error) throw error;
       return data as any[];
     },
+    refetchOnWindowFocus: false,
   });
 
   // Realtime — debounced para evitar cascata de refetches

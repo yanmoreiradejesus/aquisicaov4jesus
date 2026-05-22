@@ -90,12 +90,13 @@ export const LeadCard = ({
   });
   const { toast } = useToast();
 
-  // Hide the original card while dragging — the DragOverlay clone is what the user sees
+  // Mantém o card visível (semitransparente) enquanto arrasta — evita sensação de "sumiu" se o drag começou por engano.
   const style: React.CSSProperties | undefined = overlay
     ? undefined
     : {
         transform: CSS.Translate.toString(transform),
-        opacity: isDragging ? 0 : 1,
+        opacity: isDragging ? 0.35 : 1,
+        pointerEvents: isDragging ? "none" : undefined,
       };
 
   const phone = lead.telefone as string | undefined;

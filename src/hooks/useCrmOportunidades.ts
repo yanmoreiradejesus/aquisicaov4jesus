@@ -24,16 +24,25 @@ export function useCrmOportunidades() {
       if (error) throw error;
       return data as any[];
     },
+    refetchOnWindowFocus: false,
   });
 
+  // Realtime — debounced para evitar cascata de refetches enquanto o usuário
+  // ainda está interagindo (mover etapa dispara vários eventos em sequência).
   useEffect(() => {
+    let pending: ReturnType<typeof setTimeout> | null = null;
     const channel = supabase
       .channel("crm_oportunidades_changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "crm_oportunidades" }, () => {
-        qc.invalidateQueries({ queryKey: ["crm_oportunidades"] });
+        if (pending) clearTimeout(pending);
+        pending = setTimeout(() => {
+          qc.invalidateQueries({ queryKey: ["crm_oportunidades"] });
+          pending = null;
+        }, 300);
       })
       .subscribe();
     return () => {
+      if (pending) clearTimeout(pending);
       supabase.removeChannel(channel);
     };
   }, [qc]);
