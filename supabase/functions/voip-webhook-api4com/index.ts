@@ -134,7 +134,32 @@ Deno.serve(async (req) => {
 
     const telefoneNorm = normalizePhone(telefoneRaw);
 
-    // Lookup do lead pelo telefone (busca tolerante a formatação)
+    // Resolve user_id E tenant_id via voip_accounts ANTES do lookup do lead,
+    // para escopar a busca de leads ao tenant correto (multi-tenant).
+    let userId: string | null = null;
+    let tenantId: string | null = null;
+    if (operador) {
+      const { data: acc } = await supabase
+        .from("voip_accounts")
+        .select("user_id, tenant_id")
+        .eq("provider", "api4com")
+        .eq("operador_id", operador)
+        .eq("ativo", true)
+        .maybeSingle();
+      if (acc?.user_id) userId = acc.user_id;
+      if (acc?.tenant_id) tenantId = acc.tenant_id;
+    }
+
+    if (!tenantId) {
+      console.warn("[api4com] operador sem voip_account vinculado:", operador,
+        "— evento descartado (sem tenant resolvível)");
+      return new Response(
+        JSON.stringify({ ok: true, skipped: true, reason: "no_voip_account", operador }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Lookup do lead pelo telefone, ESCOPADO ao tenant do operador.
     let leadId: string | null = null;
     if (telefoneNorm) {
       const last10 = telefoneNorm.slice(-10);
@@ -143,6 +168,7 @@ Deno.serve(async (req) => {
       const { data: leads, error: leadErr } = await supabase
         .from("crm_leads")
         .select("id, telefone")
+        .eq("tenant_id", tenantId)
         .not("telefone", "is", null)
         .ilike("telefone", `%${last4}%`)
         .limit(200);
@@ -154,30 +180,18 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Resolve user_id via voip_accounts (operador -> usuário do CRM)
-    let userId: string | null = null;
-    if (operador) {
-      const { data: acc } = await supabase
-        .from("voip_accounts")
-        .select("user_id")
-        .eq("provider", "api4com")
-        .eq("operador_id", operador)
-        .eq("ativo", true)
-        .maybeSingle();
-      if (acc?.user_id) userId = acc.user_id;
-    }
-
     // Upsert por (provider, call_id) — eventos posteriores (ended) atualizam a mesma linha
     let upsertErr: any = null;
     if (callId) {
       const { data: existing } = await supabase
         .from("crm_call_events")
-        .select("id, lead_id, user_id, duracao_seg, status, gravacao_url, telefone, telefone_normalizado, operador")
+        .select("id, lead_id, user_id, tenant_id, duracao_seg, status, gravacao_url, telefone, telefone_normalizado, operador")
         .eq("provider", "api4com")
         .eq("call_id", callId)
         .maybeSingle();
 
       const merged = {
+        tenant_id: tenantId,
         lead_id: leadId ?? existing?.lead_id ?? null,
         user_id: userId ?? existing?.user_id ?? null,
         provider: "api4com",
@@ -200,6 +214,7 @@ Deno.serve(async (req) => {
       const { error } = await supabase
         .from("crm_call_events")
         .insert({
+          tenant_id: tenantId,
           lead_id: leadId,
           user_id: userId,
           provider: "api4com",
@@ -215,6 +230,7 @@ Deno.serve(async (req) => {
         });
       upsertErr = error;
     }
+
 
     if (upsertErr) {
       console.error("[api4com] upsert error:", upsertErr);
