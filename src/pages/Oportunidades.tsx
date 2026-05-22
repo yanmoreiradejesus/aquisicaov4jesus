@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useHorizontalWheelScroll } from "@/hooks/useHorizontalWheelScroll";
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Plus, Search, LayoutGrid, ListChecks, Upload, Download } from "lucide-react";
@@ -63,7 +63,11 @@ const Oportunidades = () => {
   const openOp = (id: string) => navigate(`/comercial/oportunidades/${id}`);
   const closeOp = () => navigate("/comercial/oportunidades");
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  // Threshold maior + delay no touch evita "falso drag" quando o usuário só passa o mouse / clica.
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }),
+  );
   const scrollRef = useRef<HTMLDivElement>(null);
   useHorizontalWheelScroll(scrollRef);
 

@@ -103,14 +103,17 @@ export const OportunidadeCard = ({ oportunidade, onClick, onOpenInNewTab, overla
     };
   }, [oportunidade.id, oportunidade.updated_at]);
 
+  // Mantém o card visível (semitransparente) enquanto arrasta — o DragOverlay clona ele "flutuando".
+  // Antes ficava opacity:0, o que dava sensação de "card sumiu" quando o drag era acionado por engano.
   const style: React.CSSProperties | undefined = overlay
     ? undefined
     : transform
     ? {
         transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-        opacity: isDragging ? 0 : 1,
+        opacity: isDragging ? 0.35 : 1,
+        pointerEvents: isDragging ? "none" : undefined,
       }
-    : { opacity: isDragging ? 0 : 1 };
+    : { opacity: isDragging ? 0.35 : 1, pointerEvents: isDragging ? "none" : undefined };
 
   const lead = oportunidade.lead;
   const isProposta = oportunidade.etapa === "proposta";
