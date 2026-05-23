@@ -898,26 +898,15 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
                   <CheckCircle2 className="h-4 w-4" />
                   Growth Class concluída
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <Button
-                    variant="outline"
-                    className="w-full border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
-                    disabled={!!exportingPdf}
-                    onClick={() => generateJourneyPdf(false)}
-                  >
-                    {exportingPdf === "summary" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileDown className="h-4 w-4 mr-2" />}
-                    PDF executivo
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full border-primary/30 text-primary/90 hover:bg-primary/10 hover:text-primary"
-                    disabled={!!exportingPdf}
-                    onClick={() => generateJourneyPdf(true)}
-                  >
-                    {exportingPdf === "appendix" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
-                    PDF com apêndice
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  className="w-full border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
+                  disabled={!!exportingPdf}
+                  onClick={() => generateJourneyPdf(true)}
+                >
+                  {exportingPdf ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileDown className="h-4 w-4 mr-2" />}
+                  Exportar jornada (PDF)
+                </Button>
                 {lastPdfUrl && (
                   <a
                     href={lastPdfUrl}
@@ -930,7 +919,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
                   </a>
                 )}
                 <p className="text-[11px] text-muted-foreground text-center">
-                  Estrutura SPICED + destaque da Growth Class + síntese executiva por IA. Leva ~15s.
+                  Relatório completo com SPICED, jornada, Growth Class, síntese por IA e apêndice de transcrições. Leva ~15s.
                 </p>
               </div>
             )}
