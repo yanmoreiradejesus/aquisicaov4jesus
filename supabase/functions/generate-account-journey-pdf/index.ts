@@ -453,14 +453,14 @@ function buildHTML(data: {
 
   // ---------- Participants ----------
   const participants: { name: string; role: string }[] = [];
-  if (oportunidade?.responsavel_id) {
-    participants.push({ name: nameOf(oportunidade.responsavel_id), role: "Responsável comercial" });
+  if (lead?.responsavel_id) {
+    participants.push({ name: nameOf(lead.responsavel_id), role: "SDR" });
+  }
+  if (oportunidade?.closer_id) {
+    participants.push({ name: nameOf(oportunidade.closer_id), role: "Closer responsável" });
   }
   if (account.account_manager_id) {
-    participants.push({ name: nameOf(account.account_manager_id), role: "Account Manager" });
-  }
-  if (account.growth_class_responsavel_id) {
-    participants.push({ name: nameOf(account.growth_class_responsavel_id), role: "Responsável Growth Class" });
+    participants.push({ name: nameOf(account.account_manager_id), role: "Account Manager (Growth Class)" });
   }
   if (isFilled(lead?.nome)) {
     participants.push({ name: lead.nome, role: `Cliente${isFilled(lead?.cargo) ? ` · ${lead.cargo}` : ""}` });
