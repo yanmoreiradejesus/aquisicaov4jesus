@@ -841,6 +841,24 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
 
           <TabsContent value="growth" className="space-y-4 mt-4">
             <div>
+              <Label>Account Manager (quem realizou a Growth Class)</Label>
+              <Select
+                value={(form as any).account_manager_id ?? "none"}
+                onValueChange={(v) => update({ account_manager_id: v === "none" ? null : v } as any)}
+              >
+                <SelectTrigger className="mt-1.5">
+                  <SelectValue placeholder="Selecione o Account Manager" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem Account Manager</SelectItem>
+                  {amProfiles.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{profileLabel(p)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
               <Label>Expectativa do cliente</Label>
               <Textarea
                 placeholder="O que o cliente espera, o que foi alinhado..."
