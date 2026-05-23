@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { GraduationCap, Building2, ExternalLink, FileText, Copy, RefreshCw, CheckCircle2, Flame, Pencil, X, Save, AlertTriangle, ShieldCheck, Loader2 } from "lucide-react";
+import { GraduationCap, Building2, ExternalLink, FileText, Copy, RefreshCw, CheckCircle2, Flame, Pencil, X, Save, AlertTriangle, ShieldCheck, Loader2, FileDown } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MultiSelect } from "@/components/ui/multi-select";
@@ -69,6 +69,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
   const [responsaveis, setResponsaveis] = useState<{ id: string; full_name: string | null; email: string }[]>([]);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [contratoSignedUrl, setContratoSignedUrl] = useState<string | null>(null);
   const [editingContrato, setEditingContrato] = useState(false);
   const [contratoForm, setContratoForm] = useState<any>(null);
@@ -845,9 +846,58 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
               </div>
             )}
             {form.onboarding_status === "concluida" && (
-              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-center text-[13px] text-emerald-300 font-medium inline-flex items-center justify-center gap-2 w-full">
-                <CheckCircle2 className="h-4 w-4" />
-                Growth Class concluída
+              <div className="space-y-3">
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-center text-[13px] text-emerald-300 font-medium inline-flex items-center justify-center gap-2 w-full">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Growth Class concluída
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
+                  disabled={exportingPdf}
+                  onClick={async () => {
+                    if (!form.id) return;
+                    setExportingPdf(true);
+                    try {
+                      const { data, error } = await supabase.functions.invoke(
+                        "generate-account-journey-pdf",
+                        { body: { account_id: form.id } },
+                      );
+                      if (error) throw error;
+                      const url = (data as any)?.url;
+                      const filename = (data as any)?.filename ?? "jornada-cliente.pdf";
+                      if (!url) throw new Error("URL não retornada");
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = filename;
+                      a.target = "_blank";
+                      a.rel = "noopener";
+                      document.body.appendChild(a);
+                      a.click();
+                      a.remove();
+                      toast({ title: "PDF gerado", description: "Download iniciado." });
+                    } catch (e: any) {
+                      console.error(e);
+                      toast({
+                        title: "Erro ao gerar PDF",
+                        description: e?.message ?? "Tente novamente.",
+                        variant: "destructive",
+                      });
+                    } finally {
+                      setExportingPdf(false);
+                    }
+                  }}
+                >
+                  {exportingPdf ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <FileDown className="h-4 w-4 mr-2" />
+                  )}
+                  {exportingPdf ? "Gerando jornada completa..." : "Exportar jornada completa (PDF)"}
+                </Button>
+                <p className="text-[11px] text-muted-foreground text-center">
+                  Estrutura SPICED + destaque da Growth Class + síntese executiva por IA. Leva ~15s.
+                </p>
               </div>
             )}
           </TabsContent>
