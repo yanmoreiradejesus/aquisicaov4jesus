@@ -226,22 +226,25 @@ Estrutura, exatamente nesta ordem:
 async function generateExecutiveSummary(payload: any): Promise<string> {
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) return "Síntese executiva indisponível (LOVABLE_API_KEY ausente).";
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 18000);
   try {
     const resp = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
       {
         method: "POST",
+        signal: controller.signal,
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
+          model: "google/gemini-3.1-flash-lite-preview",
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: JSON.stringify(payload).slice(0, 120000) },
+            { role: "user", content: JSON.stringify(payload).slice(0, 35000) },
           ],
-          max_tokens: 4000,
+          max_tokens: 1600,
         }),
       },
     );
@@ -255,6 +258,8 @@ async function generateExecutiveSummary(payload: any): Promise<string> {
   } catch (e) {
     console.error("AI error", e);
     return "Síntese executiva indisponível (erro de rede).";
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
