@@ -10,7 +10,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { Sheet, SheetContent, SheetPortal, SheetOverlay } from "@/components/ui/sheet";
+import { Sheet, SheetPortal, SheetOverlay } from "@/components/ui/sheet";
 import * as SheetPrimitive from "@radix-ui/react-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
