@@ -1487,12 +1487,17 @@ async function renderPDFShift(html: string): Promise<Uint8Array> {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      source: html.trim(),
+      source: html,
+      landscape: false,
       format: "A4",
+      margin: "0",
       use_print: true,
       wait_for_network: false,
       disable_javascript: true,
+      lazy_load_images: false,
       timeout: 30,
+      remove_blank: true,
+      sandbox: false,
     }),
   });
 
