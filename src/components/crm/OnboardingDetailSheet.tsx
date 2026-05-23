@@ -69,7 +69,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
   const [responsaveis, setResponsaveis] = useState<{ id: string; full_name: string | null; email: string }[]>([]);
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [exportingPdf, setExportingPdf] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState<false | "summary" | "appendix">(false);
   const [lastPdfUrl, setLastPdfUrl] = useState<string | null>(null);
   const [lastPdfFilename, setLastPdfFilename] = useState<string>("jornada-cliente.pdf");
   const [contratoSignedUrl, setContratoSignedUrl] = useState<string | null>(null);
@@ -92,6 +92,51 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
   }>({ status: "idle" });
   const { toast } = useToast();
   const qc = useQueryClient();
+
+  const generateJourneyPdf = async (includeAppendix: boolean) => {
+    if (!form.id) return;
+    setExportingPdf(includeAppendix ? "appendix" : "summary");
+    setLastPdfUrl(null);
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "generate-account-journey-pdf",
+        { body: { account_id: form.id, include_appendix: includeAppendix } },
+      );
+      if (error) throw error;
+      const url = (data as any)?.url;
+      const filename = (data as any)?.filename ?? "jornada-cliente.pdf";
+      if (!url) throw new Error("URL não retornada");
+      setLastPdfUrl(url);
+      setLastPdfFilename(filename);
+
+      try {
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const blob = await resp.blob();
+        const objUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = objUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(objUrl), 1500);
+        toast({ title: "PDF gerado", description: "Download iniciado." });
+      } catch (downloadErr) {
+        console.warn("blob download falhou, usando fallback", downloadErr);
+        toast({ title: "PDF pronto", description: "Clique no link abaixo para baixar." });
+      }
+    } catch (e: any) {
+      console.error(e);
+      toast({
+        title: "Erro ao gerar PDF",
+        description: e?.message ?? "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setExportingPdf(false);
+    }
+  };
 
   useEffect(() => {
     if (account) setForm({ ...account });
