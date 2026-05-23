@@ -160,17 +160,22 @@ function similarity(a: string, b: string): number {
 }
 
 async function fetchImageAsDataURL(url: string): Promise<string | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
   try {
-    const resp = await fetch(url);
+    const resp = await fetch(url, { signal: controller.signal });
     if (!resp.ok) return null;
     const ct = resp.headers.get("content-type") ?? "image/png";
     const buf = new Uint8Array(await resp.arrayBuffer());
+    if (buf.byteLength > 1_500_000) return null;
     let bin = "";
     for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
     return `data:${ct};base64,${btoa(bin)}`;
   } catch (e) {
     console.error("image fetch error", e);
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -221,22 +226,25 @@ Estrutura, exatamente nesta ordem:
 async function generateExecutiveSummary(payload: any): Promise<string> {
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
   if (!apiKey) return "Síntese executiva indisponível (LOVABLE_API_KEY ausente).";
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 18000);
   try {
     const resp = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
       {
         method: "POST",
+        signal: controller.signal,
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
+          model: "google/gemini-3.1-flash-lite-preview",
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: JSON.stringify(payload).slice(0, 120000) },
+            { role: "user", content: JSON.stringify(payload).slice(0, 35000) },
           ],
-          max_tokens: 4000,
+          max_tokens: 1600,
         }),
       },
     );
@@ -250,6 +258,8 @@ async function generateExecutiveSummary(payload: any): Promise<string> {
   } catch (e) {
     console.error("AI error", e);
     return "Síntese executiva indisponível (erro de rede).";
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -271,6 +281,7 @@ function buildHTML(data: {
   briefingText: string;
   preQualText: string;
   aiSummary: string;
+  includeAppendix: boolean;
   nameOf: (id?: string | null) => string;
 }): string {
   const {
@@ -288,6 +299,7 @@ function buildHTML(data: {
     briefingText,
     preQualText,
     aiSummary,
+    includeAppendix,
     nameOf,
   } = data;
 
@@ -393,8 +405,6 @@ function buildHTML(data: {
 
   // ============== CSS ==============
   const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800&display=swap');
-
     :root {
       --primary: ${primary};
       --bg: hsl(240 10% 3.9%);
@@ -410,7 +420,7 @@ function buildHTML(data: {
     html, body {
       background: var(--bg);
       color: var(--text);
-      font-family: 'Inter', -apple-system, sans-serif;
+      font-family: Arial, Helvetica, sans-serif;
       font-size: 10pt;
       line-height: 1.55;
       -webkit-print-color-adjust: exact;
@@ -1414,7 +1424,7 @@ function buildHTML(data: {
       '<span class="timestamp">$1</span>',
     );
 
-  const appendixHTML = transcripts.length
+  const appendixHTML = includeAppendix && transcripts.length
     ? `
     <div class="page">
       ${footer(10)}
@@ -1461,11 +1471,10 @@ async function renderPDFShift(html: string): Promise<Uint8Array> {
   const apiKey = Deno.env.get("PDFSHIFT_API_KEY");
   if (!apiKey) throw new Error("PDFSHIFT_API_KEY missing");
 
-  const auth = btoa(`api:${apiKey}`);
   const resp = await fetch("https://api.pdfshift.io/v3/convert/pdf", {
     method: "POST",
     headers: {
-      Authorization: `Basic ${auth}`,
+      "X-API-Key": apiKey,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -1473,7 +1482,12 @@ async function renderPDFShift(html: string): Promise<Uint8Array> {
       landscape: false,
       format: "A4",
       margin: "0",
-      use_print: false,
+      use_print: true,
+      wait_for_network: false,
+      disable_javascript: true,
+      lazy_load_images: false,
+      timeout: 30,
+      remove_blank: true,
       sandbox: false,
     }),
   });
@@ -1500,7 +1514,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { account_id } = await req.json();
+    const body = await req.json();
+    const { account_id } = body;
+    const includeAppendix = body?.include_appendix === true;
     if (!account_id || typeof account_id !== "string") {
       return new Response(JSON.stringify({ error: "account_id is required" }), {
         status: 400,
@@ -1576,7 +1592,9 @@ Deno.serve(async (req) => {
       const { data } = await userClient
         .from("crm_call_events")
         .select(
-          "id, created_at, event_type, operador, duracao_seg, status, gravacao_url, resumo, transcricao",
+          includeAppendix
+            ? "id, created_at, event_type, operador, duracao_seg, status, gravacao_url, resumo, transcricao"
+            : "id, created_at, event_type, operador, duracao_seg, status, gravacao_url, resumo",
         )
         .eq("lead_id", leadId)
         .order("created_at", { ascending: true });
@@ -1685,6 +1703,7 @@ Deno.serve(async (req) => {
       briefingText,
       preQualText,
       aiSummary,
+      includeAppendix,
       nameOf,
     });
 
