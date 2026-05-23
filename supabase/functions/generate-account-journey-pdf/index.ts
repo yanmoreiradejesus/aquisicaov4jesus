@@ -967,22 +967,26 @@ function buildHTML(data: {
     },
   ];
 
-  const spicedHTML = `
+  const visibleSpiced = spicedItems.filter(
+    (s: any) => (s.body && String(s.body).trim()) || (s.micro && s.micro.length),
+  );
+
+  const spicedHTML = visibleSpiced.length ? `
     <div class="section">
       ${sectionHead("03", "Diagnóstico SPICED", "Situação · Pain · Impact · Critical · Decision")}
-      ${spicedItems.map((s: any) => `
+      ${visibleSpiced.map((s: any) => `
         <div class="spiced-item">
           <div class="spiced-letter">${s.letter}</div>
           <div class="spiced-body">
             <h4>${esc(s.title)}</h4>
             <div class="sub">${esc(s.sub)}</div>
-            ${s.body ? renderRich(s.body) : (s.micro?.length ? "" : `<p style="color:#999;font-style:italic;">Não informado.</p>`)}
+            ${s.body ? renderRich(s.body) : ""}
             ${s.micro?.length ? `<div class="micro">${s.micro.map((m: any) => `<div><div class="label">${esc(m.label)}</div><div class="value">${esc(m.value)}</div></div>`).join("")}</div>` : ""}
           </div>
         </div>
       `).join("")}
     </div>
-  `;
+  ` : "";
 
   // ---------- 4. Jornada ----------
   const timelineHTML = byDay.size === 0
