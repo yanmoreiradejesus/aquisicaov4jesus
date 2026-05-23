@@ -1,46 +1,52 @@
-## Diagnóstico
+## Correções no PDF Account Journey
 
-O backend está saudável e os PDFs foram gerados no bucket `account-journeys`:
+Vou refatorar `supabase/functions/generate-account-journey-pdf/index.ts` para resolver todos os problemas identificados na análise.
 
-- `ca48961c-.../ffa7abd5-.../2026-05-23T01-35-06-101Z_PhD_Sports_Vila_Prudente.pdf`
-- `ca48961c-.../ffa7abd5-.../2026-05-23T01-34-18-933Z_PhD_Sports_Vila_Prudente.pdf`
+### 1. Sanitização de texto (emojis e caracteres especiais)
+- Criar função `sanitize(text)` que substitui emojis comuns por equivalentes ASCII seguros do Helvetica:
+  - `🎯 ✅ 🔴 🟡 🟢 📅 💬 📝 💰 ➡️ 🎙️ 📞 👥 🚀 ⚠️ 📊 🏢` → `•`, `[x]`, `[ALTA]`, `[MED]`, `[OK]`, `Data:`, `"`, `-`, `R$`, `→`, etc.
+  - Strip de qualquer caractere fora do range Latin-1 (`\u0000-\u00FF`) com fallback `?`
+- Aplicar `sanitize()` em **todo** texto antes de `doc.text()`, incluindo conteúdo gerado pela IA
+- Ajustar prompt do Gemini para **não usar emojis** na saída
 
-Ou seja: o arquivo existe no Storage. O problema é de acesso/download.
+### 2. Pré-processar JSON cru
+- Detectar campos `briefing_mercado`, `pesquisa_pre_qualificacao`, `pre_growth_class_relatorio` que são JSON
+- Renderizar apenas campos legíveis (`resumo`, `highlights[].resumo`, `pontos_principais`) em formato narrativo
+- Nunca despejar `JSON.stringify` no PDF
 
-Há dois pontos prováveis:
+### 3. Deduplicação de conteúdo
+- Se `lead.qualificacao` e `oportunidade.resumo_reuniao` têm overlap > 70% (comparação por substring/jaccard simples), renderizar apenas uma vez sob "Síntese da Qualificação"
+- Marcar seções já renderizadas para não repetir "Participantes / Dores / Próximos passos"
 
-1. **Arquivos criados pela função aparecem com `owner = null`** porque foram enviados pelo backend com chave administrativa. Dependendo do painel de Storage, isso pode impedir download direto pela UI mesmo com o objeto existente.
-2. No app, o botão tenta abrir o link assinado depois de uma geração de ~25s usando clique programático em `<a target="_blank">`. Navegadores podem bloquear esse download porque a ação acontece muito depois do clique original do usuário.
+### 4. Quebras de página corretas
+- Helper `ensureSpace(mm)` antes de cada `sectionTitle()` — se restar < 40mm, força `doc.addPage()`
+- Aplicar em todos os títulos de seção
 
-## Plano de correção
+### 5. Campos vazios com fallback `—`
+- Helper `val(v)` → retorna `'—'` se `v` for null/undefined/`''`/`'null'`
+- Aplicar em todos os campos (Cidade, Estado, datas, valores)
 
-### 1. Corrigir o download dentro do CRM
+### 6. Growth Class vazia
+- Se GC marcada como `concluida` mas todos os campos estão vazios → renderizar bloco único: *"Growth Class registrada mas conteúdo ainda não preenchido."*
+- Não renderizar os 5 cards vazios
 
-No `OnboardingDetailSheet.tsx`, ajustar o botão “Exportar jornada completa (PDF)” para:
+### 7. Logo do tenant na capa
+- `fetch(tenant.client_logo_url)` → converter para base64 → `doc.addImage()` na capa
+- Fallback para texto "V4 COMPANY" se logo não carregar ou der erro
 
-- chamar a função `generate-account-journey-pdf` normalmente;
-- receber `{ url, filename }`;
-- baixar o arquivo com `fetch(url)` como `blob`;
-- criar um `blob:` URL local;
-- disparar o download sem `target="_blank"`;
-- exibir um link de fallback “Clique aqui para baixar o PDF” caso o navegador ainda bloqueie.
+### 8. Síntese executiva completa
+- Aumentar `slice(0, 60000)` → `slice(0, 120000)` no input do Gemini
+- Aumentar `max_tokens` da síntese para garantir resposta completa
+- Ajustar prompt para retornar **markdown puro sem emojis**
 
-Isso garante que o usuário consiga baixar pelo próprio CRM, sem depender da UI do Storage.
+### 9. Atividades agrupadas por dia
+- Agrupar `crm_atividades` por data (YYYY-MM-DD) e renderizar como timeline com cabeçalho de dia
+- Transcrições com timestamps `[00:05:43]` formatadas em itálico/cinza claro
 
-### 2. Corrigir metadados de arquivos futuros no bucket
+### Arquivos alterados
+- `supabase/functions/generate-account-journey-pdf/index.ts` (refatoração completa)
 
-Na função `generate-account-journey-pdf`, antes do upload, passar o usuário autenticado como `owner`/metadado quando possível, para que arquivos futuros fiquem associados ao usuário que gerou o PDF.
-
-### 3. Ajustar arquivos já criados
-
-Adicionar uma migration para preencher o `owner` dos PDFs existentes no bucket `account-journeys` onde `owner is null`, usando o usuário que está associado ao tenant atual/admin quando aplicável.
-
-### 4. Validar
-
-- Confirmar que os objetos continuam em `account-journeys`.
-- Confirmar que o botão do CRM passa a oferecer download/fallback.
-- Confirmar que a política de leitura continua restrita ao mesmo tenant.
-
-## Resultado esperado
-
-O PDF continuará privado e isolado por tenant, mas poderá ser baixado com segurança pelo CRM e terá acesso mais consistente na área de Storage.
+### Validação
+- Gerar novo PDF para a mesma conta (PhD Sports Vila Prudente)
+- Baixar via Storage e converter páginas com `pdftoppm -jpeg -r 150` 
+- Inspecionar cada página: sem boxes pretos, sem JSON cru, sem duplicação, sem quebras feias, logo presente
