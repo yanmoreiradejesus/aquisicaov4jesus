@@ -495,7 +495,31 @@ function buildHTML(data: {
   const css = `
     @page {
       size: A4;
-      margin: 18mm 16mm 18mm 16mm;
+      margin: 22mm 16mm 18mm 16mm;
+      @top-left {
+        content: "${esc(clientName)} · Jornada do Cliente";
+        font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+        font-size: 8pt;
+        color: #999;
+        letter-spacing: 0.04em;
+      }
+      @bottom-right {
+        content: "Página " counter(page) " de " counter(pages);
+        font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+        font-size: 8pt;
+        color: #999;
+      }
+      @bottom-left {
+        content: "${esc(tenantName)}";
+        font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+        font-size: 8pt;
+        color: #bbb;
+      }
+    }
+    @page :first {
+      @top-left { content: ""; }
+      @bottom-left { content: ""; }
+      @bottom-right { content: ""; }
     }
     * { box-sizing: border-box; }
     html, body {
@@ -518,7 +542,7 @@ function buildHTML(data: {
     /* ===== Cover ===== */
     .cover {
       page-break-after: always;
-      padding-top: 30mm;
+      padding-top: 8mm;
     }
     .cover-eyebrow {
       font-size: 9pt;
