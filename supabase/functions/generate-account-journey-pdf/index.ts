@@ -1419,7 +1419,7 @@ function buildHTML(data: {
       '<span class="timestamp">$1</span>',
     );
 
-  const appendixHTML = transcripts.length
+  const appendixHTML = includeAppendix && transcripts.length
     ? `
     <div class="page">
       ${footer(10)}
@@ -1478,7 +1478,12 @@ async function renderPDFShift(html: string): Promise<Uint8Array> {
       landscape: false,
       format: "A4",
       margin: "0",
-      use_print: false,
+      use_print: true,
+      wait_for_network: false,
+      disable_javascript: true,
+      lazy_load_images: false,
+      timeout: 30,
+      remove_blank: true,
       sandbox: false,
     }),
   });
