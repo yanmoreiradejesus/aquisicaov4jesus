@@ -1229,8 +1229,8 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { account_id } = body;
-    // Default: include appendix when not specified (full report)
-    const includeAppendix = body?.include_appendix !== false;
+    // Default: exclude appendix (transcrições crus geram dezenas de páginas inúteis)
+    const includeAppendix = body?.include_appendix === true;
     if (!account_id || typeof account_id !== "string") {
       return new Response(JSON.stringify({ error: "account_id is required" }), {
         status: 400,
