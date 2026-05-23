@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { OnboardingCopilot } from "./OnboardingCopilot";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { DetailShell } from "./DetailShell";
+import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
 
 import ReactMarkdown from "react-markdown";
 
