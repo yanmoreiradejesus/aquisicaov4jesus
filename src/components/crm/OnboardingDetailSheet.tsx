@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { OnboardingCopilot } from "./OnboardingCopilot";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { DetailShell } from "./DetailShell";
+import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
 
 import ReactMarkdown from "react-markdown";
 
@@ -66,7 +67,7 @@ const formatCategorias = (val?: string | null): string => {
 
 export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, fullPage = false, backTo }: Props) => {
   const [form, setForm] = useState<any>(null);
-  const [responsaveis, setResponsaveis] = useState<{ id: string; full_name: string | null; email: string }[]>([]);
+  const { profiles: amProfiles } = useProfilesList({ departamento: "Receitas" });
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [exportingPdf, setExportingPdf] = useState<false | "summary" | "appendix">(false);
@@ -142,15 +143,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
     if (account) setForm({ ...account });
   }, [account]);
 
-  useEffect(() => {
-    if (!open) return;
-    supabase
-      .from("profiles" as any)
-      .select("id, full_name, email")
-      .eq("approved", true)
-      .order("full_name")
-      .then(({ data }) => setResponsaveis((data as any[]) ?? []));
-  }, [open]);
+  // (lista de responsáveis agora vem de useProfilesList acima)
 
   // Sign contrato URL when present
   useEffect(() => {
@@ -847,6 +840,24 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
           </TabsContent>
 
           <TabsContent value="growth" className="space-y-4 mt-4">
+            <div>
+              <Label>Account Manager (quem realizou a Growth Class)</Label>
+              <Select
+                value={(form as any).account_manager_id ?? "none"}
+                onValueChange={(v) => update({ account_manager_id: v === "none" ? null : v } as any)}
+              >
+                <SelectTrigger className="mt-1.5">
+                  <SelectValue placeholder="Selecione o Account Manager" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem Account Manager</SelectItem>
+                  {amProfiles.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{profileLabel(p)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div>
               <Label>Expectativa do cliente</Label>
               <Textarea

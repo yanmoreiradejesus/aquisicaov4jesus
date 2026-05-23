@@ -270,16 +270,17 @@ export const LeadDialog = ({ open, onOpenChange, lead, pipe, onSave, onDelete }:
             </Select>
           </div>
           <div className="space-y-1.5 md:col-span-2">
-            <Label>Responsável pelo lead</Label>
+            <Label>SDR responsável</Label>
             <Select value={form.responsavel_id ?? "none"} onValueChange={(v) => set("responsavel_id", v === "none" ? null : v)}>
               <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Sem responsável</SelectItem>
+                <SelectItem value="none">Sem SDR</SelectItem>
                 {profiles.map((p) => (
                   <SelectItem key={p.id} value={p.id}>{profileLabel(p)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-[11px] text-muted-foreground">O closer será definido automaticamente no agendamento da reunião.</p>
           </div>
           {form.etapa === "desqualificado" && (
             <div className="space-y-1.5 md:col-span-2">

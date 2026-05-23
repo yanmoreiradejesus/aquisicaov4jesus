@@ -453,14 +453,14 @@ function buildHTML(data: {
 
   // ---------- Participants ----------
   const participants: { name: string; role: string }[] = [];
-  if (oportunidade?.responsavel_id) {
-    participants.push({ name: nameOf(oportunidade.responsavel_id), role: "Responsável comercial" });
+  if (lead?.responsavel_id) {
+    participants.push({ name: nameOf(lead.responsavel_id), role: "SDR" });
+  }
+  if (oportunidade?.closer_id) {
+    participants.push({ name: nameOf(oportunidade.closer_id), role: "Closer responsável" });
   }
   if (account.account_manager_id) {
-    participants.push({ name: nameOf(account.account_manager_id), role: "Account Manager" });
-  }
-  if (account.growth_class_responsavel_id) {
-    participants.push({ name: nameOf(account.growth_class_responsavel_id), role: "Responsável Growth Class" });
+    participants.push({ name: nameOf(account.account_manager_id), role: "Account Manager (Growth Class)" });
   }
   if (isFilled(lead?.nome)) {
     participants.push({ name: lead.nome, role: `Cliente${isFilled(lead?.cargo) ? ` · ${lead.cargo}` : ""}` });
@@ -898,9 +898,9 @@ function buildHTML(data: {
         <div><div class="label">Fee mensal</div><div class="value">${esc(fmtBRL(oportunidade?.valor_fee))}</div></div>
         <div><div class="label">Fechamento</div><div class="value">${esc(fmtDate(oportunidade?.data_fechamento_real ?? account.data_inicio_contrato))}</div></div>
         <div><div class="label">Growth Class</div><div class="value">${esc(fmtDateTime(account.growth_class_data_realizada))}</div></div>
-        <div><div class="label">Responsável comercial</div><div class="value">${esc(nameOf(oportunidade?.responsavel_id ?? lead?.responsavel_id))}</div></div>
+        <div><div class="label">SDR</div><div class="value">${esc(nameOf(lead?.responsavel_id))}</div></div>
+        <div><div class="label">Closer</div><div class="value">${esc(nameOf(oportunidade?.closer_id))}</div></div>
         <div><div class="label">Account Manager</div><div class="value">${esc(nameOf(account.account_manager_id))}</div></div>
-        <div><div class="label">Responsável GC</div><div class="value">${esc(nameOf(account.growth_class_responsavel_id))}</div></div>
         <div><div class="label">Gerado em</div><div class="value">${esc(generatedAt)}</div></div>
       </div>
     </div>
@@ -1120,7 +1120,7 @@ function buildHTML(data: {
         <div class="kv-grid" style="margin-bottom:4mm;">
           <div class="kv"><div class="label">Agendada</div><div class="value">${esc(fmtDateTime(account.growth_class_data_agendada))}</div></div>
           <div class="kv"><div class="label">Realizada</div><div class="value">${esc(fmtDateTime(account.growth_class_data_realizada))}</div></div>
-          <div class="kv"><div class="label">Responsável V4</div><div class="value">${esc(nameOf(account.growth_class_responsavel_id))}</div></div>
+          <div class="kv"><div class="label">Account Manager</div><div class="value">${esc(nameOf(account.account_manager_id))}</div></div>
         </div>
         ${isFilled(account.growth_class_expectativas) ? `
           <h3 class="sub-title">Expectativa do cliente</h3>
@@ -1328,8 +1328,8 @@ Deno.serve(async (req) => {
 
     const userIds = [
       oportunidade?.responsavel_id,
+      oportunidade?.closer_id,
       account.account_manager_id,
-      account.growth_class_responsavel_id,
       lead?.responsavel_id,
     ].filter(Boolean);
     const profiles: Record<string, string> = {};
