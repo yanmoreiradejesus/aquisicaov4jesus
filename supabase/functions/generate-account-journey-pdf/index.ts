@@ -1,6 +1,5 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,66 +8,9 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// V4 brand palette
-const COLORS = {
-  bg: [10, 10, 15] as [number, number, number],
-  surface: [20, 20, 28] as [number, number, number],
-  primary: [59, 130, 246] as [number, number, number],
-  primarySoft: [29, 78, 216] as [number, number, number],
-  text: [240, 240, 245] as [number, number, number],
-  muted: [160, 165, 180] as [number, number, number],
-  border: [55, 65, 90] as [number, number, number],
-  gcAccent: [37, 99, 235] as [number, number, number],
-};
-
-const PAGE_W = 210;
-const PAGE_H = 297;
-const MARGIN = 16;
-const CONTENT_W = PAGE_W - MARGIN * 2;
-
-// ============ Text helpers ============
-
-// Map of emojis/symbols to ASCII-safe Helvetica equivalents
-const EMOJI_MAP: Record<string, string> = {
-  "🎯": "•", "✅": "[x]", "❌": "[x]", "🔴": "[ALTA]", "🟡": "[MED]",
-  "🟢": "[OK]", "📅": "Data:", "💬": '"', "📝": "-", "💰": "R$",
-  "➡️": "->", "→": "->", "🎙️": "•", "📞": "Tel:", "👥": "•",
-  "🚀": "•", "⚠️": "[!]", "📊": "•", "🏢": "•", "💡": "•",
-  "📌": "•", "🔥": "[!]", "⭐": "*", "📈": "•", "📉": "•",
-  "🎤": "•", "🗓️": "Data:", "⏰": "Hora:", "📍": "•", "🤝": "•",
-  "💼": "•", "🎓": "•", "🏆": "*", "✨": "*", "🔍": "•",
-  "📋": "-", "📁": "•", "🎉": "*", "👤": "•", "🌟": "*",
-};
-
-function sanitize(input: string | null | undefined): string {
-  if (input == null) return "";
-  let s = String(input);
-  // Replace mapped emojis first
-  for (const [k, v] of Object.entries(EMOJI_MAP)) {
-    s = s.split(k).join(v);
-  }
-  // Remove any remaining surrogate pairs / emoji-range chars
-  s = s.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, "");
-  s = s.replace(/[\u{1F000}-\u{1FFFF}]/gu, "");
-  s = s.replace(/[\u{2600}-\u{27BF}]/gu, "");
-  s = s.replace(/[\u{2300}-\u{23FF}]/gu, "");
-  // Variation selectors / ZWJ
-  s = s.replace(/[\uFE00-\uFE0F\u200D]/g, "");
-  // Smart quotes -> ascii
-  s = s.replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"');
-  s = s.replace(/[\u2013\u2014]/g, "-");
-  // Strip anything still beyond Latin-1
-  s = s.replace(/[^\x00-\xFF]/g, "");
-  return s;
-}
-
-function val(v: any): string {
-  if (v === null || v === undefined) return "—";
-  const s = String(v).trim();
-  if (!s || s === "null" || s === "undefined") return "—";
-  return s;
-}
-
+// ====================================================================
+// Helpers
+// ====================================================================
 const fmtBRL = (v?: number | null) =>
   !v
     ? "—"
@@ -80,6 +22,7 @@ const fmtBRL = (v?: number | null) =>
 
 const fmtDate = (iso?: string | null) =>
   !iso ? "—" : new Date(iso).toLocaleDateString("pt-BR");
+
 const fmtDateTime = (iso?: string | null) =>
   !iso
     ? "—"
@@ -88,7 +31,71 @@ const fmtDateTime = (iso?: string | null) =>
         timeStyle: "short",
       });
 
-// ============ JSON -> readable text ============
+const isFilled = (v: any): boolean => {
+  if (v == null) return false;
+  const s = String(v).trim();
+  return !!s && s !== "null" && s !== "undefined" && s !== "—";
+};
+
+const esc = (s: any): string => {
+  if (s == null) return "";
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+};
+
+// Minimal markdown -> HTML for AI output (headers, bold, italics, lists, hr)
+function mdToHtml(input: string): string {
+  if (!input) return "";
+  let s = esc(input);
+  // Code blocks (rare here, but safe)
+  s = s.replace(/```([\s\S]*?)```/g, (_, code) => `<pre>${code}</pre>`);
+  // Headings ## and ###
+  s = s.replace(/^###\s+(.+)$/gm, "<h4>$1</h4>");
+  s = s.replace(/^##\s+(.+)$/gm, "<h3>$1</h3>");
+  s = s.replace(/^#\s+(.+)$/gm, "<h2>$1</h2>");
+  // Horizontal rule
+  s = s.replace(/^---+\s*$/gm, "<hr/>");
+  // Bold and italic
+  s = s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+  s = s.replace(/_([^_\n]+)_/g, "<em>$1</em>");
+  // Lists
+  const lines = s.split("\n");
+  const out: string[] = [];
+  let inUL = false;
+  for (const line of lines) {
+    const m = line.match(/^\s*[-•]\s+(.+)$/);
+    if (m) {
+      if (!inUL) {
+        out.push("<ul>");
+        inUL = true;
+      }
+      out.push(`<li>${m[1]}</li>`);
+    } else {
+      if (inUL) {
+        out.push("</ul>");
+        inUL = false;
+      }
+      out.push(line);
+    }
+  }
+  if (inUL) out.push("</ul>");
+  s = out.join("\n");
+  // Paragraphs from blank lines, but skip lines that are already block tags
+  const blocks = s.split(/\n{2,}/).map((b) => {
+    const t = b.trim();
+    if (!t) return "";
+    if (/^<(h\d|ul|ol|pre|hr|blockquote|div|p)/.test(t)) return t;
+    return `<p>${t.replace(/\n/g, "<br/>")}</p>`;
+  });
+  return blocks.filter(Boolean).join("\n");
+}
+
+// JSON -> readable text (used for briefing/qualification JSON fields)
 function jsonToReadable(v: any, depth = 0): string {
   if (v == null) return "";
   if (typeof v === "string") return v;
@@ -98,19 +105,25 @@ function jsonToReadable(v: any, depth = 0): string {
       .map((item) => {
         if (item == null) return null;
         if (typeof item === "object") {
-          // prefer common fields
-          const r = item.resumo ?? item.descricao ?? item.titulo ?? item.text ?? item.name;
-          if (r) return `• ${jsonToReadable(r, depth + 1)}`;
-          return `• ${jsonToReadable(item, depth + 1)}`;
+          const r =
+            item.resumo ?? item.descricao ?? item.titulo ?? item.text ?? item.name;
+          if (r) return `- ${jsonToReadable(r, depth + 1)}`;
+          return `- ${jsonToReadable(item, depth + 1)}`;
         }
-        return `• ${jsonToReadable(item, depth + 1)}`;
+        return `- ${jsonToReadable(item, depth + 1)}`;
       })
       .filter(Boolean)
       .join("\n");
   }
   if (typeof v === "object") {
-    // Preferred keys first
-    const preferred = ["resumo", "descricao", "highlights", "pontos_principais", "principais_pontos", "insights"];
+    const preferred = [
+      "resumo",
+      "descricao",
+      "highlights",
+      "pontos_principais",
+      "principais_pontos",
+      "insights",
+    ];
     const parts: string[] = [];
     for (const k of preferred) {
       if (v[k] != null) {
@@ -138,7 +151,6 @@ function similarity(a: string, b: string): number {
   const shorter = A.length < B.length ? A : B;
   const longer = A.length < B.length ? B : A;
   if (longer.includes(shorter)) return shorter.length / longer.length;
-  // simple token jaccard
   const ta = new Set(A.split(/\s+/));
   const tb = new Set(B.split(/\s+/));
   let inter = 0;
@@ -147,406 +159,1335 @@ function similarity(a: string, b: string): number {
   return uni === 0 ? 0 : inter / uni;
 }
 
-async function fetchImageAsBase64(url: string): Promise<{ data: string; format: string } | null> {
+async function fetchImageAsDataURL(url: string): Promise<string | null> {
   try {
     const resp = await fetch(url);
     if (!resp.ok) return null;
-    const ct = resp.headers.get("content-type") ?? "";
-    let format = "PNG";
-    if (ct.includes("jpeg") || ct.includes("jpg")) format = "JPEG";
-    else if (ct.includes("webp")) format = "WEBP";
+    const ct = resp.headers.get("content-type") ?? "image/png";
     const buf = new Uint8Array(await resp.arrayBuffer());
     let bin = "";
     for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
-    const b64 = btoa(bin);
-    return { data: `data:image/${format.toLowerCase()};base64,${b64}`, format };
+    return `data:${ct};base64,${btoa(bin)}`;
   } catch (e) {
-    console.error("logo fetch error", e);
+    console.error("image fetch error", e);
     return null;
   }
 }
 
-class PDFBuilder {
-  doc: jsPDF;
-  y: number = MARGIN;
-  pageNum: number = 1;
-  clientName: string;
-  primary: [number, number, number];
+const initials = (name: string): string =>
+  (name || "?")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
 
-  constructor(clientName: string, primaryHex?: string) {
-    this.doc = new jsPDF({ unit: "mm", format: "a4" });
-    this.clientName = clientName;
-    this.primary = primaryHex ? this.hexToRgb(primaryHex) : COLORS.primary;
-    this.paintBackground();
-    this.drawHeaderFooter();
-  }
-
-  hexToRgb(hex: string): [number, number, number] {
-    if (hex.startsWith("hsl")) return COLORS.primary;
-    const h = hex.replace("#", "");
-    return [
-      parseInt(h.slice(0, 2), 16),
-      parseInt(h.slice(2, 4), 16),
-      parseInt(h.slice(4, 6), 16),
-    ];
-  }
-
-  paintBackground() {
-    this.doc.setFillColor(...COLORS.bg);
-    this.doc.rect(0, 0, PAGE_W, PAGE_H, "F");
-  }
-
-  drawHeaderFooter() {
-    this.doc.setFillColor(...this.primary);
-    this.doc.rect(0, 0, PAGE_W, 1.5, "F");
-    this.doc.setFontSize(8);
-    this.doc.setTextColor(...COLORS.muted);
-    this.doc.text(
-      sanitize(`${this.clientName} · Jornada do Cliente`),
-      MARGIN,
-      PAGE_H - 6,
-    );
-    this.doc.text(`Página ${this.pageNum}`, PAGE_W - MARGIN, PAGE_H - 6, {
-      align: "right",
-    });
-  }
-
-  newPage() {
-    this.doc.addPage();
-    this.pageNum++;
-    this.y = MARGIN + 4;
-    this.paintBackground();
-    this.drawHeaderFooter();
-  }
-
-  ensureSpace(needed: number) {
-    if (this.y + needed > PAGE_H - 14) this.newPage();
-  }
-
-  addSpace(mm: number) {
-    this.y += mm;
-  }
-
-  sectionTitle(num: string, title: string) {
-    // Force fresh space (>= 40mm) before a section title
-    if (this.y + 40 > PAGE_H - 14) this.newPage();
-    this.addSpace(4);
-    this.doc.setFillColor(...this.primary);
-    this.doc.roundedRect(MARGIN, this.y, 10, 8, 1.5, 1.5, "F");
-    this.doc.setTextColor(255, 255, 255);
-    this.doc.setFontSize(10);
-    this.doc.setFont("helvetica", "bold");
-    this.doc.text(num, MARGIN + 5, this.y + 5.6, { align: "center" });
-    this.doc.setTextColor(...COLORS.text);
-    this.doc.setFontSize(15);
-    this.doc.text(sanitize(title.toUpperCase()), MARGIN + 14, this.y + 6);
-    this.y += 11;
-    this.doc.setDrawColor(...this.primary);
-    this.doc.setLineWidth(0.4);
-    this.doc.line(MARGIN, this.y, MARGIN + 40, this.y);
-    this.y += 5;
-    this.doc.setFont("helvetica", "normal");
-  }
-
-  subTitle(text: string) {
-    this.ensureSpace(10);
-    this.doc.setTextColor(...this.primary);
-    this.doc.setFontSize(11);
-    this.doc.setFont("helvetica", "bold");
-    this.doc.text(sanitize(text), MARGIN, this.y);
-    this.y += 5;
-    this.doc.setFont("helvetica", "normal");
-    this.doc.setTextColor(...COLORS.text);
-  }
-
-  paragraph(
-    text: string | null | undefined,
-    opts: { italic?: boolean; muted?: boolean; size?: number } = {},
-  ) {
-    const value = sanitize((text ?? "").toString()).trim();
-    if (!value) return this.muted("—");
-    const size = opts.size ?? 10;
-    this.doc.setFont("helvetica", opts.italic ? "italic" : "normal");
-    this.doc.setFontSize(size);
-    this.doc.setTextColor(...(opts.muted ? COLORS.muted : COLORS.text));
-    const lines = this.doc.splitTextToSize(value, CONTENT_W);
-    for (const line of lines) {
-      this.ensureSpace(size * 0.45);
-      this.doc.text(line, MARGIN, this.y);
-      this.y += size * 0.42 + 0.6;
-    }
-    this.doc.setFont("helvetica", "normal");
-  }
-
-  muted(text: string) {
-    this.doc.setFontSize(9);
-    this.doc.setTextColor(...COLORS.muted);
-    this.doc.setFont("helvetica", "italic");
-    this.ensureSpace(5);
-    this.doc.text(sanitize(text), MARGIN, this.y);
-    this.y += 4;
-    this.doc.setFont("helvetica", "normal");
-    this.doc.setTextColor(...COLORS.text);
-  }
-
-  field(label: string, value: string | null | undefined) {
-    const v = sanitize(val(value));
-    this.ensureSpace(7);
-    this.doc.setFontSize(8.5);
-    this.doc.setTextColor(...COLORS.muted);
-    this.doc.text(sanitize(label.toUpperCase()), MARGIN, this.y);
-    this.y += 3.4;
-    this.doc.setFontSize(10);
-    this.doc.setTextColor(...COLORS.text);
-    const lines = this.doc.splitTextToSize(v, CONTENT_W);
-    for (const line of lines) {
-      this.ensureSpace(5);
-      this.doc.text(line, MARGIN, this.y);
-      this.y += 4.4;
-    }
-    this.addSpace(1.5);
-  }
-
-  twoCols(items: { label: string; value: string | null | undefined }[]) {
-    const colW = CONTENT_W / 2 - 3;
-    for (let i = 0; i < items.length; i += 2) {
-      const left = items[i];
-      const right = items[i + 1];
-      this.ensureSpace(11);
-      const startY = this.y;
-      this.doc.setFontSize(8.5);
-      this.doc.setTextColor(...COLORS.muted);
-      this.doc.text(sanitize(left.label.toUpperCase()), MARGIN, this.y);
-      this.doc.setFontSize(10);
-      this.doc.setTextColor(...COLORS.text);
-      const leftLines = this.doc.splitTextToSize(sanitize(val(left.value)), colW);
-      this.doc.text(leftLines, MARGIN, this.y + 4);
-      let rLines: string[] = [];
-      if (right) {
-        this.doc.setFontSize(8.5);
-        this.doc.setTextColor(...COLORS.muted);
-        this.doc.text(sanitize(right.label.toUpperCase()), MARGIN + colW + 6, startY);
-        this.doc.setFontSize(10);
-        this.doc.setTextColor(...COLORS.text);
-        rLines = this.doc.splitTextToSize(sanitize(val(right.value)), colW);
-        this.doc.text(rLines, MARGIN + colW + 6, startY + 4);
-      }
-      const maxLines = Math.max(leftLines.length, rLines.length || 1);
-      this.y = startY + 4 + maxLines * 4.4 + 1.5;
-    }
-  }
-
-  card(content: () => void, accentColor?: [number, number, number]) {
-    const startY = this.y;
-    this.ensureSpace(12);
-    const innerStart = this.y + 4;
-    this.y = innerStart;
-    content();
-    const endY = this.y + 3;
-    this.doc.setDrawColor(...(accentColor ?? COLORS.border));
-    this.doc.setLineWidth(0.3);
-    this.doc.roundedRect(MARGIN - 2, startY + 1, CONTENT_W + 4, endY - startY, 2, 2, "S");
-    if (accentColor) {
-      this.doc.setFillColor(...accentColor);
-      this.doc.rect(MARGIN - 2, startY + 1, 1.2, endY - startY, "F");
-    }
-    this.y = endY + 2;
-  }
-
-  quoteBlock(text: string | null | undefined) {
-    const value = sanitize((text ?? "").toString()).trim();
-    if (!value) {
-      this.muted("Nenhuma expectativa registrada.");
-      return;
-    }
-    this.ensureSpace(14);
-    const startY = this.y;
-    this.doc.setFont("helvetica", "italic");
-    this.doc.setFontSize(11);
-    this.doc.setTextColor(...COLORS.text);
-    const lines = this.doc.splitTextToSize(`" ${value} "`, CONTENT_W - 8);
-    for (const line of lines) {
-      this.ensureSpace(5.5);
-      this.doc.text(line, MARGIN + 6, this.y);
-      this.y += 5;
-    }
-    this.doc.setFillColor(...this.primary);
-    this.doc.rect(MARGIN, startY - 1, 2, this.y - startY + 1, "F");
-    this.doc.setFont("helvetica", "normal");
-    this.addSpace(2);
-  }
-
-  drawCover(opts: {
-    clientName: string;
-    tenantName: string;
-    tenantLogo?: { data: string; format: string } | null;
-    responsavelComercial?: string;
-    accountManager?: string;
-    gcResponsavel?: string;
-    gcData?: string;
-  }) {
-    this.doc.setFillColor(...this.primary);
-    this.doc.rect(0, 0, PAGE_W, 70, "F");
-
-    // Logo or tenant name
-    if (opts.tenantLogo) {
-      try {
-        this.doc.addImage(opts.tenantLogo.data, opts.tenantLogo.format, MARGIN, 10, 28, 14, undefined, "FAST");
-      } catch (e) {
-        console.error("addImage fail", e);
-        this.doc.setTextColor(255, 255, 255);
-        this.doc.setFontSize(10);
-        this.doc.text(sanitize(opts.tenantName.toUpperCase()), MARGIN, 14);
-      }
-    } else {
-      this.doc.setTextColor(255, 255, 255);
-      this.doc.setFontSize(10);
-      this.doc.text(sanitize(opts.tenantName.toUpperCase()), MARGIN, 14);
-    }
-
-    this.doc.setTextColor(255, 255, 255);
-    this.doc.setFontSize(34);
-    this.doc.setFont("helvetica", "bold");
-    this.doc.text("JORNADA", MARGIN, 44);
-    this.doc.text("DO CLIENTE", MARGIN, 60);
-    this.doc.setFont("helvetica", "normal");
-
-    this.y = 90;
-    this.doc.setFontSize(9);
-    this.doc.setTextColor(...COLORS.muted);
-    this.doc.text("CLIENTE", MARGIN, this.y);
-    this.y += 6;
-    this.doc.setFontSize(24);
-    this.doc.setFont("helvetica", "bold");
-    this.doc.setTextColor(...COLORS.text);
-    const nameLines = this.doc.splitTextToSize(sanitize(opts.clientName), CONTENT_W);
-    for (const ln of nameLines) {
-      this.doc.text(ln, MARGIN, this.y);
-      this.y += 9;
-    }
-    this.doc.setFont("helvetica", "normal");
-
-    this.y += 6;
-    this.doc.setDrawColor(...this.primary);
-    this.doc.setLineWidth(0.5);
-    this.doc.line(MARGIN, this.y, MARGIN + 30, this.y);
-    this.y += 12;
-
-    this.doc.setTextColor(...COLORS.muted);
-    this.doc.setFontSize(10);
-    this.doc.text(
-      "Diagnostico SPICED - Linha do tempo comercial - Growth Class",
-      MARGIN,
-      this.y,
-    );
-    this.y += 16;
-
-    this.twoCols([
-      { label: "Responsável comercial", value: opts.responsavelComercial ?? "—" },
-      { label: "Account manager", value: opts.accountManager ?? "—" },
-      { label: "Responsável Growth Class", value: opts.gcResponsavel ?? "—" },
-      { label: "Growth Class realizada em", value: opts.gcData ?? "—" },
-    ]);
-
-    this.doc.setFontSize(8);
-    this.doc.setTextColor(...COLORS.muted);
-    this.doc.text(
-      sanitize(`Gerado em ${new Date().toLocaleString("pt-BR", { dateStyle: "long", timeStyle: "short" })}`),
-      MARGIN,
-      PAGE_H - 20,
-    );
-  }
-
-  drawGCBanner() {
-    this.newPage();
-    this.doc.setFillColor(...this.primary);
-    this.doc.rect(0, MARGIN, PAGE_W, 38, "F");
-
-    this.doc.setTextColor(255, 255, 255);
-    this.doc.setFontSize(9);
-    this.doc.text("MARCO ZERO DA OPERACAO", MARGIN, MARGIN + 9);
-    this.doc.setFontSize(26);
-    this.doc.setFont("helvetica", "bold");
-    this.doc.text("GROWTH CLASS", MARGIN, MARGIN + 24);
-    this.doc.setFont("helvetica", "italic");
-    this.doc.setFontSize(9.5);
-    this.doc.text(
-      "Ponto de calibracao entre o que foi vendido e o que sera entregue.",
-      MARGIN,
-      MARGIN + 32,
-    );
-    this.doc.setFont("helvetica", "normal");
-    this.y = MARGIN + 46;
-  }
-}
-
+// ====================================================================
+// AI executive summary
+// ====================================================================
 const SYSTEM_PROMPT = `Você é um consultor sênior da V4 Company que prepara handoffs comerciais → operação.
 Receberá os dados completos da jornada de um cliente (lead, oportunidade, reuniões, Growth Class).
-Gere uma SÍNTESE EXECUTIVA para a operação, em português do Brasil, em texto corrido com bullets curtos.
+Gere uma SÍNTESE EXECUTIVA para a operação, em português do Brasil.
 
-REGRAS DE FORMATAÇÃO OBRIGATÓRIAS:
-- NÃO use emojis de espécie alguma (sem 🎯 ✅ 🔴 📅 💬 etc).
-- Use apenas caracteres ASCII/Latin-1. Bullets como "- " ou "• ".
-- NÃO use markdown headings (#, ##). Use SEÇÕES EM CAIXA ALTA seguidas de linha em branco.
-- Não use asteriscos ** para negrito.
+FORMATO obrigatório (markdown):
+- Use ## para títulos de seção, listas com "- " e **negrito** para destacar termos chave.
+- NÃO use emojis.
+- Seja preciso, sem floreios. Se algo estiver vazio, escreva "Não informado".
 
-A síntese deve ter estas seções, exatamente nesta ordem:
+Estrutura, exatamente nesta ordem:
 
-QUEM E O CLIENTE
+## Quem é o cliente
 - 2 a 4 bullets factuais (segmento, faturamento, contexto)
 
-DOR CENTRAL
-- 1 parágrafo curto e direto
+## Dor central
+1 parágrafo curto e direto.
 
-PROMESSA FEITA NA GROWTH CLASS
-- bullets do que foi acordado/prometido na GC
+## Promessa feita na Growth Class
+- bullets do que foi acordado
 
-EXPECTATIVA DO CLIENTE EM UMA FRASE
-- 1 frase entre aspas, parafraseando o cliente
+## Expectativa do cliente em uma frase
+> 1 frase entre aspas, parafraseando o cliente.
 
-ENTREGAVEIS COMBINADOS
+## Entregáveis combinados
 - bullets concretos
 
-RISCOS E PONTOS DE ATENCAO
+## Riscos e pontos de atenção
 - bullets
 
-PRIMEIRAS ACOES (30 dias)
-- 3 a 6 bullets de ações priorizadas
-
-Seja preciso, sem floreios. Não invente dados. Se algo estiver vazio, escreva "Não informado".`;
+## Primeiras ações (30 dias)
+- 3 a 6 bullets de ações priorizadas`;
 
 async function generateExecutiveSummary(payload: any): Promise<string> {
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!apiKey) return "Sintese executiva indisponivel (LOVABLE_API_KEY ausente).";
+  if (!apiKey) return "Síntese executiva indisponível (LOVABLE_API_KEY ausente).";
   try {
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
+    const resp = await fetch(
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-pro",
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: JSON.stringify(payload).slice(0, 120000) },
+          ],
+          max_tokens: 4000,
+        }),
       },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: JSON.stringify(payload).slice(0, 120000) },
-        ],
-        max_tokens: 4000,
-      }),
-    });
+    );
     if (!resp.ok) {
       const t = await resp.text();
       console.error("AI gateway error:", resp.status, t);
-      return `Sintese executiva indisponivel (erro ${resp.status}).`;
+      return `Síntese executiva indisponível (erro ${resp.status}).`;
     }
     const data = await resp.json();
-    return data?.choices?.[0]?.message?.content ?? "Sintese nao retornada.";
+    return data?.choices?.[0]?.message?.content ?? "Síntese não retornada.";
   } catch (e) {
     console.error("AI error", e);
-    return "Sintese executiva indisponivel (erro de rede).";
+    return "Síntese executiva indisponível (erro de rede).";
   }
 }
 
+// ====================================================================
+// HTML TEMPLATE
+// ====================================================================
+function buildHTML(data: {
+  clientName: string;
+  tenantName: string;
+  tenantLogo: string | null;
+  primaryHsl: string;
+  generatedAt: string;
+  lead: any;
+  oportunidade: any;
+  account: any;
+  cobrancas: any[];
+  atividades: any[];
+  callEvents: any[];
+  briefingText: string;
+  preQualText: string;
+  aiSummary: string;
+  nameOf: (id?: string | null) => string;
+}): string {
+  const {
+    clientName,
+    tenantName,
+    tenantLogo,
+    primaryHsl,
+    generatedAt,
+    lead,
+    oportunidade,
+    account,
+    cobrancas,
+    atividades,
+    callEvents,
+    briefingText,
+    preQualText,
+    aiSummary,
+    nameOf,
+  } = data;
+
+  const primary = primaryHsl && primaryHsl.startsWith("hsl") ? primaryHsl : "hsl(217 91% 60%)";
+
+  // KPIs for cover
+  const kpis = [
+    {
+      label: "Valor total",
+      value: fmtBRL(oportunidade?.valor_total ?? oportunidade?.valor_ef),
+    },
+    {
+      label: "Fee mensal",
+      value: fmtBRL(oportunidade?.valor_fee),
+    },
+    {
+      label: "Fechamento",
+      value: fmtDate(
+        oportunidade?.data_fechamento_real ?? account.data_inicio_contrato,
+      ),
+    },
+  ];
+
+  // Identification fields (omit empty ones — no orphan labels)
+  const cidadeEstado = [lead?.cidade, lead?.estado].filter(isFilled).join(" / ");
+  const idFields: { label: string; value: string }[] = [];
+  const pushIfFilled = (label: string, v: any) => {
+    if (isFilled(v)) idFields.push({ label, value: String(v) });
+  };
+  pushIfFilled("Empresa", lead?.empresa);
+  pushIfFilled("Contato", lead?.nome);
+  pushIfFilled("Cargo", lead?.cargo);
+  pushIfFilled("Email", lead?.email);
+  pushIfFilled("Telefone", lead?.telefone);
+  pushIfFilled("Instagram", lead?.instagram);
+  pushIfFilled("Site", lead?.site);
+  pushIfFilled("Localização", cidadeEstado);
+  pushIfFilled("Segmento", lead?.segmento);
+  pushIfFilled("Faturamento", lead?.faturamento);
+  pushIfFilled("Tier", lead?.tier);
+  pushIfFilled("Urgência", lead?.urgencia);
+  pushIfFilled("Origem", lead?.origem);
+  pushIfFilled("Canal", lead?.canal);
+  pushIfFilled("Pipe", lead?.pipe);
+  if (lead?.data_criacao_origem)
+    idFields.push({ label: "Criado em", value: fmtDate(lead.data_criacao_origem) });
+
+  // SPICED data
+  const qualif = (lead?.qualificacao ?? "").trim();
+  const resumoReu = (oportunidade?.resumo_reuniao ?? "").trim();
+  const sim = similarity(qualif, resumoReu);
+  const dorParts: string[] = [];
+  if (qualif) dorParts.push(qualif);
+  if (resumoReu && sim < 0.7) dorParts.push(resumoReu);
+
+  const situParts: string[] = [];
+  if (lead?.notas) situParts.push(lead.notas);
+  if (oportunidade?.info_deal) situParts.push(oportunidade.info_deal);
+  if (briefingText) situParts.push(`**Briefing de mercado**\n${briefingText}`);
+  if (preQualText) situParts.push(`**Pré-qualificação**\n${preQualText}`);
+
+  // Timeline grouped by day
+  const byDay = new Map<string, any[]>();
+  for (const a of atividades) {
+    const d = new Date(a.created_at).toLocaleDateString("pt-BR");
+    if (!byDay.has(d)) byDay.set(d, []);
+    byDay.get(d)!.push(a);
+  }
+
+  // GC empty check
+  const gcFields = [
+    account.growth_class_expectativas,
+    account.growth_class_ata,
+    account.growth_class_oportunidades_monetizacao,
+    account.growth_class_proximos_passos,
+    account.growth_class_transcricao_reuniao,
+  ];
+  const gcIsEmpty = gcFields.every((f) => !f || !String(f).trim());
+
+  // Participants (initials extracted from oportunidade.participantes if exists, else just responsavel)
+  const participants: { name: string; role: string }[] = [];
+  if (oportunidade?.responsavel_id) {
+    participants.push({
+      name: nameOf(oportunidade.responsavel_id),
+      role: "Responsável comercial",
+    });
+  }
+  if (account.account_manager_id) {
+    participants.push({
+      name: nameOf(account.account_manager_id),
+      role: "Account Manager",
+    });
+  }
+  if (account.growth_class_responsavel_id) {
+    participants.push({
+      name: nameOf(account.growth_class_responsavel_id),
+      role: "Responsável Growth Class",
+    });
+  }
+  if (lead?.nome) {
+    participants.push({ name: lead.nome, role: `Cliente${lead?.cargo ? ` · ${lead.cargo}` : ""}` });
+  }
+
+  // ============== CSS ==============
+  const css = `
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    :root {
+      --primary: ${primary};
+      --bg: hsl(240 10% 3.9%);
+      --surface: hsl(240 10% 7%);
+      --surface-2: hsl(240 8% 11%);
+      --border: hsl(240 6% 18%);
+      --text: hsl(0 0% 98%);
+      --muted: hsl(240 5% 65%);
+      --accent: ${primary};
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, sans-serif;
+      font-size: 10pt;
+      line-height: 1.55;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    @page { size: A4; margin: 0; }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      padding: 18mm 16mm 22mm 16mm;
+      position: relative;
+      page-break-after: always;
+      background: var(--bg);
+      overflow: hidden;
+    }
+    .page:last-child { page-break-after: auto; }
+
+    .page-footer {
+      position: absolute;
+      bottom: 8mm;
+      left: 16mm;
+      right: 16mm;
+      display: flex;
+      justify-content: space-between;
+      font-size: 8pt;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      padding-top: 4mm;
+    }
+    .page-strip {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--primary);
+    }
+
+    /* ============ COVER ============ */
+    .cover {
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .cover-hero {
+      background: linear-gradient(135deg, var(--primary) 0%, hsl(220 70% 35%) 100%);
+      padding: 22mm 18mm 30mm 18mm;
+      position: relative;
+      overflow: hidden;
+    }
+    .cover-hero::after {
+      content: '';
+      position: absolute;
+      right: -50mm;
+      top: -50mm;
+      width: 200mm;
+      height: 200mm;
+      background: radial-gradient(circle, hsla(0,0%,100%,0.08) 0%, transparent 60%);
+    }
+    .cover-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 30mm;
+      position: relative;
+      z-index: 1;
+    }
+    .cover-brand img { max-height: 36px; max-width: 130px; }
+    .cover-brand .brand-text {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 14pt;
+      letter-spacing: 0.15em;
+      color: white;
+    }
+    .cover-eyebrow {
+      font-family: 'Inter', sans-serif;
+      font-size: 10pt;
+      font-weight: 500;
+      color: hsla(0,0%,100%,0.75);
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      margin-bottom: 6mm;
+      position: relative;
+      z-index: 1;
+    }
+    .cover-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 80pt;
+      line-height: 0.92;
+      color: white;
+      letter-spacing: 0.02em;
+      position: relative;
+      z-index: 1;
+    }
+    .cover-body {
+      padding: 14mm 18mm 18mm 18mm;
+      flex: 1;
+    }
+    .cover-client-label {
+      font-size: 9pt;
+      color: var(--muted);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 4mm;
+    }
+    .cover-client-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 44pt;
+      line-height: 1;
+      color: var(--text);
+      letter-spacing: 0.02em;
+      margin-bottom: 8mm;
+    }
+    .cover-meta {
+      color: var(--muted);
+      font-size: 10pt;
+      margin-bottom: 14mm;
+      max-width: 130mm;
+    }
+    .kpi-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6mm;
+      margin-bottom: 14mm;
+    }
+    .kpi {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8mm 6mm;
+      border-left: 3px solid var(--primary);
+    }
+    .kpi-label {
+      font-size: 8pt;
+      color: var(--muted);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 3mm;
+    }
+    .kpi-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22pt;
+      color: var(--text);
+      line-height: 1;
+    }
+    .cover-roles {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6mm;
+      margin-bottom: 10mm;
+    }
+    .role-cell .label {
+      font-size: 8pt;
+      color: var(--muted);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 2mm;
+    }
+    .role-cell .value {
+      font-size: 10pt;
+      color: var(--text);
+      font-weight: 500;
+    }
+    .cover-stamp {
+      position: absolute;
+      bottom: 14mm;
+      left: 18mm;
+      right: 18mm;
+      font-size: 8pt;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      border-top: 1px solid var(--border);
+      padding-top: 5mm;
+    }
+
+    /* ============ Sections ============ */
+    .section-head {
+      display: flex;
+      align-items: center;
+      gap: 6mm;
+      margin-bottom: 8mm;
+    }
+    .section-num {
+      width: 12mm;
+      height: 12mm;
+      background: var(--primary);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18pt;
+      border-radius: 6px;
+    }
+    .section-title {
+      flex: 1;
+    }
+    .section-title h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 26pt;
+      letter-spacing: 0.04em;
+      line-height: 1;
+      color: var(--text);
+    }
+    .section-title .sub {
+      font-size: 9pt;
+      color: var(--muted);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-top: 2mm;
+    }
+    .section-rule {
+      height: 2px;
+      background: var(--primary);
+      width: 30mm;
+      margin-bottom: 6mm;
+    }
+
+    /* ============ Cards / Grids ============ */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5mm 6mm;
+      page-break-inside: avoid;
+    }
+    .card.accent { border-left: 3px solid var(--primary); }
+
+    .field { padding: 2mm 0; }
+    .field .label {
+      font-size: 7.5pt;
+      color: var(--muted);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 1.5mm;
+    }
+    .field .value {
+      font-size: 10pt;
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .id-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 4mm 6mm;
+    }
+
+    /* SPICED cards */
+    .spiced {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 4mm;
+    }
+    .spiced-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5mm 6mm;
+      display: grid;
+      grid-template-columns: 14mm 1fr;
+      gap: 4mm;
+      page-break-inside: avoid;
+    }
+    .spiced-letter {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 36pt;
+      line-height: 0.9;
+      color: var(--primary);
+    }
+    .spiced-body h4 {
+      font-size: 11pt;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 2mm;
+      letter-spacing: 0.04em;
+    }
+    .spiced-body .sub {
+      font-size: 8pt;
+      color: var(--muted);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 3mm;
+    }
+    .spiced-body p { color: var(--text); font-size: 9.5pt; white-space: pre-wrap; }
+    .spiced-body .micro-fields {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 3mm;
+      margin-top: 3mm;
+    }
+
+    /* Timeline */
+    .timeline { padding-left: 6mm; position: relative; }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 1.5mm;
+      top: 4mm;
+      bottom: 4mm;
+      width: 1px;
+      background: var(--border);
+    }
+    .tl-day {
+      position: relative;
+      margin-bottom: 6mm;
+      page-break-inside: avoid;
+    }
+    .tl-day-label {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 13pt;
+      letter-spacing: 0.08em;
+      color: var(--primary);
+      margin-bottom: 3mm;
+      margin-left: -2mm;
+    }
+    .tl-item {
+      position: relative;
+      padding: 2mm 0 3mm 4mm;
+    }
+    .tl-item::before {
+      content: '';
+      position: absolute;
+      left: -5.5mm;
+      top: 3mm;
+      width: 3mm;
+      height: 3mm;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 0 2px var(--bg);
+    }
+    .tl-time {
+      font-size: 8pt;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+    }
+    .tl-tipo {
+      display: inline-block;
+      font-size: 7.5pt;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      background: var(--surface-2);
+      color: var(--primary);
+      padding: 0.7mm 2mm;
+      border-radius: 2px;
+      margin-left: 2mm;
+    }
+    .tl-desc {
+      font-size: 9.5pt;
+      color: var(--text);
+      margin-top: 1mm;
+    }
+
+    /* Participants */
+    .participants {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 3mm;
+      margin-top: 4mm;
+    }
+    .participant {
+      display: flex;
+      align-items: center;
+      gap: 3mm;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 3mm 4mm;
+    }
+    .avatar {
+      width: 11mm;
+      height: 11mm;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 14pt;
+      flex-shrink: 0;
+    }
+    .participant .info .name {
+      font-size: 10pt;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .participant .info .role {
+      font-size: 8pt;
+      color: var(--muted);
+    }
+
+    /* Calls list */
+    .call-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--primary);
+      border-radius: 4px;
+      padding: 4mm 5mm;
+      margin-bottom: 3mm;
+      page-break-inside: avoid;
+    }
+    .call-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      font-size: 9pt;
+      color: var(--muted);
+      margin-bottom: 2mm;
+    }
+    .call-head strong { color: var(--text); font-weight: 600; }
+    .call-resumo { font-size: 9pt; color: var(--text); }
+
+    /* AI summary block */
+    .ai-block {
+      background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8mm 9mm;
+    }
+    .ai-block h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18pt;
+      color: var(--primary);
+      letter-spacing: 0.04em;
+      margin: 8mm 0 3mm 0;
+    }
+    .ai-block h2:first-child { margin-top: 0; }
+    .ai-block h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 15pt;
+      color: var(--text);
+      letter-spacing: 0.03em;
+      margin: 6mm 0 2mm 0;
+    }
+    .ai-block h4 {
+      font-size: 10pt;
+      font-weight: 600;
+      color: var(--text);
+      margin: 4mm 0 2mm 0;
+    }
+    .ai-block p { margin: 2mm 0; color: var(--text); font-size: 10pt; line-height: 1.6; }
+    .ai-block ul { margin: 2mm 0 3mm 5mm; }
+    .ai-block li { margin: 1.2mm 0; font-size: 10pt; line-height: 1.5; }
+    .ai-block li::marker { color: var(--primary); }
+    .ai-block strong { color: var(--text); font-weight: 600; }
+    .ai-block em { color: var(--muted); font-style: italic; }
+    .ai-block hr { border: none; border-top: 1px solid var(--border); margin: 5mm 0; }
+
+    /* Quote */
+    .quote {
+      border-left: 3px solid var(--primary);
+      padding: 3mm 5mm;
+      background: var(--surface);
+      font-style: italic;
+      color: var(--text);
+      font-size: 11pt;
+      line-height: 1.5;
+      page-break-inside: avoid;
+    }
+
+    /* GC Banner */
+    .gc-banner {
+      background: linear-gradient(135deg, var(--primary) 0%, hsl(220 70% 35%) 100%);
+      color: white;
+      padding: 14mm 16mm;
+      border-radius: 8px;
+      margin: -2mm 0 8mm 0;
+      page-break-inside: avoid;
+    }
+    .gc-banner .eyebrow {
+      font-size: 9pt;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      opacity: 0.85;
+    }
+    .gc-banner h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 50pt;
+      line-height: 0.95;
+      letter-spacing: 0.02em;
+      margin: 3mm 0 3mm 0;
+    }
+    .gc-banner p { font-size: 10pt; opacity: 0.9; max-width: 130mm; }
+
+    /* Tag/badge */
+    .badge {
+      display: inline-block;
+      font-size: 8pt;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: var(--surface-2);
+      color: var(--primary);
+      padding: 1mm 2.5mm;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+    }
+
+    /* Tables (cobranças) */
+    table.compact {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9pt;
+      margin-top: 3mm;
+    }
+    table.compact th {
+      text-align: left;
+      font-weight: 500;
+      color: var(--muted);
+      font-size: 8pt;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 2mm 3mm;
+      border-bottom: 1px solid var(--border);
+    }
+    table.compact td {
+      padding: 2mm 3mm;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    /* Appendix transcription */
+    .transcript {
+      background: var(--surface);
+      border-radius: 6px;
+      padding: 6mm 7mm;
+      font-size: 8.5pt;
+      line-height: 1.5;
+      color: var(--text);
+      column-count: 2;
+      column-gap: 8mm;
+      column-rule: 1px solid var(--border);
+    }
+    .transcript .timestamp {
+      color: var(--muted);
+      font-size: 7.5pt;
+      letter-spacing: 0.05em;
+      display: block;
+      margin-top: 3mm;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: var(--muted);
+      font-style: italic;
+      padding: 8mm;
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: 6px;
+    }
+
+    .section-intro {
+      color: var(--muted);
+      font-size: 9pt;
+      margin-bottom: 5mm;
+      max-width: 160mm;
+      font-style: italic;
+    }
+  `;
+
+  // ============== HTML BUILDERS ==============
+  const footer = (n: number) => `
+    <div class="page-strip"></div>
+    <div class="page-footer">
+      <span>${esc(clientName)} · Jornada do Cliente</span>
+      <span>Página ${n}</span>
+    </div>`;
+
+  const sectionHead = (num: string, title: string, sub?: string) => `
+    <div class="section-head">
+      <div class="section-num">${num}</div>
+      <div class="section-title">
+        <h1>${esc(title)}</h1>
+        ${sub ? `<div class="sub">${esc(sub)}</div>` : ""}
+      </div>
+    </div>
+    <div class="section-rule"></div>`;
+
+  // --- Cover ---
+  const coverHTML = `
+    <div class="page cover">
+      <div class="cover-hero">
+        <div class="cover-brand">
+          ${
+            tenantLogo
+              ? `<img src="${tenantLogo}" alt="${esc(tenantName)}"/>`
+              : `<div class="brand-text">${esc(tenantName.toUpperCase())}</div>`
+          }
+        </div>
+        <div class="cover-eyebrow">Handoff · Comercial → Operação</div>
+        <div class="cover-title">JORNADA<br/>DO CLIENTE</div>
+      </div>
+      <div class="cover-body">
+        <div class="cover-client-label">Cliente</div>
+        <div class="cover-client-name">${esc(clientName)}</div>
+        <div class="cover-meta">
+          ${lead?.segmento ? `<span class="badge">${esc(lead.segmento)}</span> ` : ""}
+          ${lead?.faturamento ? `<span class="badge">${esc(lead.faturamento)}</span> ` : ""}
+          ${lead?.tier ? `<span class="badge">Tier · ${esc(lead.tier)}</span>` : ""}
+        </div>
+        <div class="kpi-row">
+          ${kpis
+            .map(
+              (k) => `
+            <div class="kpi">
+              <div class="kpi-label">${esc(k.label)}</div>
+              <div class="kpi-value">${esc(k.value)}</div>
+            </div>`,
+            )
+            .join("")}
+        </div>
+        <div class="cover-roles">
+          <div class="role-cell"><div class="label">Responsável comercial</div><div class="value">${esc(nameOf(oportunidade?.responsavel_id ?? lead?.responsavel_id))}</div></div>
+          <div class="role-cell"><div class="label">Account Manager</div><div class="value">${esc(nameOf(account.account_manager_id))}</div></div>
+          <div class="role-cell"><div class="label">Responsável Growth Class</div><div class="value">${esc(nameOf(account.growth_class_responsavel_id))}</div></div>
+          <div class="role-cell"><div class="label">Growth Class realizada</div><div class="value">${esc(fmtDateTime(account.growth_class_data_realizada))}</div></div>
+        </div>
+      </div>
+      <div class="cover-stamp">
+        <span>Documento gerado em ${esc(generatedAt)}</span>
+        <span>${esc(tenantName)}</span>
+      </div>
+    </div>`;
+
+  // --- 1. Identificação ---
+  const idHTML = `
+    <div class="page">
+      ${footer(2)}
+      ${sectionHead("1", "Identificação", "Lead · Empresa · Contato")}
+      <div class="card accent">
+        <div class="id-grid">
+          ${idFields
+            .map(
+              (f) => `
+            <div class="field">
+              <div class="label">${esc(f.label)}</div>
+              <div class="value">${esc(f.value)}</div>
+            </div>`,
+            )
+            .join("")}
+        </div>
+      </div>
+      ${
+        briefingText
+          ? `
+        <div style="margin-top: 8mm;">
+          <div class="section-head" style="margin-bottom: 4mm;">
+            <div class="section-title"><h1 style="font-size:18pt;">Briefing de Mercado</h1></div>
+          </div>
+          <div class="card">
+            <div style="white-space: pre-wrap; font-size: 9.5pt; line-height: 1.6;">${esc(briefingText)}</div>
+          </div>
+        </div>`
+          : ""
+      }
+    </div>`;
+
+  // --- 2. SPICED ---
+  const spicedItems = [
+    {
+      letter: "S",
+      title: "Situation",
+      sub: "Situação atual",
+      body: situParts.length ? situParts.join("\n\n") : "Não informado.",
+    },
+    {
+      letter: "P",
+      title: "Pain",
+      sub: "Dores identificadas",
+      body: dorParts.length ? dorParts.join("\n\n") : "Não informado.",
+    },
+    {
+      letter: "I",
+      title: "Impact",
+      sub: "Impacto e contexto",
+      body: "",
+      microFields: [
+        { label: "Faturamento", value: lead?.faturamento },
+        { label: "Grau de exigência", value: oportunidade?.grau_exigencia },
+        { label: "Nível de consciência", value: oportunidade?.nivel_consciencia },
+        { label: "Monetização", value: oportunidade?.oportunidades_monetizacao },
+      ].filter((f) => isFilled(f.value)),
+    },
+    {
+      letter: "C",
+      title: "Critical Event",
+      sub: "Urgência",
+      body: "",
+      microFields: [
+        { label: "Urgência declarada", value: lead?.urgencia },
+        { label: "Fechamento previsto", value: fmtDate(oportunidade?.data_fechamento_previsto) },
+      ].filter((f) => f.value && f.value !== "—"),
+    },
+    {
+      letter: "D",
+      title: "Decision",
+      sub: "Decisão e valores",
+      body: "",
+      microFields: [
+        { label: "Valor EF", value: fmtBRL(oportunidade?.valor_ef) },
+        { label: "Fee recorrente", value: fmtBRL(oportunidade?.valor_fee) },
+        { label: "Valor total", value: fmtBRL(oportunidade?.valor_total) },
+        { label: "Data fechamento", value: fmtDate(oportunidade?.data_fechamento_real) },
+        { label: "Temperatura", value: oportunidade?.temperatura },
+        { label: "Etapa final", value: oportunidade?.etapa },
+      ].filter((f) => f.value && f.value !== "—"),
+    },
+  ];
+
+  const spicedHTML = `
+    <div class="page">
+      ${footer(3)}
+      ${sectionHead("2", "Diagnóstico SPICED", "Situação · Pain · Impact · Critical · Decision")}
+      <div class="spiced">
+        ${spicedItems
+          .map(
+            (s: any) => `
+          <div class="spiced-item">
+            <div class="spiced-letter">${s.letter}</div>
+            <div class="spiced-body">
+              <h4>${esc(s.title)}</h4>
+              <div class="sub">${esc(s.sub)}</div>
+              ${s.body ? `<p>${esc(s.body)}</p>` : ""}
+              ${
+                s.microFields && s.microFields.length
+                  ? `<div class="micro-fields">${s.microFields
+                      .map(
+                        (mf: any) => `
+                <div class="field">
+                  <div class="label">${esc(mf.label)}</div>
+                  <div class="value">${esc(mf.value)}</div>
+                </div>`,
+                      )
+                      .join("")}</div>`
+                  : ""
+              }
+            </div>
+          </div>`,
+          )
+          .join("")}
+      </div>
+    </div>`;
+
+  // --- 3. Jornada (timeline) ---
+  const jornadaHTML = `
+    <div class="page">
+      ${footer(4)}
+      ${sectionHead("3", "Jornada Comercial", "Atividades · Chamadas · Participantes")}
+      ${
+        participants.length
+          ? `
+        <h3 style="font-family:'Bebas Neue',sans-serif;font-size:14pt;letter-spacing:0.05em;color:var(--text);margin-bottom:2mm;">Participantes</h3>
+        <div class="participants">
+          ${participants
+            .map(
+              (p) => `
+            <div class="participant">
+              <div class="avatar">${esc(initials(p.name))}</div>
+              <div class="info">
+                <div class="name">${esc(p.name)}</div>
+                <div class="role">${esc(p.role)}</div>
+              </div>
+            </div>`,
+            )
+            .join("")}
+        </div>`
+          : ""
+      }
+
+      <h3 style="font-family:'Bebas Neue',sans-serif;font-size:14pt;letter-spacing:0.05em;color:var(--text);margin:8mm 0 4mm 0;">Linha do tempo</h3>
+      ${
+        byDay.size === 0
+          ? `<div class="empty-state">Nenhuma atividade registrada.</div>`
+          : `<div class="timeline">
+              ${Array.from(byDay.entries())
+                .map(
+                  ([day, items]) => `
+                <div class="tl-day">
+                  <div class="tl-day-label">${esc(day)}</div>
+                  ${items
+                    .map((a: any) => {
+                      const t = new Date(a.created_at).toLocaleTimeString(
+                        "pt-BR",
+                        { hour: "2-digit", minute: "2-digit" },
+                      );
+                      return `
+                    <div class="tl-item">
+                      <div>
+                        <span class="tl-time">${esc(t)}</span>
+                        <span class="tl-tipo">${esc((a.tipo || "").replace(/_/g, " "))}</span>
+                      </div>
+                      ${a.descricao ? `<div class="tl-desc">${esc(a.descricao)}</div>` : ""}
+                    </div>`;
+                    })
+                    .join("")}
+                </div>`,
+                )
+                .join("")}
+            </div>`
+      }
+
+      ${
+        callEvents.length
+          ? `
+        <h3 style="font-family:'Bebas Neue',sans-serif;font-size:14pt;letter-spacing:0.05em;color:var(--text);margin:8mm 0 4mm 0;">Chamadas registradas</h3>
+        ${callEvents
+          .map(
+            (c) => `
+          <div class="call-card">
+            <div class="call-head">
+              <span><strong>${esc(fmtDateTime(c.created_at))}</strong> · ${esc(c.operador || "—")}</span>
+              <span>${esc(c.duracao_seg ?? 0)}s · ${esc(c.status || "—")}</span>
+            </div>
+            ${c.resumo ? `<div class="call-resumo">${esc(c.resumo)}</div>` : ""}
+          </div>`,
+          )
+          .join("")}`
+          : ""
+      }
+    </div>`;
+
+  // --- 4. Reunião comercial (AI summary + raw resumo) ---
+  const reuniaoHTML = `
+    <div class="page">
+      ${footer(5)}
+      ${sectionHead("4", "Reunião Comercial", "Resumo da sessão de vendas")}
+      ${
+        oportunidade?.resumo_reuniao
+          ? `<div class="card accent">
+              <div style="white-space: pre-wrap; font-size: 10pt; line-height: 1.6;">${esc(oportunidade.resumo_reuniao)}</div>
+            </div>`
+          : `<div class="empty-state">Sem resumo de reunião registrado.</div>`
+      }
+    </div>`;
+
+  // --- 5. Fechamento ---
+  const cobrancasRows =
+    cobrancas && cobrancas.length
+      ? cobrancas
+          .slice(0, 30)
+          .map(
+            (c: any) => `
+          <tr>
+            <td>${esc(c.tipo)}</td>
+            <td>${esc(c.parcela_num ?? "—")}/${esc(c.parcela_total ?? "—")}</td>
+            <td>${esc(fmtDate(c.vencimento))}</td>
+            <td>${esc(fmtBRL(c.valor))}</td>
+            <td><span class="badge">${esc(c.status)}</span></td>
+          </tr>`,
+          )
+          .join("")
+      : "";
+
+  const fechamentoHTML = `
+    <div class="page">
+      ${footer(6)}
+      ${sectionHead("5", "Fechamento & Contrato", "Valores · Cobranças")}
+      <div class="grid-3" style="margin-bottom:6mm;">
+        <div class="kpi"><div class="kpi-label">EF</div><div class="kpi-value">${esc(fmtBRL(oportunidade?.valor_ef))}</div></div>
+        <div class="kpi"><div class="kpi-label">Fee mensal</div><div class="kpi-value">${esc(fmtBRL(oportunidade?.valor_fee))}</div></div>
+        <div class="kpi"><div class="kpi-label">Total</div><div class="kpi-value">${esc(fmtBRL(oportunidade?.valor_total))}</div></div>
+      </div>
+      <div class="card">
+        <div class="grid-2">
+          <div class="field"><div class="label">Início do contrato</div><div class="value">${esc(fmtDate(account.data_inicio_contrato))}</div></div>
+          <div class="field"><div class="label">Fim do contrato</div><div class="value">${esc(fmtDate(account.data_fim_contrato))}</div></div>
+          <div class="field"><div class="label">Produtos</div><div class="value">${esc(
+            account.produtos_contratados && Object.keys(account.produtos_contratados).length
+              ? Object.keys(account.produtos_contratados).join(", ")
+              : "—",
+          )}</div></div>
+        </div>
+      </div>
+      ${
+        cobrancasRows
+          ? `
+        <h3 style="font-family:'Bebas Neue',sans-serif;font-size:14pt;letter-spacing:0.05em;color:var(--text);margin:8mm 0 2mm 0;">Cobranças</h3>
+        <table class="compact">
+          <thead><tr><th>Tipo</th><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Status</th></tr></thead>
+          <tbody>${cobrancasRows}</tbody>
+        </table>`
+          : ""
+      }
+    </div>`;
+
+  // --- 6. Pre-GC ---
+  const preGcText = account.pre_growth_class_relatorio
+    ? typeof account.pre_growth_class_relatorio === "string"
+      ? account.pre_growth_class_relatorio
+      : jsonToReadable(account.pre_growth_class_relatorio)
+    : "";
+
+  const preGcHTML = preGcText
+    ? `
+    <div class="page">
+      ${footer(7)}
+      ${sectionHead("6", "Pré Growth Class", "Relatório de preparação")}
+      <div class="card">
+        <div style="white-space: pre-wrap; font-size: 9.5pt; line-height: 1.65;">${esc(preGcText)}</div>
+      </div>
+    </div>`
+    : "";
+
+  // --- 7. Growth Class ---
+  const gcHTML = `
+    <div class="page">
+      ${footer(8)}
+      <div class="gc-banner">
+        <div class="eyebrow">Marco Zero da Operação</div>
+        <h1>GROWTH CLASS</h1>
+        <p>Ponto de calibração entre o que foi vendido e o que será entregue.</p>
+      </div>
+      ${sectionHead("7", "Growth Class", "Marco balizador")}
+      ${
+        gcIsEmpty
+          ? `<div class="empty-state">
+              ${
+                account.onboarding_status === "growth_class_realizada"
+                  ? "Growth Class marcada como realizada, mas conteúdo ainda não foi registrado no sistema."
+                  : "Growth Class ainda não preenchida. Conteúdo (expectativas, ata, oportunidades, próximos passos) será adicionado após a realização."
+              }
+            </div>`
+          : `
+        <div class="card" style="margin-bottom:5mm;">
+          <div class="grid-2">
+            <div class="field"><div class="label">Agendada</div><div class="value">${esc(fmtDateTime(account.growth_class_data_agendada))}</div></div>
+            <div class="field"><div class="label">Realizada</div><div class="value">${esc(fmtDateTime(account.growth_class_data_realizada))}</div></div>
+            <div class="field"><div class="label">Responsável V4</div><div class="value">${esc(nameOf(account.growth_class_responsavel_id))}</div></div>
+            <div class="field"><div class="label">Link</div><div class="value" style="font-size:8.5pt; word-break:break-all;">${esc(account.growth_class_meet_link || "—")}</div></div>
+          </div>
+        </div>
+        ${
+          account.growth_class_expectativas
+            ? `<div style="margin-bottom:5mm;">
+                <h3 style="font-family:'Bebas Neue',sans-serif;font-size:14pt;color:var(--primary);margin-bottom:3mm;">Expectativa declarada pelo cliente</h3>
+                <div class="quote">"${esc(account.growth_class_expectativas)}"</div>
+              </div>`
+            : ""
+        }
+        ${
+          account.growth_class_ata
+            ? `<div class="card" style="margin-bottom:5mm;"><h4 style="font-size:11pt;font-weight:600;margin-bottom:3mm;">Ata oficial</h4><div style="white-space:pre-wrap;font-size:9.5pt;line-height:1.6;">${esc(account.growth_class_ata)}</div></div>`
+            : ""
+        }
+        ${
+          account.growth_class_oportunidades_monetizacao
+            ? `<div class="card" style="margin-bottom:5mm;"><h4 style="font-size:11pt;font-weight:600;margin-bottom:3mm;">Oportunidades de monetização</h4><div style="white-space:pre-wrap;font-size:9.5pt;line-height:1.6;">${esc(account.growth_class_oportunidades_monetizacao)}</div></div>`
+            : ""
+        }
+        ${
+          account.growth_class_proximos_passos
+            ? `<div class="card accent"><h4 style="font-size:11pt;font-weight:600;margin-bottom:3mm;">Próximos passos acordados</h4><div style="white-space:pre-wrap;font-size:9.5pt;line-height:1.6;">${esc(account.growth_class_proximos_passos)}</div></div>`
+            : ""
+        }`
+      }
+    </div>`;
+
+  // --- 8. Síntese executiva (hero) ---
+  const sinteseHTML = `
+    <div class="page">
+      ${footer(9)}
+      ${sectionHead("8", "Síntese Executiva", "Para a operação iniciar com clareza")}
+      <div class="section-intro">Resumo gerado por IA com base em todos os dados da jornada acima. Use como ponto de partida para a primeira reunião de rotina.</div>
+      <div class="ai-block">
+        ${mdToHtml(aiSummary)}
+      </div>
+    </div>`;
+
+  // --- Appendix: full transcripts ---
+  const transcripts: { title: string; text: string }[] = [];
+  if (oportunidade?.transcricao_reuniao) {
+    transcripts.push({
+      title: "Transcrição da reunião comercial",
+      text: String(oportunidade.transcricao_reuniao),
+    });
+  }
+  if (account.growth_class_transcricao_reuniao) {
+    transcripts.push({
+      title: "Transcrição da Growth Class",
+      text: String(account.growth_class_transcricao_reuniao),
+    });
+  }
+  const callTranscripts = callEvents
+    .filter((c) => c.transcricao)
+    .map((c) => ({
+      title: `Chamada · ${fmtDateTime(c.created_at)} · ${c.operador || "—"}`,
+      text: String(c.transcricao),
+    }));
+  transcripts.push(...callTranscripts);
+
+  // Format transcript text — wrap timestamps in spans
+  const formatTranscript = (txt: string) =>
+    esc(txt).replace(
+      /(\d{2}:\d{2}:\d{2})/g,
+      '<span class="timestamp">$1</span>',
+    );
+
+  const appendixHTML = transcripts.length
+    ? `
+    <div class="page">
+      ${footer(10)}
+      ${sectionHead("9", "Apêndice", "Transcrições completas · leitura opcional")}
+      <div class="section-intro">As transcrições abaixo são preservadas na íntegra para consulta. Não é necessário ler de ponta a ponta — use a Síntese Executiva como guia.</div>
+      ${transcripts
+        .map(
+          (t) => `
+        <div style="margin-bottom: 8mm;">
+          <h3 style="font-family:'Bebas Neue',sans-serif;font-size:15pt;color:var(--primary);margin-bottom:3mm;letter-spacing:0.04em;">${esc(t.title)}</h3>
+          <div class="transcript">${formatTranscript(t.text)}</div>
+        </div>`,
+        )
+        .join("")}
+    </div>`
+    : "";
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<title>Jornada do Cliente · ${esc(clientName)}</title>
+<style>${css}</style>
+</head>
+<body>
+${coverHTML}
+${idHTML}
+${spicedHTML}
+${jornadaHTML}
+${reuniaoHTML}
+${fechamentoHTML}
+${preGcHTML}
+${gcHTML}
+${sinteseHTML}
+${appendixHTML}
+</body>
+</html>`;
+}
+
+// ====================================================================
+// PDFShift call
+// ====================================================================
+async function renderPDFShift(html: string): Promise<Uint8Array> {
+  const apiKey = Deno.env.get("PDFSHIFT_API_KEY");
+  if (!apiKey) throw new Error("PDFSHIFT_API_KEY missing");
+
+  const auth = btoa(`api:${apiKey}`);
+  const resp = await fetch("https://api.pdfshift.io/v3/convert/pdf", {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${auth}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      source: html,
+      landscape: false,
+      format: "A4",
+      margin: "0",
+      use_print: false,
+      sandbox: false,
+    }),
+  });
+
+  if (!resp.ok) {
+    const t = await resp.text();
+    throw new Error(`PDFShift error ${resp.status}: ${t}`);
+  }
+  return new Uint8Array(await resp.arrayBuffer());
+}
+
+// ====================================================================
+// SERVE
+// ====================================================================
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -634,7 +1575,9 @@ Deno.serve(async (req) => {
     if (leadId) {
       const { data } = await userClient
         .from("crm_call_events")
-        .select("id, created_at, event_type, operador, duracao_seg, status, gravacao_url, resumo, transcricao")
+        .select(
+          "id, created_at, event_type, operador, duracao_seg, status, gravacao_url, resumo, transcricao",
+        )
         .eq("lead_id", leadId)
         .order("created_at", { ascending: true });
       callEvents = data ?? [];
@@ -657,7 +1600,7 @@ Deno.serve(async (req) => {
       account.growth_class_responsavel_id,
       lead?.responsavel_id,
     ].filter(Boolean);
-    let profiles: Record<string, string> = {};
+    const profiles: Record<string, string> = {};
     if (userIds.length > 0) {
       const { data: profs } = await userClient
         .from("profiles")
@@ -669,13 +1612,13 @@ Deno.serve(async (req) => {
     }
     const nameOf = (id?: string | null) => (id ? profiles[id] ?? "—" : "—");
 
-    // Pre-process JSON fields into readable text
-    const briefingText = lead?.briefing_mercado ? jsonToReadable(lead.briefing_mercado) : "";
+    const briefingText = lead?.briefing_mercado
+      ? jsonToReadable(lead.briefing_mercado)
+      : "";
     const preQualText = lead?.pesquisa_pre_qualificacao
       ? jsonToReadable(lead.pesquisa_pre_qualificacao)
       : "";
 
-    // ===== AI executive summary =====
     const aiInput = {
       client: account.cliente_nome,
       lead: {
@@ -716,282 +1659,36 @@ Deno.serve(async (req) => {
 
     const [aiSummary, tenantLogo] = await Promise.all([
       generateExecutiveSummary(aiInput),
-      tenant?.client_logo_url ? fetchImageAsBase64(tenant.client_logo_url) : Promise.resolve(null),
+      tenant?.client_logo_url
+        ? fetchImageAsDataURL(tenant.client_logo_url)
+        : Promise.resolve(null),
     ]);
 
-    // ===== Build PDF =====
     const clientName = lead?.empresa ?? account.cliente_nome ?? "Cliente";
     const tenantName = tenant?.client_name ?? "V4 Company";
-    const builder = new PDFBuilder(clientName, tenant?.primary_color_hsl);
 
-    builder.drawCover({
+    const html = buildHTML({
       clientName,
       tenantName,
       tenantLogo,
-      responsavelComercial: nameOf(oportunidade?.responsavel_id ?? lead?.responsavel_id),
-      accountManager: nameOf(account.account_manager_id),
-      gcResponsavel: nameOf(account.growth_class_responsavel_id),
-      gcData: fmtDateTime(account.growth_class_data_realizada),
+      primaryHsl: tenant?.primary_color_hsl ?? "hsl(217 91% 60%)",
+      generatedAt: new Date().toLocaleString("pt-BR", {
+        dateStyle: "long",
+        timeStyle: "short",
+      }),
+      lead,
+      oportunidade,
+      account,
+      cobrancas: cobrancas ?? [],
+      atividades,
+      callEvents,
+      briefingText,
+      preQualText,
+      aiSummary,
+      nameOf,
     });
 
-    // ===== 1. Identificação =====
-    builder.newPage();
-    builder.sectionTitle("1", "Identificacao");
-    const cidadeEstado = [val(lead?.cidade), val(lead?.estado)]
-      .filter((s) => s !== "—")
-      .join(" / ") || "—";
-    builder.twoCols([
-      { label: "Nome", value: lead?.nome },
-      { label: "Empresa", value: lead?.empresa },
-      { label: "Cargo", value: lead?.cargo },
-      { label: "Email", value: lead?.email },
-      { label: "Telefone", value: lead?.telefone },
-      { label: "Instagram", value: lead?.instagram },
-      { label: "Site", value: lead?.site },
-      { label: "Cidade / Estado", value: cidadeEstado },
-      { label: "Segmento", value: lead?.segmento },
-      { label: "Faturamento", value: lead?.faturamento },
-      { label: "Tier", value: lead?.tier },
-      { label: "Urgência", value: lead?.urgencia },
-      { label: "Origem", value: lead?.origem },
-      { label: "Canal", value: lead?.canal },
-      { label: "Pipe", value: lead?.pipe },
-      { label: "Criado em (origem)", value: fmtDate(lead?.data_criacao_origem) },
-    ]);
-
-    // ===== 2. SPICED =====
-    builder.sectionTitle("2", "Diagnostico SPICED");
-
-    // Build de-duplicated dor central
-    const qualif = (lead?.qualificacao ?? "").trim();
-    const resumoReu = (oportunidade?.resumo_reuniao ?? "").trim();
-    const sim = similarity(qualif, resumoReu);
-    const dorParts: string[] = [];
-    if (qualif) dorParts.push(qualif);
-    if (resumoReu && sim < 0.7) dorParts.push(resumoReu);
-
-    builder.subTitle("S - Situation (situacao atual)");
-    const situParts: string[] = [];
-    if (lead?.notas) situParts.push(lead.notas);
-    if (oportunidade?.info_deal) situParts.push(oportunidade.info_deal);
-    if (briefingText) situParts.push(`Briefing de mercado:\n${briefingText}`);
-    if (preQualText) situParts.push(`Pre-qualificacao:\n${preQualText}`);
-    builder.paragraph(situParts.join("\n\n") || "—");
-
-    builder.subTitle("P - Pain (dores)");
-    builder.paragraph(dorParts.join("\n\n") || "—");
-
-    builder.subTitle("I - Impact (impacto)");
-    builder.field("Faturamento", lead?.faturamento);
-    builder.field("Grau de exigencia", oportunidade?.grau_exigencia);
-    builder.field("Nivel de consciencia", oportunidade?.nivel_consciencia);
-    builder.field("Oportunidades de monetizacao identificadas", oportunidade?.oportunidades_monetizacao);
-
-    builder.subTitle("C - Critical Event (urgencia)");
-    builder.field("Urgencia declarada", lead?.urgencia);
-    builder.field("Data fechamento previsto", fmtDate(oportunidade?.data_fechamento_previsto));
-
-    builder.subTitle("D - Decision (decisao e valores)");
-    builder.twoCols([
-      { label: "Valor EF", value: fmtBRL(oportunidade?.valor_ef) },
-      { label: "Valor Fee (recorrente)", value: fmtBRL(oportunidade?.valor_fee) },
-      { label: "Valor total", value: fmtBRL(oportunidade?.valor_total) },
-      { label: "Data fechamento", value: fmtDate(oportunidade?.data_fechamento_real) },
-      { label: "Temperatura", value: oportunidade?.temperatura },
-      { label: "Etapa final", value: oportunidade?.etapa },
-    ]);
-
-    // ===== 3. Jornada comercial =====
-    builder.sectionTitle("3", "Jornada comercial");
-    if (atividades.length === 0 && callEvents.length === 0) {
-      builder.muted("Sem atividades registradas.");
-    } else {
-      builder.subTitle("Atividades");
-      if (atividades.length === 0) {
-        builder.muted("Nenhuma atividade.");
-      } else {
-        // Group by day
-        const byDay = new Map<string, any[]>();
-        for (const a of atividades) {
-          const d = new Date(a.created_at).toLocaleDateString("pt-BR");
-          if (!byDay.has(d)) byDay.set(d, []);
-          byDay.get(d)!.push(a);
-        }
-        for (const [day, items] of byDay) {
-          builder.ensureSpace(8);
-          builder.doc.setFontSize(9);
-          builder.doc.setTextColor(...COLORS.muted);
-          builder.doc.setFont("helvetica", "bold");
-          builder.doc.text(sanitize(day.toUpperCase()), MARGIN, builder.y);
-          builder.y += 4.5;
-          builder.doc.setFont("helvetica", "normal");
-          for (const a of items) {
-            const time = new Date(a.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-            const head = `${time} - ${a.tipo}${a.titulo ? ` - ${a.titulo}` : ""}`;
-            builder.doc.setFontSize(9.5);
-            builder.doc.setTextColor(...COLORS.text);
-            builder.doc.setFont("helvetica", "bold");
-            builder.ensureSpace(5);
-            builder.doc.text(sanitize(head), MARGIN + 3, builder.y);
-            builder.y += 4;
-            builder.doc.setFont("helvetica", "normal");
-            if (a.descricao) builder.paragraph(a.descricao, { size: 9, muted: true });
-            builder.addSpace(1);
-          }
-          builder.addSpace(1.5);
-        }
-      }
-
-      builder.subTitle("Chamadas registradas");
-      if (callEvents.length === 0) {
-        builder.muted("Nenhuma chamada vinculada.");
-      } else {
-        for (const c of callEvents) {
-          const head = `${fmtDateTime(c.created_at)} - ${val(c.operador)} - ${c.duracao_seg ?? 0}s - ${val(c.status)}`;
-          builder.doc.setFontSize(9.5);
-          builder.doc.setFont("helvetica", "bold");
-          builder.doc.setTextColor(...COLORS.text);
-          builder.ensureSpace(5);
-          builder.doc.text(sanitize(head), MARGIN, builder.y);
-          builder.y += 4;
-          builder.doc.setFont("helvetica", "normal");
-          if (c.resumo) builder.paragraph(c.resumo, { size: 9 });
-          else if (c.gravacao_url) builder.paragraph("Gravacao disponivel (sem resumo IA).", { muted: true, size: 9 });
-          builder.addSpace(1.5);
-        }
-      }
-    }
-
-    // ===== 4. Reunião comercial =====
-    builder.sectionTitle("4", "Reuniao comercial");
-    builder.subTitle("Resumo");
-    builder.paragraph(oportunidade?.resumo_reuniao);
-    if (oportunidade?.transcricao_reuniao) {
-      builder.subTitle("Transcricao (extrato)");
-      builder.paragraph(String(oportunidade.transcricao_reuniao).slice(0, 4000), { size: 8.5, muted: true });
-    }
-
-    // ===== 5. Fechamento & Contrato =====
-    builder.sectionTitle("5", "Fechamento e contrato");
-    builder.twoCols([
-      { label: "Valor EF", value: fmtBRL(oportunidade?.valor_ef) },
-      { label: "Valor Fee mensal", value: fmtBRL(oportunidade?.valor_fee) },
-      { label: "Total", value: fmtBRL(oportunidade?.valor_total) },
-      { label: "Inicio do contrato", value: fmtDate(account.data_inicio_contrato) },
-      { label: "Fim do contrato", value: fmtDate(account.data_fim_contrato) },
-      {
-        label: "Produtos",
-        value:
-          account.produtos_contratados && Object.keys(account.produtos_contratados).length > 0
-            ? Object.keys(account.produtos_contratados).join(", ")
-            : "—",
-      },
-    ]);
-    if (cobrancas && cobrancas.length > 0) {
-      builder.subTitle("Cobrancas");
-      for (const c of cobrancas.slice(0, 20)) {
-        builder.field(
-          `${c.tipo} - parcela ${c.parcela_num ?? "—"}/${c.parcela_total ?? "—"} - venc ${fmtDate(c.vencimento)}`,
-          `${fmtBRL(c.valor)} - ${c.status}`,
-        );
-      }
-    }
-
-    // ===== 6. Pré Growth Class =====
-    builder.sectionTitle("6", "Pre Growth Class");
-    const preGcText = account.pre_growth_class_relatorio
-      ? (typeof account.pre_growth_class_relatorio === "string"
-          ? account.pre_growth_class_relatorio
-          : jsonToReadable(account.pre_growth_class_relatorio))
-      : "";
-    builder.paragraph(preGcText);
-
-    // ===== 7. GROWTH CLASS =====
-    builder.drawGCBanner();
-    builder.sectionTitle("7", "Growth Class - Marco balizador");
-    builder.paragraph(
-      "A Growth Class e a etapa balizadora que mede a expectativa do cliente. Este e o registro oficial do que foi acordado entre V4 e cliente.",
-      { italic: true, muted: true },
-    );
-    builder.addSpace(2);
-
-    // Detect empty GC
-    const gcFields = [
-      account.growth_class_expectativas,
-      account.growth_class_ata,
-      account.growth_class_oportunidades_monetizacao,
-      account.growth_class_proximos_passos,
-      account.growth_class_transcricao_reuniao,
-    ];
-    const gcIsEmpty = gcFields.every((f) => !f || !String(f).trim());
-
-    if (gcIsEmpty && account.onboarding_status !== "growth_class_realizada") {
-      builder.card(() => {
-        builder.subTitle("Status");
-        builder.paragraph(
-          "Growth Class ainda nao preenchida. Conteudo (expectativas, ata, oportunidades, proximos passos) sera adicionado apos a realizacao.",
-          { italic: true, muted: true },
-        );
-      });
-    } else if (gcIsEmpty) {
-      builder.card(() => {
-        builder.subTitle("Status");
-        builder.paragraph(
-          "Growth Class marcada como realizada, mas conteudo ainda nao foi registrado no sistema.",
-          { italic: true, muted: true },
-        );
-      });
-    } else {
-      builder.card(() => {
-        builder.subTitle("Realizacao");
-        builder.twoCols([
-          { label: "Agendada", value: fmtDateTime(account.growth_class_data_agendada) },
-          { label: "Realizada", value: fmtDateTime(account.growth_class_data_realizada) },
-          { label: "Responsavel V4", value: nameOf(account.growth_class_responsavel_id) },
-          { label: "Link da reuniao", value: account.growth_class_meet_link ?? "—" },
-        ]);
-      });
-
-      if (account.growth_class_expectativas) {
-        builder.card(() => {
-          builder.subTitle("Expectativas declaradas pelo cliente");
-          builder.quoteBlock(account.growth_class_expectativas);
-        }, COLORS.gcAccent);
-      }
-
-      if (account.growth_class_ata) {
-        builder.card(() => {
-          builder.subTitle("Ata oficial");
-          builder.paragraph(account.growth_class_ata);
-        });
-      }
-
-      if (account.growth_class_oportunidades_monetizacao) {
-        builder.card(() => {
-          builder.subTitle("Oportunidades de monetizacao identificadas");
-          builder.paragraph(account.growth_class_oportunidades_monetizacao);
-        });
-      }
-
-      if (account.growth_class_proximos_passos) {
-        builder.card(() => {
-          builder.subTitle("Proximos passos acordados");
-          builder.paragraph(account.growth_class_proximos_passos);
-        }, COLORS.gcAccent);
-      }
-
-      if (account.growth_class_transcricao_reuniao) {
-        builder.subTitle("Transcricao (extrato)");
-        builder.paragraph(String(account.growth_class_transcricao_reuniao).slice(0, 6000), { size: 8.5, muted: true });
-      }
-    }
-
-    // ===== 8. Síntese executiva =====
-    builder.sectionTitle("8", "Sintese executiva para a operacao");
-    builder.paragraph(aiSummary);
-
-    // ===== Output =====
-    const pdfBuffer = builder.doc.output("arraybuffer");
+    const pdfBytes = await renderPDFShift(html);
 
     const adminClient = createClient(SUPABASE_URL, SERVICE_KEY);
 
@@ -1014,7 +1711,7 @@ Deno.serve(async (req) => {
 
     const { error: upErr } = await adminClient.storage
       .from("account-journeys")
-      .upload(path, new Uint8Array(pdfBuffer), {
+      .upload(path, pdfBytes, {
         contentType: "application/pdf",
         upsert: true,
       });
