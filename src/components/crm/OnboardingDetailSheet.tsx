@@ -902,7 +902,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
                   variant="outline"
                   className="w-full border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
                   disabled={!!exportingPdf}
-                  onClick={() => generateJourneyPdf(true)}
+                  onClick={() => generateJourneyPdf(false)}
                 >
                   {exportingPdf ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileDown className="h-4 w-4 mr-2" />}
                   Exportar jornada (PDF)
@@ -918,8 +918,16 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
                     Se o download não iniciou, clique aqui para abrir o PDF
                   </a>
                 )}
+                <button
+                  type="button"
+                  disabled={!!exportingPdf}
+                  onClick={() => generateJourneyPdf(true)}
+                  className="block w-full text-center text-[11px] text-muted-foreground underline hover:text-foreground disabled:opacity-50"
+                >
+                  Incluir transcrições completas (PDF mais longo)
+                </button>
                 <p className="text-[11px] text-muted-foreground text-center">
-                  Relatório completo com SPICED, jornada, Growth Class, síntese por IA e apêndice de transcrições. Leva ~15s.
+                  Relatório com síntese executiva, SPICED, jornada, Growth Class e cobranças. Leva ~15s.
                 </p>
               </div>
             )}

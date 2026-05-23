@@ -64,7 +64,6 @@ const textToParagraphs = (s: string): string => {
   return blocks
     .map((b) => {
       const lines = b.split("\n");
-      // bullet block
       if (lines.every((l) => /^\s*[-•*]\s+/.test(l))) {
         const items = lines
           .map((l) => esc(l.replace(/^\s*[-•*]\s+/, "")))
@@ -76,6 +75,91 @@ const textToParagraphs = (s: string): string => {
     })
     .join("");
 };
+
+// Detect markdown markers worth rendering
+const hasMarkdown = (s: string): boolean =>
+  /\*\*|^#{1,4}\s|^\s*[-*]\s+|^\s*\d+\.\s+|^---+\s*$|\[[ xX]\]/m.test(s || "");
+
+// Render any free-text field: markdown when detected, plain paragraphs otherwise.
+// Strips decorative leading emojis from headings/bullets and normalizes checkboxes.
+const renderRich = (s: any): string => {
+  const t = cleanText(s);
+  if (!t) return "";
+  const cleaned = t
+    .replace(/^(#{1,4}\s+)[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+\s*/gmu, "$1")
+    .replace(/^(\s*[-*]\s+)[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+\s*/gmu, "$1")
+    .replace(/^\s*\[[xX]\]\s+/gm, "- ")
+    .replace(/^\s*\[\s\]\s+/gm, "- ");
+  return hasMarkdown(cleaned) ? mdToHtml(cleaned) : textToParagraphs(cleaned);
+};
+
+// Deduplicate and clean call events: drop 0s calls, collapse duplicates
+// produced by the webhook (same call lands twice with different operador label).
+function dedupeCalls(calls: any[]): any[] {
+  const seen = new Map<string, any>();
+  for (const c of calls) {
+    const dur = Number(c.duracao_seg ?? 0);
+    if (dur <= 0 && !isFilled(c.resumo) && !isFilled(c.transcricao)) continue;
+    const ts = c.created_at ? new Date(c.created_at).toISOString().slice(0, 16) : "";
+    const key = `${ts}|${c.call_id ?? c.operador ?? ""}`;
+    const prev = seen.get(key);
+    if (!prev || Number(prev.duracao_seg ?? 0) < dur) seen.set(key, c);
+  }
+  return Array.from(seen.values()).sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  );
+}
+
+// Tidy a verbatim transcript: group consecutive lines by the same speaker,
+// drop tiny filler turns, keep timestamps every ~5min only.
+function tidyTranscript(text: string): string {
+  if (!text) return "";
+  const lines = text.split(/\n/);
+  const out: string[] = [];
+  let lastSpeaker = "";
+  let buffer: string[] = [];
+  let lastTsMin = -10;
+  const flush = () => {
+    if (buffer.length && lastSpeaker) {
+      out.push(`${lastSpeaker}: ${buffer.join(" ").replace(/\s+/g, " ").trim()}`);
+    } else if (buffer.length) {
+      out.push(buffer.join(" ").replace(/\s+/g, " ").trim());
+    }
+    buffer = [];
+  };
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) { flush(); lastSpeaker = ""; continue; }
+    const ts = line.match(/^(\d{2}):(\d{2}):(\d{2})$/);
+    if (ts) {
+      const min = Number(ts[1]) * 60 + Number(ts[2]);
+      if (min - lastTsMin >= 5) {
+        flush();
+        out.push("");
+        out.push(`[${ts[1]}:${ts[2]}]`);
+        lastTsMin = min;
+        lastSpeaker = "";
+      }
+      continue;
+    }
+    const m = line.match(/^([A-Za-zÀ-ÿ][\wÀ-ÿ.\s-]{1,40}?):\s*(.*)$/);
+    if (m) {
+      const speaker = m[1].trim();
+      const utter = m[2].trim();
+      if (speaker === lastSpeaker) {
+        if (utter) buffer.push(utter);
+      } else {
+        flush();
+        lastSpeaker = speaker;
+        if (utter) buffer.push(utter);
+      }
+    } else {
+      buffer.push(line);
+    }
+  }
+  flush();
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
 
 // Minimal markdown -> HTML for AI output
 function mdToHtml(input: string): string {
@@ -342,15 +426,13 @@ function buildHTML(data: {
   const sim = similarity(qualif, resumoReu);
   const dorParts: string[] = [];
   if (qualif) dorParts.push(qualif);
-  if (resumoReu && sim < 0.7) dorParts.push(resumoReu);
+  // resumo_reuniao tem sua própria seção; só duplicar em Pain se for muito diferente
+  if (resumoReu && sim < 0.4 && qualif.length < 200) dorParts.push(resumoReu);
 
+  // Situation: usar só notas/info_deal. Briefing e pré-qualificação têm sua própria seção.
   const situParts: string[] = [];
   if (isFilled(lead?.notas)) situParts.push(cleanText(lead.notas));
   if (isFilled(oportunidade?.info_deal)) situParts.push(cleanText(oportunidade.info_deal));
-  if (briefingText) situParts.push("**Briefing de mercado**\n" + briefingText);
-  if (preQualText && similarity(preQualText, briefingText) < 0.7) {
-    situParts.push("**Pré-qualificação**\n" + preQualText);
-  }
 
   // ---------- Timeline (group by day) ----------
   const byDay = new Map<string, any[]>();
@@ -413,7 +495,31 @@ function buildHTML(data: {
   const css = `
     @page {
       size: A4;
-      margin: 18mm 16mm 18mm 16mm;
+      margin: 22mm 16mm 18mm 16mm;
+      @top-left {
+        content: "${esc(clientName)} · Jornada do Cliente";
+        font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+        font-size: 8pt;
+        color: #999;
+        letter-spacing: 0.04em;
+      }
+      @bottom-right {
+        content: "Página " counter(page) " de " counter(pages);
+        font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+        font-size: 8pt;
+        color: #999;
+      }
+      @bottom-left {
+        content: "${esc(tenantName)}";
+        font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+        font-size: 8pt;
+        color: #bbb;
+      }
+    }
+    @page :first {
+      @top-left { content: ""; }
+      @bottom-left { content: ""; }
+      @bottom-right { content: ""; }
     }
     * { box-sizing: border-box; }
     html, body {
@@ -436,7 +542,7 @@ function buildHTML(data: {
     /* ===== Cover ===== */
     .cover {
       page-break-after: always;
-      padding-top: 30mm;
+      padding-top: 8mm;
     }
     .cover-eyebrow {
       font-size: 9pt;
@@ -819,7 +925,7 @@ function buildHTML(data: {
           )
           .join("")}
       </div>
-      ${briefingText ? `<h3 class="sub-title">Briefing de mercado</h3><div class="block">${textToParagraphs(briefingText)}</div>` : ""}
+      ${briefingText ? `<h3 class="sub-title">Briefing de mercado</h3><div class="block">${renderRich(briefingText)}</div>` : ""}
     </div>
   `;
 
@@ -861,22 +967,26 @@ function buildHTML(data: {
     },
   ];
 
-  const spicedHTML = `
+  const visibleSpiced = spicedItems.filter(
+    (s: any) => (s.body && String(s.body).trim()) || (s.micro && s.micro.length),
+  );
+
+  const spicedHTML = visibleSpiced.length ? `
     <div class="section">
       ${sectionHead("03", "Diagnóstico SPICED", "Situação · Pain · Impact · Critical · Decision")}
-      ${spicedItems.map((s: any) => `
+      ${visibleSpiced.map((s: any) => `
         <div class="spiced-item">
           <div class="spiced-letter">${s.letter}</div>
           <div class="spiced-body">
             <h4>${esc(s.title)}</h4>
             <div class="sub">${esc(s.sub)}</div>
-            ${s.body ? textToParagraphs(s.body) : (s.micro?.length ? "" : `<p style="color:#999;font-style:italic;">Não informado.</p>`)}
+            ${s.body ? renderRich(s.body) : ""}
             ${s.micro?.length ? `<div class="micro">${s.micro.map((m: any) => `<div><div class="label">${esc(m.label)}</div><div class="value">${esc(m.value)}</div></div>`).join("")}</div>` : ""}
           </div>
         </div>
       `).join("")}
     </div>
-  `;
+  ` : "";
 
   // ---------- 4. Jornada ----------
   const timelineHTML = byDay.size === 0
@@ -898,18 +1008,30 @@ function buildHTML(data: {
         </div>
       `).join("");
 
-  const callsHTML = callEvents.length
+  const cleanCalls = dedupeCalls(callEvents);
+  const totalAttempts = callEvents.length;
+  const connected = cleanCalls.filter((c) => Number(c.duracao_seg ?? 0) >= 3).length;
+  const totalSec = cleanCalls.reduce((s, c) => s + Number(c.duracao_seg ?? 0), 0);
+  const totalMin = Math.round(totalSec / 60);
+
+  const callsHTML = cleanCalls.length
     ? `
       <h3 class="sub-title">Chamadas registradas</h3>
-      ${callEvents.map((c) => `
-        <div class="call">
-          <div class="call-head">
-            <span><strong>${esc(fmtDateTime(c.created_at))}</strong>${c.operador ? ` · ${esc(c.operador)}` : ""}</span>
-            <span>${esc(c.duracao_seg ?? 0)}s${c.status ? ` · ${esc(c.status)}` : ""}</span>
-          </div>
-          ${isFilled(c.resumo) ? `<div class="call-resumo">${esc(cleanText(c.resumo))}</div>` : ""}
-        </div>
-      `).join("")}
+      <div class="section-sub">${totalAttempts} tentativas · ${connected} conectadas · ${totalMin} min totais</div>
+      <table class="compact">
+        <thead><tr><th>Data/hora</th><th>Operador</th><th>Duração</th><th>Status</th></tr></thead>
+        <tbody>
+          ${cleanCalls.map((c) => `
+            <tr>
+              <td>${esc(fmtDateTime(c.created_at))}</td>
+              <td>${esc(c.operador ?? "—")}</td>
+              <td>${esc(c.duracao_seg ?? 0)}s</td>
+              <td>${esc(c.status ?? "—")}</td>
+            </tr>
+            ${isFilled(c.resumo) ? `<tr><td colspan="4" style="color:#555;font-size:9pt;padding-top:0;">${esc(cleanText(c.resumo))}</td></tr>` : ""}
+          `).join("")}
+        </tbody>
+      </table>
     ` : "";
 
   const participantsHTML = participants.length ? `
@@ -936,7 +1058,7 @@ function buildHTML(data: {
   const reuniaoHTML = isFilled(oportunidade?.resumo_reuniao) ? `
     <div class="section">
       ${sectionHead("05", "Reunião Comercial", "Resumo da sessão de vendas")}
-      <div class="block">${textToParagraphs(cleanText(oportunidade.resumo_reuniao))}</div>
+      <div class="block">${renderRich(oportunidade.resumo_reuniao)}</div>
     </div>
   ` : "";
 
@@ -980,7 +1102,7 @@ function buildHTML(data: {
   const preGcHTML = preGcText ? `
     <div class="section">
       ${sectionHead("07", "Pré Growth Class", "Relatório de preparação")}
-      <div class="block">${textToParagraphs(preGcText)}</div>
+      <div class="block">${renderRich(preGcText)}</div>
     </div>
   ` : "";
 
@@ -1006,23 +1128,23 @@ function buildHTML(data: {
         ` : ""}
         ${isFilled(account.growth_class_ata) ? `
           <h3 class="sub-title">Ata oficial</h3>
-          <div class="block">${textToParagraphs(cleanText(account.growth_class_ata))}</div>
+          <div class="block">${renderRich(account.growth_class_ata)}</div>
         ` : ""}
         ${isFilled(account.growth_class_oportunidades_monetizacao) ? `
           <h3 class="sub-title">Oportunidades de monetização</h3>
-          <div class="block">${textToParagraphs(cleanText(account.growth_class_oportunidades_monetizacao))}</div>
+          <div class="block">${renderRich(account.growth_class_oportunidades_monetizacao)}</div>
         ` : ""}
         ${isFilled(account.growth_class_proximos_passos) ? `
           <h3 class="sub-title">Próximos passos acordados</h3>
-          <div class="block">${textToParagraphs(cleanText(account.growth_class_proximos_passos))}</div>
+          <div class="block">${renderRich(account.growth_class_proximos_passos)}</div>
         ` : ""}
       `}
     </div>
   `;
 
-  // ---------- 9. Apêndice ----------
+  // ---------- 9. Apêndice (transcrições) ----------
   const formatTranscript = (txt: string) =>
-    esc(txt).replace(/(\d{2}:\d{2}:\d{2})/g, '<span class="ts">$1</span>');
+    esc(tidyTranscript(txt)).replace(/\[(\d{2}:\d{2})\]/g, '<span class="ts">[$1]</span>');
 
   const appendixHTML = includeAppendix && transcripts.length ? `
     <div class="section appendix-divider">
@@ -1107,8 +1229,8 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { account_id } = body;
-    // Default: include appendix when not specified (full report)
-    const includeAppendix = body?.include_appendix !== false;
+    // Default: exclude appendix (transcrições crus geram dezenas de páginas inúteis)
+    const includeAppendix = body?.include_appendix === true;
     if (!account_id || typeof account_id !== "string") {
       return new Response(JSON.stringify({ error: "account_id is required" }), {
         status: 400,
