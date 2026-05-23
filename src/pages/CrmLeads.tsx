@@ -442,9 +442,9 @@ const CrmLeads = () => {
         onOpenChange={(v) => { setRespOpen(v); if (!v) setPendingRespMove(null); }}
         title={pendingRespMove?.etapa === "reuniao_realizada" ? "Confirme o closer da reunião" : "Defina o closer para o agendamento"}
         description="Apenas usuários do depto Receitas. Este será o responsável pela oportunidade quando a reunião for realizada."
-        onConfirm={async (responsavelId) => {
+        onConfirm={async (closerId) => {
           if (!pendingRespMove) return;
-          await upsert.mutateAsync({ ...pendingRespMove.lead, responsavel_id: responsavelId });
+          await upsert.mutateAsync({ ...pendingRespMove.lead, closer_id: closerId } as any);
           moveLead(pendingRespMove.lead.id, pendingRespMove.etapa);
           setPendingRespMove(null);
         }}
