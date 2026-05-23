@@ -429,36 +429,42 @@ function buildHTML(data: {
 
     @page { size: A4; margin: 0; }
 
-    .page {
-      width: 210mm;
-      min-height: 297mm;
-      padding: 18mm 16mm 22mm 16mm;
-      position: relative;
-      page-break-after: always;
+    /* Section: full-bleed background, padding inside, page-break BEFORE.
+       NO min-height — content flows naturally across pages without forcing
+       blank A4 fillers. The dark background is repeated via body so any
+       overflow pages also stay dark. */
+    .section {
+      page-break-before: always;
+      padding: 18mm 16mm 18mm 16mm;
       background: var(--bg);
-      overflow: hidden;
     }
-    .page:last-child { page-break-after: auto; }
+    .section:first-of-type { page-break-before: auto; }
 
-    .page-footer {
-      position: absolute;
-      bottom: 8mm;
-      left: 16mm;
-      right: 16mm;
+    /* A simple top accent on each section instead of absolute strip */
+    .section-strip {
+      height: 3px;
+      background: var(--primary);
+      margin: -18mm -16mm 10mm -16mm;
+    }
+
+    .doc-footer {
+      margin-top: 12mm;
+      padding-top: 4mm;
+      border-top: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
       font-size: 8pt;
       color: var(--muted);
-      border-top: 1px solid var(--border);
-      padding-top: 4mm;
     }
-    .page-strip {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-      background: var(--primary);
+
+    /* Cover: own full-bleed page with zero margin */
+    .cover {
+      width: 210mm;
+      height: 297mm;
+      position: relative;
+      page-break-after: always;
+      background: var(--bg);
+      overflow: hidden;
     }
 
     /* ============ COVER ============ */
@@ -510,7 +516,7 @@ function buildHTML(data: {
     }
     .cover-title {
       font-family: 'Bebas Neue', sans-serif;
-      font-size: 80pt;
+      font-size: 64pt;
       line-height: 0.92;
       color: white;
       letter-spacing: 0.02em;
@@ -535,6 +541,7 @@ function buildHTML(data: {
       color: var(--text);
       letter-spacing: 0.02em;
       margin-bottom: 8mm;
+      text-transform: uppercase;
     }
     .cover-meta {
       color: var(--muted);
@@ -651,7 +658,9 @@ function buildHTML(data: {
       border: 1px solid var(--border);
       border-radius: 6px;
       padding: 5mm 6mm;
-      page-break-inside: avoid;
+      /* NO page-break-inside:avoid — long content cards (briefing, ata,
+         transcripts) MUST be allowed to split or they push huge blocks
+         onto a new page and leave the previous one blank. */
     }
     .card.accent { border-left: 3px solid var(--primary); }
 
@@ -689,7 +698,7 @@ function buildHTML(data: {
       display: grid;
       grid-template-columns: 14mm 1fr;
       gap: 4mm;
-      page-break-inside: avoid;
+      /* allow split: SPICED situation/pain bodies can be huge */
     }
     .spiced-letter {
       font-family: 'Bebas Neue', sans-serif;
@@ -988,12 +997,12 @@ function buildHTML(data: {
   `;
 
   // ============== HTML BUILDERS ==============
-  const footer = (n: number) => `
-    <div class="page-strip"></div>
-    <div class="page-footer">
+  const docFooterMark = `
+    <div class="doc-footer">
       <span>${esc(clientName)} · Jornada do Cliente</span>
-      <span>Página ${n}</span>
+      <span>${esc(tenantName)}</span>
     </div>`;
+
 
   const sectionHead = (num: string, title: string, sub?: string) => `
     <div class="section-head">
@@ -1053,8 +1062,8 @@ function buildHTML(data: {
 
   // --- 1. Identificação ---
   const idHTML = `
-    <div class="page">
-      ${footer(2)}
+    <div class="section">
+      <div class="section-strip"></div>
       ${sectionHead("1", "Identificação", "Lead · Empresa · Contato")}
       <div class="card accent">
         <div class="id-grid">
@@ -1137,8 +1146,8 @@ function buildHTML(data: {
   ];
 
   const spicedHTML = `
-    <div class="page">
-      ${footer(3)}
+    <div class="section">
+      <div class="section-strip"></div>
       ${sectionHead("2", "Diagnóstico SPICED", "Situação · Pain · Impact · Critical · Decision")}
       <div class="spiced">
         ${spicedItems
@@ -1172,8 +1181,8 @@ function buildHTML(data: {
 
   // --- 3. Jornada (timeline) ---
   const jornadaHTML = `
-    <div class="page">
-      ${footer(4)}
+    <div class="section">
+      <div class="section-strip"></div>
       ${sectionHead("3", "Jornada Comercial", "Atividades · Chamadas · Participantes")}
       ${
         participants.length
@@ -1250,8 +1259,8 @@ function buildHTML(data: {
 
   // --- 4. Reunião comercial (AI summary + raw resumo) ---
   const reuniaoHTML = `
-    <div class="page">
-      ${footer(5)}
+    <div class="section">
+      <div class="section-strip"></div>
       ${sectionHead("4", "Reunião Comercial", "Resumo da sessão de vendas")}
       ${
         oportunidade?.resumo_reuniao
@@ -1281,8 +1290,8 @@ function buildHTML(data: {
       : "";
 
   const fechamentoHTML = `
-    <div class="page">
-      ${footer(6)}
+    <div class="section">
+      <div class="section-strip"></div>
       ${sectionHead("5", "Fechamento & Contrato", "Valores · Cobranças")}
       <div class="grid-3" style="margin-bottom:6mm;">
         <div class="kpi"><div class="kpi-label">EF</div><div class="kpi-value">${esc(fmtBRL(oportunidade?.valor_ef))}</div></div>
@@ -1321,8 +1330,8 @@ function buildHTML(data: {
 
   const preGcHTML = preGcText
     ? `
-    <div class="page">
-      ${footer(7)}
+    <div class="section">
+      <div class="section-strip"></div>
       ${sectionHead("6", "Pré Growth Class", "Relatório de preparação")}
       <div class="card">
         <div style="white-space: pre-wrap; font-size: 9.5pt; line-height: 1.65;">${esc(preGcText)}</div>
@@ -1332,8 +1341,8 @@ function buildHTML(data: {
 
   // --- 7. Growth Class ---
   const gcHTML = `
-    <div class="page">
-      ${footer(8)}
+    <div class="section">
+      <div class="section-strip"></div>
       <div class="gc-banner">
         <div class="eyebrow">Marco Zero da Operação</div>
         <h1>GROWTH CLASS</h1>
@@ -1386,8 +1395,8 @@ function buildHTML(data: {
 
   // --- 8. Síntese executiva (hero) ---
   const sinteseHTML = `
-    <div class="page">
-      ${footer(9)}
+    <div class="section">
+      <div class="section-strip"></div>
       ${sectionHead("8", "Síntese Executiva", "Para a operação iniciar com clareza")}
       <div class="section-intro">Resumo gerado por IA com base em todos os dados da jornada acima. Use como ponto de partida para a primeira reunião de rotina.</div>
       <div class="ai-block">
@@ -1426,8 +1435,8 @@ function buildHTML(data: {
 
   const appendixHTML = includeAppendix && transcripts.length
     ? `
-    <div class="page">
-      ${footer(10)}
+    <div class="section">
+      <div class="section-strip"></div>
       ${sectionHead("9", "Apêndice", "Transcrições completas · leitura opcional")}
       <div class="section-intro">As transcrições abaixo são preservadas na íntegra para consulta. Não é necessário ler de ponta a ponta — use a Síntese Executiva como guia.</div>
       ${transcripts
@@ -1478,17 +1487,12 @@ async function renderPDFShift(html: string): Promise<Uint8Array> {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      source: html,
-      landscape: false,
+      source: html.trim(),
       format: "A4",
-      margin: "0",
       use_print: true,
       wait_for_network: false,
       disable_javascript: true,
-      lazy_load_images: false,
       timeout: 30,
-      remove_blank: true,
-      sandbox: false,
     }),
   });
 
