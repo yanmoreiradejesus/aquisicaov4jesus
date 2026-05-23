@@ -70,6 +70,8 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [lastPdfUrl, setLastPdfUrl] = useState<string | null>(null);
+  const [lastPdfFilename, setLastPdfFilename] = useState<string>("jornada-cliente.pdf");
   const [contratoSignedUrl, setContratoSignedUrl] = useState<string | null>(null);
   const [editingContrato, setEditingContrato] = useState(false);
   const [contratoForm, setContratoForm] = useState<any>(null);
@@ -858,6 +860,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
                   onClick={async () => {
                     if (!form.id) return;
                     setExportingPdf(true);
+                    setLastPdfUrl(null);
                     try {
                       const { data, error } = await supabase.functions.invoke(
                         "generate-account-journey-pdf",
@@ -867,15 +870,30 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
                       const url = (data as any)?.url;
                       const filename = (data as any)?.filename ?? "jornada-cliente.pdf";
                       if (!url) throw new Error("URL não retornada");
-                      const a = document.createElement("a");
-                      a.href = url;
-                      a.download = filename;
-                      a.target = "_blank";
-                      a.rel = "noopener";
-                      document.body.appendChild(a);
-                      a.click();
-                      a.remove();
-                      toast({ title: "PDF gerado", description: "Download iniciado." });
+                      setLastPdfUrl(url);
+                      setLastPdfFilename(filename);
+
+                      // Baixar como blob (evita bloqueio do navegador por gesto expirado)
+                      try {
+                        const resp = await fetch(url);
+                        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                        const blob = await resp.blob();
+                        const objUrl = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = objUrl;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        setTimeout(() => URL.revokeObjectURL(objUrl), 1500);
+                        toast({ title: "PDF gerado", description: "Download iniciado." });
+                      } catch (downloadErr) {
+                        console.warn("blob download falhou, usando fallback", downloadErr);
+                        toast({
+                          title: "PDF pronto",
+                          description: "Clique no link abaixo para baixar.",
+                        });
+                      }
                     } catch (e: any) {
                       console.error(e);
                       toast({
@@ -895,6 +913,17 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
                   )}
                   {exportingPdf ? "Gerando jornada completa..." : "Exportar jornada completa (PDF)"}
                 </Button>
+                {lastPdfUrl && (
+                  <a
+                    href={lastPdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    download={lastPdfFilename}
+                    className="block w-full text-center text-[12px] text-primary underline hover:text-primary/80"
+                  >
+                    Se o download não iniciou, clique aqui para abrir o PDF
+                  </a>
+                )}
                 <p className="text-[11px] text-muted-foreground text-center">
                   Estrutura SPICED + destaque da Growth Class + síntese executiva por IA. Leva ~15s.
                 </p>
