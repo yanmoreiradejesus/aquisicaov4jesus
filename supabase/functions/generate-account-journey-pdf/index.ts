@@ -426,15 +426,13 @@ function buildHTML(data: {
   const sim = similarity(qualif, resumoReu);
   const dorParts: string[] = [];
   if (qualif) dorParts.push(qualif);
-  if (resumoReu && sim < 0.7) dorParts.push(resumoReu);
+  // resumo_reuniao tem sua própria seção; só duplicar em Pain se for muito diferente
+  if (resumoReu && sim < 0.4 && qualif.length < 200) dorParts.push(resumoReu);
 
+  // Situation: usar só notas/info_deal. Briefing e pré-qualificação têm sua própria seção.
   const situParts: string[] = [];
   if (isFilled(lead?.notas)) situParts.push(cleanText(lead.notas));
   if (isFilled(oportunidade?.info_deal)) situParts.push(cleanText(oportunidade.info_deal));
-  if (briefingText) situParts.push("**Briefing de mercado**\n" + briefingText);
-  if (preQualText && similarity(preQualText, briefingText) < 0.7) {
-    situParts.push("**Pré-qualificação**\n" + preQualText);
-  }
 
   // ---------- Timeline (group by day) ----------
   const byDay = new Map<string, any[]>();
