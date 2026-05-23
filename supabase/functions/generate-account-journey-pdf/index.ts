@@ -160,17 +160,22 @@ function similarity(a: string, b: string): number {
 }
 
 async function fetchImageAsDataURL(url: string): Promise<string | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
   try {
-    const resp = await fetch(url);
+    const resp = await fetch(url, { signal: controller.signal });
     if (!resp.ok) return null;
     const ct = resp.headers.get("content-type") ?? "image/png";
     const buf = new Uint8Array(await resp.arrayBuffer());
+    if (buf.byteLength > 1_500_000) return null;
     let bin = "";
     for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
     return `data:${ct};base64,${btoa(bin)}`;
   } catch (e) {
     console.error("image fetch error", e);
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -271,6 +276,7 @@ function buildHTML(data: {
   briefingText: string;
   preQualText: string;
   aiSummary: string;
+  includeAppendix: boolean;
   nameOf: (id?: string | null) => string;
 }): string {
   const {
@@ -288,6 +294,7 @@ function buildHTML(data: {
     briefingText,
     preQualText,
     aiSummary,
+    includeAppendix,
     nameOf,
   } = data;
 
