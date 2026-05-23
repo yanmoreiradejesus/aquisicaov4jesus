@@ -32,7 +32,6 @@ export type Database = {
           growth_class_meet_link: string | null
           growth_class_oportunidades_monetizacao: string | null
           growth_class_proximos_passos: string | null
-          growth_class_responsavel_id: string | null
           growth_class_transcricao_reuniao: string | null
           health_score: number | null
           id: string
@@ -64,7 +63,6 @@ export type Database = {
           growth_class_meet_link?: string | null
           growth_class_oportunidades_monetizacao?: string | null
           growth_class_proximos_passos?: string | null
-          growth_class_responsavel_id?: string | null
           growth_class_transcricao_reuniao?: string | null
           health_score?: number | null
           id?: string
@@ -96,7 +94,6 @@ export type Database = {
           growth_class_meet_link?: string | null
           growth_class_oportunidades_monetizacao?: string | null
           growth_class_proximos_passos?: string | null
-          growth_class_responsavel_id?: string | null
           growth_class_transcricao_reuniao?: string | null
           health_score?: number | null
           id?: string
@@ -438,6 +435,7 @@ export type Database = {
           canal: string | null
           cargo: string | null
           cidade: string | null
+          closer_id: string | null
           created_at: string
           created_by: string | null
           data_aquisicao: string | null
@@ -485,6 +483,7 @@ export type Database = {
           canal?: string | null
           cargo?: string | null
           cidade?: string | null
+          closer_id?: string | null
           created_at?: string
           created_by?: string | null
           data_aquisicao?: string | null
@@ -532,6 +531,7 @@ export type Database = {
           canal?: string | null
           cargo?: string | null
           cidade?: string | null
+          closer_id?: string | null
           created_at?: string
           created_by?: string | null
           data_aquisicao?: string | null
@@ -575,6 +575,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "crm_leads_closer_id_fkey"
+            columns: ["closer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "crm_leads_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
@@ -599,6 +606,7 @@ export type Database = {
       }
       crm_oportunidades: {
         Row: {
+          closer_id: string | null
           contrato_url: string | null
           created_at: string
           data_fechamento_previsto: string | null
@@ -625,6 +633,7 @@ export type Database = {
           valor_total: number | null
         }
         Insert: {
+          closer_id?: string | null
           contrato_url?: string | null
           created_at?: string
           data_fechamento_previsto?: string | null
@@ -651,6 +660,7 @@ export type Database = {
           valor_total?: number | null
         }
         Update: {
+          closer_id?: string | null
           contrato_url?: string | null
           created_at?: string
           data_fechamento_previsto?: string | null
@@ -677,6 +687,13 @@ export type Database = {
           valor_total?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "crm_oportunidades_closer_id_fkey"
+            columns: ["closer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "crm_oportunidades_lead_id_fkey"
             columns: ["lead_id"]
