@@ -67,7 +67,7 @@ const formatCategorias = (val?: string | null): string => {
 
 export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, fullPage = false, backTo }: Props) => {
   const [form, setForm] = useState<any>(null);
-  const [responsaveis, setResponsaveis] = useState<{ id: string; full_name: string | null; email: string }[]>([]);
+  const { profiles: amProfiles } = useProfilesList({ departamento: "Receitas" });
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [exportingPdf, setExportingPdf] = useState<false | "summary" | "appendix">(false);
