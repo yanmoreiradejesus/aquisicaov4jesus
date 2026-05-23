@@ -1510,7 +1510,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { account_id } = await req.json();
+    const body = await req.json();
+    const { account_id } = body;
+    const includeAppendix = body?.include_appendix === true;
     if (!account_id || typeof account_id !== "string") {
       return new Response(JSON.stringify({ error: "account_id is required" }), {
         status: 400,
@@ -1695,6 +1697,7 @@ Deno.serve(async (req) => {
       briefingText,
       preQualText,
       aiSummary,
+      includeAppendix,
       nameOf,
     });
 
