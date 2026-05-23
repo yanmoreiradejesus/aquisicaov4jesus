@@ -12,7 +12,7 @@ const corsHeaders = {
 // Helpers
 // ====================================================================
 const fmtBRL = (v?: number | null) =>
-  !v
+  v == null || v === 0 || Number.isNaN(Number(v))
     ? "—"
     : new Intl.NumberFormat("pt-BR", {
         style: "currency",
@@ -47,23 +47,47 @@ const esc = (s: any): string => {
     .replace(/'/g, "&#039;");
 };
 
-// Minimal markdown -> HTML for AI output (headers, bold, italics, lists, hr)
+// Normalize whitespace and collapse 3+ blank lines
+const cleanText = (s: any): string => {
+  if (!isFilled(s)) return "";
+  return String(s)
+    .replace(/\r\n/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+};
+
+// Convert plain text to safe HTML paragraphs (preserves bullets, splits long blocks)
+const textToParagraphs = (s: string): string => {
+  if (!s) return "";
+  const blocks = cleanText(s).split(/\n{2,}/);
+  return blocks
+    .map((b) => {
+      const lines = b.split("\n");
+      // bullet block
+      if (lines.every((l) => /^\s*[-•*]\s+/.test(l))) {
+        const items = lines
+          .map((l) => esc(l.replace(/^\s*[-•*]\s+/, "")))
+          .map((li) => `<li>${li}</li>`)
+          .join("");
+        return `<ul>${items}</ul>`;
+      }
+      return `<p>${esc(b).replace(/\n/g, "<br/>")}</p>`;
+    })
+    .join("");
+};
+
+// Minimal markdown -> HTML for AI output
 function mdToHtml(input: string): string {
   if (!input) return "";
   let s = esc(input);
-  // Code blocks (rare here, but safe)
-  s = s.replace(/```([\s\S]*?)```/g, (_, code) => `<pre>${code}</pre>`);
-  // Headings ## and ###
   s = s.replace(/^###\s+(.+)$/gm, "<h4>$1</h4>");
   s = s.replace(/^##\s+(.+)$/gm, "<h3>$1</h3>");
-  s = s.replace(/^#\s+(.+)$/gm, "<h2>$1</h2>");
-  // Horizontal rule
+  s = s.replace(/^#\s+(.+)$/gm, "<h3>$1</h3>");
   s = s.replace(/^---+\s*$/gm, "<hr/>");
-  // Bold and italic
   s = s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
   s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
-  s = s.replace(/_([^_\n]+)_/g, "<em>$1</em>");
-  // Lists
+  s = s.replace(/^&gt;\s+(.+)$/gm, "<blockquote>$1</blockquote>");
   const lines = s.split("\n");
   const out: string[] = [];
   let inUL = false;
@@ -85,7 +109,6 @@ function mdToHtml(input: string): string {
   }
   if (inUL) out.push("</ul>");
   s = out.join("\n");
-  // Paragraphs from blank lines, but skip lines that are already block tags
   const blocks = s.split(/\n{2,}/).map((b) => {
     const t = b.trim();
     if (!t) return "";
@@ -95,7 +118,7 @@ function mdToHtml(input: string): string {
   return blocks.filter(Boolean).join("\n");
 }
 
-// JSON -> readable text (used for briefing/qualification JSON fields)
+// JSON -> readable text
 function jsonToReadable(v: any, depth = 0): string {
   if (v == null) return "";
   if (typeof v === "string") return v;
@@ -179,53 +202,41 @@ async function fetchImageAsDataURL(url: string): Promise<string | null> {
   }
 }
 
-const initials = (name: string): string =>
-  (name || "?")
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join("")
-    .toUpperCase();
-
 // ====================================================================
 // AI executive summary
 // ====================================================================
 const SYSTEM_PROMPT = `Você é um consultor sênior da V4 Company que prepara handoffs comerciais → operação.
-Receberá os dados completos da jornada de um cliente (lead, oportunidade, reuniões, Growth Class).
-Gere uma SÍNTESE EXECUTIVA para a operação, em português do Brasil.
+Receberá os dados completos da jornada de um cliente.
+Gere uma SÍNTESE EXECUTIVA curta e objetiva em português do Brasil.
 
-FORMATO obrigatório (markdown):
-- Use ## para títulos de seção, listas com "- " e **negrito** para destacar termos chave.
-- NÃO use emojis.
-- Seja preciso, sem floreios. Se algo estiver vazio, escreva "Não informado".
+FORMATO obrigatório (markdown puro, sem emojis):
+- Use ### para títulos de seção, listas com "- " e **negrito** para destaques.
+- Seja direto. Se algo estiver vazio, escreva "Não informado".
+- Total: no máximo ~500 palavras.
 
-Estrutura, exatamente nesta ordem:
+Estrutura exata:
 
-## Quem é o cliente
-- 2 a 4 bullets factuais (segmento, faturamento, contexto)
+### Quem é o cliente
+- 2 a 3 bullets factuais.
 
-## Dor central
-1 parágrafo curto e direto.
+### Dor central
+1 parágrafo curto.
 
-## Promessa feita na Growth Class
-- bullets do que foi acordado
+### Promessa feita
+- bullets curtos.
 
-## Expectativa do cliente em uma frase
-> 1 frase entre aspas, parafraseando o cliente.
+### Entregáveis combinados
+- bullets concretos.
 
-## Entregáveis combinados
-- bullets concretos
+### Riscos e atenção
+- bullets.
 
-## Riscos e pontos de atenção
-- bullets
-
-## Primeiras ações (30 dias)
-- 3 a 6 bullets de ações priorizadas`;
+### Primeiras ações (30 dias)
+- 3 a 5 bullets priorizados.`;
 
 async function generateExecutiveSummary(payload: any): Promise<string> {
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
-  if (!apiKey) return "Síntese executiva indisponível (LOVABLE_API_KEY ausente).";
+  if (!apiKey) return "Síntese executiva indisponível.";
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 18000);
   try {
@@ -239,12 +250,12 @@ async function generateExecutiveSummary(payload: any): Promise<string> {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3.1-flash-lite-preview",
+          model: "google/gemini-2.5-flash",
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: JSON.stringify(payload).slice(0, 35000) },
+            { role: "user", content: JSON.stringify(payload).slice(0, 40000) },
           ],
-          max_tokens: 1600,
+          max_tokens: 1400,
         }),
       },
     );
@@ -264,7 +275,7 @@ async function generateExecutiveSummary(payload: any): Promise<string> {
 }
 
 // ====================================================================
-// HTML TEMPLATE
+// HTML TEMPLATE — clean, light, report-style
 // ====================================================================
 function buildHTML(data: {
   clientName: string;
@@ -303,65 +314,45 @@ function buildHTML(data: {
     nameOf,
   } = data;
 
-  const primary = primaryHsl && primaryHsl.startsWith("hsl") ? primaryHsl : "hsl(217 91% 60%)";
+  const primary = primaryHsl && primaryHsl.startsWith("hsl") ? primaryHsl : "hsl(217 91% 50%)";
 
-  // KPIs for cover
-  const kpis = [
-    {
-      label: "Valor total",
-      value: fmtBRL(oportunidade?.valor_total ?? oportunidade?.valor_ef),
-    },
-    {
-      label: "Fee mensal",
-      value: fmtBRL(oportunidade?.valor_fee),
-    },
-    {
-      label: "Fechamento",
-      value: fmtDate(
-        oportunidade?.data_fechamento_real ?? account.data_inicio_contrato,
-      ),
-    },
-  ];
-
-  // Identification fields (omit empty ones — no orphan labels)
+  // ---------- Identification ----------
   const cidadeEstado = [lead?.cidade, lead?.estado].filter(isFilled).join(" / ");
   const idFields: { label: string; value: string }[] = [];
   const pushIfFilled = (label: string, v: any) => {
-    if (isFilled(v)) idFields.push({ label, value: String(v) });
+    if (isFilled(v)) idFields.push({ label, value: String(v).trim() });
   };
   pushIfFilled("Empresa", lead?.empresa);
   pushIfFilled("Contato", lead?.nome);
   pushIfFilled("Cargo", lead?.cargo);
   pushIfFilled("Email", lead?.email);
   pushIfFilled("Telefone", lead?.telefone);
-  pushIfFilled("Instagram", lead?.instagram);
-  pushIfFilled("Site", lead?.site);
   pushIfFilled("Localização", cidadeEstado);
   pushIfFilled("Segmento", lead?.segmento);
   pushIfFilled("Faturamento", lead?.faturamento);
   pushIfFilled("Tier", lead?.tier);
-  pushIfFilled("Urgência", lead?.urgencia);
   pushIfFilled("Origem", lead?.origem);
   pushIfFilled("Canal", lead?.canal);
-  pushIfFilled("Pipe", lead?.pipe);
-  if (lead?.data_criacao_origem)
-    idFields.push({ label: "Criado em", value: fmtDate(lead.data_criacao_origem) });
+  pushIfFilled("Instagram", lead?.instagram);
+  pushIfFilled("Site", lead?.site);
 
-  // SPICED data
-  const qualif = (lead?.qualificacao ?? "").trim();
-  const resumoReu = (oportunidade?.resumo_reuniao ?? "").trim();
+  // ---------- SPICED ----------
+  const qualif = cleanText(lead?.qualificacao);
+  const resumoReu = cleanText(oportunidade?.resumo_reuniao);
   const sim = similarity(qualif, resumoReu);
   const dorParts: string[] = [];
   if (qualif) dorParts.push(qualif);
   if (resumoReu && sim < 0.7) dorParts.push(resumoReu);
 
   const situParts: string[] = [];
-  if (lead?.notas) situParts.push(lead.notas);
-  if (oportunidade?.info_deal) situParts.push(oportunidade.info_deal);
-  if (briefingText) situParts.push(`**Briefing de mercado**\n${briefingText}`);
-  if (preQualText) situParts.push(`**Pré-qualificação**\n${preQualText}`);
+  if (isFilled(lead?.notas)) situParts.push(cleanText(lead.notas));
+  if (isFilled(oportunidade?.info_deal)) situParts.push(cleanText(oportunidade.info_deal));
+  if (briefingText) situParts.push("**Briefing de mercado**\n" + briefingText);
+  if (preQualText && similarity(preQualText, briefingText) < 0.7) {
+    situParts.push("**Pré-qualificação**\n" + preQualText);
+  }
 
-  // Timeline grouped by day
+  // ---------- Timeline (group by day) ----------
   const byDay = new Map<string, any[]>();
   for (const a of atividades) {
     const d = new Date(a.created_at).toLocaleDateString("pt-BR");
@@ -369,750 +360,482 @@ function buildHTML(data: {
     byDay.get(d)!.push(a);
   }
 
-  // GC empty check
+  // ---------- GC ----------
   const gcFields = [
     account.growth_class_expectativas,
     account.growth_class_ata,
     account.growth_class_oportunidades_monetizacao,
     account.growth_class_proximos_passos,
-    account.growth_class_transcricao_reuniao,
   ];
-  const gcIsEmpty = gcFields.every((f) => !f || !String(f).trim());
+  const gcIsEmpty = gcFields.every((f) => !isFilled(f));
 
-  // Participants (initials extracted from oportunidade.participantes if exists, else just responsavel)
+  // ---------- Participants ----------
   const participants: { name: string; role: string }[] = [];
   if (oportunidade?.responsavel_id) {
-    participants.push({
-      name: nameOf(oportunidade.responsavel_id),
-      role: "Responsável comercial",
-    });
+    participants.push({ name: nameOf(oportunidade.responsavel_id), role: "Responsável comercial" });
   }
   if (account.account_manager_id) {
-    participants.push({
-      name: nameOf(account.account_manager_id),
-      role: "Account Manager",
-    });
+    participants.push({ name: nameOf(account.account_manager_id), role: "Account Manager" });
   }
   if (account.growth_class_responsavel_id) {
-    participants.push({
-      name: nameOf(account.growth_class_responsavel_id),
-      role: "Responsável Growth Class",
+    participants.push({ name: nameOf(account.growth_class_responsavel_id), role: "Responsável Growth Class" });
+  }
+  if (isFilled(lead?.nome)) {
+    participants.push({ name: lead.nome, role: `Cliente${isFilled(lead?.cargo) ? ` · ${lead.cargo}` : ""}` });
+  }
+
+  // ---------- Transcripts ----------
+  const transcripts: { title: string; text: string }[] = [];
+  if (isFilled(oportunidade?.transcricao_reuniao)) {
+    transcripts.push({
+      title: "Transcrição — Reunião comercial",
+      text: cleanText(oportunidade.transcricao_reuniao),
     });
   }
-  if (lead?.nome) {
-    participants.push({ name: lead.nome, role: `Cliente${lead?.cargo ? ` · ${lead.cargo}` : ""}` });
+  if (isFilled(account.growth_class_transcricao_reuniao)) {
+    transcripts.push({
+      title: "Transcrição — Growth Class",
+      text: cleanText(account.growth_class_transcricao_reuniao),
+    });
+  }
+  for (const c of callEvents) {
+    if (isFilled(c.transcricao)) {
+      transcripts.push({
+        title: `Chamada · ${fmtDateTime(c.created_at)}${c.operador ? ` · ${c.operador}` : ""}`,
+        text: cleanText(c.transcricao),
+      });
+    }
   }
 
-  // ============== CSS ==============
+  // ====================================================================
+  // CSS — light, editorial, predictable pagination
+  // ====================================================================
   const css = `
-    :root {
-      --primary: ${primary};
-      --bg: hsl(240 10% 3.9%);
-      --surface: hsl(240 10% 7%);
-      --surface-2: hsl(240 8% 11%);
-      --border: hsl(240 6% 18%);
-      --text: hsl(0 0% 98%);
-      --muted: hsl(240 5% 65%);
-      --accent: ${primary};
+    @page {
+      size: A4;
+      margin: 18mm 16mm 18mm 16mm;
     }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; }
     html, body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: 10pt;
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+      color: #1a1a1a;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 10.5pt;
       line-height: 1.55;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
 
-    @page { size: A4; margin: 0; }
+    h1, h2, h3, h4 { color: #0a0a0a; font-weight: 600; }
+    p { margin: 0 0 2.5mm 0; }
+    ul { margin: 0 0 3mm 5mm; padding: 0; }
+    li { margin: 0.8mm 0; }
 
-    /* Section: full-bleed background, padding inside, page-break BEFORE.
-       NO min-height — content flows naturally across pages without forcing
-       blank A4 fillers. The dark background is repeated via body so any
-       overflow pages also stay dark. */
-    .section {
-      page-break-before: always;
-      padding: 18mm 16mm 18mm 16mm;
-      background: var(--bg);
+    /* ===== Cover ===== */
+    .cover {
+      page-break-after: always;
+      padding-top: 30mm;
     }
-    .section:first-of-type { page-break-before: auto; }
-
-    /* A simple top accent on each section instead of absolute strip */
-    .section-strip {
+    .cover-eyebrow {
+      font-size: 9pt;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: ${primary};
+      font-weight: 600;
+      margin-bottom: 4mm;
+    }
+    .cover-title {
+      font-size: 32pt;
+      font-weight: 700;
+      line-height: 1.05;
+      color: #0a0a0a;
+      letter-spacing: -0.01em;
+      margin-bottom: 6mm;
+    }
+    .cover-client {
+      font-size: 18pt;
+      color: #4a4a4a;
+      font-weight: 400;
+      margin-bottom: 14mm;
+    }
+    .cover-rule {
       height: 3px;
-      background: var(--primary);
-      margin: -18mm -16mm 10mm -16mm;
+      width: 40mm;
+      background: ${primary};
+      margin-bottom: 10mm;
     }
-
-    .doc-footer {
-      margin-top: 12mm;
-      padding-top: 4mm;
-      border-top: 1px solid var(--border);
+    .cover-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6mm 10mm;
+      margin-bottom: 12mm;
+    }
+    .cover-grid .label {
+      font-size: 8pt;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #888;
+      margin-bottom: 1mm;
+    }
+    .cover-grid .value {
+      font-size: 11pt;
+      color: #1a1a1a;
+      font-weight: 500;
+    }
+    .cover-footer {
+      position: running(coverFooter);
+      margin-top: 50mm;
+      padding-top: 5mm;
+      border-top: 1px solid #e5e5e5;
       display: flex;
       justify-content: space-between;
-      font-size: 8pt;
-      color: var(--muted);
-    }
-
-    /* Cover: own full-bleed page with zero margin */
-    .cover {
-      width: 210mm;
-      height: 297mm;
-      position: relative;
-      page-break-after: always;
-      background: var(--bg);
-      overflow: hidden;
-    }
-
-    /* ============ COVER ============ */
-    .cover {
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-    }
-    .cover-hero {
-      background: linear-gradient(135deg, var(--primary) 0%, hsl(220 70% 35%) 100%);
-      padding: 22mm 18mm 30mm 18mm;
-      position: relative;
-      overflow: hidden;
-    }
-    .cover-hero::after {
-      content: '';
-      position: absolute;
-      right: -50mm;
-      top: -50mm;
-      width: 200mm;
-      height: 200mm;
-      background: radial-gradient(circle, hsla(0,0%,100%,0.08) 0%, transparent 60%);
+      font-size: 8.5pt;
+      color: #888;
     }
     .cover-brand {
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 30mm;
-      position: relative;
-      z-index: 1;
+      gap: 8px;
+      margin-bottom: 16mm;
     }
-    .cover-brand img { max-height: 36px; max-width: 130px; }
-    .cover-brand .brand-text {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 14pt;
-      letter-spacing: 0.15em;
-      color: white;
-    }
-    .cover-eyebrow {
-      font-family: 'Inter', sans-serif;
+    .cover-brand img { max-height: 28px; max-width: 110px; }
+    .cover-brand-name {
       font-size: 10pt;
-      font-weight: 500;
-      color: hsla(0,0%,100%,0.75);
-      letter-spacing: 0.25em;
+      letter-spacing: 0.18em;
+      color: #555;
       text-transform: uppercase;
-      margin-bottom: 6mm;
-      position: relative;
-      z-index: 1;
+      font-weight: 600;
     }
-    .cover-title {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 64pt;
-      line-height: 0.92;
-      color: white;
-      letter-spacing: 0.02em;
-      position: relative;
-      z-index: 1;
-    }
-    .cover-body {
-      padding: 14mm 18mm 18mm 18mm;
-      flex: 1;
-    }
-    .cover-client-label {
-      font-size: 9pt;
-      color: var(--muted);
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      margin-bottom: 4mm;
-    }
-    .cover-client-name {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 44pt;
-      line-height: 1;
-      color: var(--text);
-      letter-spacing: 0.02em;
-      margin-bottom: 8mm;
-      text-transform: uppercase;
-    }
-    .cover-meta {
-      color: var(--muted);
-      font-size: 10pt;
-      margin-bottom: 14mm;
-      max-width: 130mm;
-    }
-    .kpi-row {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 6mm;
-      margin-bottom: 14mm;
-    }
-    .kpi {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 8mm 6mm;
-      border-left: 3px solid var(--primary);
-    }
-    .kpi-label {
+
+    /* ===== Sections ===== */
+    .section { margin-top: 10mm; }
+    .section:first-of-type { margin-top: 0; }
+    .section-eyebrow {
       font-size: 8pt;
-      color: var(--muted);
-      letter-spacing: 0.15em;
+      letter-spacing: 0.22em;
       text-transform: uppercase;
-      margin-bottom: 3mm;
-    }
-    .kpi-value {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 22pt;
-      color: var(--text);
-      line-height: 1;
-    }
-    .cover-roles {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6mm;
-      margin-bottom: 10mm;
-    }
-    .role-cell .label {
-      font-size: 8pt;
-      color: var(--muted);
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
+      color: ${primary};
+      font-weight: 600;
       margin-bottom: 2mm;
     }
-    .role-cell .value {
-      font-size: 10pt;
-      color: var(--text);
-      font-weight: 500;
-    }
-    .cover-stamp {
-      position: absolute;
-      bottom: 14mm;
-      left: 18mm;
-      right: 18mm;
-      font-size: 8pt;
-      color: var(--muted);
-      display: flex;
-      justify-content: space-between;
-      border-top: 1px solid var(--border);
-      padding-top: 5mm;
-    }
-
-    /* ============ Sections ============ */
-    .section-head {
-      display: flex;
-      align-items: center;
-      gap: 6mm;
-      margin-bottom: 8mm;
-    }
-    .section-num {
-      width: 12mm;
-      height: 12mm;
-      background: var(--primary);
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 18pt;
-      border-radius: 6px;
-    }
     .section-title {
-      flex: 1;
+      font-size: 18pt;
+      font-weight: 700;
+      color: #0a0a0a;
+      margin-bottom: 1.5mm;
+      letter-spacing: -0.01em;
     }
-    .section-title h1 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 26pt;
-      letter-spacing: 0.04em;
-      line-height: 1;
-      color: var(--text);
-    }
-    .section-title .sub {
-      font-size: 9pt;
-      color: var(--muted);
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      margin-top: 2mm;
-    }
-    .section-rule {
-      height: 2px;
-      background: var(--primary);
-      width: 30mm;
+    .section-sub {
+      font-size: 9.5pt;
+      color: #666;
       margin-bottom: 6mm;
     }
-
-    /* ============ Cards / Grids ============ */
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
-    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; }
-
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 5mm 6mm;
-      /* NO page-break-inside:avoid — long content cards (briefing, ata,
-         transcripts) MUST be allowed to split or they push huge blocks
-         onto a new page and leave the previous one blank. */
+    .section-rule {
+      height: 1px;
+      background: #e5e5e5;
+      margin: 0 0 6mm 0;
     }
-    .card.accent { border-left: 3px solid var(--primary); }
 
-    .field { padding: 2mm 0; }
-    .field .label {
+    h3.sub-title {
+      font-size: 12pt;
+      font-weight: 600;
+      color: #0a0a0a;
+      margin: 5mm 0 2.5mm 0;
+    }
+
+    /* ===== Small blocks (allow break inside if large, but keep tight blocks together) ===== */
+    .kv-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3mm 8mm;
+    }
+    .kv {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .kv .label {
       font-size: 7.5pt;
-      color: var(--muted);
-      letter-spacing: 0.15em;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
-      margin-bottom: 1.5mm;
+      color: #888;
+      margin-bottom: 0.6mm;
     }
-    .field .value {
+    .kv .value {
       font-size: 10pt;
-      color: var(--text);
+      color: #1a1a1a;
       font-weight: 500;
     }
 
-    .id-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 4mm 6mm;
+    /* ===== Content blocks ===== */
+    .block {
+      background: #fafafa;
+      border: 1px solid #ececec;
+      border-left: 3px solid ${primary};
+      border-radius: 4px;
+      padding: 5mm 6mm;
+      margin: 3mm 0 4mm 0;
+    }
+    .block p, .block li { font-size: 10pt; color: #2a2a2a; }
+    .block strong { color: #0a0a0a; }
+
+    .quote {
+      border-left: 3px solid ${primary};
+      padding: 3mm 5mm;
+      background: #fafafa;
+      font-style: italic;
+      color: #2a2a2a;
+      font-size: 10.5pt;
+      margin: 3mm 0 4mm 0;
+      break-inside: avoid;
+      page-break-inside: avoid;
     }
 
-    /* SPICED cards */
-    .spiced {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 4mm;
-    }
+    /* ===== SPICED ===== */
     .spiced-item {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 5mm 6mm;
       display: grid;
-      grid-template-columns: 14mm 1fr;
+      grid-template-columns: 10mm 1fr;
       gap: 4mm;
-      /* allow split: SPICED situation/pain bodies can be huge */
+      padding: 4mm 0;
+      border-bottom: 1px solid #eee;
     }
+    .spiced-item:last-child { border-bottom: none; }
     .spiced-letter {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 36pt;
-      line-height: 0.9;
-      color: var(--primary);
+      font-size: 22pt;
+      font-weight: 700;
+      color: ${primary};
+      line-height: 1;
     }
     .spiced-body h4 {
       font-size: 11pt;
+      margin: 0 0 1mm 0;
       font-weight: 600;
-      color: var(--text);
-      margin-bottom: 2mm;
-      letter-spacing: 0.04em;
     }
     .spiced-body .sub {
       font-size: 8pt;
-      color: var(--muted);
       letter-spacing: 0.15em;
       text-transform: uppercase;
-      margin-bottom: 3mm;
+      color: #888;
+      margin-bottom: 2mm;
     }
-    .spiced-body p { color: var(--text); font-size: 9.5pt; white-space: pre-wrap; }
-    .spiced-body .micro-fields {
+    .spiced-body p { font-size: 9.5pt; color: #2a2a2a; }
+    .micro {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 3mm;
-      margin-top: 3mm;
+      grid-template-columns: 1fr 1fr;
+      gap: 2mm 6mm;
+      margin-top: 2mm;
     }
+    .micro .label {
+      font-size: 7.5pt; letter-spacing: 0.14em; text-transform: uppercase; color: #888;
+    }
+    .micro .value { font-size: 9.5pt; color: #1a1a1a; font-weight: 500; }
 
-    /* Timeline */
-    .timeline { padding-left: 6mm; position: relative; }
-    .timeline::before {
-      content: '';
-      position: absolute;
-      left: 1.5mm;
-      top: 4mm;
-      bottom: 4mm;
-      width: 1px;
-      background: var(--border);
-    }
+    /* ===== Timeline ===== */
     .tl-day {
-      position: relative;
-      margin-bottom: 6mm;
+      margin: 4mm 0;
+      break-inside: avoid;
       page-break-inside: avoid;
     }
     .tl-day-label {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 13pt;
-      letter-spacing: 0.08em;
-      color: var(--primary);
-      margin-bottom: 3mm;
-      margin-left: -2mm;
+      font-size: 9pt;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: ${primary};
+      font-weight: 600;
+      margin-bottom: 1.5mm;
     }
-    .tl-item {
-      position: relative;
-      padding: 2mm 0 3mm 4mm;
-    }
-    .tl-item::before {
-      content: '';
-      position: absolute;
-      left: -5.5mm;
-      top: 3mm;
-      width: 3mm;
-      height: 3mm;
-      border-radius: 50%;
-      background: var(--primary);
-      box-shadow: 0 0 0 2px var(--bg);
-    }
-    .tl-time {
-      font-size: 8pt;
-      color: var(--muted);
-      letter-spacing: 0.1em;
-    }
+    .tl-items { padding-left: 4mm; border-left: 1px solid #e5e5e5; }
+    .tl-item { padding: 1.5mm 0; }
+    .tl-time { font-size: 8.5pt; color: #888; }
     .tl-tipo {
       display: inline-block;
       font-size: 7.5pt;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
-      background: var(--surface-2);
-      color: var(--primary);
-      padding: 0.7mm 2mm;
-      border-radius: 2px;
+      color: ${primary};
       margin-left: 2mm;
-    }
-    .tl-desc {
-      font-size: 9.5pt;
-      color: var(--text);
-      margin-top: 1mm;
-    }
-
-    /* Participants */
-    .participants {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 3mm;
-      margin-top: 4mm;
-    }
-    .participant {
-      display: flex;
-      align-items: center;
-      gap: 3mm;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 3mm 4mm;
-    }
-    .avatar {
-      width: 11mm;
-      height: 11mm;
-      border-radius: 50%;
-      background: var(--primary);
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 14pt;
-      flex-shrink: 0;
-    }
-    .participant .info .name {
-      font-size: 10pt;
       font-weight: 600;
-      color: var(--text);
     }
-    .participant .info .role {
-      font-size: 8pt;
-      color: var(--muted);
-    }
+    .tl-desc { font-size: 9.5pt; color: #2a2a2a; margin-top: 0.5mm; }
 
-    /* Calls list */
-    .call-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-left: 3px solid var(--primary);
-      border-radius: 4px;
-      padding: 4mm 5mm;
-      margin-bottom: 3mm;
+    /* ===== Calls ===== */
+    .call {
+      padding: 3mm 0;
+      border-bottom: 1px solid #eee;
+      break-inside: avoid;
       page-break-inside: avoid;
     }
+    .call:last-child { border-bottom: none; }
     .call-head {
       display: flex;
       justify-content: space-between;
-      align-items: baseline;
       font-size: 9pt;
-      color: var(--muted);
-      margin-bottom: 2mm;
+      color: #666;
+      margin-bottom: 1mm;
     }
-    .call-head strong { color: var(--text); font-weight: 600; }
-    .call-resumo { font-size: 9pt; color: var(--text); }
+    .call-head strong { color: #1a1a1a; font-weight: 600; }
+    .call-resumo { font-size: 9.5pt; color: #2a2a2a; }
 
-    /* AI summary block */
-    .ai-block {
-      background: linear-gradient(180deg, var(--surface) 0%, var(--surface-2) 100%);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 8mm 9mm;
+    /* ===== Participants ===== */
+    .participants { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm; }
+    .participant {
+      display: flex; align-items: center; gap: 3mm;
+      padding: 2.5mm 3mm;
+      background: #fafafa; border: 1px solid #ececec; border-radius: 4px;
+      break-inside: avoid;
     }
-    .ai-block h2 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 18pt;
-      color: var(--primary);
-      letter-spacing: 0.04em;
-      margin: 8mm 0 3mm 0;
+    .avatar {
+      width: 9mm; height: 9mm; border-radius: 50%;
+      background: ${primary}; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9pt; font-weight: 600; flex-shrink: 0;
     }
-    .ai-block h2:first-child { margin-top: 0; }
-    .ai-block h3 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 15pt;
-      color: var(--text);
-      letter-spacing: 0.03em;
-      margin: 6mm 0 2mm 0;
-    }
-    .ai-block h4 {
-      font-size: 10pt;
-      font-weight: 600;
-      color: var(--text);
-      margin: 4mm 0 2mm 0;
-    }
-    .ai-block p { margin: 2mm 0; color: var(--text); font-size: 10pt; line-height: 1.6; }
-    .ai-block ul { margin: 2mm 0 3mm 5mm; }
-    .ai-block li { margin: 1.2mm 0; font-size: 10pt; line-height: 1.5; }
-    .ai-block li::marker { color: var(--primary); }
-    .ai-block strong { color: var(--text); font-weight: 600; }
-    .ai-block em { color: var(--muted); font-style: italic; }
-    .ai-block hr { border: none; border-top: 1px solid var(--border); margin: 5mm 0; }
+    .participant .name { font-size: 9.5pt; font-weight: 600; color: #1a1a1a; }
+    .participant .role { font-size: 8pt; color: #888; }
 
-    /* Quote */
-    .quote {
-      border-left: 3px solid var(--primary);
-      padding: 3mm 5mm;
-      background: var(--surface);
-      font-style: italic;
-      color: var(--text);
-      font-size: 11pt;
-      line-height: 1.5;
-      page-break-inside: avoid;
-    }
-
-    /* GC Banner */
-    .gc-banner {
-      background: linear-gradient(135deg, var(--primary) 0%, hsl(220 70% 35%) 100%);
-      color: white;
-      padding: 14mm 16mm;
-      border-radius: 8px;
-      margin: -2mm 0 8mm 0;
-      page-break-inside: avoid;
-    }
-    .gc-banner .eyebrow {
-      font-size: 9pt;
-      letter-spacing: 0.25em;
-      text-transform: uppercase;
-      opacity: 0.85;
-    }
-    .gc-banner h1 {
-      font-family: 'Bebas Neue', sans-serif;
-      font-size: 50pt;
-      line-height: 0.95;
-      letter-spacing: 0.02em;
-      margin: 3mm 0 3mm 0;
-    }
-    .gc-banner p { font-size: 10pt; opacity: 0.9; max-width: 130mm; }
-
-    /* Tag/badge */
-    .badge {
-      display: inline-block;
-      font-size: 8pt;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      background: var(--surface-2);
-      color: var(--primary);
-      padding: 1mm 2.5mm;
-      border-radius: 3px;
-      border: 1px solid var(--border);
-    }
-
-    /* Tables (cobranças) */
-    table.compact {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 9pt;
-      margin-top: 3mm;
-    }
+    /* ===== Table ===== */
+    table.compact { width: 100%; border-collapse: collapse; font-size: 9pt; margin-top: 2mm; }
     table.compact th {
       text-align: left;
-      font-weight: 500;
-      color: var(--muted);
-      font-size: 8pt;
+      font-weight: 600;
+      color: #888;
+      font-size: 7.5pt;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       padding: 2mm 3mm;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid #e5e5e5;
     }
     table.compact td {
       padding: 2mm 3mm;
-      border-bottom: 1px solid var(--border);
-      color: var(--text);
+      border-bottom: 1px solid #f0f0f0;
+      color: #2a2a2a;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 7.5pt;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: #f0f0f0;
+      color: #555;
+      padding: 0.5mm 2mm;
+      border-radius: 2px;
     }
 
-    /* Appendix transcription */
+    /* ===== AI block ===== */
+    .ai h3 { font-size: 12pt; color: ${primary}; margin: 5mm 0 2mm 0; font-weight: 600; }
+    .ai h3:first-child { margin-top: 0; }
+    .ai p { margin: 0 0 2.5mm 0; }
+    .ai ul { margin: 1mm 0 3mm 5mm; }
+    .ai li { font-size: 10pt; margin: 1mm 0; }
+    .ai blockquote {
+      border-left: 3px solid ${primary};
+      padding: 2mm 4mm; margin: 2mm 0;
+      background: #fafafa; font-style: italic; color: #2a2a2a;
+    }
+
+    /* ===== Empty ===== */
+    .empty {
+      text-align: center; color: #999; font-style: italic;
+      padding: 4mm; border: 1px dashed #ddd; border-radius: 4px;
+      font-size: 9.5pt;
+    }
+
+    /* ===== Appendix ===== */
+    .appendix-divider {
+      page-break-before: always;
+      margin-top: 0;
+    }
     .transcript {
-      background: var(--surface);
-      border-radius: 6px;
-      padding: 6mm 7mm;
       font-size: 8.5pt;
       line-height: 1.5;
-      color: var(--text);
-      column-count: 2;
-      column-gap: 8mm;
-      column-rule: 1px solid var(--border);
+      color: #333;
+      background: #fafafa;
+      border: 1px solid #ececec;
+      border-radius: 4px;
+      padding: 4mm 5mm;
+      margin: 2mm 0 6mm 0;
+      white-space: pre-wrap;
+      word-break: break-word;
     }
-    .transcript .timestamp {
-      color: var(--muted);
-      font-size: 7.5pt;
-      letter-spacing: 0.05em;
-      display: block;
-      margin-top: 3mm;
-    }
+    .transcript .ts { color: #888; font-weight: 600; }
 
-    .empty-state {
-      text-align: center;
-      color: var(--muted);
-      font-style: italic;
-      padding: 8mm;
-      background: var(--surface);
-      border: 1px dashed var(--border);
-      border-radius: 6px;
-    }
+    /* Avoid orphan headings */
+    h3.sub-title, .section-title { page-break-after: avoid; break-after: avoid; }
 
-    .section-intro {
-      color: var(--muted);
-      font-size: 9pt;
-      margin-bottom: 5mm;
-      max-width: 160mm;
-      font-style: italic;
-    }
+    /* Allow long blocks to flow (NO break-inside avoid on big content) */
   `;
 
-  // ============== HTML BUILDERS ==============
-  const docFooterMark = `
-    <div class="doc-footer">
-      <span>${esc(clientName)} · Jornada do Cliente</span>
-      <span>${esc(tenantName)}</span>
-    </div>`;
+  // ====================================================================
+  // BUILDERS
+  // ====================================================================
+  const sectionHead = (eyebrow: string, title: string, sub?: string) => `
+    <div class="section-eyebrow">${esc(eyebrow)}</div>
+    <div class="section-title">${esc(title)}</div>
+    ${sub ? `<div class="section-sub">${esc(sub)}</div>` : `<div style="margin-bottom:4mm;"></div>`}
+    <div class="section-rule"></div>
+  `;
 
-
-  const sectionHead = (num: string, title: string, sub?: string) => `
-    <div class="section-head">
-      <div class="section-num">${num}</div>
-      <div class="section-title">
-        <h1>${esc(title)}</h1>
-        ${sub ? `<div class="sub">${esc(sub)}</div>` : ""}
+  // ---------- Cover ----------
+  const coverHTML = `
+    <div class="cover">
+      <div class="cover-brand">
+        ${tenantLogo ? `<img src="${tenantLogo}" alt="${esc(tenantName)}"/>` : ""}
+        <div class="cover-brand-name">${esc(tenantName)}</div>
+      </div>
+      <div class="cover-eyebrow">Handoff · Comercial → Operação</div>
+      <div class="cover-title">Jornada do Cliente</div>
+      <div class="cover-client">${esc(clientName)}</div>
+      <div class="cover-rule"></div>
+      <div class="cover-grid">
+        <div><div class="label">Valor total</div><div class="value">${esc(fmtBRL(oportunidade?.valor_total ?? oportunidade?.valor_ef))}</div></div>
+        <div><div class="label">Fee mensal</div><div class="value">${esc(fmtBRL(oportunidade?.valor_fee))}</div></div>
+        <div><div class="label">Fechamento</div><div class="value">${esc(fmtDate(oportunidade?.data_fechamento_real ?? account.data_inicio_contrato))}</div></div>
+        <div><div class="label">Growth Class</div><div class="value">${esc(fmtDateTime(account.growth_class_data_realizada))}</div></div>
+        <div><div class="label">Responsável comercial</div><div class="value">${esc(nameOf(oportunidade?.responsavel_id ?? lead?.responsavel_id))}</div></div>
+        <div><div class="label">Account Manager</div><div class="value">${esc(nameOf(account.account_manager_id))}</div></div>
+        <div><div class="label">Responsável GC</div><div class="value">${esc(nameOf(account.growth_class_responsavel_id))}</div></div>
+        <div><div class="label">Gerado em</div><div class="value">${esc(generatedAt)}</div></div>
       </div>
     </div>
-    <div class="section-rule"></div>`;
+  `;
 
-  // --- Cover ---
-  const coverHTML = `
-    <div class="page cover">
-      <div class="cover-hero">
-        <div class="cover-brand">
-          ${
-            tenantLogo
-              ? `<img src="${tenantLogo}" alt="${esc(tenantName)}"/>`
-              : `<div class="brand-text">${esc(tenantName.toUpperCase())}</div>`
-          }
-        </div>
-        <div class="cover-eyebrow">Handoff · Comercial → Operação</div>
-        <div class="cover-title">JORNADA<br/>DO CLIENTE</div>
-      </div>
-      <div class="cover-body">
-        <div class="cover-client-label">Cliente</div>
-        <div class="cover-client-name">${esc(clientName)}</div>
-        <div class="cover-meta">
-          ${lead?.segmento ? `<span class="badge">${esc(lead.segmento)}</span> ` : ""}
-          ${lead?.faturamento ? `<span class="badge">${esc(lead.faturamento)}</span> ` : ""}
-          ${lead?.tier ? `<span class="badge">Tier · ${esc(lead.tier)}</span>` : ""}
-        </div>
-        <div class="kpi-row">
-          ${kpis
-            .map(
-              (k) => `
-            <div class="kpi">
-              <div class="kpi-label">${esc(k.label)}</div>
-              <div class="kpi-value">${esc(k.value)}</div>
-            </div>`,
-            )
-            .join("")}
-        </div>
-        <div class="cover-roles">
-          <div class="role-cell"><div class="label">Responsável comercial</div><div class="value">${esc(nameOf(oportunidade?.responsavel_id ?? lead?.responsavel_id))}</div></div>
-          <div class="role-cell"><div class="label">Account Manager</div><div class="value">${esc(nameOf(account.account_manager_id))}</div></div>
-          <div class="role-cell"><div class="label">Responsável Growth Class</div><div class="value">${esc(nameOf(account.growth_class_responsavel_id))}</div></div>
-          <div class="role-cell"><div class="label">Growth Class realizada</div><div class="value">${esc(fmtDateTime(account.growth_class_data_realizada))}</div></div>
-        </div>
-      </div>
-      <div class="cover-stamp">
-        <span>Documento gerado em ${esc(generatedAt)}</span>
-        <span>${esc(tenantName)}</span>
-      </div>
-    </div>`;
+  // ---------- 1. Síntese executiva (primeiro, para leitura rápida) ----------
+  const sinteseHTML = `
+    <div class="section">
+      ${sectionHead("01", "Síntese Executiva", "Resumo gerado por IA para iniciar a operação")}
+      <div class="ai">${mdToHtml(aiSummary)}</div>
+    </div>
+  `;
 
-  // --- 1. Identificação ---
+  // ---------- 2. Identificação ----------
   const idHTML = `
     <div class="section">
-      <div class="section-strip"></div>
-      ${sectionHead("1", "Identificação", "Lead · Empresa · Contato")}
-      <div class="card accent">
-        <div class="id-grid">
-          ${idFields
-            .map(
-              (f) => `
-            <div class="field">
-              <div class="label">${esc(f.label)}</div>
-              <div class="value">${esc(f.value)}</div>
-            </div>`,
-            )
-            .join("")}
-        </div>
+      ${sectionHead("02", "Identificação do Cliente", "Dados de cadastro")}
+      <div class="kv-grid">
+        ${idFields
+          .map(
+            (f) => `<div class="kv"><div class="label">${esc(f.label)}</div><div class="value">${esc(f.value)}</div></div>`,
+          )
+          .join("")}
       </div>
-      ${
-        briefingText
-          ? `
-        <div style="margin-top: 8mm;">
-          <div class="section-head" style="margin-bottom: 4mm;">
-            <div class="section-title"><h1 style="font-size:18pt;">Briefing de Mercado</h1></div>
-          </div>
-          <div class="card">
-            <div style="white-space: pre-wrap; font-size: 9.5pt; line-height: 1.6;">${esc(briefingText)}</div>
-          </div>
-        </div>`
-          : ""
-      }
-    </div>`;
+      ${briefingText ? `<h3 class="sub-title">Briefing de mercado</h3><div class="block">${textToParagraphs(briefingText)}</div>` : ""}
+    </div>
+  `;
 
-  // --- 2. SPICED ---
+  // ---------- 3. SPICED ----------
   const spicedItems = [
     {
-      letter: "S",
-      title: "Situation",
-      sub: "Situação atual",
-      body: situParts.length ? situParts.join("\n\n") : "Não informado.",
+      letter: "S", title: "Situation", sub: "Situação atual",
+      body: situParts.length ? situParts.join("\n\n") : "",
     },
     {
-      letter: "P",
-      title: "Pain",
-      sub: "Dores identificadas",
-      body: dorParts.length ? dorParts.join("\n\n") : "Não informado.",
+      letter: "P", title: "Pain", sub: "Dores identificadas",
+      body: dorParts.length ? dorParts.join("\n\n") : "",
     },
     {
-      letter: "I",
-      title: "Impact",
-      sub: "Impacto e contexto",
-      body: "",
-      microFields: [
+      letter: "I", title: "Impact", sub: "Impacto e contexto", body: "",
+      micro: [
         { label: "Faturamento", value: lead?.faturamento },
         { label: "Grau de exigência", value: oportunidade?.grau_exigencia },
         { label: "Nível de consciência", value: oportunidade?.nivel_consciencia },
@@ -1120,336 +843,196 @@ function buildHTML(data: {
       ].filter((f) => isFilled(f.value)),
     },
     {
-      letter: "C",
-      title: "Critical Event",
-      sub: "Urgência",
-      body: "",
-      microFields: [
+      letter: "C", title: "Critical Event", sub: "Urgência", body: "",
+      micro: [
         { label: "Urgência declarada", value: lead?.urgencia },
         { label: "Fechamento previsto", value: fmtDate(oportunidade?.data_fechamento_previsto) },
       ].filter((f) => f.value && f.value !== "—"),
     },
     {
-      letter: "D",
-      title: "Decision",
-      sub: "Decisão e valores",
-      body: "",
-      microFields: [
+      letter: "D", title: "Decision", sub: "Decisão e valores", body: "",
+      micro: [
         { label: "Valor EF", value: fmtBRL(oportunidade?.valor_ef) },
         { label: "Fee recorrente", value: fmtBRL(oportunidade?.valor_fee) },
         { label: "Valor total", value: fmtBRL(oportunidade?.valor_total) },
         { label: "Data fechamento", value: fmtDate(oportunidade?.data_fechamento_real) },
         { label: "Temperatura", value: oportunidade?.temperatura },
-        { label: "Etapa final", value: oportunidade?.etapa },
       ].filter((f) => f.value && f.value !== "—"),
     },
   ];
 
   const spicedHTML = `
     <div class="section">
-      <div class="section-strip"></div>
-      ${sectionHead("2", "Diagnóstico SPICED", "Situação · Pain · Impact · Critical · Decision")}
-      <div class="spiced">
-        ${spicedItems
-          .map(
-            (s: any) => `
-          <div class="spiced-item">
-            <div class="spiced-letter">${s.letter}</div>
-            <div class="spiced-body">
-              <h4>${esc(s.title)}</h4>
-              <div class="sub">${esc(s.sub)}</div>
-              ${s.body ? `<p>${esc(s.body)}</p>` : ""}
-              ${
-                s.microFields && s.microFields.length
-                  ? `<div class="micro-fields">${s.microFields
-                      .map(
-                        (mf: any) => `
-                <div class="field">
-                  <div class="label">${esc(mf.label)}</div>
-                  <div class="value">${esc(mf.value)}</div>
-                </div>`,
-                      )
-                      .join("")}</div>`
-                  : ""
-              }
-            </div>
-          </div>`,
-          )
-          .join("")}
-      </div>
-    </div>`;
+      ${sectionHead("03", "Diagnóstico SPICED", "Situação · Pain · Impact · Critical · Decision")}
+      ${spicedItems.map((s: any) => `
+        <div class="spiced-item">
+          <div class="spiced-letter">${s.letter}</div>
+          <div class="spiced-body">
+            <h4>${esc(s.title)}</h4>
+            <div class="sub">${esc(s.sub)}</div>
+            ${s.body ? textToParagraphs(s.body) : (s.micro?.length ? "" : `<p style="color:#999;font-style:italic;">Não informado.</p>`)}
+            ${s.micro?.length ? `<div class="micro">${s.micro.map((m: any) => `<div><div class="label">${esc(m.label)}</div><div class="value">${esc(m.value)}</div></div>`).join("")}</div>` : ""}
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
 
-  // --- 3. Jornada (timeline) ---
+  // ---------- 4. Jornada ----------
+  const timelineHTML = byDay.size === 0
+    ? `<div class="empty">Nenhuma atividade registrada.</div>`
+    : Array.from(byDay.entries()).map(([day, items]) => `
+        <div class="tl-day">
+          <div class="tl-day-label">${esc(day)}</div>
+          <div class="tl-items">
+            ${items.map((a: any) => {
+              const t = new Date(a.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+              return `
+                <div class="tl-item">
+                  <span class="tl-time">${esc(t)}</span>
+                  <span class="tl-tipo">${esc((a.tipo || "").replace(/_/g, " "))}</span>
+                  ${a.descricao ? `<div class="tl-desc">${esc(cleanText(a.descricao))}</div>` : ""}
+                </div>`;
+            }).join("")}
+          </div>
+        </div>
+      `).join("");
+
+  const callsHTML = callEvents.length
+    ? `
+      <h3 class="sub-title">Chamadas registradas</h3>
+      ${callEvents.map((c) => `
+        <div class="call">
+          <div class="call-head">
+            <span><strong>${esc(fmtDateTime(c.created_at))}</strong>${c.operador ? ` · ${esc(c.operador)}` : ""}</span>
+            <span>${esc(c.duracao_seg ?? 0)}s${c.status ? ` · ${esc(c.status)}` : ""}</span>
+          </div>
+          ${isFilled(c.resumo) ? `<div class="call-resumo">${esc(cleanText(c.resumo))}</div>` : ""}
+        </div>
+      `).join("")}
+    ` : "";
+
+  const participantsHTML = participants.length ? `
+    <h3 class="sub-title">Participantes</h3>
+    <div class="participants">
+      ${participants.map((p) => {
+        const ini = (p.name || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+        return `<div class="participant"><div class="avatar">${esc(ini)}</div><div><div class="name">${esc(p.name)}</div><div class="role">${esc(p.role)}</div></div></div>`;
+      }).join("")}
+    </div>
+  ` : "";
+
   const jornadaHTML = `
     <div class="section">
-      <div class="section-strip"></div>
-      ${sectionHead("3", "Jornada Comercial", "Atividades · Chamadas · Participantes")}
-      ${
-        participants.length
-          ? `
-        <h3 style="font-family:'Bebas Neue',sans-serif;font-size:14pt;letter-spacing:0.05em;color:var(--text);margin-bottom:2mm;">Participantes</h3>
-        <div class="participants">
-          ${participants
-            .map(
-              (p) => `
-            <div class="participant">
-              <div class="avatar">${esc(initials(p.name))}</div>
-              <div class="info">
-                <div class="name">${esc(p.name)}</div>
-                <div class="role">${esc(p.role)}</div>
-              </div>
-            </div>`,
-            )
-            .join("")}
-        </div>`
-          : ""
-      }
+      ${sectionHead("04", "Jornada Comercial", "Atividades · Chamadas · Participantes")}
+      ${participantsHTML}
+      <h3 class="sub-title">Linha do tempo</h3>
+      ${timelineHTML}
+      ${callsHTML}
+    </div>
+  `;
 
-      <h3 style="font-family:'Bebas Neue',sans-serif;font-size:14pt;letter-spacing:0.05em;color:var(--text);margin:8mm 0 4mm 0;">Linha do tempo</h3>
-      ${
-        byDay.size === 0
-          ? `<div class="empty-state">Nenhuma atividade registrada.</div>`
-          : `<div class="timeline">
-              ${Array.from(byDay.entries())
-                .map(
-                  ([day, items]) => `
-                <div class="tl-day">
-                  <div class="tl-day-label">${esc(day)}</div>
-                  ${items
-                    .map((a: any) => {
-                      const t = new Date(a.created_at).toLocaleTimeString(
-                        "pt-BR",
-                        { hour: "2-digit", minute: "2-digit" },
-                      );
-                      return `
-                    <div class="tl-item">
-                      <div>
-                        <span class="tl-time">${esc(t)}</span>
-                        <span class="tl-tipo">${esc((a.tipo || "").replace(/_/g, " "))}</span>
-                      </div>
-                      ${a.descricao ? `<div class="tl-desc">${esc(a.descricao)}</div>` : ""}
-                    </div>`;
-                    })
-                    .join("")}
-                </div>`,
-                )
-                .join("")}
-            </div>`
-      }
-
-      ${
-        callEvents.length
-          ? `
-        <h3 style="font-family:'Bebas Neue',sans-serif;font-size:14pt;letter-spacing:0.05em;color:var(--text);margin:8mm 0 4mm 0;">Chamadas registradas</h3>
-        ${callEvents
-          .map(
-            (c) => `
-          <div class="call-card">
-            <div class="call-head">
-              <span><strong>${esc(fmtDateTime(c.created_at))}</strong> · ${esc(c.operador || "—")}</span>
-              <span>${esc(c.duracao_seg ?? 0)}s · ${esc(c.status || "—")}</span>
-            </div>
-            ${c.resumo ? `<div class="call-resumo">${esc(c.resumo)}</div>` : ""}
-          </div>`,
-          )
-          .join("")}`
-          : ""
-      }
-    </div>`;
-
-  // --- 4. Reunião comercial (AI summary + raw resumo) ---
-  const reuniaoHTML = `
+  // ---------- 5. Reunião comercial ----------
+  const reuniaoHTML = isFilled(oportunidade?.resumo_reuniao) ? `
     <div class="section">
-      <div class="section-strip"></div>
-      ${sectionHead("4", "Reunião Comercial", "Resumo da sessão de vendas")}
-      ${
-        oportunidade?.resumo_reuniao
-          ? `<div class="card accent">
-              <div style="white-space: pre-wrap; font-size: 10pt; line-height: 1.6;">${esc(oportunidade.resumo_reuniao)}</div>
-            </div>`
-          : `<div class="empty-state">Sem resumo de reunião registrado.</div>`
-      }
-    </div>`;
+      ${sectionHead("05", "Reunião Comercial", "Resumo da sessão de vendas")}
+      <div class="block">${textToParagraphs(cleanText(oportunidade.resumo_reuniao))}</div>
+    </div>
+  ` : "";
 
-  // --- 5. Fechamento ---
-  const cobrancasRows =
-    cobrancas && cobrancas.length
-      ? cobrancas
-          .slice(0, 30)
-          .map(
-            (c: any) => `
-          <tr>
-            <td>${esc(c.tipo)}</td>
-            <td>${esc(c.parcela_num ?? "—")}/${esc(c.parcela_total ?? "—")}</td>
-            <td>${esc(fmtDate(c.vencimento))}</td>
-            <td>${esc(fmtBRL(c.valor))}</td>
-            <td><span class="badge">${esc(c.status)}</span></td>
-          </tr>`,
-          )
-          .join("")
-      : "";
+  // ---------- 6. Fechamento ----------
+  const cobrancasRows = (cobrancas ?? []).slice(0, 30).map((c: any) => `
+    <tr>
+      <td>${esc(c.tipo)}</td>
+      <td>${esc(c.parcela_num ?? "—")}/${esc(c.parcela_total ?? "—")}</td>
+      <td>${esc(fmtDate(c.vencimento))}</td>
+      <td>${esc(fmtBRL(c.valor))}</td>
+      <td><span class="badge">${esc(c.status)}</span></td>
+    </tr>
+  `).join("");
 
   const fechamentoHTML = `
     <div class="section">
-      <div class="section-strip"></div>
-      ${sectionHead("5", "Fechamento & Contrato", "Valores · Cobranças")}
-      <div class="grid-3" style="margin-bottom:6mm;">
-        <div class="kpi"><div class="kpi-label">EF</div><div class="kpi-value">${esc(fmtBRL(oportunidade?.valor_ef))}</div></div>
-        <div class="kpi"><div class="kpi-label">Fee mensal</div><div class="kpi-value">${esc(fmtBRL(oportunidade?.valor_fee))}</div></div>
-        <div class="kpi"><div class="kpi-label">Total</div><div class="kpi-value">${esc(fmtBRL(oportunidade?.valor_total))}</div></div>
+      ${sectionHead("06", "Fechamento & Contrato", "Valores · Cobranças")}
+      <div class="kv-grid">
+        <div class="kv"><div class="label">Valor EF</div><div class="value">${esc(fmtBRL(oportunidade?.valor_ef))}</div></div>
+        <div class="kv"><div class="label">Fee mensal</div><div class="value">${esc(fmtBRL(oportunidade?.valor_fee))}</div></div>
+        <div class="kv"><div class="label">Valor total</div><div class="value">${esc(fmtBRL(oportunidade?.valor_total))}</div></div>
+        <div class="kv"><div class="label">Início do contrato</div><div class="value">${esc(fmtDate(account.data_inicio_contrato))}</div></div>
       </div>
-      <div class="card">
-        <div class="grid-2">
-          <div class="field"><div class="label">Início do contrato</div><div class="value">${esc(fmtDate(account.data_inicio_contrato))}</div></div>
-          <div class="field"><div class="label">Fim do contrato</div><div class="value">${esc(fmtDate(account.data_fim_contrato))}</div></div>
-          <div class="field"><div class="label">Produtos</div><div class="value">${esc(
-            account.produtos_contratados && Object.keys(account.produtos_contratados).length
-              ? Object.keys(account.produtos_contratados).join(", ")
-              : "—",
-          )}</div></div>
-        </div>
-      </div>
-      ${
-        cobrancasRows
-          ? `
-        <h3 style="font-family:'Bebas Neue',sans-serif;font-size:14pt;letter-spacing:0.05em;color:var(--text);margin:8mm 0 2mm 0;">Cobranças</h3>
+      ${cobrancasRows ? `
+        <h3 class="sub-title">Cobranças</h3>
         <table class="compact">
           <thead><tr><th>Tipo</th><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Status</th></tr></thead>
           <tbody>${cobrancasRows}</tbody>
-        </table>`
-          : ""
-      }
-    </div>`;
+        </table>
+      ` : ""}
+    </div>
+  `;
 
-  // --- 6. Pre-GC ---
+  // ---------- 7. Pré GC ----------
   const preGcText = account.pre_growth_class_relatorio
     ? typeof account.pre_growth_class_relatorio === "string"
-      ? account.pre_growth_class_relatorio
-      : jsonToReadable(account.pre_growth_class_relatorio)
+      ? cleanText(account.pre_growth_class_relatorio)
+      : cleanText(jsonToReadable(account.pre_growth_class_relatorio))
     : "";
 
-  const preGcHTML = preGcText
-    ? `
+  const preGcHTML = preGcText ? `
     <div class="section">
-      <div class="section-strip"></div>
-      ${sectionHead("6", "Pré Growth Class", "Relatório de preparação")}
-      <div class="card">
-        <div style="white-space: pre-wrap; font-size: 9.5pt; line-height: 1.65;">${esc(preGcText)}</div>
-      </div>
-    </div>`
-    : "";
+      ${sectionHead("07", "Pré Growth Class", "Relatório de preparação")}
+      <div class="block">${textToParagraphs(preGcText)}</div>
+    </div>
+  ` : "";
 
-  // --- 7. Growth Class ---
+  // ---------- 8. Growth Class ----------
   const gcHTML = `
     <div class="section">
-      <div class="section-strip"></div>
-      <div class="gc-banner">
-        <div class="eyebrow">Marco Zero da Operação</div>
-        <h1>GROWTH CLASS</h1>
-        <p>Ponto de calibração entre o que foi vendido e o que será entregue.</p>
-      </div>
-      ${sectionHead("7", "Growth Class", "Marco balizador")}
-      ${
-        gcIsEmpty
-          ? `<div class="empty-state">
-              ${
-                account.onboarding_status === "growth_class_realizada"
-                  ? "Growth Class marcada como realizada, mas conteúdo ainda não foi registrado no sistema."
-                  : "Growth Class ainda não preenchida. Conteúdo (expectativas, ata, oportunidades, próximos passos) será adicionado após a realização."
-              }
-            </div>`
-          : `
-        <div class="card" style="margin-bottom:5mm;">
-          <div class="grid-2">
-            <div class="field"><div class="label">Agendada</div><div class="value">${esc(fmtDateTime(account.growth_class_data_agendada))}</div></div>
-            <div class="field"><div class="label">Realizada</div><div class="value">${esc(fmtDateTime(account.growth_class_data_realizada))}</div></div>
-            <div class="field"><div class="label">Responsável V4</div><div class="value">${esc(nameOf(account.growth_class_responsavel_id))}</div></div>
-            <div class="field"><div class="label">Link</div><div class="value" style="font-size:8.5pt; word-break:break-all;">${esc(account.growth_class_meet_link || "—")}</div></div>
-          </div>
+      ${sectionHead(preGcText ? "08" : "07", "Growth Class", "Marco zero da operação")}
+      ${gcIsEmpty ? `
+        <div class="empty">
+          ${account.onboarding_status === "concluida" || account.onboarding_status === "growth_class_realizada"
+            ? "Growth Class marcada como realizada, mas conteúdo ainda não foi registrado no sistema."
+            : "Growth Class ainda não preenchida."}
         </div>
-        ${
-          account.growth_class_expectativas
-            ? `<div style="margin-bottom:5mm;">
-                <h3 style="font-family:'Bebas Neue',sans-serif;font-size:14pt;color:var(--primary);margin-bottom:3mm;">Expectativa declarada pelo cliente</h3>
-                <div class="quote">"${esc(account.growth_class_expectativas)}"</div>
-              </div>`
-            : ""
-        }
-        ${
-          account.growth_class_ata
-            ? `<div class="card" style="margin-bottom:5mm;"><h4 style="font-size:11pt;font-weight:600;margin-bottom:3mm;">Ata oficial</h4><div style="white-space:pre-wrap;font-size:9.5pt;line-height:1.6;">${esc(account.growth_class_ata)}</div></div>`
-            : ""
-        }
-        ${
-          account.growth_class_oportunidades_monetizacao
-            ? `<div class="card" style="margin-bottom:5mm;"><h4 style="font-size:11pt;font-weight:600;margin-bottom:3mm;">Oportunidades de monetização</h4><div style="white-space:pre-wrap;font-size:9.5pt;line-height:1.6;">${esc(account.growth_class_oportunidades_monetizacao)}</div></div>`
-            : ""
-        }
-        ${
-          account.growth_class_proximos_passos
-            ? `<div class="card accent"><h4 style="font-size:11pt;font-weight:600;margin-bottom:3mm;">Próximos passos acordados</h4><div style="white-space:pre-wrap;font-size:9.5pt;line-height:1.6;">${esc(account.growth_class_proximos_passos)}</div></div>`
-            : ""
-        }`
-      }
-    </div>`;
+      ` : `
+        <div class="kv-grid" style="margin-bottom:4mm;">
+          <div class="kv"><div class="label">Agendada</div><div class="value">${esc(fmtDateTime(account.growth_class_data_agendada))}</div></div>
+          <div class="kv"><div class="label">Realizada</div><div class="value">${esc(fmtDateTime(account.growth_class_data_realizada))}</div></div>
+          <div class="kv"><div class="label">Responsável V4</div><div class="value">${esc(nameOf(account.growth_class_responsavel_id))}</div></div>
+        </div>
+        ${isFilled(account.growth_class_expectativas) ? `
+          <h3 class="sub-title">Expectativa do cliente</h3>
+          <div class="quote">"${esc(cleanText(account.growth_class_expectativas))}"</div>
+        ` : ""}
+        ${isFilled(account.growth_class_ata) ? `
+          <h3 class="sub-title">Ata oficial</h3>
+          <div class="block">${textToParagraphs(cleanText(account.growth_class_ata))}</div>
+        ` : ""}
+        ${isFilled(account.growth_class_oportunidades_monetizacao) ? `
+          <h3 class="sub-title">Oportunidades de monetização</h3>
+          <div class="block">${textToParagraphs(cleanText(account.growth_class_oportunidades_monetizacao))}</div>
+        ` : ""}
+        ${isFilled(account.growth_class_proximos_passos) ? `
+          <h3 class="sub-title">Próximos passos acordados</h3>
+          <div class="block">${textToParagraphs(cleanText(account.growth_class_proximos_passos))}</div>
+        ` : ""}
+      `}
+    </div>
+  `;
 
-  // --- 8. Síntese executiva (hero) ---
-  const sinteseHTML = `
-    <div class="section">
-      <div class="section-strip"></div>
-      ${sectionHead("8", "Síntese Executiva", "Para a operação iniciar com clareza")}
-      <div class="section-intro">Resumo gerado por IA com base em todos os dados da jornada acima. Use como ponto de partida para a primeira reunião de rotina.</div>
-      <div class="ai-block">
-        ${mdToHtml(aiSummary)}
-      </div>
-    </div>`;
-
-  // --- Appendix: full transcripts ---
-  const transcripts: { title: string; text: string }[] = [];
-  if (oportunidade?.transcricao_reuniao) {
-    transcripts.push({
-      title: "Transcrição da reunião comercial",
-      text: String(oportunidade.transcricao_reuniao),
-    });
-  }
-  if (account.growth_class_transcricao_reuniao) {
-    transcripts.push({
-      title: "Transcrição da Growth Class",
-      text: String(account.growth_class_transcricao_reuniao),
-    });
-  }
-  const callTranscripts = callEvents
-    .filter((c) => c.transcricao)
-    .map((c) => ({
-      title: `Chamada · ${fmtDateTime(c.created_at)} · ${c.operador || "—"}`,
-      text: String(c.transcricao),
-    }));
-  transcripts.push(...callTranscripts);
-
-  // Format transcript text — wrap timestamps in spans
+  // ---------- 9. Apêndice ----------
   const formatTranscript = (txt: string) =>
-    esc(txt).replace(
-      /(\d{2}:\d{2}:\d{2})/g,
-      '<span class="timestamp">$1</span>',
-    );
+    esc(txt).replace(/(\d{2}:\d{2}:\d{2})/g, '<span class="ts">$1</span>');
 
-  const appendixHTML = includeAppendix && transcripts.length
-    ? `
-    <div class="section">
-      <div class="section-strip"></div>
-      ${sectionHead("9", "Apêndice", "Transcrições completas · leitura opcional")}
-      <div class="section-intro">As transcrições abaixo são preservadas na íntegra para consulta. Não é necessário ler de ponta a ponta — use a Síntese Executiva como guia.</div>
-      ${transcripts
-        .map(
-          (t) => `
-        <div style="margin-bottom: 8mm;">
-          <h3 style="font-family:'Bebas Neue',sans-serif;font-size:15pt;color:var(--primary);margin-bottom:3mm;letter-spacing:0.04em;">${esc(t.title)}</h3>
-          <div class="transcript">${formatTranscript(t.text)}</div>
-        </div>`,
-        )
-        .join("")}
-    </div>`
-    : "";
+  const appendixHTML = includeAppendix && transcripts.length ? `
+    <div class="section appendix-divider">
+      ${sectionHead("Apêndice", "Transcrições completas", "Material de referência — leitura opcional")}
+      ${transcripts.map((t) => `
+        <h3 class="sub-title">${esc(t.title)}</h3>
+        <div class="transcript">${formatTranscript(t.text)}</div>
+      `).join("")}
+    </div>
+  ` : "";
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -1460,6 +1043,7 @@ function buildHTML(data: {
 </head>
 <body>
 ${coverHTML}
+${sinteseHTML}
 ${idHTML}
 ${spicedHTML}
 ${jornadaHTML}
@@ -1467,7 +1051,6 @@ ${reuniaoHTML}
 ${fechamentoHTML}
 ${preGcHTML}
 ${gcHTML}
-${sinteseHTML}
 ${appendixHTML}
 </body>
 </html>`;
@@ -1490,7 +1073,6 @@ async function renderPDFShift(html: string): Promise<Uint8Array> {
       source: html,
       landscape: false,
       format: "A4",
-      margin: "0",
       use_print: true,
       wait_for_network: false,
       disable_javascript: true,
@@ -1525,7 +1107,8 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { account_id } = body;
-    const includeAppendix = body?.include_appendix === true;
+    // Default: include appendix when not specified (full report)
+    const includeAppendix = body?.include_appendix !== false;
     if (!account_id || typeof account_id !== "string") {
       return new Response(JSON.stringify({ error: "account_id is required" }), {
         status: 400,
@@ -1640,10 +1223,10 @@ Deno.serve(async (req) => {
     const nameOf = (id?: string | null) => (id ? profiles[id] ?? "—" : "—");
 
     const briefingText = lead?.briefing_mercado
-      ? jsonToReadable(lead.briefing_mercado)
+      ? cleanText(jsonToReadable(lead.briefing_mercado))
       : "";
     const preQualText = lead?.pesquisa_pre_qualificacao
-      ? jsonToReadable(lead.pesquisa_pre_qualificacao)
+      ? cleanText(jsonToReadable(lead.pesquisa_pre_qualificacao))
       : "";
 
     const aiInput = {
@@ -1655,13 +1238,11 @@ Deno.serve(async (req) => {
         faturamento: lead?.faturamento,
         cargo: lead?.cargo,
         tier: lead?.tier,
-        canal: lead?.canal,
-        origem: lead?.origem,
         urgencia: lead?.urgencia,
         qualificacao: lead?.qualificacao,
         notas: lead?.notas,
-        briefing_mercado: briefingText,
-        pesquisa_pre_qualificacao: preQualText,
+        briefing_mercado: briefingText.slice(0, 8000),
+        pesquisa_pre_qualificacao: preQualText.slice(0, 4000),
       },
       oportunidade: {
         valor_total: oportunidade?.valor_total,
@@ -1680,7 +1261,9 @@ Deno.serve(async (req) => {
         oportunidades_monetizacao: account.growth_class_oportunidades_monetizacao,
         proximos_passos: account.growth_class_proximos_passos,
       },
-      pre_gc: account.pre_growth_class_relatorio,
+      pre_gc: typeof account.pre_growth_class_relatorio === "string"
+        ? account.pre_growth_class_relatorio?.slice(0, 4000)
+        : account.pre_growth_class_relatorio,
       call_resumos: callEvents.map((c) => c.resumo).filter(Boolean).slice(0, 10),
     };
 
@@ -1698,7 +1281,7 @@ Deno.serve(async (req) => {
       clientName,
       tenantName,
       tenantLogo,
-      primaryHsl: tenant?.primary_color_hsl ?? "hsl(217 91% 60%)",
+      primaryHsl: tenant?.primary_color_hsl ?? "hsl(217 91% 50%)",
       generatedAt: new Date().toLocaleString("pt-BR", {
         dateStyle: "long",
         timeStyle: "short",
@@ -1763,7 +1346,20 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ url: signed?.signedUrl, path, filename: `${safeName}.pdf` }),
+      JSON.stringify({
+        url: signed?.signedUrl,
+        path,
+        filename: `${safeName}.pdf`,
+        meta: {
+          atividades: atividades.length,
+          chamadas: callEvents.length,
+          transcricoes: includeAppendix
+            ? (isFilled(oportunidade?.transcricao_reuniao) ? 1 : 0)
+              + (isFilled(account.growth_class_transcricao_reuniao) ? 1 : 0)
+              + callEvents.filter((c) => isFilled((c as any).transcricao)).length
+            : 0,
+        },
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
