@@ -1466,11 +1466,10 @@ async function renderPDFShift(html: string): Promise<Uint8Array> {
   const apiKey = Deno.env.get("PDFSHIFT_API_KEY");
   if (!apiKey) throw new Error("PDFSHIFT_API_KEY missing");
 
-  const auth = btoa(`api:${apiKey}`);
   const resp = await fetch("https://api.pdfshift.io/v3/convert/pdf", {
     method: "POST",
     headers: {
-      Authorization: `Basic ${auth}`,
+      "X-API-Key": apiKey,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -1588,7 +1587,9 @@ Deno.serve(async (req) => {
       const { data } = await userClient
         .from("crm_call_events")
         .select(
-          "id, created_at, event_type, operador, duracao_seg, status, gravacao_url, resumo, transcricao",
+          includeAppendix
+            ? "id, created_at, event_type, operador, duracao_seg, status, gravacao_url, resumo, transcricao"
+            : "id, created_at, event_type, operador, duracao_seg, status, gravacao_url, resumo",
         )
         .eq("lead_id", leadId)
         .order("created_at", { ascending: true });
