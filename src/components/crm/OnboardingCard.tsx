@@ -96,6 +96,70 @@ export const OnboardingCard = ({ account, onClick, onOpenInNewTab, overlay = fal
   const gcPendente =
     gcAgendada && !gcRealizada && new Date(gcAgendada) < new Date();
 
+  const copyLink = async () => {
+    const url = `${window.location.origin}/comercial/onboarding/${account.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({ title: "Link copiado", description: "Cole onde quiser compartilhar." });
+    } catch {
+      toast({ title: "Erro ao copiar", variant: "destructive" });
+    }
+  };
+
+  const actions = onOpenInNewTab
+    ? buildOnboardingMenuActions({
+        onOpenInNewTab: () => onOpenInNewTab(),
+        onCopyLink: copyLink,
+      })
+    : [];
+
+  // Stops pointerdown from initiating drag on the ⋯ button
+  const stopDrag = (e: React.PointerEvent | React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
+  const menuButton = !overlay && onOpenInNewTab ? (
+    isMobile ? (
+      <button
+        type="button"
+        aria-label="Mais opções"
+        onPointerDown={stopDrag}
+        onClick={(e) => {
+          e.stopPropagation();
+          setMenuOpen(true);
+        }}
+        className="shrink-0 h-7 w-7 -mr-1 -mt-0.5 inline-flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-foreground/[0.06] active:bg-foreground/10 transition-colors"
+      >
+        <MoreHorizontal className="h-4 w-4" />
+      </button>
+    ) : (
+      <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label="Mais opções"
+            onPointerDown={stopDrag}
+            onClick={stopDrag}
+            className="shrink-0 h-7 w-7 -mr-1 -mt-0.5 inline-flex items-center justify-center rounded-full text-muted-foreground opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 hover:text-foreground hover:bg-foreground/[0.06] active:bg-foreground/10 transition-all"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="end"
+          sideOffset={6}
+          className="w-56 p-0 rounded-xl border-border/60 bg-surface-1/90 backdrop-blur-xl shadow-ios-xl"
+        >
+          <OnboardingCardMenuList
+            actions={actions}
+            variant="popover"
+            onAfterSelect={() => setMenuOpen(false)}
+          />
+        </PopoverContent>
+      </Popover>
+    )
+  ) : null;
+
   const cardInner = (
     <div ref={overlay ? undefined : setNodeRef} style={style} {...(overlay ? {} : attributes)}>
       <div
@@ -136,11 +200,14 @@ export const OnboardingCard = ({ account, onClick, onOpenInNewTab, overlay = fal
                 </p>
               )}
             </div>
-            {valorFmt && (
-              <span className="shrink-0 text-[11px] font-semibold tabular-nums text-foreground/90">
-                {valorFmt}
-              </span>
-            )}
+            <div className="flex items-start gap-1.5 shrink-0">
+              {valorFmt && (
+                <span className="text-[11px] font-semibold tabular-nums text-foreground/90 leading-snug">
+                  {valorFmt}
+                </span>
+              )}
+              {menuButton}
+            </div>
           </div>
 
           <div className="flex items-center gap-1.5 mt-2 flex-wrap">
@@ -187,29 +254,53 @@ export const OnboardingCard = ({ account, onClick, onOpenInNewTab, overlay = fal
 
   if (overlay || !onOpenInNewTab) return cardInner;
 
-  const copyLink = async () => {
-    const url = `${window.location.origin}/comercial/onboarding/${account.id}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      toast({ title: "Link copiado", description: "Cole onde quiser compartilhar." });
-    } catch {
-      toast({ title: "Erro ao copiar", variant: "destructive" });
-    }
-  };
-
   return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>{cardInner}</ContextMenuTrigger>
-      <ContextMenuContent className="w-56">
-        <ContextMenuItem onSelect={() => onOpenInNewTab()}>
-          <ExternalLink className="h-3.5 w-3.5 mr-2" />
-          Abrir em nova aba
-        </ContextMenuItem>
-        <ContextMenuItem onSelect={copyLink}>
-          <Link2 className="h-3.5 w-3.5 mr-2" />
-          Copiar link
-        </ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenu>
+    <>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>{cardInner}</ContextMenuTrigger>
+        <ContextMenuContent className="w-56">
+          <ContextMenuItem onSelect={() => onOpenInNewTab()}>
+            <ExternalLink className="h-3.5 w-3.5 mr-2" />
+            Abrir em nova aba
+          </ContextMenuItem>
+          <ContextMenuItem onSelect={copyLink}>
+            <Link2 className="h-3.5 w-3.5 mr-2" />
+            Copiar link
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+
+      {isMobile && (
+        <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+          <SheetPortal>
+            <SheetOverlay className="bg-black/50 backdrop-blur-sm" />
+            <SheetPrimitive.Content
+              className={cn(
+                "fixed inset-x-0 bottom-0 z-50",
+                "rounded-t-2xl border-t border-border/60",
+                "bg-surface-1/95 backdrop-blur-xl shadow-ios-xl",
+                "px-3 pt-2 pb-[max(env(safe-area-inset-bottom),12px)]",
+                "data-[state=open]:animate-in data-[state=closed]:animate-out",
+                "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
+                "data-[state=closed]:duration-200 data-[state=open]:duration-300"
+              )}
+            >
+              <div className="mx-auto mb-2 mt-1 h-1 w-9 rounded-full bg-foreground/20" />
+              {titulo && (
+                <div className="px-4 pb-2 text-center text-[12px] font-medium text-muted-foreground truncate">
+                  {titulo}
+                </div>
+              )}
+              <OnboardingCardMenuList
+                actions={actions}
+                variant="sheet"
+                onAfterSelect={() => setMenuOpen(false)}
+              />
+              <SheetPrimitive.Title className="sr-only">Opções do card</SheetPrimitive.Title>
+            </SheetPrimitive.Content>
+          </SheetPortal>
+        </Sheet>
+      )}
+    </>
   );
 };
