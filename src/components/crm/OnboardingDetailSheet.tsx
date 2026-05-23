@@ -143,15 +143,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
     if (account) setForm({ ...account });
   }, [account]);
 
-  useEffect(() => {
-    if (!open) return;
-    supabase
-      .from("profiles" as any)
-      .select("id, full_name, email")
-      .eq("approved", true)
-      .order("full_name")
-      .then(({ data }) => setResponsaveis((data as any[]) ?? []));
-  }, [open]);
+  // (lista de responsáveis agora vem de useProfilesList acima)
 
   // Sign contrato URL when present
   useEffect(() => {
