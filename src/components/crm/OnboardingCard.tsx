@@ -48,6 +48,8 @@ const fmtDate = (iso?: string | null) => {
 
 export const OnboardingCard = ({ account, onClick, onOpenInNewTab, overlay = false }: Props) => {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
+  const [menuOpen, setMenuOpen] = useState(false);
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: account.id,
     disabled: overlay,
