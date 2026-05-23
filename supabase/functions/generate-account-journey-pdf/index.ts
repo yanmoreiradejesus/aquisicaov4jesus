@@ -1008,18 +1008,30 @@ function buildHTML(data: {
         </div>
       `).join("");
 
-  const callsHTML = callEvents.length
+  const cleanCalls = dedupeCalls(callEvents);
+  const totalAttempts = callEvents.length;
+  const connected = cleanCalls.filter((c) => Number(c.duracao_seg ?? 0) >= 3).length;
+  const totalSec = cleanCalls.reduce((s, c) => s + Number(c.duracao_seg ?? 0), 0);
+  const totalMin = Math.round(totalSec / 60);
+
+  const callsHTML = cleanCalls.length
     ? `
       <h3 class="sub-title">Chamadas registradas</h3>
-      ${callEvents.map((c) => `
-        <div class="call">
-          <div class="call-head">
-            <span><strong>${esc(fmtDateTime(c.created_at))}</strong>${c.operador ? ` · ${esc(c.operador)}` : ""}</span>
-            <span>${esc(c.duracao_seg ?? 0)}s${c.status ? ` · ${esc(c.status)}` : ""}</span>
-          </div>
-          ${isFilled(c.resumo) ? `<div class="call-resumo">${esc(cleanText(c.resumo))}</div>` : ""}
-        </div>
-      `).join("")}
+      <div class="section-sub">${totalAttempts} tentativas · ${connected} conectadas · ${totalMin} min totais</div>
+      <table class="compact">
+        <thead><tr><th>Data/hora</th><th>Operador</th><th>Duração</th><th>Status</th></tr></thead>
+        <tbody>
+          ${cleanCalls.map((c) => `
+            <tr>
+              <td>${esc(fmtDateTime(c.created_at))}</td>
+              <td>${esc(c.operador ?? "—")}</td>
+              <td>${esc(c.duracao_seg ?? 0)}s</td>
+              <td>${esc(c.status ?? "—")}</td>
+            </tr>
+            ${isFilled(c.resumo) ? `<tr><td colspan="4" style="color:#555;font-size:9pt;padding-top:0;">${esc(cleanText(c.resumo))}</td></tr>` : ""}
+          `).join("")}
+        </tbody>
+      </table>
     ` : "";
 
   const participantsHTML = participants.length ? `
