@@ -898,66 +898,26 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
                   <CheckCircle2 className="h-4 w-4" />
                   Growth Class concluída
                 </div>
-                <Button
-                  variant="outline"
-                  className="w-full border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
-                  disabled={exportingPdf}
-                  onClick={async () => {
-                    if (!form.id) return;
-                    setExportingPdf(true);
-                    setLastPdfUrl(null);
-                    try {
-                      const { data, error } = await supabase.functions.invoke(
-                        "generate-account-journey-pdf",
-                        { body: { account_id: form.id } },
-                      );
-                      if (error) throw error;
-                      const url = (data as any)?.url;
-                      const filename = (data as any)?.filename ?? "jornada-cliente.pdf";
-                      if (!url) throw new Error("URL não retornada");
-                      setLastPdfUrl(url);
-                      setLastPdfFilename(filename);
-
-                      // Baixar como blob (evita bloqueio do navegador por gesto expirado)
-                      try {
-                        const resp = await fetch(url);
-                        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-                        const blob = await resp.blob();
-                        const objUrl = URL.createObjectURL(blob);
-                        const a = document.createElement("a");
-                        a.href = objUrl;
-                        a.download = filename;
-                        document.body.appendChild(a);
-                        a.click();
-                        a.remove();
-                        setTimeout(() => URL.revokeObjectURL(objUrl), 1500);
-                        toast({ title: "PDF gerado", description: "Download iniciado." });
-                      } catch (downloadErr) {
-                        console.warn("blob download falhou, usando fallback", downloadErr);
-                        toast({
-                          title: "PDF pronto",
-                          description: "Clique no link abaixo para baixar.",
-                        });
-                      }
-                    } catch (e: any) {
-                      console.error(e);
-                      toast({
-                        title: "Erro ao gerar PDF",
-                        description: e?.message ?? "Tente novamente.",
-                        variant: "destructive",
-                      });
-                    } finally {
-                      setExportingPdf(false);
-                    }
-                  }}
-                >
-                  {exportingPdf ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <FileDown className="h-4 w-4 mr-2" />
-                  )}
-                  {exportingPdf ? "Gerando jornada completa..." : "Exportar jornada completa (PDF)"}
-                </Button>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Button
+                    variant="outline"
+                    className="w-full border-primary/40 text-primary hover:bg-primary/10 hover:text-primary"
+                    disabled={!!exportingPdf}
+                    onClick={() => generateJourneyPdf(false)}
+                  >
+                    {exportingPdf === "summary" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileDown className="h-4 w-4 mr-2" />}
+                    PDF executivo
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full border-primary/30 text-primary/90 hover:bg-primary/10 hover:text-primary"
+                    disabled={!!exportingPdf}
+                    onClick={() => generateJourneyPdf(true)}
+                  >
+                    {exportingPdf === "appendix" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
+                    PDF com apêndice
+                  </Button>
+                </div>
                 {lastPdfUrl && (
                   <a
                     href={lastPdfUrl}
