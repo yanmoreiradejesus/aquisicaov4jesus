@@ -1,52 +1,76 @@
-## Correções no PDF Account Journey
+## Problema identificado
 
-Vou refatorar `supabase/functions/generate-account-journey-pdf/index.ts` para resolver todos os problemas identificados na análise.
+O PDF atual é montado como um HTML longo com várias seções forçando `page-break-before: always`, capa com `page-break-after`, cards longos, grids e blocos com estilos que o motor de conversão pode quebrar mal. Isso explica os sintomas: páginas vazias, texto solto/desorganizado e apêndice/transcrições ficando visualmente ruins nos dois formatos.
 
-### 1. Sanitização de texto (emojis e caracteres especiais)
-- Criar função `sanitize(text)` que substitui emojis comuns por equivalentes ASCII seguros do Helvetica:
-  - `🎯 ✅ 🔴 🟡 🟢 📅 💬 📝 💰 ➡️ 🎙️ 📞 👥 🚀 ⚠️ 📊 🏢` → `•`, `[x]`, `[ALTA]`, `[MED]`, `[OK]`, `Data:`, `"`, `-`, `R$`, `→`, etc.
-  - Strip de qualquer caractere fora do range Latin-1 (`\u0000-\u00FF`) com fallback `?`
-- Aplicar `sanitize()` em **todo** texto antes de `doc.text()`, incluindo conteúdo gerado pela IA
-- Ajustar prompt do Gemini para **não usar emojis** na saída
+## Solução proposta
 
-### 2. Pré-processar JSON cru
-- Detectar campos `briefing_mercado`, `pesquisa_pre_qualificacao`, `pre_growth_class_relatorio` que são JSON
-- Renderizar apenas campos legíveis (`resumo`, `highlights[].resumo`, `pontos_principais`) em formato narrativo
-- Nunca despejar `JSON.stringify` no PDF
+### 1. Trocar a estrutura do PDF para um layout de relatório, não de “slides”
+- Remover o modelo atual de seções full-page com quebras obrigatórias.
+- Usar páginas A4 com margens reais, fundo claro, texto escuro e hierarquia editorial.
+- Cada bloco terá título, subtítulo, conteúdo e espaçamento previsível.
+- Só inserir quebra de página quando necessário, não antes de toda seção.
 
-### 3. Deduplicação de conteúdo
-- Se `lead.qualificacao` e `oportunidade.resumo_reuniao` têm overlap > 70% (comparação por substring/jaccard simples), renderizar apenas uma vez sob "Síntese da Qualificação"
-- Marcar seções já renderizadas para não repetir "Participantes / Dores / Próximos passos"
+### 2. Gerar um único PDF completo
+- Remover os dois botões atuais.
+- Deixar um botão único: `Exportar jornada (PDF)`.
+- O PDF sempre inclui a parte executiva e, no final, o apêndice quando houver transcrições/call logs.
+- Manter compatibilidade no backend: se `include_appendix` não vier, o padrão será gerar completo.
 
-### 4. Quebras de página corretas
-- Helper `ensureSpace(mm)` antes de cada `sectionTitle()` — se restar < 40mm, força `doc.addPage()`
-- Aplicar em todos os títulos de seção
+### 3. Reorganizar o conteúdo em ordem útil para operação
+Nova estrutura:
+1. Capa compacta com cliente, responsáveis, data e principais valores.
+2. Sumário executivo por IA.
+3. Dados do cliente e contrato.
+4. Diagnóstico comercial/SPICED em blocos curtos.
+5. Jornada comercial: atividades e chamadas em timeline limpa.
+6. Reunião comercial.
+7. Pré Growth Class, somente se houver conteúdo útil.
+8. Growth Class: expectativa, ata, oportunidades e próximos passos.
+9. Apêndice técnico: transcrições completas e call logs, em fonte menor e bem delimitado.
 
-### 5. Campos vazios com fallback `—`
-- Helper `val(v)` → retorna `'—'` se `v` for null/undefined/`''`/`'null'`
-- Aplicar em todos os campos (Cidade, Estado, datas, valores)
+### 4. Corrigir paginação e páginas vazias
+- Eliminar `page-break-before` obrigatório nas seções.
+- Remover elementos com altura fixa de página fora da capa.
+- Evitar `page-break-inside: avoid` em blocos longos.
+- Aplicar `break-inside: avoid` apenas em blocos pequenos, como KPIs e linhas de metadados.
+- Quebrar textos grandes em parágrafos/listas antes de mandar ao HTML, evitando blocos gigantes indivisíveis.
+- Remover layout em duas colunas nas transcrições, que costuma bagunçar paginação em PDF.
 
-### 6. Growth Class vazia
-- Se GC marcada como `concluida` mas todos os campos estão vazios → renderizar bloco único: *"Growth Class registrada mas conteúdo ainda não preenchido."*
-- Não renderizar os 5 cards vazios
+### 5. Limpar e normalizar textos antes de renderizar
+- Transformar JSON bruto em texto legível.
+- Cortar espaços excessivos, quebras duplicadas e campos vazios.
+- Evitar repetir a mesma qualificação/resumo em múltiplas seções.
+- Limitar trechos executivos muito longos no corpo principal e deixar o conteúdo completo no apêndice.
 
-### 7. Logo do tenant na capa
-- `fetch(tenant.client_logo_url)` → converter para base64 → `doc.addImage()` na capa
-- Fallback para texto "V4 COMPANY" se logo não carregar ou der erro
+### 6. Melhorar robustez técnica da conversão
+- Ajustar CSS para impressão com `@page` com margens, sem full-bleed em todo o documento.
+- Usar tipografia padrão segura para PDF.
+- Manter PDFShift, mas com HTML mais simples e previsível.
+- Retornar também metadados básicos no response, como quantidade de seções/apêndices incluídos, para facilitar debug futuro.
 
-### 8. Síntese executiva completa
-- Aumentar `slice(0, 60000)` → `slice(0, 120000)` no input do Gemini
-- Aumentar `max_tokens` da síntese para garantir resposta completa
-- Ajustar prompt para retornar **markdown puro sem emojis**
+## Arquivos que serão alterados
 
-### 9. Atividades agrupadas por dia
-- Agrupar `crm_atividades` por data (YYYY-MM-DD) e renderizar como timeline com cabeçalho de dia
-- Transcrições com timestamps `[00:05:43]` formatadas em itálico/cinza claro
+- `supabase/functions/generate-account-journey-pdf/index.ts`
+  - Refatorar o template HTML/CSS do PDF.
+  - Ajustar padrão de `include_appendix` para completo.
+  - Reorganizar conteúdo e paginação.
 
-### Arquivos alterados
-- `supabase/functions/generate-account-journey-pdf/index.ts` (refatoração completa)
+- `src/components/crm/OnboardingDetailSheet.tsx`
+  - Substituir os dois botões por um botão único.
+  - Chamar a função sempre no modo completo.
+  - Atualizar texto de ajuda do botão.
 
-### Validação
-- Gerar novo PDF para a mesma conta (PhD Sports Vila Prudente)
-- Baixar via Storage e converter páginas com `pdftoppm -jpeg -r 150` 
-- Inspecionar cada página: sem boxes pretos, sem JSON cru, sem duplicação, sem quebras feias, logo presente
+## Validação
+
+Após implementar, vou:
+- Verificar que a função continua compilável em termos de TypeScript/estrutura.
+- Conferir que o frontend chama apenas um modo de exportação.
+- Revisar o HTML gerado para garantir que não há quebras obrigatórias causando páginas vazias.
+- Se possível pelo ambiente, usar logs/teste da função para confirmar que a geração não retorna erro.
+
+## Fora do escopo deste ajuste
+
+- Alterar dados do CRM ou banco.
+- Criar novo armazenamento.
+- Trocar PDFShift por outro provedor agora.
+- Redesenhar a tela de onboarding além do botão de exportação.
