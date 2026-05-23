@@ -1120,7 +1120,7 @@ function buildHTML(data: {
         <div class="kv-grid" style="margin-bottom:4mm;">
           <div class="kv"><div class="label">Agendada</div><div class="value">${esc(fmtDateTime(account.growth_class_data_agendada))}</div></div>
           <div class="kv"><div class="label">Realizada</div><div class="value">${esc(fmtDateTime(account.growth_class_data_realizada))}</div></div>
-          <div class="kv"><div class="label">Responsável V4</div><div class="value">${esc(nameOf(account.growth_class_responsavel_id))}</div></div>
+          <div class="kv"><div class="label">Account Manager</div><div class="value">${esc(nameOf(account.account_manager_id))}</div></div>
         </div>
         ${isFilled(account.growth_class_expectativas) ? `
           <h3 class="sub-title">Expectativa do cliente</h3>
