@@ -1,59 +1,50 @@
-## Conceito de responsáveis
+# Menu iOS no card de Onboarding
 
-Hoje o sistema sobrescreve o `responsavel_id` do lead pelo closer no agendamento e duplica papéis na tabela `accounts`. Vamos separar claramente os 3 papéis:
+## Decisão de UX
 
-| Papel | Onde mora | Quando é definido |
-|---|---|---|
-| **SDR** | `crm_leads.responsavel_id` (já existe) | Manual no card do lead — nunca sobrescrito |
-| **Closer** | `crm_oportunidades.closer_id` (novo) | No diálogo de agendamento da reunião |
-| **Account Manager** | `accounts.account_manager_id` (preenchido pelo `growth_class_responsavel_id` atual) | Quem realizou a Growth Class |
+Pra responder "qual a melhor pra UX": **botão ⋯ visível + comportamento adaptativo** (sheet no mobile, popover no desktop). Razão:
 
-### Mudanças no banco
+- O viewport atual é mobile (430px). `ContextMenu` do Radix depende de right-click — no mobile praticamente não dispara. Hoje o menu está **invisível** pra quem usa celular.
+- Long-press conflita com o `useDraggable` do dnd-kit (que já segura o toque pra arrastar). Tentar long-press = bug de drag travado.
+- Botão ⋯ explícito resolve os dois: descoberta clara, zero conflito com drag, padrão iOS (Mail, Reminders, Files usam o mesmo botão).
 
-1. `crm_oportunidades`: adicionar coluna `closer_id uuid` (FK profiles, ON DELETE SET NULL) + índice.
-2. `accounts`: migrar dados de `growth_class_responsavel_id` → `account_manager_id` (preencher onde `account_manager_id IS NULL`) e remover `growth_class_responsavel_id`.
-3. Atualizar trigger `auto_create_oportunidade`: ao criar a oportunidade quando a reunião é realizada, **preencher `closer_id` com o atual `lead.responsavel_id`** (que naquele momento já foi setado como closer pelo fluxo legado — ver passo de migração de dados abaixo) e manter `responsavel_id` da oportunidade igual ao do lead por enquanto, depois substituiremos para usar `closer_id` apenas.
-4. Atualizar trigger `auto_create_account_and_cobrancas`: usar `closer_id` da oportunidade para nada (account_manager fica vazio até a GC ser realizada — é preenchido manualmente no painel de Onboarding/Growth Class).
-5. Backfill: para oportunidades já existentes, copiar `responsavel_id` → `closer_id`.
+## O que muda
 
-### Mudanças no fluxo (frontend)
+### 1. Botão ⋯ no card
+- Adiciona um botão circular de 28px no canto superior direito do `OnboardingCard`, ao lado do valor.
+- Só aparece no hover (desktop) e sempre visível no mobile.
+- `onPointerDown` com `stopPropagation` pra não disparar o drag.
+- Ícone `MoreHorizontal` do lucide, cor `text-muted-foreground`, hover `bg-foreground/5`.
 
-- **`ResponsavelPickerDialog`** (usado no agendamento/realização da reunião em `CrmLeads.tsx`): em vez de gravar `lead.responsavel_id`, gravar `crm_oportunidades.closer_id`. Se a oportunidade ainda não existir (reunião agendada, não realizada), salvar a escolha em um campo temporário do lead (`closer_id` no lead) OU adiar a pergunta para o momento de "reunião realizada". **Recomendação:** adicionar também `crm_leads.closer_id` opcional, só para guardar a intenção, e ao criar a oportunidade o trigger copia para `crm_oportunidades.closer_id`.
-  - Decisão: adicionar `crm_leads.closer_id` (sem propagar para nada além da oportunidade) para preservar o SDR no `responsavel_id`.
-- **`LeadDetailSheet`**: o campo "Responsável" passa a se chamar **"SDR responsável"**. Adicionar campo de leitura "Closer" (vindo da oportunidade quando existir).
-- **`OportunidadeDetailSheet` / `OportunidadeDialog`**: renomear/expor "Closer responsável" usando `closer_id`. O campo `responsavel_id` da oportunidade pode ser descontinuado da UI (mantido no schema por compatibilidade) ou removido — proponho **manter no schema mas esconder da UI**, e usar `closer_id` em todos os lugares (cards, filtros, copilot, PDF, exports).
-- **`OnboardingDetailSheet`**: campo "Account Manager" agora aponta para `accounts.account_manager_id`. Remover qualquer referência a `growth_class_responsavel_id`.
-- Atualizar `OportunidadesFilterPopover`, `LeadsFilterPopover`, exports CSV, `closer-copilot`, `meeting-ai`, `generate-account-journey-pdf` para usarem os novos campos:
-  - SDR → `lead.responsavel_id`
-  - Closer → `oportunidade.closer_id`
-  - Account Manager → `account.account_manager_id`
+### 2. Menu adaptativo
+- Mobile (`< 640px`): usa `Sheet` do shadcn com `side="bottom"`, cantos arredondados no topo (`rounded-t-2xl`), handle bar cinza no topo (estilo iOS), padding generoso, itens de 52px de altura, separadores `bg-border/40`, fundo `bg-surface-1/95 backdrop-blur-xl`.
+- Desktop (`>= 640px`): usa `Popover` com `rounded-xl`, `backdrop-blur-xl`, `bg-surface-1/90`, sombra `shadow-ios-xl`, itens de 36px com ícone à esquerda e chevron/atalho à direita quando aplicável.
+- Mesma lista de ações nos dois, mesmo componente fonte (`OnboardingCardMenu`), só o container muda via `useIsMobile()`.
 
-### Detalhes técnicos
+### 3. Ações (mantém as 2 atuais + 1 destrutiva visual de exemplo só se fizer sentido)
+Mantém escopo enxuto já que você não pediu novas:
+- **Abrir em nova aba** (ícone `ExternalLink`)
+- **Copiar link** (ícone `Link2`, com feedback toast)
 
-- Migration order:
-  1. `ALTER TABLE crm_leads ADD COLUMN closer_id uuid REFERENCES profiles(id) ON DELETE SET NULL;`
-  2. `ALTER TABLE crm_oportunidades ADD COLUMN closer_id uuid REFERENCES profiles(id) ON DELETE SET NULL;`
-  3. Backfill: `UPDATE crm_oportunidades SET closer_id = responsavel_id WHERE closer_id IS NULL;`
-  4. Backfill: `UPDATE accounts SET account_manager_id = growth_class_responsavel_id WHERE account_manager_id IS NULL AND growth_class_responsavel_id IS NOT NULL;`
-  5. `ALTER TABLE accounts DROP COLUMN growth_class_responsavel_id;`
-  6. Recriar `auto_create_oportunidade` para setar `closer_id` a partir de `crm_leads.closer_id` (fallback `responsavel_id`).
-- Frontend: refatorar `ResponsavelPickerDialog` callback para gravar `lead.closer_id` em vez de `lead.responsavel_id`.
-- Atualizar `useCrmLeads`, `useCrmOportunidades`, `useOnboarding` types/queries.
-- Atualizar edge functions (`generate-account-journey-pdf`, `closer-copilot`, `meeting-ai`) para usar os novos campos nos joins/rótulos.
+Sem submenu de status nem ações destrutivas — pode ser adicionado depois.
 
-### Arquivos afetados (principais)
+### 4. Mantém o `ContextMenu` (right-click) no desktop
+Pra quem já usa right-click, o `ContextMenuTrigger` continua envolvendo o card. Botão ⋯ é o caminho principal, right-click é atalho de power-user.
 
-- Banco: migration nova
-- `src/components/crm/ResponsavelPickerDialog.tsx`
-- `src/pages/CrmLeads.tsx` (callback do picker)
-- `src/components/crm/LeadDetailSheet.tsx`, `LeadDialog.tsx`, `LeadsFilterPopover.tsx`, `LeadCard.tsx`
-- `src/components/crm/OportunidadeDetailSheet.tsx`, `OportunidadeDialog.tsx`, `OportunidadeCard.tsx`, `OportunidadesFilterPopover.tsx`
-- `src/components/crm/OnboardingDetailSheet.tsx`, `OnboardingCard.tsx`
-- `src/lib/leadCsvImport.ts`, `oportunidadeCsvImport.ts`, `LeadExportDialog.tsx`, `OportunidadeExportDialog.tsx`
-- `supabase/functions/generate-account-journey-pdf/index.ts`, `closer-copilot/index.ts`, `meeting-ai/index.ts`, `delete-user/index.ts`
+## Detalhes visuais iOS
 
-### Resultado esperado
+- Sheet mobile: handle bar (4×36px, `bg-foreground/20`, `rounded-full`) no topo, título opcional pequeno com nome da conta truncado, divisor após título.
+- Itens: tipografia `text-[15px]` (iOS body), ícone 18px à esquerda, padding `px-4`, tap highlight `active:bg-foreground/10`.
+- Animação: sheet sobe com `slide-in-from-bottom`, popover com `zoom-in-95 fade-in` (já é o default do shadcn).
+- Safe area inset bottom no sheet: `pb-[env(safe-area-inset-bottom)]`.
 
-- SDR do lead nunca se perde.
-- Closer fica registrado claramente na oportunidade desde o agendamento.
-- Account Manager = quem fez a Growth Class, em um único campo.
+## Arquivos
+
+- `src/components/crm/OnboardingCard.tsx` — adiciona botão ⋯ e integra novo menu, mantém `ContextMenu` como atalho.
+- `src/components/crm/OnboardingCardMenu.tsx` — **novo**, exporta a lista de itens reutilizável.
+- (sem mudanças em backend, hooks ou dados)
+
+## Fora de escopo
+
+- Replicar nos cards de Lead/Oportunidade (posso fazer em seguida se gostar do resultado).
+- Novas ações (mudar status, marcar GC, exportar PDF do card).
