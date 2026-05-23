@@ -1328,8 +1328,8 @@ Deno.serve(async (req) => {
 
     const userIds = [
       oportunidade?.responsavel_id,
+      oportunidade?.closer_id,
       account.account_manager_id,
-      account.growth_class_responsavel_id,
       lead?.responsavel_id,
     ].filter(Boolean);
     const profiles: Record<string, string> = {};
