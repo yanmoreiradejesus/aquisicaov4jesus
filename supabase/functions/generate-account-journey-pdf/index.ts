@@ -400,8 +400,6 @@ function buildHTML(data: {
 
   // ============== CSS ==============
   const css = `
-    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800&display=swap');
-
     :root {
       --primary: ${primary};
       --bg: hsl(240 10% 3.9%);
@@ -417,7 +415,7 @@ function buildHTML(data: {
     html, body {
       background: var(--bg);
       color: var(--text);
-      font-family: 'Inter', -apple-system, sans-serif;
+      font-family: Arial, Helvetica, sans-serif;
       font-size: 10pt;
       line-height: 1.55;
       -webkit-print-color-adjust: exact;
