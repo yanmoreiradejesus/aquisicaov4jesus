@@ -1,13 +1,22 @@
+import { useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import { Calendar, GraduationCap, Package, ExternalLink, Link2 } from "lucide-react";
+import { Calendar, GraduationCap, Package, ExternalLink, Link2, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   ContextMenu,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import { Sheet, SheetContent, SheetPortal, SheetOverlay } from "@/components/ui/sheet";
+import * as SheetPrimitive from "@radix-ui/react-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  buildOnboardingMenuActions,
+  OnboardingCardMenuList,
+} from "./OnboardingCardMenu";
 
 const CATEGORIA_PRODUTOS_LABEL: Record<string, string> = {
   saber: "Saber",
