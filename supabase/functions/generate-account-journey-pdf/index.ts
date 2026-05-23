@@ -64,7 +64,6 @@ const textToParagraphs = (s: string): string => {
   return blocks
     .map((b) => {
       const lines = b.split("\n");
-      // bullet block
       if (lines.every((l) => /^\s*[-•*]\s+/.test(l))) {
         const items = lines
           .map((l) => esc(l.replace(/^\s*[-•*]\s+/, "")))
@@ -76,6 +75,91 @@ const textToParagraphs = (s: string): string => {
     })
     .join("");
 };
+
+// Detect markdown markers worth rendering
+const hasMarkdown = (s: string): boolean =>
+  /\*\*|^#{1,4}\s|^\s*[-*]\s+|^\s*\d+\.\s+|^---+\s*$|\[[ xX]\]/m.test(s || "");
+
+// Render any free-text field: markdown when detected, plain paragraphs otherwise.
+// Strips decorative leading emojis from headings/bullets and normalizes checkboxes.
+const renderRich = (s: any): string => {
+  const t = cleanText(s);
+  if (!t) return "";
+  const cleaned = t
+    .replace(/^(#{1,4}\s+)[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+\s*/gmu, "$1")
+    .replace(/^(\s*[-*]\s+)[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]+\s*/gmu, "$1")
+    .replace(/^\s*\[[xX]\]\s+/gm, "- ")
+    .replace(/^\s*\[\s\]\s+/gm, "- ");
+  return hasMarkdown(cleaned) ? mdToHtml(cleaned) : textToParagraphs(cleaned);
+};
+
+// Deduplicate and clean call events: drop 0s calls, collapse duplicates
+// produced by the webhook (same call lands twice with different operador label).
+function dedupeCalls(calls: any[]): any[] {
+  const seen = new Map<string, any>();
+  for (const c of calls) {
+    const dur = Number(c.duracao_seg ?? 0);
+    if (dur <= 0 && !isFilled(c.resumo) && !isFilled(c.transcricao)) continue;
+    const ts = c.created_at ? new Date(c.created_at).toISOString().slice(0, 16) : "";
+    const key = `${ts}|${c.call_id ?? c.operador ?? ""}`;
+    const prev = seen.get(key);
+    if (!prev || Number(prev.duracao_seg ?? 0) < dur) seen.set(key, c);
+  }
+  return Array.from(seen.values()).sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  );
+}
+
+// Tidy a verbatim transcript: group consecutive lines by the same speaker,
+// drop tiny filler turns, keep timestamps every ~5min only.
+function tidyTranscript(text: string): string {
+  if (!text) return "";
+  const lines = text.split(/\n/);
+  const out: string[] = [];
+  let lastSpeaker = "";
+  let buffer: string[] = [];
+  let lastTsMin = -10;
+  const flush = () => {
+    if (buffer.length && lastSpeaker) {
+      out.push(`${lastSpeaker}: ${buffer.join(" ").replace(/\s+/g, " ").trim()}`);
+    } else if (buffer.length) {
+      out.push(buffer.join(" ").replace(/\s+/g, " ").trim());
+    }
+    buffer = [];
+  };
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) { flush(); lastSpeaker = ""; continue; }
+    const ts = line.match(/^(\d{2}):(\d{2}):(\d{2})$/);
+    if (ts) {
+      const min = Number(ts[1]) * 60 + Number(ts[2]);
+      if (min - lastTsMin >= 5) {
+        flush();
+        out.push("");
+        out.push(`[${ts[1]}:${ts[2]}]`);
+        lastTsMin = min;
+        lastSpeaker = "";
+      }
+      continue;
+    }
+    const m = line.match(/^([A-Za-zÀ-ÿ][\wÀ-ÿ.\s-]{1,40}?):\s*(.*)$/);
+    if (m) {
+      const speaker = m[1].trim();
+      const utter = m[2].trim();
+      if (speaker === lastSpeaker) {
+        if (utter) buffer.push(utter);
+      } else {
+        flush();
+        lastSpeaker = speaker;
+        if (utter) buffer.push(utter);
+      }
+    } else {
+      buffer.push(line);
+    }
+  }
+  flush();
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
 
 // Minimal markdown -> HTML for AI output
 function mdToHtml(input: string): string {
