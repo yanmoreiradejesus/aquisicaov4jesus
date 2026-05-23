@@ -1142,9 +1142,9 @@ function buildHTML(data: {
     </div>
   `;
 
-  // ---------- 9. Apêndice ----------
+  // ---------- 9. Apêndice (transcrições) ----------
   const formatTranscript = (txt: string) =>
-    esc(txt).replace(/(\d{2}:\d{2}:\d{2})/g, '<span class="ts">$1</span>');
+    esc(tidyTranscript(txt)).replace(/\[(\d{2}:\d{2})\]/g, '<span class="ts">[$1]</span>');
 
   const appendixHTML = includeAppendix && transcripts.length ? `
     <div class="section appendix-divider">
