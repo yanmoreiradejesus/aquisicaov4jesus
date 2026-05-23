@@ -171,7 +171,7 @@ const CrmLeads = () => {
       return;
     }
     // Exige closer responsável antes de agendar/realizar reunião
-    if ((over.id === "reuniao_agendada" || over.id === "reuniao_realizada") && !lead.responsavel_id) {
+    if ((over.id === "reuniao_agendada" || over.id === "reuniao_realizada") && !(lead as any).closer_id) {
       setPendingRespMove({ lead, etapa: String(over.id) });
       setRespOpen(true);
       return;
