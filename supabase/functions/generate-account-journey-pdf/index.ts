@@ -925,7 +925,7 @@ function buildHTML(data: {
           )
           .join("")}
       </div>
-      ${briefingText ? `<h3 class="sub-title">Briefing de mercado</h3><div class="block">${textToParagraphs(briefingText)}</div>` : ""}
+      ${briefingText ? `<h3 class="sub-title">Briefing de mercado</h3><div class="block">${renderRich(briefingText)}</div>` : ""}
     </div>
   `;
 
@@ -976,7 +976,7 @@ function buildHTML(data: {
           <div class="spiced-body">
             <h4>${esc(s.title)}</h4>
             <div class="sub">${esc(s.sub)}</div>
-            ${s.body ? textToParagraphs(s.body) : (s.micro?.length ? "" : `<p style="color:#999;font-style:italic;">Não informado.</p>`)}
+            ${s.body ? renderRich(s.body) : (s.micro?.length ? "" : `<p style="color:#999;font-style:italic;">Não informado.</p>`)}
             ${s.micro?.length ? `<div class="micro">${s.micro.map((m: any) => `<div><div class="label">${esc(m.label)}</div><div class="value">${esc(m.value)}</div></div>`).join("")}</div>` : ""}
           </div>
         </div>
@@ -1042,7 +1042,7 @@ function buildHTML(data: {
   const reuniaoHTML = isFilled(oportunidade?.resumo_reuniao) ? `
     <div class="section">
       ${sectionHead("05", "Reunião Comercial", "Resumo da sessão de vendas")}
-      <div class="block">${textToParagraphs(cleanText(oportunidade.resumo_reuniao))}</div>
+      <div class="block">${renderRich(oportunidade.resumo_reuniao)}</div>
     </div>
   ` : "";
 
@@ -1086,7 +1086,7 @@ function buildHTML(data: {
   const preGcHTML = preGcText ? `
     <div class="section">
       ${sectionHead("07", "Pré Growth Class", "Relatório de preparação")}
-      <div class="block">${textToParagraphs(preGcText)}</div>
+      <div class="block">${renderRich(preGcText)}</div>
     </div>
   ` : "";
 
@@ -1112,15 +1112,15 @@ function buildHTML(data: {
         ` : ""}
         ${isFilled(account.growth_class_ata) ? `
           <h3 class="sub-title">Ata oficial</h3>
-          <div class="block">${textToParagraphs(cleanText(account.growth_class_ata))}</div>
+          <div class="block">${renderRich(account.growth_class_ata)}</div>
         ` : ""}
         ${isFilled(account.growth_class_oportunidades_monetizacao) ? `
           <h3 class="sub-title">Oportunidades de monetização</h3>
-          <div class="block">${textToParagraphs(cleanText(account.growth_class_oportunidades_monetizacao))}</div>
+          <div class="block">${renderRich(account.growth_class_oportunidades_monetizacao)}</div>
         ` : ""}
         ${isFilled(account.growth_class_proximos_passos) ? `
           <h3 class="sub-title">Próximos passos acordados</h3>
-          <div class="block">${textToParagraphs(cleanText(account.growth_class_proximos_passos))}</div>
+          <div class="block">${renderRich(account.growth_class_proximos_passos)}</div>
         ` : ""}
       `}
     </div>
