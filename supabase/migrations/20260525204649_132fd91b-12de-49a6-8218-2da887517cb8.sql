@@ -1,0 +1,1 @@
+UPDATE public.crm_leads SET briefing_mercado = NULL WHERE id = '6a61a792-141e-462c-9626-6b9ca7e585ed';
