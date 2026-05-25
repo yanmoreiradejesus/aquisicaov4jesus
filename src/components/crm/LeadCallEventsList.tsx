@@ -267,11 +267,11 @@ function TranscricaoBlock({ event }: { event: CallEvent }) {
   const [retrying, setRetrying] = useState(false);
   const status = event.transcricao_status;
 
-  const retry = async () => {
+  const retry = async (force = false) => {
     setRetrying(true);
     try {
       const { error } = await supabase.functions.invoke("transcribe-call-recording", {
-        body: { event_id: event.id },
+        body: { event_id: event.id, force },
       });
       if (error) throw error;
       toast.success("Transcrição iniciada");
@@ -282,7 +282,11 @@ function TranscricaoBlock({ event }: { event: CallEvent }) {
     }
   };
 
-  if (status === "pendente" || status === "processando") {
+  // Detecta transcrição travada: status "processando" há mais de 10 min
+  const ageMs = Date.now() - new Date(event.created_at).getTime();
+  const stuck = (status === "pendente" || status === "processando") && ageMs > 10 * 60 * 1000;
+
+  if ((status === "pendente" || status === "processando") && !stuck) {
     return (
       <div className="mt-2 inline-flex items-center gap-1.5 text-[10px] text-muted-foreground">
         <Loader2 className="h-3 w-3 animate-spin" />
@@ -291,17 +295,39 @@ function TranscricaoBlock({ event }: { event: CallEvent }) {
     );
   }
 
+  if (stuck) {
+    return (
+      <div className="mt-2 flex items-center gap-2">
+        <span className="inline-flex items-center gap-1 text-[10px] text-amber-500">
+          <AlertCircle className="h-3 w-3" /> Transcrição travada
+        </span>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-5 px-1.5 text-[10px]"
+          onClick={() => retry(true)}
+          disabled={retrying}
+        >
+          <RefreshCw className={`h-3 w-3 mr-1 ${retrying ? "animate-spin" : ""}`} /> Tentar de novo
+        </Button>
+      </div>
+    );
+  }
+
   if (status === "erro") {
     return (
       <div className="mt-2 flex items-center gap-2">
-        <span className="inline-flex items-center gap-1 text-[10px] text-destructive">
+        <span
+          className="inline-flex items-center gap-1 text-[10px] text-destructive"
+          title={event.transcricao_error ?? undefined}
+        >
           <AlertCircle className="h-3 w-3" /> Erro na transcrição
         </span>
         <Button
           size="sm"
           variant="ghost"
           className="h-5 px-1.5 text-[10px]"
-          onClick={retry}
+          onClick={() => retry(true)}
           disabled={retrying}
         >
           <RefreshCw className={`h-3 w-3 mr-1 ${retrying ? "animate-spin" : ""}`} /> Tentar de novo
@@ -334,7 +360,7 @@ function TranscricaoBlock({ event }: { event: CallEvent }) {
       size="sm"
       variant="ghost"
       className="mt-2 h-6 px-2 text-[10px]"
-      onClick={retry}
+      onClick={() => retry(false)}
       disabled={retrying}
     >
       <FileText className="h-3 w-3 mr-1" />
