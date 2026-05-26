@@ -370,8 +370,6 @@ export const OportunidadeDetailSheet = ({
       setAiTarefa(null);
       setAiLoadingResumo(false);
       setAiLoadingTarefa(false);
-      setTranscricaoEditing(!(oportunidade?.transcricao_reuniao ?? "").trim());
-      setTranscricaoExpanded(false);
       // Se já existe resumo salvo, marca o hash da transcrição como já processado
       // (evita reprocessar automaticamente ao abrir)
       processedHashRef.current = oportunidade?.resumo_reuniao
