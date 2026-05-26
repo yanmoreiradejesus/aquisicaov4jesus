@@ -18,13 +18,29 @@ const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
 // por invocação síncrona, mas com EdgeRuntime.waitUntil podemos passar disso.
 const AI_TIMEOUT_MS = 8 * 60 * 1000;
 
+async function resolveApi4comListenerUrl(url: string): Promise<string> {
+  try {
+    if (!/listener\.api4com\.com\/files\/listen\//i.test(url)) return url;
+    const r = await fetch(url, { redirect: "manual" });
+    const loc = r.headers.get("location");
+    if (loc) return loc;
+    const txt = (await r.text()).slice(0, 2000);
+    const m = txt.match(/https?:\/\/[^\s"'<>]+/i);
+    if (m) return m[0];
+    return url;
+  } catch {
+    return url;
+  }
+}
+
 async function downloadAudioAsBase64(url: string): Promise<{ base64: string; mime: string }> {
   const headers: Record<string, string> = {};
   if (url.includes("3c.plus")) {
     const token = Deno.env.get("THREECPLUS_API_TOKEN");
     if (token) headers.Authorization = `Bearer ${token}`;
   }
-  const r = await fetch(url, { headers, redirect: "follow" });
+  const resolved = await resolveApi4comListenerUrl(url);
+  const r = await fetch(resolved, { headers, redirect: "follow" });
   if (!r.ok) throw new Error(`Falha ao baixar gravação: ${r.status}`);
   const mime = r.headers.get("content-type") || "audio/mpeg";
   const buf = new Uint8Array(await r.arrayBuffer());
@@ -111,7 +127,7 @@ async function processEvent(eventId: string, force: boolean) {
       return;
     }
 
-    if ((event.duracao_seg ?? 0) < 3) {
+    if ((event.duracao_seg ?? 0) < 10) {
       await admin
         .from("crm_call_events")
         .update({ transcricao_status: "sem_audio", transcricao_error: null })
