@@ -1046,9 +1046,9 @@ export const OportunidadeDetailSheet = ({
                     size="sm"
                     variant="outline"
                     onClick={arquivarReuniaoAtual}
-                    disabled={!((form.transcricao_reuniao ?? "").trim().length >= 20) || addReuniao.isPending}
+                    disabled={addReuniao.isPending}
                     className="h-9 text-[11px]"
-                    title="Arquivar transcrição atual e iniciar uma nova reunião"
+                    title="Iniciar nova reunião (arquiva a atual se houver transcrição)"
                   >
                     <Archive className="h-3.5 w-3.5 mr-1.5" />
                     + Nova reunião
