@@ -1128,7 +1128,7 @@ export const OportunidadeDetailSheet = ({
               {/* TRANSCRIÇÃO ATIVA — paste zone (texto nunca é renderizado) */}
               <div className="border-t border-border/40 pt-3">
                 <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-2">
-                  Transcrição da reunião atual
+                  {reunioesArquivadas.length > 0 ? "Adicionar nova reunião" : "Transcrição da reunião atual"}
                 </p>
                 {(form.transcricao_reuniao ?? "").trim().length > 0 ? (
                   <div className="flex items-center justify-between gap-3 rounded-md border border-border/40 bg-background/40 px-3 py-2.5">
