@@ -29,7 +29,6 @@ import {
   AlertCircle,
   Calendar as CalendarIcon,
   ListTodo,
-  Sparkles,
   ChevronDown,
   DollarSign,
 } from "lucide-react";
@@ -87,8 +86,6 @@ const REQUIRES_MEETING = new Set(["negociacao", "contrato", "follow_infinito", "
 // Etapas onde a temperatura também é exigida no step de reunião.
 // Ganho está fora (lead fechou — temperatura não faz sentido).
 const REQUIRES_TEMPERATURA = new Set(["negociacao", "contrato", "follow_infinito"]);
-// Tarefas: sugeridas em etapas em andamento. Ganho não precisa.
-const REQUIRES_TASK = new Set(["negociacao", "contrato", "follow_infinito"]);
 // Valores obrigatórios em "Dúvidas e Fechamento". Em "Ganho" os valores
 // aparecem dentro do próprio bloco ganho (para revisão/desconto), por isso
 // não precisam ser cobrados como step separado.
@@ -124,8 +121,7 @@ export function computeNeededSteps(
 
   const requireTemp = REQUIRES_TEMPERATURA.has(etapaDestino);
   const meeting = REQUIRES_MEETING.has(etapaDestino) && (!hasTranscricao || (requireTemp && !hasTemperatura));
-  // Tarefa: passo é exibido se não houver nenhuma pendente (para sugerir via IA), mas é OPCIONAL — não bloqueia o avanço.
-  const task = REQUIRES_TASK.has(etapaDestino) && tarefasPendentesCount === 0;
+  const task = false;
   const valores = REQUIRES_VALORES.has(etapaDestino) && !hasValores;
   const ganho = REQUIRES_GANHO_FORM.has(etapaDestino); // bloco ganho sempre obrigatório (contrato + grau + monetização + info)
   return { meeting, task, valores, ganho, any: meeting || task || valores || ganho };
