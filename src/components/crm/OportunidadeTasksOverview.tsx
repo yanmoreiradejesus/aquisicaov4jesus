@@ -36,6 +36,9 @@ type SectionKey = "atrasadas" | "hoje" | "amanha" | "proximos" | "concluidas";
 
 const CONCLUIDAS_LIMIT = 20;
 
+const cleanTaskTitle = (value?: string | null) =>
+  (value || "Tarefa").replace(/^\[SUGEST(Ã|A)O IA[^\]]*\]\s*/i, "").split("\n")[0];
+
 function fireSync(atividade_id: string, action: "upsert" | "delete", google_event_id?: string | null) {
   supabase.functions
     .invoke("sync-task-to-google", { body: { atividade_id, action, google_event_id } })
@@ -192,6 +195,7 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
   const TaskItem = ({ t }: { t: TaskRow }) => {
     const d = t.data_agendada ? new Date(t.data_agendada) : null;
     const ref = t.lead_empresa || t.lead_nome || t.op_nome;
+    const title = cleanTaskTitle(t.titulo || t.descricao);
 
     return (
       <li className={cn(
@@ -212,7 +216,7 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
           "flex-1 min-w-0 text-sm text-foreground leading-snug break-words",
           t.concluida && "line-through text-muted-foreground"
         )}>
-          {t.titulo || t.descricao || "Tarefa"}
+          {title}
         </p>
         {d && (
           <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
@@ -232,7 +236,7 @@ export function OportunidadeTasksOverview({ onOpenOportunidade }: Props) {
         )}
         {!t.concluida && (
           <button
-            onClick={() => setEditTask({ id: t.id, titulo: t.titulo || t.descricao || "", data_agendada: t.data_agendada || "" })}
+            onClick={() => setEditTask({ id: t.id, titulo: title, data_agendada: t.data_agendada || "" })}
             className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 shrink-0"
             title="Editar tarefa"
           >
