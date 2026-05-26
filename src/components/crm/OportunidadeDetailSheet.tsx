@@ -353,6 +353,64 @@ export const OportunidadeDetailSheet = ({
     [atividades],
   );
 
+  // Parse robusto do descricao da reunião arquivada.
+  // Só considera que existe resumo se o formato canônico estiver presente.
+  const parseReuniaoDescricao = (desc: string): { resumo: string; transcricao: string } => {
+    const d = desc ?? "";
+    const hasResumoPrefix = /^📝\s*\*\*Resumo\*\*/i.test(d.trim());
+    const separator = /\n\s*---\s*\n\s*\*\*Transcrição completa:\*\*\s*\n/;
+    if (hasResumoPrefix && separator.test(d)) {
+      const parts = d.split(separator);
+      const resumo = parts[0].replace(/^📝\s*\*\*Resumo\*\*\s*\n+/i, "").trim();
+      const transcricao = (parts[1] ?? "").trim();
+      return { resumo, transcricao };
+    }
+    // Sem resumo: extrai apenas a transcrição (com ou sem prefixo "**Transcrição:**")
+    const txt = d.replace(/^\*\*Transcrição:\*\*\s*\n+/i, "").trim();
+    return { resumo: "", transcricao: txt };
+  };
+
+  const gerarResumoArquivado = async (atividade: any) => {
+    const id = atividade.id;
+    const { transcricao } = parseReuniaoDescricao(atividade.descricao ?? "");
+    if (transcricao.length < 20) {
+      toast({ title: "Transcrição insuficiente", description: "Esta reunião não tem transcrição suficiente para gerar resumo.", variant: "destructive" });
+      return;
+    }
+    setGeneratingResumoIds((s) => new Set(s).add(id));
+    try {
+      const contexto = {
+        nome_oportunidade: form?.nome_oportunidade,
+        etapa: form?.etapa,
+        valor_ef: form?.valor_ef,
+        valor_fee: form?.valor_fee,
+        temperatura: form?.temperatura,
+        lead: lead ? {
+          nome: lead.nome, empresa: lead.empresa, segmento: lead.segmento,
+          faturamento: lead.faturamento, qualificacao: lead.qualificacao,
+        } : null,
+      };
+      const { data, error } = await supabase.functions.invoke("meeting-ai", {
+        body: { action: "summarize", transcricao, contexto, provider: "sonnet" },
+      });
+      if (error) throw error;
+      const resumo = (data as any)?.resumo ?? "";
+      if (!resumo) throw new Error("IA não retornou resumo");
+      const novaDesc = `📝 **Resumo**\n\n${resumo}\n\n---\n\n**Transcrição completa:**\n\n${transcricao}`;
+      const { error: upErr } = await supabase
+        .from("crm_atividades" as any)
+        .update({ descricao: novaDesc })
+        .eq("id", id);
+      if (upErr) throw upErr;
+      toast({ title: "Resumo gerado", description: "O resumo IA foi criado para esta reunião." });
+    } catch (e: any) {
+      toast({ title: "Erro ao gerar resumo", description: e?.message ?? "Falha desconhecida", variant: "destructive" });
+    } finally {
+      setGeneratingResumoIds((s) => { const n = new Set(s); n.delete(id); return n; });
+    }
+  };
+
+
   const lastResetIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (!open) {
