@@ -509,7 +509,7 @@ export const OportunidadeDetailSheet = ({
   };
 
   const callMeetingAI = async (
-    action: "summarize" | "suggest_task",
+    action: "summarize",
     opts?: { silent?: boolean; transcricaoOverride?: string; providerOverride?: "sonnet" | "opus45" | "haiku45" },
   ): Promise<any> => {
     const transcricao = (opts?.transcricaoOverride ?? form.transcricao_reuniao ?? "").trim();
@@ -519,10 +519,8 @@ export const OportunidadeDetailSheet = ({
       }
       return null;
     }
-    // Sonnet para resumo (auto), Opus 4.5 para sugestão de tarefa e reprocessamento manual
-    const provider = opts?.providerOverride ?? (action === "summarize" ? "sonnet" : "opus45");
-    if (action === "summarize") setAiLoadingResumo(true);
-    else setAiLoadingTarefa(true);
+    const provider = opts?.providerOverride ?? "sonnet";
+    setAiLoadingResumo(true);
     try {
       const contexto = {
         nome_oportunidade: form.nome_oportunidade,
@@ -540,31 +538,25 @@ export const OportunidadeDetailSheet = ({
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      if (action === "summarize") {
-        const resumo = (data as any).resumo ?? "";
-        setAiResumo(resumo);
-        // Persiste o resumo no banco (descarta o antigo)
-        if (form.id && resumo) {
-          setForm((p: any) => ({ ...p, resumo_reuniao: resumo }));
-          supabase
-            .from("crm_oportunidades")
-            .update({ resumo_reuniao: resumo })
-            .eq("id", form.id)
-            .then(() => {});
-        }
-        return resumo;
-      } else {
-        setAiTarefa((data as any).tarefa ?? null);
-        return (data as any).tarefa ?? null;
+      const resumo = (data as any).resumo ?? "";
+      setAiResumo(resumo);
+      // Persiste o resumo no banco (descarta o antigo)
+      if (form.id && resumo) {
+        setForm((p: any) => ({ ...p, resumo_reuniao: resumo }));
+        supabase
+          .from("crm_oportunidades")
+          .update({ resumo_reuniao: resumo })
+          .eq("id", form.id)
+          .then(() => {});
       }
+      return resumo;
     } catch (e: any) {
       if (!opts?.silent) {
         toast({ title: "Erro na IA", description: e?.message ?? "Falha ao chamar IA", variant: "destructive" });
       }
       return null;
     } finally {
-      if (action === "summarize") setAiLoadingResumo(false);
-      else setAiLoadingTarefa(false);
+      setAiLoadingResumo(false);
     }
   };
 
@@ -591,23 +583,6 @@ export const OportunidadeDetailSheet = ({
       } catch (_) { /* silencioso */ }
     }
     toast({ title: "Resumo adicionado às notas e ao histórico" });
-  };
-
-  const criarTarefaSugerida = async () => {
-    if (!aiTarefa || !form.id) return;
-    const dt = new Date();
-    dt.setDate(dt.getDate() + (aiTarefa.prazo_sugerido_dias ?? 1));
-    dt.setHours(9, 0, 0, 0);
-    try {
-      await addTarefa.mutateAsync({
-        titulo: `[${aiTarefa.prioridade?.toUpperCase() ?? "MED"}] ${aiTarefa.titulo}\n${aiTarefa.descricao}`,
-        data_agendada: dt.toISOString(),
-      });
-      toast({ title: "Tarefa criada", description: aiTarefa.titulo });
-      setAiTarefa(null);
-    } catch (e: any) {
-      toast({ title: "Erro ao criar tarefa", description: e?.message, variant: "destructive" });
-    }
   };
 
   const focarZonaDeColar = () => {
