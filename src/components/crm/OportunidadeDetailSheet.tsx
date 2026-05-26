@@ -341,6 +341,7 @@ export const OportunidadeDetailSheet = ({
   const [aiTarefa, setAiTarefa] = useState<{ titulo: string; descricao: string; prazo_sugerido_dias: number; prioridade: string } | null>(null);
   const [aiLoadingResumo, setAiLoadingResumo] = useState(false);
   const [aiLoadingTarefa, setAiLoadingTarefa] = useState(false);
+  const [generatingResumoIds, setGeneratingResumoIds] = useState<Set<string>>(new Set());
   const processedHashRef = useRef<string>("");
   const autoTaskCreatedRef = useRef<string>("");
   const { toast } = useToast();
