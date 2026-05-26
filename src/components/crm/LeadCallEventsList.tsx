@@ -215,8 +215,28 @@ export function LeadCallEventsList({ leadId }: Props) {
                 </div>
                 {(() => {
                   const src = audioSrc(e);
-                  const tooShort = (e.duracao_seg ?? 0) > 0 && (e.duracao_seg ?? 0) < 3;
-                  if (src && !tooShort) {
+                  const dur = e.duracao_seg ?? 0;
+                  const statusLower = (e.status ?? "").toLowerCase();
+                  const isAttempt =
+                    dur < 10 ||
+                    statusLower.includes("noanswer") ||
+                    statusLower.includes("no-answer") ||
+                    statusLower.includes("nao_atend") ||
+                    statusLower.includes("missed") ||
+                    statusLower.includes("busy") ||
+                    statusLower.includes("ocupad") ||
+                    statusLower.includes("fail") ||
+                    statusLower.includes("abandon") ||
+                    statusLower.includes("congest");
+
+                  if (isAttempt) {
+                    return (
+                      <div className="mt-1.5 text-[10px] text-muted-foreground italic">
+                        Tentativa de contato
+                      </div>
+                    );
+                  }
+                  if (src) {
                     return (
                       <>
                         <audio
@@ -227,12 +247,10 @@ export function LeadCallEventsList({ leadId }: Props) {
                         />
                         <TranscricaoBlock event={e} />
                         <ResumoBlock event={e} />
-
                       </>
                     );
                   }
-                  // Sem gravação ainda — oferece botão para forçar busca (apenas 3cplus com call_id),
-                  // mesmo quando duracao_seg = 0 (evento inicial sem dados completos).
+                  // Sem gravação ainda — oferece botão para forçar busca (apenas 3cplus com call_id).
                   if (e.provider === "3cplus" && e.call_id && !src) {
                     return <FetchRecordingButton event={e} />;
                   }
@@ -241,8 +259,20 @@ export function LeadCallEventsList({ leadId }: Props) {
               </div>
               {(() => {
                 const src = audioSrc(e);
-                const tooShort = (e.duracao_seg ?? 0) < 3;
-                if (!src || tooShort || navigator.userAgent.includes("Mobi")) return null;
+                const dur = e.duracao_seg ?? 0;
+                const statusLower = (e.status ?? "").toLowerCase();
+                const isAttempt =
+                  dur < 10 ||
+                  statusLower.includes("noanswer") ||
+                  statusLower.includes("no-answer") ||
+                  statusLower.includes("nao_atend") ||
+                  statusLower.includes("missed") ||
+                  statusLower.includes("busy") ||
+                  statusLower.includes("ocupad") ||
+                  statusLower.includes("fail") ||
+                  statusLower.includes("abandon") ||
+                  statusLower.includes("congest");
+                if (!src || isAttempt || navigator.userAgent.includes("Mobi")) return null;
                 return (
                   <a
                     href={src}

@@ -39,6 +39,29 @@ function pick<T = unknown>(obj: any, keys: string[]): T | undefined {
   return undefined;
 }
 
+/**
+ * API4COM listener URLs (https://listener.api4com.com/files/listen/<id>.mp3) respondem
+ * com HTTP 200 + corpo de TEXTO "Found. Redirecting to <URL real>" — não é o MP3.
+ * Esta função extrai a URL real (fs5.api4com.com/...) para podermos tocar/baixar.
+ */
+async function resolveApi4comListenerUrl(url: string): Promise<string> {
+  try {
+    if (!/listener\.api4com\.com\/files\/listen\//i.test(url)) return url;
+    const r = await fetch(url, { redirect: "manual" });
+    // 30x normal — pega Location
+    const loc = r.headers.get("location");
+    if (loc) return loc;
+    // ou corpo textual "Found. Redirecting to <url>"
+    const txt = (await r.text()).slice(0, 2000);
+    const m = txt.match(/https?:\/\/[^\s"'<>]+/i);
+    if (m) return m[0];
+    return url;
+  } catch (e) {
+    console.warn("[api4com] resolveApi4comListenerUrl falhou:", e);
+    return url;
+  }
+}
+
 function parseDuration(v: unknown): number | null {
   if (v == null) return null;
   if (typeof v === "number" && isFinite(v)) return Math.round(v);
@@ -127,10 +150,14 @@ Deno.serve(async (req) => {
       "hangupCause", "hangup_cause", "status", "call_status", "disposition", "result",
     ])?.toString() ?? null;
 
-    const gravacaoUrl = pick<string>(data, [
+    let gravacaoUrl = pick<string>(data, [
       "recordUrl", "recording_url", "record_url", "recording", "audio_url",
       "gravacao", "gravacao_url", "url",
     ])?.toString() ?? null;
+
+    if (gravacaoUrl) {
+      gravacaoUrl = await resolveApi4comListenerUrl(gravacaoUrl);
+    }
 
     const telefoneNorm = normalizePhone(telefoneRaw);
 
