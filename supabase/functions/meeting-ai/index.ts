@@ -1,5 +1,5 @@
 // Edge function: meeting-ai
-// Actions: "summarize" -> resumo da reunião | "suggest_task" -> próxima tarefa sugerida
+// Actions: "summarize" -> resumo da reunião | "pre_growth_class" -> relatório pré-GC
 // Providers (Anthropic only): "sonnet" (default), "opus45", "haiku45"
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-    if (action !== "summarize" && action !== "suggest_task" && action !== "pre_growth_class") {
+    if (action !== "summarize" && action !== "pre_growth_class") {
       return new Response(JSON.stringify({ error: "Ação inválida" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -45,8 +45,6 @@ Deno.serve(async (req) => {
 
     let systemPrompt = "";
     let userPrompt = "";
-    let taskToolSchema: any = null;
-
     if (action === "summarize") {
       systemPrompt =
         "Você é um analista comercial sênior especializado em B2B. Estruture resumos de reuniões de vendas em português do Brasil de forma visualmente organizada, escaneável e profissional usando Markdown rico (cabeçalhos, listas, negrito, emojis sutis nos cabeçalhos). Seja específico, cite trechos quando relevante e NUNCA invente informações — se algo não foi mencionado, escreva '_Não mencionado_'.";
@@ -158,29 +156,6 @@ Lista acionável (checkbox markdown \`- [ ]\`) — quem, o quê, quando.
 
 Dados consolidados do cliente (use TUDO o que estiver disponível abaixo):
 ${JSON.stringify(contexto ?? {}, null, 2)}`;
-    } else {
-      systemPrompt =
-        "Você é um SDR/closer experiente. Sugere a PRÓXIMA tarefa mais estratégica do vendedor, de forma específica e acionável, em português do Brasil.";
-      userPrompt = `Com base na transcrição da reunião abaixo, sugira a PRÓXIMA tarefa mais importante. Use a função sugerir_tarefa.
-
-Transcrição:
-"""${transcricao}"""${ctxStr}`;
-      taskToolSchema = {
-        type: "object",
-        properties: {
-          titulo: { type: "string", description: "Título curto e acionável (máx. 80 caracteres)" },
-          descricao: { type: "string", description: "Descrição detalhada do que fazer e por quê (2-4 linhas)" },
-          prazo_sugerido_dias: {
-            type: "integer",
-            description: "Em quantos dias a tarefa deve ser executada (0=hoje, 1=amanhã)",
-            minimum: 0,
-            maximum: 30,
-          },
-          prioridade: { type: "string", enum: ["alta", "media", "baixa"] },
-        },
-        required: ["titulo", "descricao", "prazo_sugerido_dias", "prioridade"],
-        additionalProperties: false,
-      };
     }
 
     const anthropicBody: any = {
@@ -189,17 +164,6 @@ Transcrição:
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],
     };
-    if (action === "suggest_task") {
-      anthropicBody.tools = [
-        {
-          name: "sugerir_tarefa",
-          description: "Retorna a próxima tarefa sugerida para o vendedor.",
-          input_schema: taskToolSchema,
-        },
-      ];
-      anthropicBody.tool_choice = { type: "tool", name: "sugerir_tarefa" };
-    }
-
     const resp = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -241,18 +205,6 @@ Transcrição:
     } else if (action === "pre_growth_class") {
       const content = data.content?.find((b: any) => b.type === "text")?.text ?? "";
       return new Response(JSON.stringify({ relatorio: content }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    } else {
-      const toolUse = data.content?.find((b: any) => b.type === "tool_use");
-      const args = toolUse?.input ?? null;
-      if (!args) {
-        return new Response(JSON.stringify({ error: "IA não retornou tarefa estruturada." }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      return new Response(JSON.stringify({ tarefa: args }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
