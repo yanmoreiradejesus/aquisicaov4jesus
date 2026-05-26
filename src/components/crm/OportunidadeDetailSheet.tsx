@@ -338,14 +338,11 @@ export const OportunidadeDetailSheet = ({
   const [activeTab, setActiveTab] = useState<string>("informacoes");
   const [tarefaDialogOpen, setTarefaDialogOpen] = useState(false);
   const [aiResumo, setAiResumo] = useState<string>("");
-  const [aiTarefa, setAiTarefa] = useState<{ titulo: string; descricao: string; prazo_sugerido_dias: number; prioridade: string } | null>(null);
   const [aiLoadingResumo, setAiLoadingResumo] = useState(false);
-  const [aiLoadingTarefa, setAiLoadingTarefa] = useState(false);
   const [generatingResumoIds, setGeneratingResumoIds] = useState<Set<string>>(new Set());
   const processedHashRef = useRef<string>("");
-  const autoTaskCreatedRef = useRef<string>("");
   const { toast } = useToast();
-  const { data: atividades, addTarefa, addNota, addReuniao } = useOportunidadeAtividades(oportunidade?.id ?? null);
+  const { data: atividades, addNota, addReuniao } = useOportunidadeAtividades(oportunidade?.id ?? null);
 
   // Reuniões arquivadas (histórico) — atividades tipo "reuniao"
   const reunioesArquivadas = useMemo(
@@ -426,15 +423,12 @@ export const OportunidadeDetailSheet = ({
       lastResetIdRef.current = currentId;
       setActiveTab("informacoes");
       setAiResumo(oportunidade?.resumo_reuniao ?? "");
-      setAiTarefa(null);
       setAiLoadingResumo(false);
-      setAiLoadingTarefa(false);
       // Se já existe resumo salvo, marca o hash da transcrição como já processado
       // (evita reprocessar automaticamente ao abrir)
       processedHashRef.current = oportunidade?.resumo_reuniao
         ? (oportunidade?.transcricao_reuniao ?? "").trim()
         : "";
-      autoTaskCreatedRef.current = "";
     }
   }, [open, oportunidade]);
 
@@ -515,7 +509,7 @@ export const OportunidadeDetailSheet = ({
   };
 
   const callMeetingAI = async (
-    action: "summarize" | "suggest_task",
+    action: "summarize",
     opts?: { silent?: boolean; transcricaoOverride?: string; providerOverride?: "sonnet" | "opus45" | "haiku45" },
   ): Promise<any> => {
     const transcricao = (opts?.transcricaoOverride ?? form.transcricao_reuniao ?? "").trim();
@@ -525,10 +519,8 @@ export const OportunidadeDetailSheet = ({
       }
       return null;
     }
-    // Sonnet para resumo (auto), Opus 4.5 para sugestão de tarefa e reprocessamento manual
-    const provider = opts?.providerOverride ?? (action === "summarize" ? "sonnet" : "opus45");
-    if (action === "summarize") setAiLoadingResumo(true);
-    else setAiLoadingTarefa(true);
+    const provider = opts?.providerOverride ?? "sonnet";
+    setAiLoadingResumo(true);
     try {
       const contexto = {
         nome_oportunidade: form.nome_oportunidade,
@@ -546,31 +538,25 @@ export const OportunidadeDetailSheet = ({
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      if (action === "summarize") {
-        const resumo = (data as any).resumo ?? "";
-        setAiResumo(resumo);
-        // Persiste o resumo no banco (descarta o antigo)
-        if (form.id && resumo) {
-          setForm((p: any) => ({ ...p, resumo_reuniao: resumo }));
-          supabase
-            .from("crm_oportunidades")
-            .update({ resumo_reuniao: resumo })
-            .eq("id", form.id)
-            .then(() => {});
-        }
-        return resumo;
-      } else {
-        setAiTarefa((data as any).tarefa ?? null);
-        return (data as any).tarefa ?? null;
+      const resumo = (data as any).resumo ?? "";
+      setAiResumo(resumo);
+      // Persiste o resumo no banco (descarta o antigo)
+      if (form.id && resumo) {
+        setForm((p: any) => ({ ...p, resumo_reuniao: resumo }));
+        supabase
+          .from("crm_oportunidades")
+          .update({ resumo_reuniao: resumo })
+          .eq("id", form.id)
+          .then(() => {});
       }
+      return resumo;
     } catch (e: any) {
       if (!opts?.silent) {
         toast({ title: "Erro na IA", description: e?.message ?? "Falha ao chamar IA", variant: "destructive" });
       }
       return null;
     } finally {
-      if (action === "summarize") setAiLoadingResumo(false);
-      else setAiLoadingTarefa(false);
+      setAiLoadingResumo(false);
     }
   };
 
@@ -599,23 +585,6 @@ export const OportunidadeDetailSheet = ({
     toast({ title: "Resumo adicionado às notas e ao histórico" });
   };
 
-  const criarTarefaSugerida = async () => {
-    if (!aiTarefa || !form.id) return;
-    const dt = new Date();
-    dt.setDate(dt.getDate() + (aiTarefa.prazo_sugerido_dias ?? 1));
-    dt.setHours(9, 0, 0, 0);
-    try {
-      await addTarefa.mutateAsync({
-        titulo: `[${aiTarefa.prioridade?.toUpperCase() ?? "MED"}] ${aiTarefa.titulo}\n${aiTarefa.descricao}`,
-        data_agendada: dt.toISOString(),
-      });
-      toast({ title: "Tarefa criada", description: aiTarefa.titulo });
-      setAiTarefa(null);
-    } catch (e: any) {
-      toast({ title: "Erro ao criar tarefa", description: e?.message, variant: "destructive" });
-    }
-  };
-
   const focarZonaDeColar = () => {
     setTimeout(() => {
       const ta = document.getElementById(`paste-zone-${form.id}`) as HTMLTextAreaElement | null;
@@ -630,9 +599,7 @@ export const OportunidadeDetailSheet = ({
     // Sem transcrição ativa: apenas prepara a zona para colar a próxima
     if (txt.length < 20) {
       setAiResumo("");
-      setAiTarefa(null);
       processedHashRef.current = "";
-      autoTaskCreatedRef.current = "";
       toast({ title: "Pronto para nova reunião", description: "Cole a transcrição na área abaixo." });
       focarZonaDeColar();
       return;
@@ -654,9 +621,7 @@ export const OportunidadeDetailSheet = ({
         supabase.from("crm_oportunidades").update({ resumo_reuniao: null }).eq("id", form.id).then(() => {});
       }
       setAiResumo("");
-      setAiTarefa(null);
       processedHashRef.current = "";
-      autoTaskCreatedRef.current = "";
       toast({ title: "Reunião arquivada", description: "Comece uma nova transcrição." });
       focarZonaDeColar();
     } catch (e: any) {

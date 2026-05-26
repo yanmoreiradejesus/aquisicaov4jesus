@@ -41,6 +41,9 @@ const TIPO_META: Record<AtividadeTipo, { label: string; icon: any; color: string
   reuniao: { label: "Reunião", icon: Users, color: "text-violet-400 bg-violet-500/10 border-violet-500/30" },
 };
 
+const cleanTaskTitle = (value?: string | null) =>
+  (value || "Tarefa").replace(/^\[SUGEST(Ã|A)O IA[^\]]*\]\s*/i, "").split("\n")[0];
+
 interface Props {
   oportunidadeId: string;
   hideNotaComposer?: boolean;
@@ -244,7 +247,7 @@ const TimelineItem = ({
                   <Circle className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                 )}
                 <span className={`text-sm ${a.concluida ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                  {a.titulo || a.descricao}
+                  {cleanTaskTitle(a.titulo || a.descricao)}
                 </span>
               </button>
             ) : (

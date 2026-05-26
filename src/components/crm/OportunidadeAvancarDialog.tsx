@@ -29,7 +29,6 @@ import {
   AlertCircle,
   Calendar as CalendarIcon,
   ListTodo,
-  Sparkles,
   ChevronDown,
   DollarSign,
 } from "lucide-react";
@@ -87,8 +86,6 @@ const REQUIRES_MEETING = new Set(["negociacao", "contrato", "follow_infinito", "
 // Etapas onde a temperatura também é exigida no step de reunião.
 // Ganho está fora (lead fechou — temperatura não faz sentido).
 const REQUIRES_TEMPERATURA = new Set(["negociacao", "contrato", "follow_infinito"]);
-// Tarefas: sugeridas em etapas em andamento. Ganho não precisa.
-const REQUIRES_TASK = new Set(["negociacao", "contrato", "follow_infinito"]);
 // Valores obrigatórios em "Dúvidas e Fechamento". Em "Ganho" os valores
 // aparecem dentro do próprio bloco ganho (para revisão/desconto), por isso
 // não precisam ser cobrados como step separado.
@@ -124,8 +121,7 @@ export function computeNeededSteps(
 
   const requireTemp = REQUIRES_TEMPERATURA.has(etapaDestino);
   const meeting = REQUIRES_MEETING.has(etapaDestino) && (!hasTranscricao || (requireTemp && !hasTemperatura));
-  // Tarefa: passo é exibido se não houver nenhuma pendente (para sugerir via IA), mas é OPCIONAL — não bloqueia o avanço.
-  const task = REQUIRES_TASK.has(etapaDestino) && tarefasPendentesCount === 0;
+  const task = false;
   const valores = REQUIRES_VALORES.has(etapaDestino) && !hasValores;
   const ganho = REQUIRES_GANHO_FORM.has(etapaDestino); // bloco ganho sempre obrigatório (contrato + grau + monetização + info)
   return { meeting, task, valores, ganho, any: meeting || task || valores || ganho };
@@ -171,10 +167,6 @@ export const OportunidadeAvancarDialog = ({
   const [infoDeal, setInfoDeal] = useState("");
   const [dataAssinatura, setDataAssinatura] = useState<string>(""); // YYYY-MM-DD
   const [nivelConsciencia, setNivelConsciencia] = useState<string>("");
-
-  // IA: estado da sugestão automática de tarefa
-  const [aiSuggesting, setAiSuggesting] = useState(false);
-  const aiSuggestedForRef = useRef<string>(""); // hash da transcrição já processada
 
   const transcricaoRef = useRef<HTMLTextAreaElement>(null);
   const tarefaTituloRef = useRef<HTMLInputElement>(null);
@@ -249,62 +241,6 @@ export const OportunidadeAvancarDialog = ({
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, step, stepOrder.length]);
-
-  // IA: sugerir tarefa automaticamente ao chegar no step "task"
-  // Usa a transcrição (nova ou existente) e pré-preenche título + data.
-  useEffect(() => {
-    if (!open) return;
-    if (currentStepKey() !== "task") return;
-    if (aiSuggesting) return;
-    // Já tem alguma tarefa? não sugere
-    if (tarefasExistentes.length > 0 || tarefas.length > 0) return;
-
-    // Determina texto base p/ IA: prioriza nova transcrição, senão a salva
-    const baseTranscricao =
-      novaTranscricao.trim() ||
-      (oportunidade?.transcricao_reuniao?.toString().trim() ?? "");
-    if (baseTranscricao.length < 20) return;
-
-    // Evita reprocessar o mesmo texto
-    const hash = `${oportunidade?.id ?? ""}::${baseTranscricao.length}::${baseTranscricao.slice(0, 80)}`;
-    if (aiSuggestedForRef.current === hash) return;
-    aiSuggestedForRef.current = hash;
-
-    (async () => {
-      setAiSuggesting(true);
-      try {
-        const { data, error } = await supabase.functions.invoke("meeting-ai", {
-          body: {
-            action: "suggest_task",
-            transcricao: baseTranscricao,
-            oportunidade: {
-              nome: oportunidade?.nome_oportunidade,
-              etapa: oportunidade?.etapa,
-              temperatura: temperatura || oportunidade?.temperatura,
-            },
-          },
-        });
-        if (error) throw error;
-        const tarefa = (data as any)?.tarefa;
-        if (tarefa?.titulo) {
-          setNovaTarefaTitulo(String(tarefa.titulo).slice(0, 200));
-        }
-        if (tarefa?.data_agendada) {
-          const d = new Date(tarefa.data_agendada);
-          if (!isNaN(d.getTime())) setNovaTarefaData(formatLocalDateTime(d));
-        }
-        toast({
-          title: "Sugestão da IA",
-          description: "Revise a tarefa sugerida e clique em Adicionar.",
-        });
-      } catch (e: any) {
-        console.warn("[avancar-dialog] suggest_task falhou", e);
-      } finally {
-        setAiSuggesting(false);
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, step, stepOrder.length, tarefasExistentes.length, tarefas.length]);
 
   const adicionarTarefa = () => {
     const titulo = novaTarefaTitulo.trim();
@@ -632,21 +568,6 @@ export const OportunidadeAvancarDialog = ({
                 </span>
               </div>
 
-              {tarefasExistentes.some((t) => /\[SUGEST(Ã|A)O IA/i.test(t.titulo || "")) && (
-                <p className="text-[11px] text-muted-foreground leading-relaxed px-1">
-                  Já existe uma tarefa sugerida pela IA. Você pode mantê-la, removê-la ou adicionar outras abaixo.
-                </p>
-              )}
-
-              {aiSuggesting && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-400/5 border border-violet-400/30">
-                  <Sparkles className="h-3.5 w-3.5 text-violet-400 shrink-0 animate-pulse" />
-                  <span className="text-[11px] text-violet-300">
-                    IA analisando a transcrição para sugerir a próxima tarefa…
-                  </span>
-                </div>
-              )}
-
               {tarefasExistentes.length === 0 && tarefas.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-6 px-4 rounded-xl border border-dashed border-border/50 bg-surface-1/30 text-center">
                   <ListTodo className="h-6 w-6 text-muted-foreground/60" />
@@ -656,22 +577,18 @@ export const OportunidadeAvancarDialog = ({
                 <div className="space-y-1.5">
                   {tarefasExistentes.map((t) => {
                     const raw: string = t.titulo || t.descricao || "";
-                    const isAI = /^\[SUGEST(Ã|A)O IA/i.test(raw);
-                    const display = isAI ? raw.replace(/^\[SUGEST(Ã|A)O IA[^\]]*\]\s*/i, "").split("\n")[0] : raw;
+                    const display = raw.replace(/^\[SUGEST(Ã|A)O IA[^\]]*\]\s*/i, "").split("\n")[0];
                     return (
-                      <div key={t.id} className={cn(
-                        "flex items-center gap-2 px-3 py-2 rounded-lg border text-[12px]",
-                        isAI ? "bg-violet-400/5 border-violet-400/30" : "bg-surface-1/60 border-border/40",
-                      )}>
-                        {isAI ? <Sparkles className="h-3.5 w-3.5 text-violet-400 shrink-0" /> : <Circle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+                      <div key={t.id} className="flex items-center gap-2 px-3 py-2 rounded-lg border text-[12px] bg-surface-1/60 border-border/40">
+                        <Circle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                         <span className="flex-1 truncate">{display}</span>
                         {t.data_agendada && (
                           <span className="text-[10px] text-muted-foreground tabular-nums">
                             {new Date(t.data_agendada).toLocaleDateString("pt-BR")}
                           </span>
                         )}
-                        <Badge variant="outline" className={cn("text-[9px] uppercase tracking-wider px-1.5 py-0", isAI ? "border-violet-400/40 text-violet-300" : "border-border/40")}>
-                          {isAI ? "IA" : "já criada"}
+                        <Badge variant="outline" className="text-[9px] uppercase tracking-wider px-1.5 py-0 border-border/40">
+                          já criada
                         </Badge>
                         <button
                           type="button"

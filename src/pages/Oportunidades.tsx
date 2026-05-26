@@ -17,7 +17,6 @@ import { OportunidadeTasksOverview } from "@/components/crm/OportunidadeTasksOve
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { OportunidadesFilterPopover, EMPTY_OP_FILTERS, type OportunidadeFilters } from "@/components/crm/OportunidadesFilterPopover";
-import { supabase } from "@/integrations/supabase/client";
 import WinCelebration from "@/components/celebrations/WinCelebration";
 import { usePersistedState } from "@/hooks/usePersistedState";
 
@@ -168,16 +167,7 @@ const Oportunidades = () => {
       return;
     }
 
-    // Verifica se há tarefas pendentes para decidir se o wizard é necessário
-    const { data: tarefas } = await supabase
-      .from("crm_atividades" as any)
-      .select("id")
-      .eq("oportunidade_id", op.id)
-      .eq("tipo", "tarefa")
-      .eq("concluida", false);
-    const tarefasCount = (tarefas as any[] | null)?.length ?? 0;
-
-    const needs = computeNeededSteps(op, destino, tarefasCount);
+    const needs = computeNeededSteps(op, destino, 0);
     if (!needs.any) {
       moveOp(op.id, destino);
       return;

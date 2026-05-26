@@ -6,7 +6,6 @@ import { MotivoPerdaDialog } from "@/components/crm/MotivoPerdaDialog";
 import { OportunidadeAvancarDialog, computeNeededSteps } from "@/components/crm/OportunidadeAvancarDialog";
 import WinCelebration from "@/components/celebrations/WinCelebration";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 const WORKFLOW_ETAPAS = new Set(["negociacao", "contrato", "follow_infinito", "fechado_ganho"]);
 
@@ -79,14 +78,7 @@ const OportunidadeDetailPage = () => {
       moveOp(target.id, destino);
       return;
     }
-    const { data: tarefas } = await supabase
-      .from("crm_atividades" as any)
-      .select("id")
-      .eq("oportunidade_id", target.id)
-      .eq("tipo", "tarefa")
-      .eq("concluida", false);
-    const tarefasCount = (tarefas as any[] | null)?.length ?? 0;
-    const needs = computeNeededSteps(target, destino, tarefasCount);
+    const needs = computeNeededSteps(target, destino, 0);
     if (!needs.any) { moveOp(target.id, destino); return; }
     setPendingAvanco({ op: target, etapa: destino });
     setAvancarOpen(true);
