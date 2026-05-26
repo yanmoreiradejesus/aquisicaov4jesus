@@ -1197,14 +1197,6 @@ export const OportunidadeDetailSheet = ({
                 </div>
               )}
 
-              {/* INDICADOR de tarefa sendo gerada (será criada automaticamente em Tarefas) */}
-              {aiLoadingTarefa && !aiTarefa && (
-                <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex items-center gap-2 text-xs text-muted-foreground">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-                  <ListTodo className="h-3.5 w-3.5 text-primary" />
-                  Sugerindo próxima tarefa (Opus 4.5) — será criada automaticamente na aba Tarefas…
-                </div>
-              )}
 
               {/* TRANSCRIÇÃO ATIVA — paste zone (texto nunca é renderizado) */}
               <div className="border-t border-border/40 pt-3">
