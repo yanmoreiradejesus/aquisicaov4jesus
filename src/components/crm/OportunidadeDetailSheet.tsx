@@ -1260,7 +1260,7 @@ export const OportunidadeDetailSheet = ({
                   </label>
                 )}
                 <p className="text-[10px] text-muted-foreground/60 mt-1.5">
-                  Salvamento automático após 600ms. Resumo (Sonnet 4.5) e tarefa (Opus 4.5) gerados automaticamente — tarefa aparece na aba Tarefas com prazo sugerido.
+                  Salvamento automático após 600ms. Resumo (Sonnet 4.5) gerado automaticamente.
                 </p>
               </div>
             </div>
