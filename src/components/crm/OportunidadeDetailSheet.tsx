@@ -641,12 +641,30 @@ export const OportunidadeDetailSheet = ({
     }
   };
 
+  const focarZonaDeColar = () => {
+    setTimeout(() => {
+      const ta = document.getElementById(`paste-zone-${form.id}`) as HTMLTextAreaElement | null;
+      ta?.focus();
+      ta?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 80);
+  };
+
   const arquivarReuniaoAtual = async () => {
     const txt = (form.transcricao_reuniao ?? "").trim();
-    if (!form.id || txt.length < 20) {
-      toast({ title: "Nada para arquivar", description: "Cole uma transcrição antes de iniciar uma nova reunião.", variant: "destructive" });
+
+    // Sem transcrição ativa: apenas prepara a zona para colar a próxima
+    if (txt.length < 20) {
+      setAiResumo("");
+      setAiTarefa(null);
+      processedHashRef.current = "";
+      autoTaskCreatedRef.current = "";
+      toast({ title: "Pronto para nova reunião", description: "Cole a transcrição na área abaixo." });
+      focarZonaDeColar();
       return;
     }
+
+    if (!form.id) return;
+
     const dataStr = new Date().toLocaleDateString("pt-BR");
     const titulo = `Reunião — ${dataStr}`;
     const descricao = aiResumo
@@ -665,6 +683,7 @@ export const OportunidadeDetailSheet = ({
       processedHashRef.current = "";
       autoTaskCreatedRef.current = "";
       toast({ title: "Reunião arquivada", description: "Comece uma nova transcrição." });
+      focarZonaDeColar();
     } catch (e: any) {
       toast({ title: "Erro ao arquivar", description: e?.message, variant: "destructive" });
     }
@@ -1027,9 +1046,9 @@ export const OportunidadeDetailSheet = ({
                     size="sm"
                     variant="outline"
                     onClick={arquivarReuniaoAtual}
-                    disabled={!((form.transcricao_reuniao ?? "").trim().length >= 20) || addReuniao.isPending}
+                    disabled={addReuniao.isPending}
                     className="h-9 text-[11px]"
-                    title="Arquivar transcrição atual e iniciar uma nova reunião"
+                    title="Iniciar nova reunião (arquiva a atual se houver transcrição)"
                   >
                     <Archive className="h-3.5 w-3.5 mr-1.5" />
                     + Nova reunião

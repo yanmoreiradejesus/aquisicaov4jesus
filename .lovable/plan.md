@@ -1,36 +1,26 @@
-## O problema
+## Problema
 
-No print, o card "Última reunião" está mostrando a **transcrição crua** ("Thiago Sobrosa: Opa. valdecir jacques: ..."), não o resumo.
+O botão "+ Nova reunião" hoje só fica habilitado quando há uma transcrição ativa colada (≥20 caracteres). Quando a zona está vazia (ex.: depois de arquivar a anterior), o botão fica cinza e não permite "começar uma nova reunião" — o que confunde o uso.
 
-**Causa:** essa reunião foi arquivada **antes** da IA gerar o resumo (`aiResumo` estava vazio no momento do `arquivarReuniaoAtual`). Por isso o `descricao` da atividade não tem `📝 **Resumo** ... ---` no início — só tem `**Transcrição:** ...` direto. Meu parser, ao não achar o separador, caía no fallback e exibia tudo como "resumo".
+## Solução
 
-## Regra absoluta
+Tornar o botão sempre clicável (exceto durante a operação) e fazer com que ele:
 
-- **NUNCA renderizar transcrição** no card "Última reunião" nem nos collapsibles de "Reuniões anteriores".
-- Se a reunião arquivada **não tem resumo IA**, mostrar um estado de fallback com botão **"Gerar resumo agora"**.
+1. **Se houver transcrição ativa (≥20 chars):** arquiva a reunião atual (comportamento atual de `arquivarReuniaoAtual`) e limpa a zona para colar a próxima.
+2. **Se NÃO houver transcrição ativa:** apenas garante que a zona de colar esteja limpa e visível (faz scroll/foco até a área de colar), sem chamar o backend. Mostra um toast leve "Pronto para colar nova transcrição" e foca o textarea de paste.
 
-## Mudanças técnicas
+## Mudanças (arquivo único)
 
-**Arquivo:** `src/components/crm/OportunidadeDetailSheet.tsx`
+**`src/components/crm/OportunidadeDetailSheet.tsx`**
 
-1. **Parser robusto** — só considerar que existe resumo quando o `descricao` começa com `📝 **Resumo**` E tem o separador `--- ... **Transcrição completa:**`. Em qualquer outro caso, tratar como "sem resumo".
-
-2. **Card "Última reunião"** — três estados:
-   - **Com resumo**: renderiza o markdown do resumo (igual hoje). Remover o collapsible "Ver transcrição completa" (não queremos transcrição em lugar nenhum).
-   - **Sem resumo**: estado vazio com texto "Reunião arquivada sem resumo IA" + botão `Gerar resumo agora` (Sparkles).
-   - **Gerando**: spinner "Gerando resumo…".
-
-3. **Lista "Reuniões anteriores"** — collapsible mostra **apenas o resumo** (extraído via mesmo parser). Se não houver resumo, mostra placeholder + botão `Gerar resumo` inline.
-
-4. **Função `gerarResumoArquivado(atividade)`** — nova:
-   - Extrai a transcrição do `descricao` (com ou sem prefixo `**Transcrição:**` / `**Transcrição completa:**`).
-   - Chama a edge function `meeting-ai` (mesma usada para o resumo ativo) com a transcrição.
-   - Atualiza `crm_atividades.descricao` da atividade no formato canônico: `📝 **Resumo**\n\n{resumo}\n\n---\n\n**Transcrição completa:**\n\n{txt}`.
-   - Invalida o cache de atividades para re-renderizar.
-
-5. **Migration opcional** — não fazer agora. As reuniões antigas são corrigidas sob demanda via o botão "Gerar resumo agora".
+1. Remover a condição `disabled={!((form.transcricao_reuniao ?? "").trim().length >= 20) ...}` do botão. Manter apenas `disabled={addReuniao.isPending}` para evitar duplo clique durante o arquivamento.
+2. Atualizar `arquivarReuniaoAtual` (ou criar wrapper `iniciarNovaReuniao`) para:
+   - Se `txt.length < 20`: pular o `addReuniao.mutateAsync`, apenas resetar estados de IA (`setAiResumo("")`, `setAiTarefa(null)`, refs) e dar foco na paste zone.
+   - Se `txt.length ≥ 20`: comportamento atual (arquiva + limpa).
+3. Adicionar `ref` no textarea/área de paste e chamar `.focus()` após a ação para sinalizar visualmente onde colar.
+4. Ajustar o `title` do botão para "Iniciar nova reunião (arquiva a atual se houver transcrição)".
 
 ## Fora de escopo
 
-- Não tocar no fluxo da reunião ativa (paste zone + resumo automático).
-- Não mexer na geração inicial nem na criação automática de tarefas.
+- Não alterar parser, geração de resumo IA, ou layout de "Última reunião / Reuniões anteriores".
+- Não criar modal — manter o fluxo inline de colar.
