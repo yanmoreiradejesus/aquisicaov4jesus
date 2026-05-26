@@ -1,39 +1,36 @@
-## Objetivo
+## O problema
 
-Quando a oportunidade tem **2+ reuniões**, a aba "Reunião" deve abrir mostrando o **resumo da reunião mais recente em destaque** — não a paste zone vazia esperando uma nova transcrição.
+No print, o card "Última reunião" está mostrando a **transcrição crua** ("Thiago Sobrosa: Opa. valdecir jacques: ..."), não o resumo.
 
-## Comportamento hoje
+**Causa:** essa reunião foi arquivada **antes** da IA gerar o resumo (`aiResumo` estava vazio no momento do `arquivarReuniaoAtual`). Por isso o `descricao` da atividade não tem `📝 **Resumo** ... ---` no início — só tem `**Transcrição:** ...` direto. Meu parser, ao não achar o separador, caía no fallback e exibia tudo como "resumo".
 
-A aba Reunião sempre mostra (do topo para baixo):
-1. Temperatura + botão "+ Nova reunião"
-2. Lista de reuniões anteriores (collapsibles fechados)
-3. Resumo IA da reunião ATIVA (só aparece se houver transcrição ativa)
-4. Paste zone para colar transcrição
+## Regra absoluta
 
-Resultado: depois de arquivar uma reunião, a tela fica "vazia" (paste zone + collapsibles fechados). O resumo da última reunião fica escondido.
-
-## Comportamento novo
-
-Reordenar a aba quando **não há reunião ativa** (sem `transcricao_reuniao`) e **existe ≥1 arquivada**:
-
-1. Temperatura + botão "+ Nova reunião" (igual)
-2. **Card destacado "Última reunião — {data}"** com o resumo IA renderizado em markdown (mesmo styling do bloco Resumo IA atual). Pequeno header com badge `Mais recente` e link discreto "Ver transcrição completa" (expande inline).
-3. **"Reuniões anteriores"** — só lista as outras (n-1), não inclui a mais recente que já está em destaque
-4. Paste zone aparece só quando o usuário clica em **"+ Nova reunião"** (que limpa para entrar em modo de nova transcrição) OU permanece sempre visível abaixo como zona compacta de "Adicionar nova reunião"
-
-Quando **há reunião ativa** (paste zone preenchida ou resumo da ativa sendo gerado): comportamento atual mantido (paste zone + resumo IA da ativa no topo, arquivadas embaixo).
+- **NUNCA renderizar transcrição** no card "Última reunião" nem nos collapsibles de "Reuniões anteriores".
+- Se a reunião arquivada **não tem resumo IA**, mostrar um estado de fallback com botão **"Gerar resumo agora"**.
 
 ## Mudanças técnicas
 
 **Arquivo:** `src/components/crm/OportunidadeDetailSheet.tsx`
 
-- Computar `ultimaReuniao = reunioesArquivadas[0]` (já estão em ordem decrescente por `created_at`).
-- Computar `temReuniaoAtiva = (form.transcricao_reuniao ?? '').trim().length > 0 || aiLoadingResumo`.
-- Quando `!temReuniaoAtiva && ultimaReuniao`: renderizar novo bloco "Última reunião" usando `ReactMarkdown` no campo `descricao` da atividade (que já contém `📝 **Resumo** ... --- Transcrição completa: ...`). Extrair só a parte do resumo (split por `---`) para o destaque, e esconder a transcrição atrás de um collapsible "Ver transcrição completa".
-- Ajustar lista "Reuniões anteriores": `reunioesArquivadas.slice(1)` quando o primeiro já está em destaque; ajustar contador e esconder a seção se ficar vazia.
-- Manter a paste zone sempre acessível abaixo (com o título "Adicionar nova reunião" quando há última em destaque, em vez de "Transcrição da reunião atual").
+1. **Parser robusto** — só considerar que existe resumo quando o `descricao` começa com `📝 **Resumo**` E tem o separador `--- ... **Transcrição completa:**`. Em qualquer outro caso, tratar como "sem resumo".
+
+2. **Card "Última reunião"** — três estados:
+   - **Com resumo**: renderiza o markdown do resumo (igual hoje). Remover o collapsible "Ver transcrição completa" (não queremos transcrição em lugar nenhum).
+   - **Sem resumo**: estado vazio com texto "Reunião arquivada sem resumo IA" + botão `Gerar resumo agora` (Sparkles).
+   - **Gerando**: spinner "Gerando resumo…".
+
+3. **Lista "Reuniões anteriores"** — collapsible mostra **apenas o resumo** (extraído via mesmo parser). Se não houver resumo, mostra placeholder + botão `Gerar resumo` inline.
+
+4. **Função `gerarResumoArquivado(atividade)`** — nova:
+   - Extrai a transcrição do `descricao` (com ou sem prefixo `**Transcrição:**` / `**Transcrição completa:**`).
+   - Chama a edge function `meeting-ai` (mesma usada para o resumo ativo) com a transcrição.
+   - Atualiza `crm_atividades.descricao` da atividade no formato canônico: `📝 **Resumo**\n\n{resumo}\n\n---\n\n**Transcrição completa:**\n\n{txt}`.
+   - Invalida o cache de atividades para re-renderizar.
+
+5. **Migration opcional** — não fazer agora. As reuniões antigas são corrigidas sob demanda via o botão "Gerar resumo agora".
 
 ## Fora de escopo
 
-- Não mexer no fluxo de arquivamento, geração de IA ou modelo de dados.
-- Não corrigir o título "Reunião — {data de arquivamento}" (problema já mapeado em mensagem anterior).
+- Não tocar no fluxo da reunião ativa (paste zone + resumo automático).
+- Não mexer na geração inicial nem na criação automática de tarefas.

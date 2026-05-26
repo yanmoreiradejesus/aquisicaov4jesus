@@ -341,6 +341,7 @@ export const OportunidadeDetailSheet = ({
   const [aiTarefa, setAiTarefa] = useState<{ titulo: string; descricao: string; prazo_sugerido_dias: number; prioridade: string } | null>(null);
   const [aiLoadingResumo, setAiLoadingResumo] = useState(false);
   const [aiLoadingTarefa, setAiLoadingTarefa] = useState(false);
+  const [generatingResumoIds, setGeneratingResumoIds] = useState<Set<string>>(new Set());
   const processedHashRef = useRef<string>("");
   const autoTaskCreatedRef = useRef<string>("");
   const { toast } = useToast();
@@ -351,6 +352,64 @@ export const OportunidadeDetailSheet = ({
     () => (atividades ?? []).filter((a: any) => a.tipo === "reuniao"),
     [atividades],
   );
+
+  // Parse robusto do descricao da reunião arquivada.
+  // Só considera que existe resumo se o formato canônico estiver presente.
+  const parseReuniaoDescricao = (desc: string): { resumo: string; transcricao: string } => {
+    const d = desc ?? "";
+    const hasResumoPrefix = /^📝\s*\*\*Resumo\*\*/i.test(d.trim());
+    const separator = /\n\s*---\s*\n\s*\*\*Transcrição completa:\*\*\s*\n/;
+    if (hasResumoPrefix && separator.test(d)) {
+      const parts = d.split(separator);
+      const resumo = parts[0].replace(/^📝\s*\*\*Resumo\*\*\s*\n+/i, "").trim();
+      const transcricao = (parts[1] ?? "").trim();
+      return { resumo, transcricao };
+    }
+    // Sem resumo: extrai apenas a transcrição (com ou sem prefixo "**Transcrição:**")
+    const txt = d.replace(/^\*\*Transcrição:\*\*\s*\n+/i, "").trim();
+    return { resumo: "", transcricao: txt };
+  };
+
+  const gerarResumoArquivado = async (atividade: any) => {
+    const id = atividade.id;
+    const { transcricao } = parseReuniaoDescricao(atividade.descricao ?? "");
+    if (transcricao.length < 20) {
+      toast({ title: "Transcrição insuficiente", description: "Esta reunião não tem transcrição suficiente para gerar resumo.", variant: "destructive" });
+      return;
+    }
+    setGeneratingResumoIds((s) => new Set(s).add(id));
+    try {
+      const contexto = {
+        nome_oportunidade: form?.nome_oportunidade,
+        etapa: form?.etapa,
+        valor_ef: form?.valor_ef,
+        valor_fee: form?.valor_fee,
+        temperatura: form?.temperatura,
+        lead: lead ? {
+          nome: lead.nome, empresa: lead.empresa, segmento: lead.segmento,
+          faturamento: lead.faturamento, qualificacao: lead.qualificacao,
+        } : null,
+      };
+      const { data, error } = await supabase.functions.invoke("meeting-ai", {
+        body: { action: "summarize", transcricao, contexto, provider: "sonnet" },
+      });
+      if (error) throw error;
+      const resumo = (data as any)?.resumo ?? "";
+      if (!resumo) throw new Error("IA não retornou resumo");
+      const novaDesc = `📝 **Resumo**\n\n${resumo}\n\n---\n\n**Transcrição completa:**\n\n${transcricao}`;
+      const { error: upErr } = await supabase
+        .from("crm_atividades" as any)
+        .update({ descricao: novaDesc })
+        .eq("id", id);
+      if (upErr) throw upErr;
+      toast({ title: "Resumo gerado", description: "O resumo IA foi criado para esta reunião." });
+    } catch (e: any) {
+      toast({ title: "Erro ao gerar resumo", description: e?.message ?? "Falha desconhecida", variant: "destructive" });
+    } finally {
+      setGeneratingResumoIds((s) => { const n = new Set(s); n.delete(id); return n; });
+    }
+  };
+
 
   const lastResetIdRef = useRef<string | null>(null);
   useEffect(() => {
@@ -981,11 +1040,9 @@ export const OportunidadeDetailSheet = ({
               {/* ÚLTIMA REUNIÃO em destaque (quando não há reunião ativa) */}
               {!((form.transcricao_reuniao ?? "").trim().length > 0) && !aiLoadingResumo && reunioesArquivadas.length > 0 && (() => {
                 const ultima = reunioesArquivadas[0];
-                const desc: string = ultima.descricao ?? "";
-                const split = desc.split(/\n\s*---\s*\n\s*\*\*Transcrição completa:\*\*\s*\n/);
-                const resumoMd = (split[0] || "").replace(/^📝\s*\*\*Resumo\*\*\s*\n+/, "").trim();
-                const transcricaoMd = (split[1] || "").trim();
+                const { resumo, transcricao } = parseReuniaoDescricao(ultima.descricao ?? "");
                 const dataStr = new Date(ultima.created_at).toLocaleDateString("pt-BR");
+                const isGenerating = generatingResumoIds.has(ultima.id);
                 return (
                   <div className="rounded-lg border border-primary/30 bg-surface-2/40 p-4 border-t-2 border-t-primary/60">
                     <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
@@ -997,7 +1054,7 @@ export const OportunidadeDetailSheet = ({
                         Mais recente
                       </span>
                     </div>
-                    {resumoMd ? (
+                    {resumo ? (
                       <div className="prose prose-sm prose-invert max-w-none
                         prose-headings:text-foreground prose-headings:font-semibold prose-headings:tracking-tight
                         prose-h2:text-[13px] prose-h2:uppercase prose-h2:tracking-widest prose-h2:text-primary prose-h2:mt-4 prose-h2:mb-2 prose-h2:pb-1 prose-h2:border-b prose-h2:border-border/40
@@ -1007,23 +1064,29 @@ export const OportunidadeDetailSheet = ({
                         prose-ul:my-1.5 prose-ul:space-y-1 prose-li:text-sm prose-li:text-foreground/85 prose-li:marker:text-primary/60
                         prose-hr:my-3 prose-hr:border-border/40
                         prose-code:text-primary prose-code:bg-primary/10 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-[11px] prose-code:before:content-none prose-code:after:content-none">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{resumoMd}</ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{resumo}</ReactMarkdown>
+                      </div>
+                    ) : isGenerating ? (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground py-3">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Gerando resumo da reunião…
                       </div>
                     ) : (
-                      <p className="text-xs text-muted-foreground italic">Esta reunião não possui resumo IA.</p>
-                    )}
-                    {transcricaoMd && (
-                      <Collapsible>
-                        <CollapsibleTrigger className="mt-3 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors group">
-                          <ChevronDown className="h-3 w-3 transition-transform group-data-[state=open]:rotate-180" />
-                          Ver transcrição completa
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <div className="mt-2 px-3 py-3 rounded-md border border-border/40 bg-background/30 text-xs text-foreground/80 whitespace-pre-wrap max-h-[300px] overflow-auto">
-                            {transcricaoMd}
-                          </div>
-                        </CollapsibleContent>
-                      </Collapsible>
+                      <div className="flex flex-col items-start gap-2 py-2">
+                        <p className="text-xs text-muted-foreground">
+                          Esta reunião foi arquivada sem resumo IA.
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[11px]"
+                          onClick={() => gerarResumoArquivado(ultima)}
+                          disabled={transcricao.length < 20}
+                        >
+                          <Sparkles className="h-3 w-3 mr-1.5" />
+                          Gerar resumo agora
+                        </Button>
+                      </div>
                     )}
                   </div>
                 );
@@ -1040,28 +1103,52 @@ export const OportunidadeDetailSheet = ({
                       Reuniões anteriores ({lista.length})
                     </p>
                     <div className="space-y-1.5">
-                      {lista.map((r: any) => (
-                        <Collapsible key={r.id}>
-                          <CollapsibleTrigger className="w-full flex items-center justify-between px-3 py-2 rounded-md bg-surface-2/40 border border-border/40 hover:bg-surface-2/60 transition-colors text-left group">
-                            <span className="text-xs font-medium text-foreground truncate">
-                              {r.titulo || `Reunião — ${new Date(r.created_at).toLocaleDateString("pt-BR")}`}
-                            </span>
-                            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180 shrink-0" />
-                          </CollapsibleTrigger>
-                          <CollapsibleContent>
-                            <div className="px-3 py-3 border border-t-0 border-border/40 rounded-b-md bg-background/20">
-                              <div className="prose prose-sm prose-invert max-w-none
-                                prose-headings:text-foreground prose-headings:font-semibold prose-headings:tracking-tight
-                                prose-p:text-sm prose-p:text-foreground/85 prose-p:leading-relaxed prose-p:my-1
-                                prose-strong:text-foreground
-                                prose-ul:my-1 prose-li:text-sm prose-li:text-foreground/80
-                                prose-hr:my-2 prose-hr:border-border/40">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{r.descricao ?? ""}</ReactMarkdown>
+                      {lista.map((r: any) => {
+                        const { resumo } = parseReuniaoDescricao(r.descricao ?? "");
+                        const isGen = generatingResumoIds.has(r.id);
+                        return (
+                          <Collapsible key={r.id}>
+                            <CollapsibleTrigger className="w-full flex items-center justify-between px-3 py-2 rounded-md bg-surface-2/40 border border-border/40 hover:bg-surface-2/60 transition-colors text-left group">
+                              <span className="text-xs font-medium text-foreground truncate">
+                                {r.titulo || `Reunião — ${new Date(r.created_at).toLocaleDateString("pt-BR")}`}
+                              </span>
+                              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180 shrink-0" />
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                              <div className="px-3 py-3 border border-t-0 border-border/40 rounded-b-md bg-background/20">
+                                {resumo ? (
+                                  <div className="prose prose-sm prose-invert max-w-none
+                                    prose-headings:text-foreground prose-headings:font-semibold prose-headings:tracking-tight
+                                    prose-p:text-sm prose-p:text-foreground/85 prose-p:leading-relaxed prose-p:my-1
+                                    prose-strong:text-foreground
+                                    prose-ul:my-1 prose-li:text-sm prose-li:text-foreground/80
+                                    prose-hr:my-2 prose-hr:border-border/40">
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{resumo}</ReactMarkdown>
+                                  </div>
+                                ) : isGen ? (
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground py-1">
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    Gerando resumo…
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col items-start gap-2">
+                                    <p className="text-xs text-muted-foreground">Sem resumo IA.</p>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-[11px]"
+                                      onClick={() => gerarResumoArquivado(r)}
+                                    >
+                                      <Sparkles className="h-3 w-3 mr-1.5" />
+                                      Gerar resumo
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
-                            </div>
-                          </CollapsibleContent>
-                        </Collapsible>
-                      ))}
+                            </CollapsibleContent>
+                          </Collapsible>
+                        );
+                      })}
                     </div>
                   </div>
                 );
