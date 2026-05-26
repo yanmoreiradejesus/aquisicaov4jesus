@@ -338,14 +338,11 @@ export const OportunidadeDetailSheet = ({
   const [activeTab, setActiveTab] = useState<string>("informacoes");
   const [tarefaDialogOpen, setTarefaDialogOpen] = useState(false);
   const [aiResumo, setAiResumo] = useState<string>("");
-  const [aiTarefa, setAiTarefa] = useState<{ titulo: string; descricao: string; prazo_sugerido_dias: number; prioridade: string } | null>(null);
   const [aiLoadingResumo, setAiLoadingResumo] = useState(false);
-  const [aiLoadingTarefa, setAiLoadingTarefa] = useState(false);
   const [generatingResumoIds, setGeneratingResumoIds] = useState<Set<string>>(new Set());
   const processedHashRef = useRef<string>("");
-  const autoTaskCreatedRef = useRef<string>("");
   const { toast } = useToast();
-  const { data: atividades, addTarefa, addNota, addReuniao } = useOportunidadeAtividades(oportunidade?.id ?? null);
+  const { data: atividades, addNota, addReuniao } = useOportunidadeAtividades(oportunidade?.id ?? null);
 
   // Reuniões arquivadas (histórico) — atividades tipo "reuniao"
   const reunioesArquivadas = useMemo(
@@ -426,15 +423,12 @@ export const OportunidadeDetailSheet = ({
       lastResetIdRef.current = currentId;
       setActiveTab("informacoes");
       setAiResumo(oportunidade?.resumo_reuniao ?? "");
-      setAiTarefa(null);
       setAiLoadingResumo(false);
-      setAiLoadingTarefa(false);
       // Se já existe resumo salvo, marca o hash da transcrição como já processado
       // (evita reprocessar automaticamente ao abrir)
       processedHashRef.current = oportunidade?.resumo_reuniao
         ? (oportunidade?.transcricao_reuniao ?? "").trim()
         : "";
-      autoTaskCreatedRef.current = "";
     }
   }, [open, oportunidade]);
 
