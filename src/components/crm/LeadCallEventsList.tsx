@@ -163,6 +163,14 @@ export function LeadCallEventsList({ leadId }: Props) {
           const v = statusVariant(e.status);
           const Icon = v.Icon;
           const vendorName = e.user_id ? profilesMap[e.user_id] : null;
+          // Apelido do VoIP (preferido). Se não houver, cai no nome do perfil.
+          const operadorKey = e.operador ? String(e.operador) : null;
+          const voipMatch = operadorKey
+            ? (e.provider === "3cplus"
+              ? (voipLookup.byAgent[operadorKey] ?? voipLookup.byOperador[operadorKey])
+              : (voipLookup.byOperador[operadorKey] ?? voipLookup.byAgent[operadorKey]))
+            : null;
+          const userLabel = voipMatch?.apelido ?? vendorName ?? (operadorKey ? `#${operadorKey}` : null);
           return (
             <div
               key={e.id}
@@ -176,42 +184,21 @@ export function LeadCallEventsList({ leadId }: Props) {
                   <span className="text-xs font-medium">
                     {format(new Date(e.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                   </span>
-                  <Badge variant="outline" className={`text-[10px] ${v.className}`}>{v.label}</Badge>
+                  <span className="text-[10px] text-muted-foreground">
+                    • {formatDuration(e.duracao_seg)}
+                  </span>
+                  {userLabel && (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] font-semibold bg-primary/15 text-primary border-primary/40"
+                    >
+                      <User className="h-2.5 w-2.5 mr-1" />
+                      {userLabel}
+                    </Badge>
+                  )}
                   <Badge variant="outline" className={`text-[10px] ${providerLabel(e.provider).className}`}>
                     {providerLabel(e.provider).label}
                   </Badge>
-                  {e.operador && (() => {
-                    const key = String(e.operador);
-                    // Para 3cplus o `operador` salvo é o agent_id; para api4com é o ramal
-                    const match = e.provider === "3cplus"
-                      ? (voipLookup.byAgent[key] ?? voipLookup.byOperador[key])
-                      : (voipLookup.byOperador[key] ?? voipLookup.byAgent[key]);
-                    const apelido = match?.apelido;
-                    return (
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] font-semibold bg-primary/15 text-primary border-primary/40"
-                      >
-                        <User className="h-2.5 w-2.5 mr-1" />
-                        {apelido ?? `#${key}`}
-                      </Badge>
-                    );
-                  })()}
-                  <span className="text-[10px] text-muted-foreground">
-                    • Duração: {formatDuration(e.duracao_seg)}
-                  </span>
-                  {e.gravacao_url && (
-                    <Mic
-                      className="h-3 w-3 text-muted-foreground/70"
-                      aria-label="Possui gravação"
-                    />
-                  )}
-                  {filter === "all" && vendorName && (
-                    <span className="inline-flex items-center gap-1 text-[10px] text-primary/80">
-                      <User className="h-2.5 w-2.5" />
-                      {vendorName}
-                    </span>
-                  )}
                 </div>
                 {(() => {
                   const src = audioSrc(e);
