@@ -568,21 +568,6 @@ export const OportunidadeAvancarDialog = ({
                 </span>
               </div>
 
-              {tarefasExistentes.some((t) => /\[SUGEST(Ã|A)O IA/i.test(t.titulo || "")) && (
-                <p className="text-[11px] text-muted-foreground leading-relaxed px-1">
-                  Já existe uma tarefa sugerida pela IA. Você pode mantê-la, removê-la ou adicionar outras abaixo.
-                </p>
-              )}
-
-              {aiSuggesting && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-400/5 border border-violet-400/30">
-                  <Sparkles className="h-3.5 w-3.5 text-violet-400 shrink-0 animate-pulse" />
-                  <span className="text-[11px] text-violet-300">
-                    IA analisando a transcrição para sugerir a próxima tarefa…
-                  </span>
-                </div>
-              )}
-
               {tarefasExistentes.length === 0 && tarefas.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-6 px-4 rounded-xl border border-dashed border-border/50 bg-surface-1/30 text-center">
                   <ListTodo className="h-6 w-6 text-muted-foreground/60" />
@@ -592,22 +577,18 @@ export const OportunidadeAvancarDialog = ({
                 <div className="space-y-1.5">
                   {tarefasExistentes.map((t) => {
                     const raw: string = t.titulo || t.descricao || "";
-                    const isAI = /^\[SUGEST(Ã|A)O IA/i.test(raw);
-                    const display = isAI ? raw.replace(/^\[SUGEST(Ã|A)O IA[^\]]*\]\s*/i, "").split("\n")[0] : raw;
+                    const display = raw.replace(/^\[SUGEST(Ã|A)O IA[^\]]*\]\s*/i, "").split("\n")[0];
                     return (
-                      <div key={t.id} className={cn(
-                        "flex items-center gap-2 px-3 py-2 rounded-lg border text-[12px]",
-                        isAI ? "bg-violet-400/5 border-violet-400/30" : "bg-surface-1/60 border-border/40",
-                      )}>
-                        {isAI ? <Sparkles className="h-3.5 w-3.5 text-violet-400 shrink-0" /> : <Circle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+                      <div key={t.id} className="flex items-center gap-2 px-3 py-2 rounded-lg border text-[12px] bg-surface-1/60 border-border/40">
+                        <Circle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                         <span className="flex-1 truncate">{display}</span>
                         {t.data_agendada && (
                           <span className="text-[10px] text-muted-foreground tabular-nums">
                             {new Date(t.data_agendada).toLocaleDateString("pt-BR")}
                           </span>
                         )}
-                        <Badge variant="outline" className={cn("text-[9px] uppercase tracking-wider px-1.5 py-0", isAI ? "border-violet-400/40 text-violet-300" : "border-border/40")}>
-                          {isAI ? "IA" : "já criada"}
+                        <Badge variant="outline" className="text-[9px] uppercase tracking-wider px-1.5 py-0 border-border/40">
+                          já criada
                         </Badge>
                         <button
                           type="button"
