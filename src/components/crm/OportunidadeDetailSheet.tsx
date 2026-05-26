@@ -599,9 +599,7 @@ export const OportunidadeDetailSheet = ({
     // Sem transcrição ativa: apenas prepara a zona para colar a próxima
     if (txt.length < 20) {
       setAiResumo("");
-      setAiTarefa(null);
       processedHashRef.current = "";
-      autoTaskCreatedRef.current = "";
       toast({ title: "Pronto para nova reunião", description: "Cole a transcrição na área abaixo." });
       focarZonaDeColar();
       return;
@@ -623,9 +621,7 @@ export const OportunidadeDetailSheet = ({
         supabase.from("crm_oportunidades").update({ resumo_reuniao: null }).eq("id", form.id).then(() => {});
       }
       setAiResumo("");
-      setAiTarefa(null);
       processedHashRef.current = "";
-      autoTaskCreatedRef.current = "";
       toast({ title: "Reunião arquivada", description: "Comece uma nova transcrição." });
       focarZonaDeColar();
     } catch (e: any) {
