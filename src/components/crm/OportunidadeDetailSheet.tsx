@@ -20,6 +20,7 @@ import {
   Loader2,
   ListTodo,
   Archive,
+  ClipboardPaste,
 } from "lucide-react";
 import { formatPhone, whatsappNumber, locationFromPhone, timeAgo } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
