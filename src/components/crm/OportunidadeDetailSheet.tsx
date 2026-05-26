@@ -1072,63 +1072,66 @@ export const OportunidadeDetailSheet = ({
                 </div>
               )}
 
-              {/* TRANSCRIÇÃO ATIVA — readonly por padrão, edita ao clicar */}
+              {/* TRANSCRIÇÃO ATIVA — paste zone (texto nunca é renderizado) */}
               <div className="border-t border-border/40 pt-3">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-                    Transcrição da reunião atual
-                  </p>
-                  {!transcricaoEditing && (form.transcricao_reuniao ?? "").trim().length > 0 && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 px-2 text-[10px]"
-                      onClick={() => setTranscricaoEditing(true)}
-                    >
-                      <Pencil className="h-3 w-3 mr-1" />
-                      Editar
-                    </Button>
-                  )}
-                </div>
-                {transcricaoEditing || !((form.transcricao_reuniao ?? "").trim().length > 0) ? (
-                  <Textarea
-                    autoFocus={transcricaoEditing}
-                    rows={10}
-                    value={form.transcricao_reuniao ?? ""}
-                    onChange={(e) => set("transcricao_reuniao", e.target.value)}
-                    onBlur={() => {
-                      if ((form.transcricao_reuniao ?? "").trim().length > 0) setTranscricaoEditing(false);
-                    }}
-                    placeholder="Cole aqui a transcrição completa da reunião — dores, decisores, objeções, próximos passos..."
-                    className="text-sm resize-none"
-                  />
-                ) : (
-                  <div className="relative">
-                    <div
-                      onClick={() => setTranscricaoEditing(true)}
-                      className={cn(
-                        "cursor-text rounded-md border border-border/40 bg-background/40 p-3 text-sm text-foreground/85 whitespace-pre-wrap hover:border-border/70 transition-all overflow-hidden",
-                        transcricaoExpanded ? "max-h-none" : "max-h-[200px]",
-                      )}
-                      title="Clique para editar"
-                    >
-                      {form.transcricao_reuniao}
+                <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-2">
+                  Transcrição da reunião atual
+                </p>
+                {(form.transcricao_reuniao ?? "").trim().length > 0 ? (
+                  <div className="flex items-center justify-between gap-3 rounded-md border border-border/40 bg-background/40 px-3 py-2.5">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="h-6 w-6 rounded-full bg-emerald-500/15 text-emerald-500 flex items-center justify-center shrink-0">
+                        <Check className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-foreground">Transcrição carregada</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {(form.transcricao_reuniao ?? "").length.toLocaleString("pt-BR")} caracteres
+                        </p>
+                      </div>
                     </div>
-                    {!transcricaoExpanded && (
-                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 rounded-b-md bg-gradient-to-t from-background/95 to-transparent" />
-                    )}
-                    <div className="flex justify-center -mt-2 relative z-10">
+                    <div className="flex items-center gap-1 shrink-0">
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="h-6 w-6 p-0 rounded-full"
-                        onClick={() => setTranscricaoExpanded((v) => !v)}
-                        title={transcricaoExpanded ? "Recolher" : "Expandir"}
+                        variant="ghost"
+                        className="h-7 px-2 text-[10px]"
+                        onClick={() => {
+                          const ta = document.getElementById(`paste-zone-${form.id}`) as HTMLTextAreaElement | null;
+                          set("transcricao_reuniao", "");
+                          setTimeout(() => ta?.focus(), 50);
+                        }}
+                        title="Limpar e colar outra transcrição"
                       >
-                        {transcricaoExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                        Substituir
                       </Button>
                     </div>
                   </div>
+                ) : (
+                  <label
+                    htmlFor={`paste-zone-${form.id}`}
+                    className="block cursor-text rounded-md border-2 border-dashed border-border/60 bg-background/30 hover:border-primary/50 hover:bg-background/50 transition-colors px-4 py-6 text-center"
+                  >
+                    <div className="flex flex-col items-center gap-1.5">
+                      <ClipboardPaste className="h-5 w-5 text-muted-foreground" />
+                      <p className="text-xs font-medium text-foreground">Clique e cole aqui (Ctrl+V)</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        A transcrição não será exibida — apenas processada pela IA
+                      </p>
+                    </div>
+                    <textarea
+                      id={`paste-zone-${form.id}`}
+                      className="sr-only"
+                      value=""
+                      onChange={() => {}}
+                      onPaste={(e) => {
+                        const txt = e.clipboardData.getData("text");
+                        if (txt) {
+                          e.preventDefault();
+                          set("transcricao_reuniao", txt);
+                        }
+                      }}
+                    />
+                  </label>
                 )}
                 <p className="text-[10px] text-muted-foreground/60 mt-1.5">
                   Salvamento automático após 600ms. Resumo (Sonnet 4.5) e tarefa (Opus 4.5) gerados automaticamente — tarefa aparece na aba Tarefas com prazo sugerido.
