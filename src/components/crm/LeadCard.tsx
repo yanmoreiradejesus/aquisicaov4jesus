@@ -105,7 +105,7 @@ export const LeadCard = ({
   const since = lead.data_criacao_origem || lead.data_aquisicao || lead.created_at;
   const temp = lead.temperatura ? tempPill[lead.temperatura] : null;
   const accent = lead.temperatura ? tempAccent[lead.temperatura] : "bg-border/60";
-  const stageDays = showStageDays ? daysSince(lead.updated_at) : 0;
+  const stageDays = showStageDays ? daysSince(lead.data_criacao_origem || lead.created_at) : 0;
 
   const stopHard = (e: React.MouseEvent) => {
     e.stopPropagation();

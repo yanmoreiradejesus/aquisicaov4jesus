@@ -1,19 +1,30 @@
-## O que está acontecendo
+## Problema
 
-- A "Transcrição travada" do print é só **cache da tela**: no banco essa chamada já está concluída. Um refresh sumiria.
-- As **chamadas antigas** continuam sem transcrever porque o gatilho automático no banco está olhando só pra URL da gravação, não pra duração — e o backfill de ontem não conseguiu acordá-las.
-- No **card de chamada**, hoje aparecem várias tags repetidas (status, provedor, ramal/apelido, nome do vendedor à parte). Fica poluído.
+Em `src/components/crm/LeadCard.tsx` (linha 108) a tag de dias usa `lead.updated_at`:
 
-## Plano
+```ts
+const stageDays = showStageDays ? daysSince(lead.updated_at) : 0;
+```
 
-1. **Ajustar o gatilho** pra também reagir quando a duração da chamada chega depois (caso comum no Kloh).
-2. **Reenfileirar as chamadas antigas paradas** chamando o transcritor diretamente, uma a uma.
-3. **Limpar o card visual** no `LeadCallEventsList.tsx`: manter apenas a data/hora, a duração, **um** badge do usuário (apelido do VoIP; se não tiver, nome do perfil) e **um** badge do provedor (API4COM / 3CPlus). Remover badge de status ("Atendida", "NORMAL_CLEARING" etc), badge duplicado de operador, ícone de microfone e o `<span>` extra de vendedor.
+`updated_at` é atualizado a cada edição (nota, telefone, temperatura, responsável, mudança de etapa, etc.). Por isso o número diverge da data de cadastro e parece "voltar no tempo" quando alguém mexe no lead.
 
-## Resultado esperado
+## Correção
 
-- Em 1–2 minutos as chamadas antigas com 10s+ aparecem transcritas.
-- Chamadas novas transcrevem sozinhas mesmo se a duração chegar depois.
-- Cada linha de chamada mostra: **data · duração · usuário · provedor** — sem tags repetidas.
+Trocar a base do cálculo para a data de cadastro, priorizando a data de origem quando existir (leads importados costumam ter `data_criacao_origem` diferente do `created_at`).
 
-Fora de escopo: front de oportunidades, 3CPlus de gravação, IA de reuniões.
+**Arquivo:** `src/components/crm/LeadCard.tsx`
+
+1. Substituir a linha 108:
+   ```ts
+   const stageDays = showStageDays
+     ? daysSince(lead.data_criacao_origem || lead.created_at)
+     : 0;
+   ```
+2. Renomear a variável para `ageDays` (e ajustar onde é renderizada) para deixar claro no código que é "idade do lead", não "dias na etapa". Mantém a prop `showStageDays` para não quebrar quem já passa essa flag — só muda o significado interno.
+
+Nenhuma outra alteração: backend, queries e demais componentes ficam intactos. É uma correção puramente de apresentação.
+
+## Validação
+
+- Abrir a coluna "Tentativa de Conexão" e conferir que a tag de dias bate com `created_at` / `data_criacao_origem` do lead.
+- Editar uma nota de um lead e confirmar que o número **não muda mais** após salvar.
