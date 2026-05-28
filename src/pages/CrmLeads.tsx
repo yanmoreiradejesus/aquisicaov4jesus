@@ -354,7 +354,7 @@ const CrmLeads = () => {
                       lead={activeLead}
                       onClick={() => {}}
                       showAge={activeLead.etapa === "entrada"}
-                      showStageDays={activeLead.etapa === "tentativa_contato"}
+                      showStageDays={activeLead.etapa === "tentativa_contato" || activeLead.etapa === "contato_realizado"}
                       overlay
                     />
                   </div>
