@@ -12,6 +12,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import { marked } from "marked";
 
 interface Props {
   leadId: string;
@@ -573,11 +574,34 @@ function SpicedBlock({ event }: { event: CallEvent }) {
 
   const copy = async () => {
     if (!event.spiced) return;
+    const md = event.spiced;
+    // Texto plano legível (remove marcadores markdown)
+    const plain = md
+      .replace(/^#{1,6}\s+/gm, "")
+      .replace(/\*\*(.+?)\*\*/g, "$1")
+      .replace(/\*(.+?)\*/g, "$1")
+      .replace(/^[-*]\s+/gm, "• ")
+      .replace(/`([^`]+)`/g, "$1");
     try {
-      await navigator.clipboard.writeText(event.spiced);
+      const html = await marked.parse(md, { async: true });
+      if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "text/html": new Blob([html as string], { type: "text/html" }),
+            "text/plain": new Blob([plain], { type: "text/plain" }),
+          }),
+        ]);
+      } else {
+        await navigator.clipboard.writeText(plain);
+      }
       toast.success("SPICED copiado");
     } catch {
-      toast.error("Não foi possível copiar");
+      try {
+        await navigator.clipboard.writeText(plain);
+        toast.success("SPICED copiado");
+      } catch {
+        toast.error("Não foi possível copiar");
+      }
     }
   };
 
@@ -619,7 +643,7 @@ function SpicedBlock({ event }: { event: CallEvent }) {
                 <Copy className="h-3 w-3 mr-1" /> Copiar
               </Button>
             </div>
-            <div className="p-2 text-[11px] leading-relaxed max-h-96 overflow-y-auto prose prose-sm max-w-none prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1 prose-li:my-0 dark:prose-invert">
+            <div className="p-2 text-[11px] leading-relaxed max-h-96 overflow-y-auto prose prose-sm max-w-none prose-headings:text-foreground prose-headings:font-semibold prose-p:text-foreground/90 prose-strong:text-foreground prose-strong:font-semibold prose-li:text-foreground/90 prose-ul:text-foreground/90 prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1 prose-li:my-0">
               <ReactMarkdown>{event.spiced}</ReactMarkdown>
             </div>
           </div>
