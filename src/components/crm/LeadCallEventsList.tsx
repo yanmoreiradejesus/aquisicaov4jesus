@@ -1,4 +1,4 @@
-import { Phone, PhoneOff, PhoneIncoming, Play, FileText, Loader2, RefreshCw, AlertCircle, User, Mic, Sparkles } from "lucide-react";
+import { Phone, PhoneOff, PhoneIncoming, Play, FileText, Loader2, RefreshCw, AlertCircle, User, Mic, Sparkles, Target, Copy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -11,6 +11,7 @@ import { ptBR } from "date-fns/locale";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import ReactMarkdown from "react-markdown";
 
 interface Props {
   leadId: string;
@@ -234,6 +235,7 @@ export function LeadCallEventsList({ leadId }: Props) {
                         />
                         <TranscricaoBlock event={e} />
                         <ResumoBlock event={e} />
+                        <SpicedBlock event={e} />
                       </>
                     );
                   }
