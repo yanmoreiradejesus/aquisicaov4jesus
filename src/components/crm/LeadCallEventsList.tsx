@@ -643,7 +643,7 @@ function SpicedBlock({ event }: { event: CallEvent }) {
                 <Copy className="h-3 w-3 mr-1" /> Copiar
               </Button>
             </div>
-            <div className="p-2 text-[11px] leading-relaxed max-h-96 overflow-y-auto prose prose-sm max-w-none prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1 prose-li:my-0 dark:prose-invert">
+            <div className="p-2 text-[11px] leading-relaxed max-h-96 overflow-y-auto prose prose-sm max-w-none prose-headings:text-foreground prose-headings:font-semibold prose-p:text-foreground/90 prose-strong:text-foreground prose-strong:font-semibold prose-li:text-foreground/90 prose-ul:text-foreground/90 prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1 prose-li:my-0">
               <ReactMarkdown>{event.spiced}</ReactMarkdown>
             </div>
           </div>
