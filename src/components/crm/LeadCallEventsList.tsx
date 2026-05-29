@@ -545,3 +545,130 @@ function ResumoBlock({ event }: { event: CallEvent }) {
     </Button>
   );
 }
+
+function SpicedBlock({ event }: { event: CallEvent }) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const qc = useQueryClient();
+  const status = event.spiced_status;
+  const hasTranscricao = !!event.transcricao;
+
+  const generate = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("spiced-call-analysis", {
+        body: { event_id: event.id },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast.success("Diagnóstico SPICED gerado");
+      qc.invalidateQueries({ queryKey: ["crm_call_events"] });
+      setOpen(true);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao gerar SPICED");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copy = async () => {
+    if (!event.spiced) return;
+    try {
+      await navigator.clipboard.writeText(event.spiced);
+      toast.success("SPICED copiado");
+    } catch {
+      toast.error("Não foi possível copiar");
+    }
+  };
+
+  if (!hasTranscricao) return null;
+
+  if (event.spiced) {
+    return (
+      <Collapsible open={open} onOpenChange={setOpen} className="mt-1">
+        <div className="flex items-center gap-1">
+          <CollapsibleTrigger asChild>
+            <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px]">
+              <Target className="h-3 w-3 mr-1" />
+              {open ? "Ocultar SPICED" : "Ver SPICED"}
+            </Button>
+          </CollapsibleTrigger>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 px-2 text-[10px]"
+            onClick={generate}
+            disabled={loading}
+            title="Regerar diagnóstico"
+          >
+            <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
+        <CollapsibleContent>
+          <div className="mt-1.5 rounded-md bg-accent/5 border border-accent/30">
+            <div className="flex items-center justify-between px-2 py-1 border-b border-accent/30">
+              <span className="text-[10px] font-semibold text-accent-foreground/80 uppercase tracking-wide">
+                Diagnóstico SPICED
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-2 text-[10px]"
+                onClick={copy}
+              >
+                <Copy className="h-3 w-3 mr-1" /> Copiar
+              </Button>
+            </div>
+            <div className="p-2 text-[11px] leading-relaxed max-h-96 overflow-y-auto prose prose-sm max-w-none prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1 prose-li:my-0 dark:prose-invert">
+              <ReactMarkdown>{event.spiced}</ReactMarkdown>
+            </div>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    );
+  }
+
+  if (status === "processando" || loading) {
+    return (
+      <div className="mt-1 inline-flex items-center gap-1.5 text-[10px] text-muted-foreground">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        Gerando diagnóstico SPICED…
+      </div>
+    );
+  }
+
+  if (status === "erro") {
+    return (
+      <div className="mt-1 flex items-center gap-2">
+        <span
+          className="inline-flex items-center gap-1 text-[10px] text-destructive"
+          title={event.spiced_error ?? undefined}
+        >
+          <AlertCircle className="h-3 w-3" /> Erro ao gerar SPICED
+        </span>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-5 px-1.5 text-[10px]"
+          onClick={generate}
+          disabled={loading}
+        >
+          <RefreshCw className={`h-3 w-3 mr-1 ${loading ? "animate-spin" : ""}`} /> Tentar de novo
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      className="mt-1 h-6 px-2 text-[10px]"
+      onClick={generate}
+      disabled={loading}
+    >
+      <Target className="h-3 w-3 mr-1" />
+      {loading ? "Gerando…" : "SPICED"}
+    </Button>
+  );
+}
