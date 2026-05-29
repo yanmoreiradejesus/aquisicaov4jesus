@@ -574,11 +574,34 @@ function SpicedBlock({ event }: { event: CallEvent }) {
 
   const copy = async () => {
     if (!event.spiced) return;
+    const md = event.spiced;
+    // Texto plano legível (remove marcadores markdown)
+    const plain = md
+      .replace(/^#{1,6}\s+/gm, "")
+      .replace(/\*\*(.+?)\*\*/g, "$1")
+      .replace(/\*(.+?)\*/g, "$1")
+      .replace(/^[-*]\s+/gm, "• ")
+      .replace(/`([^`]+)`/g, "$1");
     try {
-      await navigator.clipboard.writeText(event.spiced);
+      const html = await marked.parse(md, { async: true });
+      if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "text/html": new Blob([html as string], { type: "text/html" }),
+            "text/plain": new Blob([plain], { type: "text/plain" }),
+          }),
+        ]);
+      } else {
+        await navigator.clipboard.writeText(plain);
+      }
       toast.success("SPICED copiado");
     } catch {
-      toast.error("Não foi possível copiar");
+      try {
+        await navigator.clipboard.writeText(plain);
+        toast.success("SPICED copiado");
+      } catch {
+        toast.error("Não foi possível copiar");
+      }
     }
   };
 
