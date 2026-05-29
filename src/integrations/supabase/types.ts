@@ -311,6 +311,9 @@ export type Database = {
           raw_payload: Json
           resumo: string | null
           resumo_status: string | null
+          spiced: string | null
+          spiced_error: string | null
+          spiced_status: string | null
           status: string | null
           telefone: string | null
           telefone_normalizado: string | null
@@ -333,6 +336,9 @@ export type Database = {
           raw_payload?: Json
           resumo?: string | null
           resumo_status?: string | null
+          spiced?: string | null
+          spiced_error?: string | null
+          spiced_status?: string | null
           status?: string | null
           telefone?: string | null
           telefone_normalizado?: string | null
@@ -355,6 +361,9 @@ export type Database = {
           raw_payload?: Json
           resumo?: string | null
           resumo_status?: string | null
+          spiced?: string | null
+          spiced_error?: string | null
+          spiced_status?: string | null
           status?: string | null
           telefone?: string | null
           telefone_normalizado?: string | null
