@@ -378,16 +378,6 @@ export const LeadImportDialog = ({ open, onOpenChange, onOpenExport, onOpenRepor
                         </span>
                       </div>
                     )}
-                    {pctSemData >= 20 && (
-                      <div className="flex items-start gap-2 text-xs text-orange-500">
-                        <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-                        <span>
-                          <strong>{semData} de {parsed.length}</strong> linha(s) ({pctSemData.toFixed(0)}%) sem data
-                          de cadastro detectada. Confira se o CSV tem a coluna <code>"Data de criação"</code> no
-                          formato <code>dd/MM/yyyy HH:mm:ss</code>.
-                        </span>
-                      </div>
-                    )}
                     {sampleFmt && (
                       <div className="flex items-start gap-2 text-xs text-success">
                         <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0" />
