@@ -166,9 +166,19 @@ export interface ImportResult {
 }
 
 /**
- * Dedupe: (lower(email), data_criacao_origem). Linhas sem email OU sem data_criacao_origem
- * não passam pelo índice único e podem cair como duplicado lógico — checamos antes.
+ * Dedup: dois leads são o mesmo se tiverem MESMO email (case-insensitive)
+ * OU MESMO telefone (apenas dígitos, ignorando DDI 55 e máscaras).
+ * Garantia final pelos índices únicos crm_leads_tenant_email_uidx / _phone_uidx.
  */
+const normalizePhoneForDedup = (s: string | null | undefined): string => {
+  if (!s) return "";
+  let d = String(s).replace(/\D/g, "");
+  if (d.length >= 12 && d.startsWith("55")) d = d.slice(2);
+  if (d.startsWith("0")) d = d.slice(1);
+  if (d.length > 11) d = d.slice(-11);
+  return d;
+};
+
 export async function importLeads(
   rows: CsvLeadRow[],
   responsavelId?: string,
@@ -183,36 +193,62 @@ export async function importLeads(
     return { total: 0, inserted: 0, duplicates: 0, errors: 0, duplicateRows: [] };
   }
 
-  // 1) Pré-checagem: buscar leads existentes que batem na chave (email + data_criacao_origem)
-  const keyed = rows.filter((r) => r.email && r.data_criacao_origem);
-  const emails = Array.from(new Set(keyed.map((r) => r.email!.toLowerCase())));
+  // 1) Dedup dentro da própria planilha (email OU telefone normalizado)
+  const seenEmails = new Set<string>();
+  const seenPhones = new Set<string>();
+  const candidates: CsvLeadRow[] = [];
+  const duplicateRows: CsvLeadRow[] = [];
 
-  const existingKeys = new Set<string>();
+  for (const r of rows) {
+    const e = r.email?.trim().toLowerCase() || "";
+    const p = normalizePhoneForDedup(r.telefone);
+    if ((e && seenEmails.has(e)) || (p && seenPhones.has(p))) {
+      duplicateRows.push(r);
+      continue;
+    }
+    if (e) seenEmails.add(e);
+    if (p) seenPhones.add(p);
+    candidates.push(r);
+  }
+
+  // 2) Pré-checagem contra o banco (RLS filtra por tenant)
+  const emails = Array.from(seenEmails);
+  const phones = Array.from(seenPhones);
+  const existingEmails = new Set<string>();
+  const existingPhones = new Set<string>();
+
   if (emails.length > 0) {
-    const { data: existing, error } = await supabase
+    const { data, error } = await supabase
       .from("crm_leads")
-      .select("email, data_criacao_origem")
+      .select("email")
       .in("email", emails);
     if (error) throw error;
-    (existing ?? []).forEach((e: any) => {
-      if (e.email && e.data_criacao_origem) {
-        existingKeys.add(`${e.email.toLowerCase()}|${new Date(e.data_criacao_origem).toISOString()}`);
-      }
+    (data ?? []).forEach((l: any) => {
+      if (l.email) existingEmails.add(l.email.trim().toLowerCase());
+    });
+  }
+
+  if (phones.length > 0) {
+    // Telefones no banco podem estar com máscara — normaliza no cliente.
+    const { data, error } = await supabase
+      .from("crm_leads")
+      .select("telefone")
+      .not("telefone", "is", null);
+    if (error) throw error;
+    const phoneSet = new Set(phones);
+    (data ?? []).forEach((l: any) => {
+      const n = normalizePhoneForDedup(l.telefone);
+      if (n && phoneSet.has(n)) existingPhones.add(n);
     });
   }
 
   const toInsert: CsvLeadRow[] = [];
-  const duplicateRows: CsvLeadRow[] = [];
-  const seenInBatch = new Set<string>();
-
-  for (const r of rows) {
-    if (r.email && r.data_criacao_origem) {
-      const key = `${r.email.toLowerCase()}|${new Date(r.data_criacao_origem).toISOString()}`;
-      if (existingKeys.has(key) || seenInBatch.has(key)) {
-        duplicateRows.push(r);
-        continue;
-      }
-      seenInBatch.add(key);
+  for (const r of candidates) {
+    const e = r.email?.trim().toLowerCase() || "";
+    const p = normalizePhoneForDedup(r.telefone);
+    if ((e && existingEmails.has(e)) || (p && existingPhones.has(p))) {
+      duplicateRows.push(r);
+      continue;
     }
     toInsert.push(r);
   }
