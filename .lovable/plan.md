@@ -1,39 +1,49 @@
-## Ajustes no bloco SPICED (`src/components/crm/LeadCallEventsList.tsx`)
+## Diagnóstico
 
-### 1. Legibilidade
+Confirmei no banco que **os 5 usuários de Receitas do Kloh estão cadastrados, aprovados e no mesmo tenant** (Matheus, Arthur, Jonas, Isadora, Letícia). O popup que o Arthur vê é exatamente o mesmo componente que o Matheus (`ResponsavelPickerDialog`) e usa o mesmo hook `useProfilesList({ departamento: "Receitas" })`.
 
-O bloco usa `prose ... dark:prose-invert` dentro de `bg-accent/5`. Como o app não está em modo `dark` global, o `dark:prose-invert` não aplica e os headings/bold ficam com cor padrão escura sobre fundo escuro do tema.
+A única diferença entre Matheus e Arthur:
+- **Matheus** tem registro em `user_roles` com `role = 'admin'`.
+- **Arthur** não tem nenhum registro em `user_roles` (é apenas um usuário comum).
 
-**Fix:** forçar cores semânticas do design system independente do modo, trocando os modifiers do prose para usar tokens `foreground`/`muted-foreground`:
+A política de RLS atual de `profiles` em tese deveria permitir Arthur ver os colegas do mesmo tenant, mas na prática algo na cadeia está retornando lista vazia para ele. Sim — vou resolver fazendo a lista aparecer igual para o Arthur.
 
+## Plano
+
+### 1. Criar função SECURITY DEFINER para listar usuários de Receitas
+
+Criar `public.list_tenant_receitas_users()` que:
+- Retorna `id, full_name, email, cargo, departamento` de todos os perfis aprovados, do mesmo tenant do usuário logado, com `departamento = 'Receitas'`.
+- `SECURITY DEFINER` para contornar qualquer aresta de RLS que esteja causando lista vazia para usuários sem entrada em `user_roles`.
+- `GRANT EXECUTE ... TO authenticated`.
+
+### 2. Atualizar `src/hooks/useProfilesList.ts`
+
+- Quando `departamento === "Receitas"`, chamar a nova RPC em vez de `from('profiles')`.
+- Demais casos seguem como hoje.
+- Mantém a mesma interface `ProfileLite[]`, sem mudanças nos componentes que consomem.
+
+### 3. Validar
+
+- Após deploy da migration, pedir para o Arthur tentar novamente arrastar um lead para "Reunião agendada/realizada".
+- O popup deve listar os 5 usuários de Receitas do Kloh (Jonas, Matheus, Letícia, Isadora, Arthur).
+
+## Detalhes técnicos
+
+```sql
+CREATE OR REPLACE FUNCTION public.list_tenant_receitas_users()
+RETURNS TABLE(id uuid, full_name text, email text, cargo text, departamento text)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT p.id, p.full_name, p.email, p.cargo, p.departamento
+  FROM public.profiles p
+  WHERE p.tenant_id = public.current_tenant_id()
+    AND p.approved = true
+    AND p.departamento = 'Receitas'
+  ORDER BY p.full_name;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.list_tenant_receitas_users() TO authenticated;
 ```
-prose prose-sm max-w-none
-prose-headings:text-foreground prose-headings:font-semibold
-prose-p:text-foreground/90
-prose-strong:text-foreground prose-strong:font-semibold
-prose-li:text-foreground/90
-prose-ul:text-foreground/90
-prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-ul:my-1 prose-li:my-0
-```
 
-(Remover `dark:prose-invert`.)
-
-### 2. Copiar preservando formatação (negrito, headings)
-
-Hoje copiamos `event.spiced` cru (markdown), então a colagem mostra `##` e `**`.
-
-**Fix:** converter o markdown para HTML e gravar no clipboard com dois formatos via `ClipboardItem` (`text/html` + `text/plain` sem marcadores), para que apps ricos (Docs, Notion, Word, Gmail) colem com negrito/títulos e apps de texto puro colem limpo.
-
-- Adicionar dependência leve `marked` para converter markdown → HTML (já que `react-markdown` não expõe HTML string facilmente).
-- Nova função `copy()`:
-  1. `const html = await marked.parse(event.spiced)`
-  2. Gerar versão `text/plain` removendo `#`, `*`, `-` de marcação (manter o conteúdo legível).
-  3. `navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], {type:"text/html"}), "text/plain": new Blob([plain], {type:"text/plain"}) })])`
-  4. Fallback: se `ClipboardItem` indisponível, usar `writeText(plain)`.
-
-### Arquivos
-
-- `src/components/crm/LeadCallEventsList.tsx` — ajustar classes do container do `ReactMarkdown` (linha 622) e reescrever `copy()` do `SpicedBlock` (linhas 574-582), importar `marked`.
-- `package.json` — adicionar `marked`.
-
-Sem mudanças no backend nem no prompt.
+Nenhuma outra tela é afetada negativamente: todos os componentes que usam `useProfilesList({ departamento: "Receitas" })` (picker do CrmLeads, LeadDialog, LeadImportDialog, LeadActivityReportDialog, OnboardingDetailSheet, DeleteUserDialog) passam a receber a lista via RPC consistente.

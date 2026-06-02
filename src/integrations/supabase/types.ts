@@ -1215,6 +1215,16 @@ export type Database = {
         Returns: boolean
       }
       is_approved: { Args: { _user_id: string }; Returns: boolean }
+      list_tenant_receitas_users: {
+        Args: never
+        Returns: {
+          cargo: string
+          departamento: string
+          email: string
+          full_name: string
+          id: string
+        }[]
+      }
       marcar_cobrancas_atrasadas: { Args: never; Returns: undefined }
       normalize_phone_br: { Args: { phone: string }; Returns: string }
       promote_jesus_version_to_tenant: {
