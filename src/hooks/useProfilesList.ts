@@ -23,6 +23,21 @@ export function useProfilesList(opts: Options = {}) {
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
+
+    // Para o departamento Receitas, usa RPC SECURITY DEFINER para garantir
+    // que todos os usuários do tenant vejam a lista (contorna edge cases de RLS).
+    if (departamento === "Receitas" && approvedOnly) {
+      (supabase.rpc as any)("list_tenant_receitas_users").then(({ data }: any) => {
+        if (!active) return;
+        setProfiles((data ?? []) as ProfileLite[]);
+        setLoading(false);
+      });
+      return () => {
+        active = false;
+      };
+    }
+
     let q = supabase
       .from("profiles")
       .select("id, full_name, email, cargo, departamento")
