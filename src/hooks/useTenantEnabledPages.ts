@@ -73,6 +73,7 @@ export const PAGE_CATALOG: Array<{
       { path: "/aquisicao/dashboard", label: "Dashboard de aquisição" },
       { path: "/aquisicao/funil", label: "Funil" },
       { path: "/aquisicao/meta", label: "Meta (CRM)" },
+      { path: "/aquisicao/atividades", label: "Atividades (CRM)" },
       { path: "/aquisicao/insights", label: "Insights" },
       { path: "/aquisicao/financeiro", label: "Financeiro" },
       { path: "/aquisicao/legado/funil", label: "Funil (Sheets — legado)" },
