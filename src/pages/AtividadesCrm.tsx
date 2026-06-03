@@ -170,13 +170,6 @@ const AtividadesCrm = () => {
           </>
         )}
 
-        {/* Gráfico */}
-        {isLoading ? (
-          <Skeleton className="h-[320px] w-full rounded-xl" />
-        ) : (
-          <SDRPerformanceChart rows={sdr} profiles={profiles} />
-        )}
-
         <Tabs defaultValue="sdr" className="space-y-4">
           <TabsList>
             <TabsTrigger value="sdr">SDRs</TabsTrigger>
@@ -197,6 +190,17 @@ const AtividadesCrm = () => {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Gráficos compactos por indicador */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Skeleton className="h-[240px] rounded-xl" />
+            <Skeleton className="h-[240px] rounded-xl" />
+            <Skeleton className="h-[240px] rounded-xl" />
+          </div>
+        ) : (
+          <SDRPerformanceChart rows={sdr} profiles={profiles} />
+        )}
       </main>
     </div>
   );
