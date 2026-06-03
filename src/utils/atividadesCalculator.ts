@@ -93,12 +93,11 @@ export function computeSDRStats({
     return s;
   };
 
-  // Chamadas
+  // Chamadas — não filtramos por lead_id aqui; o pipe não deve afetar tentativas/conectadas
   calls.forEach((c) => {
     let uid = c.user_id as string | null;
     if (!uid && c.operador) uid = operadorMap.get(String(c.operador)) ?? null;
     if (!uid) return;
-    if (c.lead_id && !leadById.has(c.lead_id)) return; // pipe filter
     const s = ensure(uid);
     s.tentativas += 1;
     if (isConnected(c)) s.conectadas += 1;
