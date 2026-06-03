@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.recheck-3cplus-recordings]
 verify_jwt = false
+
+[functions.backfill-3cplus-history]
+verify_jwt = false
