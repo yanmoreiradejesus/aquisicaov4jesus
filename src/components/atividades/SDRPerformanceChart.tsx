@@ -13,34 +13,30 @@ const nameOf = (id: string, profiles: ProfileLite[]) =>
 
 const firstName = (full: string) => full.split(" ")[0];
 
-export const SDRPerformanceChart = ({ rows, profiles }: Props) => {
-  const data = rows.slice(0, 10).map((r) => ({
-    name: firstName(nameOf(r.userId, profiles)),
-    Ligações: r.ligacoes,
-    "Reun. Agend.": r.reunioesAgendadas,
-    "Reun. Real.": r.reunioesRealizadas,
-  }));
+interface MiniProps {
+  title: string;
+  subtitle: string;
+  data: { name: string; value: number }[];
+  color: string;
+}
 
-  if (data.length === 0) {
-    return (
-      <div className="rounded-xl border border-border/50 bg-card/40 p-6 text-center text-sm text-muted-foreground">
-        Sem dados para exibir no gráfico.
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-xl border border-border/50 bg-gradient-to-br from-card to-muted/5 p-4 lg:p-6">
-      <div className="mb-3">
-        <div className="text-sm font-semibold text-foreground">Performance por SDR</div>
-        <div className="text-xs text-muted-foreground">Top 10 — ligações, reuniões agendadas e realizadas</div>
-      </div>
-      <div className="h-[280px] w-full">
+const MiniChart = ({ title, subtitle, data, color }: MiniProps) => (
+  <div className="rounded-xl border border-border/50 bg-gradient-to-br from-card to-muted/5 p-4">
+    <div className="mb-2">
+      <div className="text-sm font-semibold text-foreground">{title}</div>
+      <div className="text-[11px] text-muted-foreground">{subtitle}</div>
+    </div>
+    <div className="h-[200px] w-full">
+      {data.length === 0 ? (
+        <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+          Sem dados
+        </div>
+      ) : (
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 8, right: 12, left: -8, bottom: 4 }}>
+          <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 4 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} />
-            <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} />
-            <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
+            <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} />
+            <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} />
             <Tooltip
               contentStyle={{
                 background: "hsl(var(--card))",
@@ -50,12 +46,44 @@ export const SDRPerformanceChart = ({ rows, profiles }: Props) => {
               }}
               cursor={{ fill: "hsl(var(--muted) / 0.3)" }}
             />
-            <Bar dataKey="Ligações" fill="hsl(var(--primary) / 0.45)" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="Reun. Agend." fill="hsl(var(--primary) / 0.75)" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="Reun. Real." fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="value" fill={color} radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
-      </div>
+      )}
+    </div>
+  </div>
+);
+
+export const SDRPerformanceChart = ({ rows, profiles }: Props) => {
+  const named = rows.map((r) => ({ ...r, name: firstName(nameOf(r.userId, profiles)) }));
+
+  const topBy = <K extends keyof SDRStats>(key: K) =>
+    [...named]
+      .sort((a, b) => (Number(b[key]) || 0) - (Number(a[key]) || 0))
+      .slice(0, 5)
+      .map((r) => ({ name: r.name, value: Number(r[key]) || 0 }))
+      .filter((d) => d.value > 0);
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <MiniChart
+        title="Ligações"
+        subtitle="Top 5 SDRs (VoIP)"
+        data={topBy("ligacoes")}
+        color="hsl(var(--primary) / 0.5)"
+      />
+      <MiniChart
+        title="Reuniões agendadas"
+        subtitle="Top 5 SDRs"
+        data={topBy("reunioesAgendadas")}
+        color="hsl(var(--primary) / 0.75)"
+      />
+      <MiniChart
+        title="Reuniões realizadas"
+        subtitle="Top 5 SDRs"
+        data={topBy("reunioesRealizadas")}
+        color="hsl(var(--primary))"
+      />
     </div>
   );
 };
