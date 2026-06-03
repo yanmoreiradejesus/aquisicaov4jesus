@@ -17,6 +17,7 @@ import Financeiro from "./pages/Financeiro";
 import DashboardComercial from "./pages/DashboardComercial";
 import MixCompra from "./pages/MixCompra";
 import MetaCrm from "./pages/MetaCrm";
+import AtividadesCrm from "./pages/AtividadesCrm";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
@@ -90,6 +91,12 @@ const AppRoutes = () => {
         <Route path="/aquisicao/meta" element={
           <ProtectedRoute requiredPath="/aquisicao/meta">
             <PageTransition><MetaCrm /></PageTransition>
+          </ProtectedRoute>
+        } />
+
+        <Route path="/aquisicao/atividades" element={
+          <ProtectedRoute requiredPath="/aquisicao/atividades">
+            <PageTransition><AtividadesCrm /></PageTransition>
           </ProtectedRoute>
         } />
 
