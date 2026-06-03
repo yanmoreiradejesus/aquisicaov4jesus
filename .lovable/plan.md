@@ -1,49 +1,86 @@
-## Diagnóstico
+# Tela de Atividades do CRM (Data Analytics)
 
-Confirmei no banco que **os 5 usuários de Receitas do Kloh estão cadastrados, aprovados e no mesmo tenant** (Matheus, Arthur, Jonas, Isadora, Letícia). O popup que o Arthur vê é exatamente o mesmo componente que o Matheus (`ResponsavelPickerDialog`) e usa o mesmo hook `useProfilesList({ departamento: "Receitas" })`.
+Nova rota dentro de Aquisição → Data Analytics para mensurar a performance operacional de SDRs e Closers, lendo dos dados do CRM nativo (`crm_leads`, `crm_oportunidades`, `crm_atividades`, `crm_call_events`).
 
-A única diferença entre Matheus e Arthur:
-- **Matheus** tem registro em `user_roles` com `role = 'admin'`.
-- **Arthur** não tem nenhum registro em `user_roles` (é apenas um usuário comum).
+## Onde fica
 
-A política de RLS atual de `profiles` em tese deveria permitir Arthur ver os colegas do mesmo tenant, mas na prática algo na cadeia está retornando lista vazia para ele. Sim — vou resolver fazendo a lista aparecer igual para o Arthur.
+- Rota: `/aquisicao/atividades`
+- Menu: novo item dentro do submenu **Data Analytics** no header (`V4Header`), ao lado de Funil/Insights
+- Página protegida via `ProtectedRoute requiredPath="/aquisicao/atividades"` e habilitada por tenant (`tenant_enabled_pages`)
 
-## Plano
+## Estrutura da tela
 
-### 1. Criar função SECURITY DEFINER para listar usuários de Receitas
+```text
+┌─ Filtros (sticky) ──────────────────────────────────────┐
+│ Período [data início] → [data fim]   Pipe [todos ▾]     │
+│ Usuário [todos ▾]   [Limpar]                            │
+└─────────────────────────────────────────────────────────┘
 
-Criar `public.list_tenant_receitas_users()` que:
-- Retorna `id, full_name, email, cargo, departamento` de todos os perfis aprovados, do mesmo tenant do usuário logado, com `departamento = 'Receitas'`.
-- `SECURITY DEFINER` para contornar qualquer aresta de RLS que esteja causando lista vazia para usuários sem entrada em `user_roles`.
-- `GRANT EXECUTE ... TO authenticated`.
+┌─ KPIs do período (cards) ───────────────────────────────┐
+│ Tentativas │ Conectadas │ Reuniões agendadas │ RR │ NS  │
+│ Propostas  │ Fechamentos │ Win rate │ Ticket médio       │
+└─────────────────────────────────────────────────────────┘
 
-### 2. Atualizar `src/hooks/useProfilesList.ts`
+[ Tab: SDRs ]  [ Tab: Closers ]
 
-- Quando `departamento === "Receitas"`, chamar a nova RPC em vez de `from('profiles')`.
-- Demais casos seguem como hoje.
-- Mantém a mesma interface `ProfileLite[]`, sem mudanças nos componentes que consomem.
+──── Tab SDRs ────
+Ranking (tabela ordenável):
+  SDR | Tentativas | Conectadas | Taxa conexão
+      | Contato realizado | Reuniões agendadas
+      | Reuniões realizadas | No-show | Show rate
 
-### 3. Validar
-
-- Após deploy da migration, pedir para o Arthur tentar novamente arrastar um lead para "Reunião agendada/realizada".
-- O popup deve listar os 5 usuários de Receitas do Kloh (Jonas, Matheus, Letícia, Isadora, Arthur).
-
-## Detalhes técnicos
-
-```sql
-CREATE OR REPLACE FUNCTION public.list_tenant_receitas_users()
-RETURNS TABLE(id uuid, full_name text, email text, cargo text, departamento text)
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
-AS $$
-  SELECT p.id, p.full_name, p.email, p.cargo, p.departamento
-  FROM public.profiles p
-  WHERE p.tenant_id = public.current_tenant_id()
-    AND p.approved = true
-    AND p.departamento = 'Receitas'
-  ORDER BY p.full_name;
-$$;
-
-GRANT EXECUTE ON FUNCTION public.list_tenant_receitas_users() TO authenticated;
+──── Tab Closers ────
+Ranking (tabela ordenável):
+  Closer | Reuniões realizadas | Propostas | Follow-ups
+         | Fechamentos ganhos | Win rate
+         | Ticket médio (EF+Fee) | Receita total
 ```
 
-Nenhuma outra tela é afetada negativamente: todos os componentes que usam `useProfilesList({ departamento: "Receitas" })` (picker do CrmLeads, LeadDialog, LeadImportDialog, LeadActivityReportDialog, OnboardingDetailSheet, DeleteUserDialog) passam a receber a lista via RPC consistente.
+Clicar em uma linha do ranking abre o **drill-down** do usuário (mesmo layout, mas filtrado por aquele responsável, com gráfico de barras diário das atividades).
+
+## Métricas — como são calculadas
+
+**SDR** (atribuído via `crm_leads.responsavel_id` no momento do evento):
+- **Tentativas de contato**: `crm_call_events` do tenant, agrupadas por `user_id` (resolvido via `voip_accounts`), filtradas por `created_at` no período
+- **Conectadas**: mesmas chamadas com `duracao_seg >= 10` (ou status indicando conexão)
+- **Mudanças de etapa**: `crm_atividades` com `tipo='mudanca_etapa'`, parseando a etapa destino do `descricao` — agrupado por `usuario_id`
+- **Reuniões agendadas / realizadas / no-show**: contagem de leads com `etapa` correspondente (`reuniao_agendada`, `reuniao_realizada`, `no_show`) por `responsavel_id`, usando `data_reuniao_agendada` / `data_reuniao_realizada` para o filtro de período
+
+**Closer** (via `crm_oportunidades.closer_id`, fallback `responsavel_id`):
+- **Reuniões realizadas**: oportunidades criadas no período (auto-criadas quando lead vai pra `reuniao_realizada`)
+- **Propostas enviadas**: oportunidades com `etapa='proposta'` e `data_proposta` no período
+- **Follow-ups**: `crm_atividades` ligadas à oportunidade com `tipo='followup'` (ou similar) por `usuario_id`
+- **Fechamentos ganhos**: `etapa='fechado_ganho'` no período (`data_fechamento_real`)
+- **Win rate**: ganhos / (ganhos + perdidos) no período
+- **Ticket médio**: média de `valor_ef + valor_fee` dos ganhos
+- **Receita total**: soma de `valor_ef + valor_fee` dos ganhos
+
+## Arquivos a criar/editar
+
+Novos:
+- `src/pages/AtividadesCrm.tsx` — página principal com filtros, KPIs, tabs e tabelas
+- `src/components/atividades/AtividadesFilters.tsx` — barra de filtros (período, pipe, usuário)
+- `src/components/atividades/SDRRankingTable.tsx`
+- `src/components/atividades/CloserRankingTable.tsx`
+- `src/components/atividades/UserDrilldownDialog.tsx` — modal com detalhamento + gráfico diário
+- `src/hooks/useCrmActivities.ts` — busca paralela de `crm_call_events`, `crm_atividades`, `crm_leads`, `crm_oportunidades` no período, com cache via React Query
+- `src/utils/atividadesCalculator.ts` — agregações por usuário (SDR/closer)
+
+Editar:
+- `src/App.tsx` — registrar rota `/aquisicao/atividades`
+- `src/components/V4Header.tsx` — adicionar item "Atividades" no submenu Data Analytics
+- Tenant precisa habilitar a página (`tenant_enabled_pages`) — incluir nas tabelas de provisionamento
+
+## Considerações técnicas
+
+- Sem mudanças de schema necessárias — todos os dados já existem nas tabelas atuais
+- RLS já isola por tenant (`current_tenant_id()`); o super admin enxerga via `active_tenant_id`
+- Para o filtro "Usuário", reusa `useProfilesList` (departamento Receitas via RPC `list_tenant_receitas_users`)
+- Reusar `PerformanceBarChart` existente para o gráfico diário no drill-down
+- Tokens semânticos do design system (cores via `hsl(var(--...))`)
+
+## Fora do escopo (futuro)
+
+- Exportação CSV/PDF do ranking
+- Comparativo entre períodos (mês vs mês anterior)
+- Metas por SDR/Closer e atingimento %
