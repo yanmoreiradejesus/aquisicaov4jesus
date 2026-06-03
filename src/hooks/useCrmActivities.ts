@@ -38,8 +38,7 @@ export function useCrmActivities({ startISO, endISO, pipe = "all" }: ActivitiesP
       if (closerRes.error) throw closerRes.error;
 
       const sdrTotals = ((sdrTotalsRes.data ?? []) as Array<{
-        tentativas: number;
-        conectadas: number;
+        ligacoes: number;
         contato_realizado: number;
         reunioes_agendadas: number;
         reunioes_realizadas: number;
@@ -50,8 +49,7 @@ export function useCrmActivities({ startISO, endISO, pipe = "all" }: ActivitiesP
         sdrTotals,
         sdrRows: (sdrRes.data ?? []) as Array<{
           user_id: string;
-          tentativas: number;
-          conectadas: number;
+          ligacoes: number;
           contato_realizado: number;
           reunioes_agendadas: number;
           reunioes_realizadas: number;
@@ -71,3 +69,4 @@ export function useCrmActivities({ startISO, endISO, pipe = "all" }: ActivitiesP
     refetchOnWindowFocus: false,
   });
 }
+

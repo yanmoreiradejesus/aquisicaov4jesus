@@ -91,8 +91,7 @@ const AtividadesCrm = () => {
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <KpiCard label="Tentativas" value={totals.tentativas} />
-            <KpiCard label="Conectadas" value={totals.conectadas} />
+            <KpiCard label="Ligações" value={totals.ligacoes} />
             <KpiCard label="Reuniões agendadas" value={totals.reunioesAgendadas} />
             <KpiCard label="Reuniões realizadas" value={totals.reunioesRealizadas} />
             <KpiCard label="No-show" value={totals.noShow} />
@@ -100,6 +99,7 @@ const AtividadesCrm = () => {
             <KpiCard label="Ganhos" value={`${totals.fechamentosGanhos} · ${fmtPct(totals.winRate)}`} />
             <KpiCard label="Receita" value={fmtMoney(totals.receitaTotal)} />
           </div>
+
         )}
 
         <Tabs defaultValue="sdr" className="space-y-4">
