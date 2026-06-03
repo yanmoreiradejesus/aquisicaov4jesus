@@ -54,7 +54,10 @@ const AtividadesCrm = () => {
     return filters.userId === "all" ? rows : rows.filter((r) => r.userId === filters.userId);
   }, [data, filters.userId]);
 
-  const totals = useMemo(() => computeTotals(sdr, closers), [sdr, closers]);
+  const totals = useMemo(
+    () => computeTotals(sdr, closers, filters.userId === "all" ? data?.sdrTotals : undefined),
+    [sdr, closers, filters.userId, data?.sdrTotals],
+  );
 
   return (
     <div className="min-h-screen bg-background">
