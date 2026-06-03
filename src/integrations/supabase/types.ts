@@ -1231,6 +1231,17 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_sdr_activity_totals: {
+        Args: { p_end: string; p_pipe?: string; p_start: string }
+        Returns: {
+          conectadas: number
+          contato_realizado: number
+          no_show: number
+          reunioes_agendadas: number
+          reunioes_realizadas: number
+          tentativas: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
