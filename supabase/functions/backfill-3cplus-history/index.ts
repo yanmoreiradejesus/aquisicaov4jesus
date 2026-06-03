@@ -104,15 +104,14 @@ Deno.serve(async (req) => {
     if (a.operador_id) agentToUser.set(String(a.operador_id), a.user_id);
   }
 
-  // 3CPlus call history. Tentamos endpoint padrão de histórico.
-  // Filtra por data via query params; ajuste de nomes pode ser necessário.
-  const params = new URLSearchParams({
-    page: String(page),
-    per_page: String(perPage),
-    start_date: start,
-    end_date: end,
-  });
-  const apiUrl = `https://app.3c.plus/api/v1/calls?${params.toString()}`;
+  // 3CPlus call history. Permite override de endpoint e nomes de parâmetros via query.
+  const endpoint = url.searchParams.get("endpoint") ?? "/api/v1/calls";
+  const startParam = url.searchParams.get("start_param") ?? "start_date";
+  const endParam = url.searchParams.get("end_param") ?? "end_date";
+  const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
+  if (start) params.set(startParam, start);
+  if (end) params.set(endParam, end);
+  const apiUrl = `https://app.3c.plus${endpoint}?${params.toString()}`;
 
   const res = await fetch(apiUrl, {
     headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
