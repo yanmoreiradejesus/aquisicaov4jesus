@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { format, subDays } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, PhoneCall, Calendar, CheckCircle2, XCircle, Target, Trophy, DollarSign, TrendingUp } from "lucide-react";
 import { useCrmActivities } from "@/hooks/useCrmActivities";
 import { useProfilesList } from "@/hooks/useProfilesList";
 import {
@@ -12,15 +12,40 @@ import {
 } from "@/utils/atividadesCalculator";
 import { AtividadesFilters, type AtividadesFiltersValue } from "@/components/atividades/AtividadesFilters";
 import { SDRRankingTable, CloserRankingTable } from "@/components/atividades/RankingTables";
+import { SDRPerformanceChart } from "@/components/atividades/SDRPerformanceChart";
 
 const fmtPct = (v: number) => `${v.toFixed(1)}%`;
 const fmtMoney = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
-const KpiCard = ({ label, value }: { label: string; value: string | number }) => (
-  <div className="rounded-xl border border-border/50 bg-gradient-to-br from-card to-muted/5 p-4">
-    <div className="text-xs text-muted-foreground">{label}</div>
-    <div className="mt-1 text-2xl font-semibold text-foreground">{value}</div>
+const KpiCard = ({
+  label,
+  value,
+  hint,
+  icon: Icon,
+}: {
+  label: string;
+  value: string | number;
+  hint?: string;
+  icon: any;
+}) => (
+  <div className="rounded-xl border border-border/50 bg-gradient-to-br from-card to-muted/10 p-4 transition-colors hover:border-border">
+    <div className="flex items-start justify-between gap-2">
+      <div className="min-w-0">
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-xs font-medium text-muted-foreground">{label}</span>
+          {hint && (
+            <span className="text-[10px] font-normal text-muted-foreground/70">{hint}</span>
+          )}
+        </div>
+        <div className="mt-1 text-2xl font-semibold tracking-tight text-foreground truncate">
+          {value}
+        </div>
+      </div>
+      <div className="shrink-0 rounded-lg bg-primary/10 p-2 text-primary">
+        <Icon className="h-4 w-4" />
+      </div>
+    </div>
   </div>
 );
 
@@ -44,7 +69,9 @@ const AtividadesCrm = () => {
 
   const sdr = useMemo(() => {
     if (!data) return [];
-    const rows = computeSDRStats(data.sdrRows);
+    const rows = computeSDRStats(data.sdrRows)
+      // Exibe apenas SDRs com pelo menos 1 reunião agendada no período
+      .filter((r) => r.reunioesAgendadas >= 1);
     return filters.userId === "all" ? rows : rows.filter((r) => r.userId === filters.userId);
   }, [data, filters.userId]);
 
@@ -58,6 +85,9 @@ const AtividadesCrm = () => {
     () => computeTotals(sdr, closers, filters.userId === "all" ? data?.sdrTotals : undefined),
     [sdr, closers, filters.userId, data?.sdrTotals],
   );
+
+  const conversionRate =
+    totals.reunioesRealizadas > 0 ? (totals.conversoes / totals.reunioesRealizadas) * 100 : 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -86,20 +116,61 @@ const AtividadesCrm = () => {
         {isLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {Array.from({ length: 8 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 rounded-xl" />
+              <Skeleton key={i} className="h-24 rounded-xl" />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <KpiCard label="Ligações" value={totals.ligacoes} />
-            <KpiCard label="Reuniões agendadas" value={totals.reunioesAgendadas} />
-            <KpiCard label="Reuniões realizadas" value={totals.reunioesRealizadas} />
-            <KpiCard label="No-show" value={totals.noShow} />
-            <KpiCard label="Propostas" value={totals.propostas} />
-            <KpiCard label="Ganhos" value={`${totals.fechamentosGanhos} · ${fmtPct(totals.winRate)}`} />
-            <KpiCard label="Receita" value={fmtMoney(totals.receitaTotal)} />
-          </div>
+          <>
+            {/* Bloco SDR */}
+            <section className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="h-px flex-1 bg-border/60" />
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Topo do funil · SDR
+                </span>
+                <div className="h-px flex-1 bg-border/60" />
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <KpiCard label="Ligações" hint="(VoIP)" value={totals.ligacoes} icon={PhoneCall} />
+                <KpiCard label="Reuniões agendadas" value={totals.reunioesAgendadas} icon={Calendar} />
+                <KpiCard label="Reuniões realizadas" value={totals.reunioesRealizadas} icon={CheckCircle2} />
+                <KpiCard label="No-show" value={totals.noShow} icon={XCircle} />
+              </div>
+            </section>
 
+            {/* Bloco Closer */}
+            <section className="space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="h-px flex-1 bg-border/60" />
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Fundo do funil · Closer
+                </span>
+                <div className="h-px flex-1 bg-border/60" />
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <KpiCard label="Propostas" value={totals.propostas} icon={Target} />
+                <KpiCard
+                  label="Ganhos"
+                  value={`${totals.fechamentosGanhos} · ${fmtPct(totals.winRate)}`}
+                  icon={Trophy}
+                />
+                <KpiCard
+                  label="Conv. reuniões → ganho"
+                  value={fmtPct(conversionRate)}
+                  hint={`${totals.conversoes}/${totals.reunioesRealizadas}`}
+                  icon={TrendingUp}
+                />
+                <KpiCard label="Receita" value={fmtMoney(totals.receitaTotal)} icon={DollarSign} />
+              </div>
+            </section>
+          </>
+        )}
+
+        {/* Gráfico */}
+        {isLoading ? (
+          <Skeleton className="h-[320px] w-full rounded-xl" />
+        ) : (
+          <SDRPerformanceChart rows={sdr} profiles={profiles} />
         )}
 
         <Tabs defaultValue="sdr" className="space-y-4">
