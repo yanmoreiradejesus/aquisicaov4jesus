@@ -1,32 +1,49 @@
-# Corrigir contagem de Tentativas (e demais métricas) sem trazer linhas
+## O que está acontecendo
 
-## Diagnóstico
-A tela hoje busca até 10.000 linhas de `crm_call_events`, mas o PostgREST do Supabase tem teto de **1.000 linhas por requisição** — por isso "Tentativas" trava em ~1.000. No banco, o tenant atual tem **4.984 eventos** nos últimos 30 dias.
+A tela de Atividades mostra zero porque a base de fato não tem eventos da V4 Jesus em junho. O problema está na ingestão, não no ranking.
 
-Buscar todas as linhas só pra contar é desperdício. Como a tela só precisa de **números agregados** (tentativas, conectadas, reuniões, propostas etc.), o certo é agregar no banco e devolver apenas os totais por usuário.
+Volume de chamadas da V4 Jesus por dia/provedor (recorte recente):
 
-## Mudanças
+```text
+30/05  api4com    5
+29/05  api4com    1
+27/05  api4com    4
+22/05  3cplus   195
+21/05  3cplus  2262
+... (3CPlus operando normal até 22/05)
+31/05 em diante  ZERO em qualquer provedor
+```
 
-### 1. Migration — duas RPCs de agregação
-- `get_sdr_activity_stats(start_ts, end_ts, pipe)` → retorna por `user_id`: `tentativas`, `conectadas`, `contato_realizado`, `reunioes_agendadas`, `reunioes_realizadas`, `no_show`.
-  - `tentativas` = `count(*)` em `crm_call_events` do tenant no período, agrupado por `coalesce(user_id, voip_accounts.user_id via operador_id)`.
-  - `conectadas` = mesmo filtro com `duracao_seg >= 10`.
-  - Resto reaproveita a lógica atual de `crm_atividades` e `crm_leads`.
-  - `SECURITY DEFINER` + filtro por `current_tenant_id()` (mantém isolamento por tenant).
-- `get_closer_activity_stats(start_ts, end_ts, pipe)` → retorna por `user_id`: `reunioes_realizadas`, `propostas`, `followups`, `fechamentos_ganhos`, `fechamentos_perdidos`, `receita_total`.
-- `GRANT EXECUTE ... TO authenticated` em ambas.
+Observações importantes:
 
-### 2. `src/hooks/useCrmActivities.ts`
-- Trocar as 4 queries pesadas (`crm_call_events`, `crm_atividades`, `crm_leads`, `crm_oportunidades`) por duas chamadas `supabase.rpc(...)` que retornam apenas as linhas agregadas por usuário.
-- Manter `voip_accounts` (necessária só para nomes) e `profiles` (para exibir nome/avatar).
+- A V4 Jesus opera com dois discadores ao mesmo tempo: **3CPlus** e **API4com**. Os mesmos SDRs (João, Yan, Thiago) estão cadastrados nos dois em `voip_accounts`.
+- O 3CPlus simplesmente **parou de chegar** após 22/05.
+- O API4com ainda chegou esporadicamente até 30/05 e também parou.
+- O webhook do 3CPlus tem uma regra que **descarta silenciosamente** qualquer chamada cujo telefone não bata com um lead do CRM (`reason: "no_lead_match"`). Isso pode estar mascarando volume real mesmo quando o webhook chega.
+- Os logs do edge function não mostram chamadas recentes em `voip-webhook-3cplus`, reforçando que a 3CPlus não está mais postando para nós.
 
-### 3. `src/utils/atividadesCalculator.ts`
-- Simplificar: as funções `computeSDRStats` / `computeCloserStats` passam a apenas mapear o retorno da RPC para os tipos `SDRStats` / `CloserStats` e calcular taxas derivadas (`taxaConexao`, `showRate`, `winRate`, `ticketMedio`). Sem loops sobre linhas brutas.
+## Plano de investigação e correção
 
-### 4. Componentes (`AtividadesCrm.tsx`, `RankingTables.tsx`)
-- Nenhuma mudança visual. Continuam consumindo `SDRStats[]` / `CloserStats[]` e os totais agregados via `computeTotals`.
+1. **Confirmar do lado da 3CPlus que o webhook está ativo**
+   - Validar com o cliente/painel 3CPlus se o webhook aponta para `https://edctpsdcrivpxynfxpef.supabase.co/functions/v1/voip-webhook-3cplus` e está habilitado.
+   - Mesma verificação para API4com.
 
-## Benefícios
-- "Tentativas" passa a refletir o total real (milhares), sem limite.
-- Resposta muito menor (kilobytes vs megabytes) e tela carrega mais rápido.
-- Lógica de agregação centralizada no banco — uma única fonte da verdade.
+2. **Adicionar visibilidade no recebimento**
+   - Criar uma tabela leve `webhook_raw_events` (ou usar tabela já existente) para gravar **todo** payload bruto recebido pelos webhooks 3CPlus e API4com, antes de qualquer filtro, com timestamp e provedor. Assim conseguimos provar se o evento chegou ou não.
+   - Adicionar logs explícitos no início de cada webhook ("recebido / motivo de descarte").
+
+3. **Remover o descarte agressivo por lead match no 3CPlus**
+   - Hoje o webhook ignora qualquer chamada sem lead correspondente. Mudar para: **sempre gravar** o evento (com `lead_id = null` quando não houver match), preservando tenant via `voip_accounts`.
+   - Isso garante que a tela de Atividades conte tentativas reais mesmo de números fora do CRM.
+
+4. **Tela de teste/diagnóstico para admin**
+   - Pequeno painel em `/admin` mostrando, por provedor: último evento recebido, contagem por dia (últimos 14 dias) e total descartado por motivo (sem lead, sem tenant, etc.).
+
+5. **Backfill opcional**
+   - Se a 3CPlus tiver histórico via API, usar o endpoint deles para recuperar as chamadas perdidas de 23/05 até hoje e popular `crm_call_events`.
+
+## Decisões que preciso de você
+
+- Posso seguir alterando o webhook do 3CPlus para parar de descartar chamadas sem lead?
+- Quer que eu crie o painel de diagnóstico de webhooks dentro do `/admin`?
+- Você consegue confirmar no painel da 3CPlus se o webhook ainda está apontado para a URL atual?

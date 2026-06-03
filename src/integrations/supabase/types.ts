@@ -1192,6 +1192,48 @@ export type Database = {
           },
         ]
       }
+      webhook_raw_events: {
+        Row: {
+          created_at: string
+          headers: Json | null
+          id: string
+          payload: Json
+          processed: boolean
+          provider: string
+          resolved_lead_id: string | null
+          resolved_tenant_id: string | null
+          resolved_user_id: string | null
+          skip_reason: string | null
+          source_ip: string | null
+        }
+        Insert: {
+          created_at?: string
+          headers?: Json | null
+          id?: string
+          payload: Json
+          processed?: boolean
+          provider: string
+          resolved_lead_id?: string | null
+          resolved_tenant_id?: string | null
+          resolved_user_id?: string | null
+          skip_reason?: string | null
+          source_ip?: string | null
+        }
+        Update: {
+          created_at?: string
+          headers?: Json | null
+          id?: string
+          payload?: Json
+          processed?: boolean
+          provider?: string
+          resolved_lead_id?: string | null
+          resolved_tenant_id?: string | null
+          resolved_user_id?: string | null
+          skip_reason?: string | null
+          source_ip?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
