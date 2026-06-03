@@ -15,8 +15,13 @@ export function useCrmActivities({ startISO, endISO, pipe = "all" }: ActivitiesP
   return useQuery({
     queryKey: ["crm_activities", startISO, endISO, pipe],
     queryFn: async () => {
-      const [sdrRes, closerRes] = await Promise.all([
+      const [sdrRes, sdrTotalsRes, closerRes] = await Promise.all([
         supabase.rpc("get_sdr_activity_stats" as any, {
+          p_start: startISO,
+          p_end: endISO,
+          p_pipe: pipe,
+        }),
+        supabase.rpc("get_sdr_activity_totals" as any, {
           p_start: startISO,
           p_end: endISO,
           p_pipe: pipe,
@@ -29,9 +34,20 @@ export function useCrmActivities({ startISO, endISO, pipe = "all" }: ActivitiesP
       ]);
 
       if (sdrRes.error) throw sdrRes.error;
+      if (sdrTotalsRes.error) throw sdrTotalsRes.error;
       if (closerRes.error) throw closerRes.error;
 
+      const sdrTotals = ((sdrTotalsRes.data ?? []) as Array<{
+        tentativas: number;
+        conectadas: number;
+        contato_realizado: number;
+        reunioes_agendadas: number;
+        reunioes_realizadas: number;
+        no_show: number;
+      }>)[0];
+
       return {
+        sdrTotals,
         sdrRows: (sdrRes.data ?? []) as Array<{
           user_id: string;
           tentativas: number;
