@@ -242,8 +242,8 @@ Deno.serve(async (req) => {
         .from("voip_accounts")
         .select("user_id, tenant_id")
         .eq("provider", "3cplus")
-        .eq("operador_id", parsed.operador)
         .eq("ativo", true)
+        .or(`agent_id.eq.${parsed.operador},operador_id.eq.${parsed.operador}`)
         .maybeSingle();
       if (acc?.user_id) userId = acc.user_id;
       if (acc?.tenant_id) tenantId = acc.tenant_id;
