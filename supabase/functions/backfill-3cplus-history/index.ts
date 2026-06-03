@@ -93,8 +93,11 @@ Deno.serve(async (req) => {
   }
 
   const url = new URL(req.url);
-  const start = url.searchParams.get("start") ?? "2026-05-23";
-  const end = url.searchParams.get("end") ?? new Date().toISOString().slice(0, 10);
+  const startRaw = url.searchParams.get("start") ?? "2026-05-23";
+  const endRaw = url.searchParams.get("end") ?? new Date().toISOString().slice(0, 10);
+  // 3CPlus exige "YYYY-MM-DD HH:MM:SS"
+  const start = /\d{2}:\d{2}:\d{2}$/.test(startRaw) ? startRaw : `${startRaw} 00:00:00`;
+  const end = /\d{2}:\d{2}:\d{2}$/.test(endRaw) ? endRaw : `${endRaw} 23:59:59`;
   const page = parseInt(url.searchParams.get("page") ?? "1", 10);
   const perPage = Math.min(parseInt(url.searchParams.get("per_page") ?? "100", 10), 200);
   const tenantSlug = url.searchParams.get("tenant") ?? "jesus";
