@@ -29,9 +29,7 @@ export const SDRRankingTable = ({ rows, profiles, onRowClick }: Props<SDRStats>)
       <TableHeader>
         <TableRow>
           <TableHead>SDR</TableHead>
-          <TableHead className="text-right">Tentativas</TableHead>
-          <TableHead className="text-right">Conectadas</TableHead>
-          <TableHead className="text-right">Conexão</TableHead>
+          <TableHead className="text-right">Ligações</TableHead>
           <TableHead className="text-right">Contato Real.</TableHead>
           <TableHead className="text-right">Reun. Agend.</TableHead>
           <TableHead className="text-right">Reun. Real.</TableHead>
@@ -42,7 +40,7 @@ export const SDRRankingTable = ({ rows, profiles, onRowClick }: Props<SDRStats>)
       <TableBody>
         {rows.length === 0 && (
           <TableRow>
-            <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+            <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
               Sem atividades no período.
             </TableCell>
           </TableRow>
@@ -54,9 +52,7 @@ export const SDRRankingTable = ({ rows, profiles, onRowClick }: Props<SDRStats>)
             onClick={() => onRowClick?.(r.userId)}
           >
             <TableCell className="font-medium">{nameOf(r.userId, profiles)}</TableCell>
-            <TableCell className="text-right">{r.tentativas}</TableCell>
-            <TableCell className="text-right">{r.conectadas}</TableCell>
-            <TableCell className="text-right">{fmtPct(r.taxaConexao)}</TableCell>
+            <TableCell className="text-right">{r.ligacoes}</TableCell>
             <TableCell className="text-right">{r.contatoRealizado}</TableCell>
             <TableCell className="text-right">{r.reunioesAgendadas}</TableCell>
             <TableCell className="text-right">{r.reunioesRealizadas}</TableCell>
@@ -65,6 +61,7 @@ export const SDRRankingTable = ({ rows, profiles, onRowClick }: Props<SDRStats>)
           </TableRow>
         ))}
       </TableBody>
+
     </Table>
   </div>
 );

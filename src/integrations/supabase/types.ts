@@ -1264,24 +1264,22 @@ export type Database = {
       get_sdr_activity_stats: {
         Args: { p_end: string; p_pipe?: string; p_start: string }
         Returns: {
-          conectadas: number
           contato_realizado: number
+          ligacoes: number
           no_show: number
           reunioes_agendadas: number
           reunioes_realizadas: number
-          tentativas: number
           user_id: string
         }[]
       }
       get_sdr_activity_totals: {
         Args: { p_end: string; p_pipe?: string; p_start: string }
         Returns: {
-          conectadas: number
           contato_realizado: number
+          ligacoes: number
           no_show: number
           reunioes_agendadas: number
           reunioes_realizadas: number
-          tentativas: number
         }[]
       }
       has_role: {

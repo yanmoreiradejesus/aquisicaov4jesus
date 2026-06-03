@@ -2,9 +2,7 @@
 
 export interface SDRStats {
   userId: string;
-  tentativas: number;
-  conectadas: number;
-  taxaConexao: number;
+  ligacoes: number;
   contatoRealizado: number;
   reunioesAgendadas: number;
   reunioesRealizadas: number;
@@ -26,8 +24,7 @@ export interface CloserStats {
 
 export interface SDRRow {
   user_id: string;
-  tentativas: number;
-  conectadas: number;
+  ligacoes: number;
   contato_realizado: number;
   reunioes_agendadas: number;
   reunioes_realizadas: number;
@@ -45,8 +42,7 @@ export interface CloserRow {
 }
 
 export interface SDRTotalsRow {
-  tentativas: number;
-  conectadas: number;
+  ligacoes: number;
   contato_realizado: number;
   reunioes_agendadas: number;
   reunioes_realizadas: number;
@@ -56,16 +52,12 @@ export interface SDRTotalsRow {
 export function computeSDRStats(rows: SDRRow[]): SDRStats[] {
   return rows
     .map((r) => {
-      const tentativas = Number(r.tentativas) || 0;
-      const conectadas = Number(r.conectadas) || 0;
       const reunioesRealizadas = Number(r.reunioes_realizadas) || 0;
       const noShow = Number(r.no_show) || 0;
       const denom = reunioesRealizadas + noShow;
       return {
         userId: r.user_id,
-        tentativas,
-        conectadas,
-        taxaConexao: tentativas > 0 ? (conectadas / tentativas) * 100 : 0,
+        ligacoes: Number(r.ligacoes) || 0,
         contatoRealizado: Number(r.contato_realizado) || 0,
         reunioesAgendadas: Number(r.reunioes_agendadas) || 0,
         reunioesRealizadas,
@@ -73,7 +65,7 @@ export function computeSDRStats(rows: SDRRow[]): SDRStats[] {
         showRate: denom > 0 ? (reunioesRealizadas / denom) * 100 : 0,
       };
     })
-    .sort((a, b) => b.tentativas - a.tentativas);
+    .sort((a, b) => b.ligacoes - a.ligacoes);
 }
 
 export function computeCloserStats(rows: CloserRow[]): CloserStats[] {
@@ -99,8 +91,7 @@ export function computeCloserStats(rows: CloserRow[]): CloserStats[] {
 }
 
 export interface PeriodTotals {
-  tentativas: number;
-  conectadas: number;
+  ligacoes: number;
   reunioesAgendadas: number;
   reunioesRealizadas: number;
   noShow: number;
@@ -113,20 +104,18 @@ export interface PeriodTotals {
 
 export function computeTotals(sdr: SDRStats[], closer: CloserStats[], sdrTotals?: SDRTotalsRow): PeriodTotals {
   const t: PeriodTotals = {
-    tentativas: 0, conectadas: 0, reunioesAgendadas: 0, reunioesRealizadas: 0, noShow: 0,
+    ligacoes: 0, reunioesAgendadas: 0, reunioesRealizadas: 0, noShow: 0,
     propostas: 0, fechamentosGanhos: 0, winRate: 0, ticketMedio: 0, receitaTotal: 0,
   };
   let perdidos = 0;
   if (sdrTotals) {
-    t.tentativas = Number(sdrTotals.tentativas) || 0;
-    t.conectadas = Number(sdrTotals.conectadas) || 0;
+    t.ligacoes = Number(sdrTotals.ligacoes) || 0;
     t.reunioesAgendadas = Number(sdrTotals.reunioes_agendadas) || 0;
     t.reunioesRealizadas = Number(sdrTotals.reunioes_realizadas) || 0;
     t.noShow = Number(sdrTotals.no_show) || 0;
   } else {
     sdr.forEach((s) => {
-      t.tentativas += s.tentativas;
-      t.conectadas += s.conectadas;
+      t.ligacoes += s.ligacoes;
       t.reunioesAgendadas += s.reunioesAgendadas;
       t.reunioesRealizadas += s.reunioesRealizadas;
       t.noShow += s.noShow;
