@@ -230,6 +230,45 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
+  // 1) Auditoria: grava SEMPRE o payload bruto antes de qualquer filtro
+  const sourceIp =
+    req.headers.get("x-forwarded-for") ??
+    req.headers.get("cf-connecting-ip") ??
+    null;
+  const headersObj: Record<string, string> = {};
+  req.headers.forEach((v, k) => {
+    if (!/authorization|apikey|cookie/i.test(k)) headersObj[k] = v;
+  });
+
+  let rawEventId: string | null = null;
+  try {
+    const { data: raw } = await supabase
+      .from("webhook_raw_events")
+      .insert({ provider: "3cplus", source_ip: sourceIp, headers: headersObj, payload })
+      .select("id")
+      .single();
+    rawEventId = raw?.id ?? null;
+  } catch (e) {
+    console.warn("[3cplus] failed to insert webhook_raw_events:", e);
+  }
+
+  const markRaw = async (
+    skipReason: string | null,
+    extra: { tenant?: string | null; lead?: string | null; user?: string | null } = {},
+  ) => {
+    if (!rawEventId) return;
+    await supabase
+      .from("webhook_raw_events")
+      .update({
+        processed: skipReason === null,
+        skip_reason: skipReason,
+        resolved_tenant_id: extra.tenant ?? null,
+        resolved_lead_id: extra.lead ?? null,
+        resolved_user_id: extra.user ?? null,
+      })
+      .eq("id", rawEventId);
+  };
+
   try {
     const { eventType, data } = extract3CPlusEvent(payload);
     const parsed = buildCallEventRow(eventType, data, payload);
@@ -252,6 +291,7 @@ Deno.serve(async (req) => {
     if (!tenantId) {
       console.warn("[3cplus] operador sem voip_account vinculado:", parsed.operador,
         "— evento descartado (sem tenant resolvível)");
+      await markRaw("no_voip_account", { user: userId });
       return new Response(
         JSON.stringify({ ok: true, skipped: true, reason: "no_voip_account", operador: parsed.operador }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -259,6 +299,8 @@ Deno.serve(async (req) => {
     }
 
     // Lookup do lead pelo telefone, ESCOPADO ao tenant do operador.
+    // IMPORTANTE: não descartamos mais a chamada quando não há lead match —
+    // gravamos o evento com lead_id = null para preservar a contagem real de tentativas.
     let leadId: string | null = null;
     if (parsed.telefoneNorm) {
       const last10 = parsed.telefoneNorm.slice(-10);
@@ -277,15 +319,6 @@ Deno.serve(async (req) => {
         const partial = leads.find((l: any) => normalizePhone(l.telefone).endsWith(last8));
         leadId = (exact ?? partial)?.id ?? null;
       }
-    }
-
-    // Política: descartar chamadas que não correspondem a nenhum lead do CRM.
-    if (!leadId) {
-      console.log("[3cplus] descartado — sem lead match:", parsed.telefoneNorm);
-      return new Response(
-        JSON.stringify({ ok: true, skipped: true, reason: "no_lead_match" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
     }
 
     // Se a chamada foi gravada e ainda não temos URL, tenta buscar via API da 3CPlus
@@ -354,6 +387,7 @@ Deno.serve(async (req) => {
 
     if (upsertErr) {
       console.error("[3cplus] upsert error:", upsertErr);
+      await markRaw("upsert_error", { tenant: tenantId, lead: leadId, user: userId });
       return new Response(JSON.stringify({ ok: false, error: upsertErr.message }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -367,12 +401,21 @@ Deno.serve(async (req) => {
         .eq("id", leadId);
     }
 
+    // Marca o raw event como processado. Se não houve match de lead, anota como
+    // processado mas com skip_reason informativo (chamada foi salva, mas sem lead).
+    await markRaw(leadId ? null : "saved_without_lead_match", {
+      tenant: tenantId,
+      lead: leadId,
+      user: userId,
+    });
+
     return new Response(
       JSON.stringify({ ok: true, lead_id: leadId, event_type: parsed.eventType }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
     console.error("[3cplus] unexpected error:", e);
+    await markRaw("unexpected_error");
     return new Response(JSON.stringify({ ok: false, error: String(e) }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
