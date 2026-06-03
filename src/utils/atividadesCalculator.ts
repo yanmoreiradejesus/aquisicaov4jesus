@@ -44,6 +44,15 @@ export interface CloserRow {
   receita_total: number;
 }
 
+export interface SDRTotalsRow {
+  tentativas: number;
+  conectadas: number;
+  contato_realizado: number;
+  reunioes_agendadas: number;
+  reunioes_realizadas: number;
+  no_show: number;
+}
+
 export function computeSDRStats(rows: SDRRow[]): SDRStats[] {
   return rows
     .map((r) => {
@@ -102,19 +111,27 @@ export interface PeriodTotals {
   receitaTotal: number;
 }
 
-export function computeTotals(sdr: SDRStats[], closer: CloserStats[]): PeriodTotals {
+export function computeTotals(sdr: SDRStats[], closer: CloserStats[], sdrTotals?: SDRTotalsRow): PeriodTotals {
   const t: PeriodTotals = {
     tentativas: 0, conectadas: 0, reunioesAgendadas: 0, reunioesRealizadas: 0, noShow: 0,
     propostas: 0, fechamentosGanhos: 0, winRate: 0, ticketMedio: 0, receitaTotal: 0,
   };
   let perdidos = 0;
-  sdr.forEach((s) => {
-    t.tentativas += s.tentativas;
-    t.conectadas += s.conectadas;
-    t.reunioesAgendadas += s.reunioesAgendadas;
-    t.reunioesRealizadas += s.reunioesRealizadas;
-    t.noShow += s.noShow;
-  });
+  if (sdrTotals) {
+    t.tentativas = Number(sdrTotals.tentativas) || 0;
+    t.conectadas = Number(sdrTotals.conectadas) || 0;
+    t.reunioesAgendadas = Number(sdrTotals.reunioes_agendadas) || 0;
+    t.reunioesRealizadas = Number(sdrTotals.reunioes_realizadas) || 0;
+    t.noShow = Number(sdrTotals.no_show) || 0;
+  } else {
+    sdr.forEach((s) => {
+      t.tentativas += s.tentativas;
+      t.conectadas += s.conectadas;
+      t.reunioesAgendadas += s.reunioesAgendadas;
+      t.reunioesRealizadas += s.reunioesRealizadas;
+      t.noShow += s.noShow;
+    });
+  }
   closer.forEach((c) => {
     t.propostas += c.propostas;
     t.fechamentosGanhos += c.fechamentosGanhos;
