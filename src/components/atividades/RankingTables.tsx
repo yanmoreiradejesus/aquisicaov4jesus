@@ -29,18 +29,21 @@ export const SDRRankingTable = ({ rows, profiles, onRowClick }: Props<SDRStats>)
       <TableHeader>
         <TableRow>
           <TableHead>SDR</TableHead>
-          <TableHead className="text-right">Ligações</TableHead>
+          <TableHead className="text-right">
+            Ligações <span className="text-[10px] font-normal text-muted-foreground/70">(VoIP)</span>
+          </TableHead>
           <TableHead className="text-right">Contato Real.</TableHead>
           <TableHead className="text-right">Reun. Agend.</TableHead>
           <TableHead className="text-right">Reun. Real.</TableHead>
           <TableHead className="text-right">No-Show</TableHead>
           <TableHead className="text-right">Show Rate</TableHead>
+          <TableHead className="text-right">Conv. Rate</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {rows.length === 0 && (
           <TableRow>
-            <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+            <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
               Sem atividades no período.
             </TableCell>
           </TableRow>
@@ -58,6 +61,7 @@ export const SDRRankingTable = ({ rows, profiles, onRowClick }: Props<SDRStats>)
             <TableCell className="text-right">{r.reunioesRealizadas}</TableCell>
             <TableCell className="text-right">{r.noShow}</TableCell>
             <TableCell className="text-right">{fmtPct(r.showRate)}</TableCell>
+            <TableCell className="text-right">{fmtPct(r.conversionRate)}</TableCell>
           </TableRow>
         ))}
       </TableBody>

@@ -7,7 +7,9 @@ export interface SDRStats {
   reunioesAgendadas: number;
   reunioesRealizadas: number;
   noShow: number;
+  conversoes: number;
   showRate: number;
+  conversionRate: number;
 }
 
 export interface CloserStats {
@@ -29,6 +31,7 @@ export interface SDRRow {
   reunioes_agendadas: number;
   reunioes_realizadas: number;
   no_show: number;
+  conversoes: number;
 }
 
 export interface CloserRow {
@@ -47,6 +50,7 @@ export interface SDRTotalsRow {
   reunioes_agendadas: number;
   reunioes_realizadas: number;
   no_show: number;
+  conversoes: number;
 }
 
 export function computeSDRStats(rows: SDRRow[]): SDRStats[] {
@@ -54,7 +58,8 @@ export function computeSDRStats(rows: SDRRow[]): SDRStats[] {
     .map((r) => {
       const reunioesRealizadas = Number(r.reunioes_realizadas) || 0;
       const noShow = Number(r.no_show) || 0;
-      const denom = reunioesRealizadas + noShow;
+      const conversoes = Number(r.conversoes) || 0;
+      const showDenom = reunioesRealizadas + noShow;
       return {
         userId: r.user_id,
         ligacoes: Number(r.ligacoes) || 0,
@@ -62,7 +67,9 @@ export function computeSDRStats(rows: SDRRow[]): SDRStats[] {
         reunioesAgendadas: Number(r.reunioes_agendadas) || 0,
         reunioesRealizadas,
         noShow,
-        showRate: denom > 0 ? (reunioesRealizadas / denom) * 100 : 0,
+        conversoes,
+        showRate: showDenom > 0 ? (reunioesRealizadas / showDenom) * 100 : 0,
+        conversionRate: reunioesRealizadas > 0 ? (conversoes / reunioesRealizadas) * 100 : 0,
       };
     })
     .sort((a, b) => b.ligacoes - a.ligacoes);
@@ -95,6 +102,7 @@ export interface PeriodTotals {
   reunioesAgendadas: number;
   reunioesRealizadas: number;
   noShow: number;
+  conversoes: number;
   propostas: number;
   fechamentosGanhos: number;
   winRate: number;
@@ -104,7 +112,7 @@ export interface PeriodTotals {
 
 export function computeTotals(sdr: SDRStats[], closer: CloserStats[], sdrTotals?: SDRTotalsRow): PeriodTotals {
   const t: PeriodTotals = {
-    ligacoes: 0, reunioesAgendadas: 0, reunioesRealizadas: 0, noShow: 0,
+    ligacoes: 0, reunioesAgendadas: 0, reunioesRealizadas: 0, noShow: 0, conversoes: 0,
     propostas: 0, fechamentosGanhos: 0, winRate: 0, ticketMedio: 0, receitaTotal: 0,
   };
   let perdidos = 0;
@@ -113,12 +121,14 @@ export function computeTotals(sdr: SDRStats[], closer: CloserStats[], sdrTotals?
     t.reunioesAgendadas = Number(sdrTotals.reunioes_agendadas) || 0;
     t.reunioesRealizadas = Number(sdrTotals.reunioes_realizadas) || 0;
     t.noShow = Number(sdrTotals.no_show) || 0;
+    t.conversoes = Number(sdrTotals.conversoes) || 0;
   } else {
     sdr.forEach((s) => {
       t.ligacoes += s.ligacoes;
       t.reunioesAgendadas += s.reunioesAgendadas;
       t.reunioesRealizadas += s.reunioesRealizadas;
       t.noShow += s.noShow;
+      t.conversoes += s.conversoes;
     });
   }
   closer.forEach((c) => {
