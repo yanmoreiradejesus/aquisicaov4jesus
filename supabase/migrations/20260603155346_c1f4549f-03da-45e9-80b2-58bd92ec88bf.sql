@@ -1,0 +1,2 @@
+ALTER TABLE public.crm_call_events
+DROP CONSTRAINT IF EXISTS crm_call_events_3cplus_requires_lead;
