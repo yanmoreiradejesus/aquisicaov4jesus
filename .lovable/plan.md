@@ -1,49 +1,39 @@
-## O que está acontecendo
+## Objetivo
+Simplificar a visão de telefonia no `/aquisicao/atividades`: remover as colunas/KPIs **Tentativas** e **Conectadas** (e a **Taxa de Conexão**) e substituir por uma única métrica **Ligações** — contagem bruta de chamadas no período, sem filtro de duração.
 
-A tela de Atividades mostra zero porque a base de fato não tem eventos da V4 Jesus em junho. O problema está na ingestão, não no ranking.
+## Mudanças
 
-Volume de chamadas da V4 Jesus por dia/provedor (recorte recente):
+### 1. Backend — RPCs
+Atualizar duas funções para devolver `ligacoes` no lugar de `tentativas` / `conectadas`:
 
-```text
-30/05  api4com    5
-29/05  api4com    1
-27/05  api4com    4
-22/05  3cplus   195
-21/05  3cplus  2262
-... (3CPlus operando normal até 22/05)
-31/05 em diante  ZERO em qualquer provedor
-```
+- `get_sdr_activity_stats(p_start, p_end, p_pipe)` — passa a retornar `user_id, ligacoes, contato_realizado, reunioes_agendadas, reunioes_realizadas, no_show`. `ligacoes` = `COUNT(*)` de `crm_call_events` do SDR no período, sem filtro de `duracao_seg`.
+- `get_sdr_activity_totals(p_start, p_end, p_pipe)` — mesmo ajuste no agregado total (inclui as ligações sem `user_id` resolvido, já que agora só importa volume bruto da operação).
 
-Observações importantes:
+Sem mudar `get_closer_activity_stats`.
 
-- A V4 Jesus opera com dois discadores ao mesmo tempo: **3CPlus** e **API4com**. Os mesmos SDRs (João, Yan, Thiago) estão cadastrados nos dois em `voip_accounts`.
-- O 3CPlus simplesmente **parou de chegar** após 22/05.
-- O API4com ainda chegou esporadicamente até 30/05 e também parou.
-- O webhook do 3CPlus tem uma regra que **descarta silenciosamente** qualquer chamada cujo telefone não bata com um lead do CRM (`reason: "no_lead_match"`). Isso pode estar mascarando volume real mesmo quando o webhook chega.
-- Os logs do edge function não mostram chamadas recentes em `voip-webhook-3cplus`, reforçando que a 3CPlus não está mais postando para nós.
+### 2. Frontend — tipos e cálculo
+`src/utils/atividadesCalculator.ts`:
+- `SDRRow` / `SDRTotalsRow`: trocar `tentativas` e `conectadas` por `ligacoes`.
+- `SDRStats`: remover `tentativas`, `conectadas`, `taxaConexao`; adicionar `ligacoes`.
+- `PeriodTotals`: remover `tentativas`, `conectadas`; adicionar `ligacoes`.
+- Ordenação do ranking SDR passa a ser por `ligacoes` desc.
 
-## Plano de investigação e correção
+`src/hooks/useCrmActivities.ts`: atualizar o shape do retorno (`ligacoes` no lugar dos dois campos).
 
-1. **Confirmar do lado da 3CPlus que o webhook está ativo**
-   - Validar com o cliente/painel 3CPlus se o webhook aponta para `https://edctpsdcrivpxynfxpef.supabase.co/functions/v1/voip-webhook-3cplus` e está habilitado.
-   - Mesma verificação para API4com.
+### 3. UI
+`src/pages/AtividadesCrm.tsx`:
+- Substituir os dois KPI cards **Tentativas** e **Conectadas** por um único card **Ligações**.
 
-2. **Adicionar visibilidade no recebimento**
-   - Criar uma tabela leve `webhook_raw_events` (ou usar tabela já existente) para gravar **todo** payload bruto recebido pelos webhooks 3CPlus e API4com, antes de qualquer filtro, com timestamp e provedor. Assim conseguimos provar se o evento chegou ou não.
-   - Adicionar logs explícitos no início de cada webhook ("recebido / motivo de descarte").
+`src/components/atividades/RankingTables.tsx` (`SDRRankingTable`):
+- Remover colunas **Tentativas**, **Conectadas**, **Conexão**.
+- Adicionar coluna **Ligações** (primeira coluna numérica).
+- `colSpan` do estado vazio de 9 para 7.
 
-3. **Remover o descarte agressivo por lead match no 3CPlus**
-   - Hoje o webhook ignora qualquer chamada sem lead correspondente. Mudar para: **sempre gravar** o evento (com `lead_id = null` quando não houver match), preservando tenant via `voip_accounts`.
-   - Isso garante que a tela de Atividades conte tentativas reais mesmo de números fora do CRM.
+### Fora de escopo
+- Bloco separado de "Discador automático" (descartado — métrica única já basta).
+- Mudanças no webhook, ingestão, transcrição ou ranking de closer.
+- Renomear/alterar coluna "Contato realizado".
 
-4. **Tela de teste/diagnóstico para admin**
-   - Pequeno painel em `/admin` mostrando, por provedor: último evento recebido, contagem por dia (últimos 14 dias) e total descartado por motivo (sem lead, sem tenant, etc.).
-
-5. **Backfill opcional**
-   - Se a 3CPlus tiver histórico via API, usar o endpoint deles para recuperar as chamadas perdidas de 23/05 até hoje e popular `crm_call_events`.
-
-## Decisões que preciso de você
-
-- Posso seguir alterando o webhook do 3CPlus para parar de descartar chamadas sem lead?
-- Quer que eu crie o painel de diagnóstico de webhooks dentro do `/admin`?
-- Você consegue confirmar no painel da 3CPlus se o webhook ainda está apontado para a URL atual?
+## Resultado esperado
+- "Ligações" passa a refletir o volume bruto real (ex.: ~7.184 no período do V4 Jesus desde 23/05), independente de o 3CPlus ter resolvido o SDR ou de duração.
+- Ranking SDR mostra ligações atribuíveis a cada SDR; total geral inclui também o discador automático.
