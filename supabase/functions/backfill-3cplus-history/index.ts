@@ -154,7 +154,8 @@ Deno.serve(async (req) => {
 
   if (debug) {
     return new Response(JSON.stringify({
-      apiUrl, total, lastPage, sample: calls.slice(0, 2), keys: Object.keys(body ?? {}),
+      apiUrl, total, lastPage, meta: body?.meta ?? null,
+      sample: calls.slice(0, 1), keys: Object.keys(body ?? {}),
     }, null, 2), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
