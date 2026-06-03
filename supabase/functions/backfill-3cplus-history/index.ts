@@ -127,54 +127,67 @@ Deno.serve(async (req) => {
   const endpoint = url.searchParams.get("endpoint") ?? "/api/v1/calls";
   const startParam = url.searchParams.get("start_param") ?? "start_date";
   const endParam = url.searchParams.get("end_param") ?? "end_date";
-  const params = new URLSearchParams({ page: String(page), per_page: String(perPage) });
-  if (start) params.set(startParam, start);
-  if (end) params.set(endParam, end);
-  const apiUrl = `https://app.3c.plus${endpoint}?${params.toString()}`;
+  const maxPages = Math.min(parseInt(url.searchParams.get("max_pages") ?? "1", 10), 50);
 
-  const res = await fetch(apiUrl, {
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-  });
-  const bodyText = await res.text();
-  if (!res.ok) {
-    return new Response(JSON.stringify({
-      error: "3CPlus API error", status: res.status, url: apiUrl,
-      body: bodyText.slice(0, 500),
-    }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  async function fetchPage(p: number) {
+    const params = new URLSearchParams({ page: String(p), per_page: String(perPage) });
+    if (start) params.set(startParam, start);
+    if (end) params.set(endParam, end);
+    const apiUrl = `https://app.3c.plus${endpoint}?${params.toString()}`;
+    const res = await fetch(apiUrl, {
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    });
+    const bodyText = await res.text();
+    if (!res.ok) throw new Error(`3CPlus ${res.status}: ${bodyText.slice(0, 200)}`);
+    return { body: JSON.parse(bodyText), apiUrl };
   }
 
-  let body: any;
-  try { body = JSON.parse(bodyText); }
-  catch { return new Response(JSON.stringify({ error: "invalid JSON", body: bodyText.slice(0,500) }),
-    { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }); }
-
-  const calls: any[] = body?.data ?? body?.calls ?? body?.items ?? (Array.isArray(body) ? body : []);
-  const total = body?.total ?? body?.meta?.total ?? null;
-  const lastPage = body?.last_page ?? body?.meta?.last_page ?? null;
-
-  if (debug) {
-    return new Response(JSON.stringify({
-      apiUrl, total, lastPage, meta: body?.meta ?? null,
-      sample: calls.slice(0, 1), keys: Object.keys(body ?? {}),
-    }, null, 2), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  }
-
-  let inserted = 0, updated = 0, skipped = 0, linked = 0;
+  let totalInserted = 0, totalUpdated = 0, totalSkipped = 0, totalFetched = 0;
   const errors: any[] = [];
+  let totalPages: number | null = null;
+  let totalCalls: number | null = null;
+  let firstApiUrl = "";
+  let processedPages = 0;
+  let lastPageProcessed = page - 1;
 
-  for (const c of calls) {
-    try {
+  for (let p = page; p < page + maxPages; p++) {
+    let body: any, apiUrl: string;
+    try { ({ body, apiUrl } = await fetchPage(p)); }
+    catch (e) {
+      errors.push({ page: p, error: String(e) });
+      break;
+    }
+    if (!firstApiUrl) firstApiUrl = apiUrl;
+
+    const calls: any[] = body?.data ?? body?.calls ?? body?.items ?? [];
+    const meta = body?.meta?.pagination ?? body?.meta ?? {};
+    totalPages = meta?.total_pages ?? meta?.last_page ?? totalPages;
+    totalCalls = meta?.total ?? totalCalls;
+
+    if (debug) {
+      return new Response(JSON.stringify({
+        apiUrl, totalPages, totalCalls, meta: body?.meta ?? null,
+        sample: calls.slice(0, 1), keys: Object.keys(body ?? {}),
+      }, null, 2), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    totalFetched += calls.length;
+    processedPages++;
+    lastPageProcessed = p;
+
+    // Monta linhas
+    const rows: any[] = [];
+    for (const c of calls) {
       const callId = (pick<string | number>(c, [
         "id", "_id", "telephony_id", "call_id", "uuid",
       ]))?.toString();
-      if (!callId) { skipped++; continue; }
+      if (!callId) { totalSkipped++; continue; }
 
       const telefoneRaw = (pick<string | number>(c, [
         "number", "phone", "mailing_data.phone",
       ]))?.toString() ?? null;
       const telefoneNorm = normalizePhone(telefoneRaw);
 
-      // agent: pode ser objeto {id,name} ou string "-" + agent_id no nível raiz
       const agentIdNum = pick<number>(c, ["agent_id", "agent.id"]);
       const agentName = typeof c?.agent === "string" && c.agent !== "-" ? c.agent
         : pick<string>(c, ["agent.name"]) ?? null;
@@ -195,20 +208,9 @@ Deno.serve(async (req) => {
       const createdAt = toIso(pick<string>(c, [
         "call_date_rfc3339", "call_date", "created_at",
       ]) ?? null) ?? new Date().toISOString();
-
-      // Lead lookup
-      let leadId: string | null = null;
-      if (telefoneNorm) {
-        const last10 = telefoneNorm.slice(-10);
-        const { data: leads } = await supabase
-          .from("crm_leads").select("id").eq("tenant_id", tenantId)
-          .ilike("telefone", `%${last10}%`).limit(1);
-        if (leads && leads.length > 0) { leadId = leads[0].id; linked++; }
-      }
-
       const userId = operador ? agentToUser.get(operador) ?? null : null;
 
-      const row = {
+      rows.push({
         provider: "3cplus",
         event_type: "call-history-was-created",
         call_id: callId,
@@ -220,26 +222,43 @@ Deno.serve(async (req) => {
         gravacao_url: gravacao,
         raw_payload: c,
         created_at: createdAt,
-        lead_id: leadId,
+        lead_id: null, // será preenchido posteriormente por link-3cplus-calls-to-lead
         user_id: userId,
         tenant_id: tenantId,
-      };
+      });
+    }
 
+    // Upsert em lote por página
+    if (rows.length > 0) {
       const { error, data } = await supabase
         .from("crm_call_events")
-        .upsert(row, { onConflict: "provider,call_id", ignoreDuplicates: false })
+        .upsert(rows, { onConflict: "provider,call_id", ignoreDuplicates: false })
         .select("id");
-      if (error) errors.push({ callId, error: error.message });
-      else if (data && data.length > 0) inserted++;
-      else updated++;
-    } catch (e) {
-      errors.push({ error: String(e) });
+      if (error) {
+        errors.push({ page: p, error: error.message });
+      } else {
+        // upsert não distingue insert vs update; somamos como "afetados"
+        totalInserted += data?.length ?? rows.length;
+      }
     }
+
+    if (totalPages && p >= totalPages) break;
+    if (calls.length === 0) break;
   }
 
   return new Response(JSON.stringify({
-    ok: true, page, perPage, fetched: calls.length, total, lastPage,
-    inserted, updated, skipped, linked, errors: errors.slice(0, 10),
-    nextPage: lastPage && page < lastPage ? page + 1 : null,
+    ok: true,
+    range: { start, end },
+    perPage,
+    pagesProcessed: processedPages,
+    lastPage: lastPageProcessed,
+    totalPages,
+    totalCalls,
+    fetched: totalFetched,
+    upserted: totalInserted,
+    skipped: totalSkipped,
+    errors: errors.slice(0, 10),
+    nextPage: totalPages && lastPageProcessed < totalPages ? lastPageProcessed + 1 : null,
+    firstApiUrl,
   }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 });
