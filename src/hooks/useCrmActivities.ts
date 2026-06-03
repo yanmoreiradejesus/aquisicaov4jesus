@@ -43,6 +43,7 @@ export function useCrmActivities({ startISO, endISO, pipe = "all" }: ActivitiesP
         reunioes_agendadas: number;
         reunioes_realizadas: number;
         no_show: number;
+        conversoes: number;
       }>)[0];
 
       return {
@@ -54,6 +55,7 @@ export function useCrmActivities({ startISO, endISO, pipe = "all" }: ActivitiesP
           reunioes_agendadas: number;
           reunioes_realizadas: number;
           no_show: number;
+          conversoes: number;
         }>,
         closerRows: (closerRes.data ?? []) as Array<{
           user_id: string;
