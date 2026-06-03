@@ -165,32 +165,36 @@ Deno.serve(async (req) => {
   for (const c of calls) {
     try {
       const callId = (pick<string | number>(c, [
-        "_id", "telephony_id", "id", "call_id", "uuid",
+        "id", "_id", "telephony_id", "call_id", "uuid",
       ]))?.toString();
       if (!callId) { skipped++; continue; }
 
       const telefoneRaw = (pick<string | number>(c, [
-        "number", "phone", "mailing_data.phone", "telephone", "to", "destination",
+        "number", "phone", "mailing_data.phone",
       ]))?.toString() ?? null;
       const telefoneNorm = normalizePhone(telefoneRaw);
 
-      const agentId = pick<string | number>(c, ["agent.id"]);
-      const agentName = pick<string>(c, ["agent.name"]);
-      const operador = (agentId !== undefined && agentId !== null && Number(agentId) !== 0
-        ? String(agentId) : null) ?? (agentName ? String(agentName) : null);
+      // agent: pode ser objeto {id,name} ou string "-" + agent_id no nível raiz
+      const agentIdNum = pick<number>(c, ["agent_id", "agent.id"]);
+      const agentName = typeof c?.agent === "string" && c.agent !== "-" ? c.agent
+        : pick<string>(c, ["agent.name"]) ?? null;
+      const operador = (agentIdNum && Number(agentIdNum) !== 0
+        ? String(agentIdNum) : null) ?? (agentName ? String(agentName) : null);
 
       const duracao = parseDuration(pick(c, [
         "speaking_with_agent_time", "speaking_time", "billed_time", "duration", "billsec",
       ]));
       const status = pick<string>(c, [
-        "hangupCause.text", "hangupCause", "qualification.name", "status",
+        "readable_hangup_cause_text", "readable_status_text",
+        "hangup_cause_text", "qualification", "status",
       ])?.toString() ?? null;
-      const gravacao = pick<string>(c, [
-        "recording_url", "record_url", "recording", "audio_url",
-      ])?.toString() ?? null;
-      const createdAt = pick<string>(c, [
-        "created_at", "start_time", "started_at", "call_date",
-      ]) ?? new Date().toISOString();
+      const recorded = c?.recorded === true;
+      const gravacao = recorded
+        ? (pick<string>(c, ["recording", "recording_url", "record_url", "audio_url"])?.toString() ?? null)
+        : null;
+      const createdAt = toIso(pick<string>(c, [
+        "call_date_rfc3339", "call_date", "created_at",
+      ]) ?? null) ?? new Date().toISOString();
 
       // Lead lookup
       let leadId: string | null = null;
