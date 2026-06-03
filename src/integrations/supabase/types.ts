@@ -1265,6 +1265,7 @@ export type Database = {
         Args: { p_end: string; p_pipe?: string; p_start: string }
         Returns: {
           contato_realizado: number
+          conversoes: number
           ligacoes: number
           no_show: number
           reunioes_agendadas: number
@@ -1276,6 +1277,7 @@ export type Database = {
         Args: { p_end: string; p_pipe?: string; p_start: string }
         Returns: {
           contato_realizado: number
+          conversoes: number
           ligacoes: number
           no_show: number
           reunioes_agendadas: number
