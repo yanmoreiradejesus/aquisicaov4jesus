@@ -41,8 +41,24 @@ function pick<T = unknown>(obj: any, keys: string[]): T | undefined {
 function parseDuration(v: unknown): number | null {
   if (v == null) return null;
   if (typeof v === "number" && isFinite(v)) return Math.round(v);
-  if (typeof v === "string" && /^\d+$/.test(v)) return parseInt(v, 10);
+  if (typeof v === "string") {
+    if (/^\d+$/.test(v)) return parseInt(v, 10);
+    const parts = v.split(":").map((p) => parseInt(p, 10));
+    if (parts.every((n) => !isNaN(n))) {
+      if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+      if (parts.length === 2) return parts[0] * 60 + parts[1];
+    }
+  }
   return null;
+}
+
+function toIso(s?: string | null): string | null {
+  if (!s) return null;
+  // "2026-06-03 12:53:41" (BRT) -> ISO with -03:00
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s)) {
+    return s.replace(" ", "T") + "-03:00";
+  }
+  return s;
 }
 
 Deno.serve(async (req) => {
