@@ -1207,6 +1207,30 @@ export type Database = {
         }[]
       }
       current_tenant_id: { Args: never; Returns: string }
+      get_closer_activity_stats: {
+        Args: { p_end: string; p_pipe?: string; p_start: string }
+        Returns: {
+          fechamentos_ganhos: number
+          fechamentos_perdidos: number
+          followups: number
+          propostas: number
+          receita_total: number
+          reunioes_realizadas: number
+          user_id: string
+        }[]
+      }
+      get_sdr_activity_stats: {
+        Args: { p_end: string; p_pipe?: string; p_start: string }
+        Returns: {
+          conectadas: number
+          contato_realizado: number
+          no_show: number
+          reunioes_agendadas: number
+          reunioes_realizadas: number
+          tentativas: number
+          user_id: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

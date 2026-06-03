@@ -39,20 +39,20 @@ const AtividadesCrm = () => {
   const startISO = `${filters.start}T00:00:00`;
   const endISO = `${filters.end}T23:59:59`;
 
-  const { data, isLoading, error } = useCrmActivities({ startISO, endISO });
+  const { data, isLoading, error } = useCrmActivities({ startISO, endISO, pipe: filters.pipe });
   const { profiles } = useProfilesList({ departamento: "Receitas" });
 
   const sdr = useMemo(() => {
     if (!data) return [];
-    const rows = computeSDRStats({ ...data, startISO, endISO, pipe: filters.pipe });
+    const rows = computeSDRStats(data.sdrRows);
     return filters.userId === "all" ? rows : rows.filter((r) => r.userId === filters.userId);
-  }, [data, startISO, endISO, filters.pipe, filters.userId]);
+  }, [data, filters.userId]);
 
   const closers = useMemo(() => {
     if (!data) return [];
-    const rows = computeCloserStats({ ...data, startISO, endISO, pipe: filters.pipe });
+    const rows = computeCloserStats(data.closerRows);
     return filters.userId === "all" ? rows : rows.filter((r) => r.userId === filters.userId);
-  }, [data, startISO, endISO, filters.pipe, filters.userId]);
+  }, [data, filters.userId]);
 
   const totals = useMemo(() => computeTotals(sdr, closers), [sdr, closers]);
 
