@@ -81,10 +81,14 @@ const AtividadesCrm = () => {
     return filters.userId === "all" ? rows : rows.filter((r) => r.userId === filters.userId);
   }, [data, filters.userId]);
 
-  const totals = useMemo(
-    () => computeTotals(sdr, closers, filters.userId === "all" ? data?.sdrTotals : undefined),
-    [sdr, closers, filters.userId, data?.sdrTotals],
-  );
+  const totals = useMemo(() => {
+    const base = computeTotals(sdr, closers, filters.userId === "all" ? data?.sdrTotals : undefined);
+    // Ligações VoIP: soma somente usuários identificados (todos os SDRs, sem filtro de reuniões)
+    const identifiedLigacoes = (data?.sdrRows ?? [])
+      .filter((r) => filters.userId === "all" || r.user_id === filters.userId)
+      .reduce((acc, r) => acc + (Number(r.ligacoes) || 0), 0);
+    return { ...base, ligacoes: identifiedLigacoes };
+  }, [sdr, closers, filters.userId, data?.sdrTotals, data?.sdrRows]);
 
   const conversionRate =
     totals.reunioesRealizadas > 0 ? (totals.conversoes / totals.reunioesRealizadas) * 100 : 0;
@@ -166,13 +170,6 @@ const AtividadesCrm = () => {
           </>
         )}
 
-        {/* Gráfico */}
-        {isLoading ? (
-          <Skeleton className="h-[320px] w-full rounded-xl" />
-        ) : (
-          <SDRPerformanceChart rows={sdr} profiles={profiles} />
-        )}
-
         <Tabs defaultValue="sdr" className="space-y-4">
           <TabsList>
             <TabsTrigger value="sdr">SDRs</TabsTrigger>
@@ -193,6 +190,17 @@ const AtividadesCrm = () => {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Gráficos compactos por indicador */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Skeleton className="h-[240px] rounded-xl" />
+            <Skeleton className="h-[240px] rounded-xl" />
+            <Skeleton className="h-[240px] rounded-xl" />
+          </div>
+        ) : (
+          <SDRPerformanceChart rows={sdr} profiles={profiles} />
+        )}
       </main>
     </div>
   );
