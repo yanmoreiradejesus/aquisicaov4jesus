@@ -30,7 +30,10 @@ export const SDRRankingTable = ({ rows, profiles, onRowClick }: Props<SDRStats>)
         <TableRow>
           <TableHead>SDR</TableHead>
           <TableHead className="text-right">
-            Ligações <span className="text-[10px] font-normal text-muted-foreground/70">(VoIP)</span>
+            Tentativas <span className="text-[10px] font-normal text-muted-foreground/70">(VoIP)</span>
+          </TableHead>
+          <TableHead className="text-right">
+            Conectadas <span className="text-[10px] font-normal text-muted-foreground/70">(≥1s)</span>
           </TableHead>
           <TableHead className="text-right">Tarefas</TableHead>
           <TableHead className="text-right">Contato Real.</TableHead>
