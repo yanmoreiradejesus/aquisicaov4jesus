@@ -135,8 +135,9 @@ const AtividadesCrm = () => {
                 </span>
                 <div className="h-px flex-1 bg-border/60" />
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <KpiCard label="Ligações" hint="(VoIP)" value={totals.ligacoes} icon={PhoneCall} />
+                <KpiCard label="Tarefas" value={totals.tarefas} icon={ListChecks} />
                 <KpiCard label="Reuniões agendadas" value={totals.reunioesAgendadas} icon={Calendar} />
                 <KpiCard label="Reuniões realizadas" value={totals.reunioesRealizadas} icon={CheckCircle2} />
                 <KpiCard label="No-show" value={totals.noShow} icon={XCircle} />
