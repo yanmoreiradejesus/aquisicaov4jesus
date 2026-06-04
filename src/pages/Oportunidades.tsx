@@ -4,7 +4,7 @@ import { useHorizontalWheelScroll } from "@/hooks/useHorizontalWheelScroll";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, LayoutGrid, ListChecks, Upload, Download } from "lucide-react";
+import { Plus, Search, LayoutGrid, ListChecks, Upload, Download, UserCog, X } from "lucide-react";
 import { OportunidadeImportDialog } from "@/components/crm/OportunidadeImportDialog";
 import { OportunidadeExportDialog } from "@/components/crm/OportunidadeExportDialog";
 import { useCrmOportunidades, OPORTUNIDADE_ETAPAS } from "@/hooks/useCrmOportunidades";
@@ -19,6 +19,9 @@ import { cn } from "@/lib/utils";
 import { OportunidadesFilterPopover, EMPTY_OP_FILTERS, type OportunidadeFilters } from "@/components/crm/OportunidadesFilterPopover";
 import WinCelebration from "@/components/celebrations/WinCelebration";
 import { usePersistedState } from "@/hooks/usePersistedState";
+import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
+import { supabase } from "@/integrations/supabase/client";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const WORKFLOW_ETAPAS = new Set(["negociacao", "contrato", "follow_infinito", "fechado_ganho"]);
 
