@@ -135,7 +135,7 @@ export const OportunidadesFilterPopover = ({ filters, onChange, oportunidades }:
           </div>
 
           <FilterSelect
-            label="Responsável"
+            label="Closer responsável"
             value={filters.responsavel}
             options={uniques.responsavel}
             onChange={(v) => update({ responsavel: v })}
