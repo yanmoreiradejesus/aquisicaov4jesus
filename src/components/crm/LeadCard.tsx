@@ -240,6 +240,25 @@ export const LeadCard = ({
                 Dia {stageDays}
               </span>
             )}
+            {showNoShowDays && noShowDays > 0 && (
+              <span className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide bg-red-500/10 text-red-300 border-red-500/30 tabular-nums">
+                Dia {noShowDays}
+              </span>
+            )}
+            {meetingLabel && (
+              <span
+                className={cn(
+                  "text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide inline-flex items-center gap-1 tabular-nums",
+                  meetingOverdue
+                    ? "bg-amber-500/15 text-amber-300 border-amber-500/40"
+                    : "bg-primary/10 text-primary border-primary/30"
+                )}
+                title={meetingOverdue ? "Reunião vencida — atualize para no show, reagende ou marque como realizada" : "Data da reunião"}
+              >
+                {meetingOverdue ? <AlertTriangle className="h-2.5 w-2.5" /> : <Calendar className="h-2.5 w-2.5" />}
+                {meetingLabel}
+              </span>
+            )}
           </div>
         </div>
 
