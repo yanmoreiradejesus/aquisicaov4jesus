@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { format, subDays } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, PhoneCall, Calendar, CheckCircle2, XCircle, Target, Trophy, DollarSign, TrendingUp } from "lucide-react";
+import { AlertCircle, PhoneCall, Calendar, CheckCircle2, XCircle, Target, Trophy, DollarSign, TrendingUp, ListChecks } from "lucide-react";
 import { useCrmActivities } from "@/hooks/useCrmActivities";
 import { useProfilesList } from "@/hooks/useProfilesList";
 import {
