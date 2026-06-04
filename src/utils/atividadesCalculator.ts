@@ -30,6 +30,7 @@ export interface CloserStats {
 export interface SDRRow {
   user_id: string;
   ligacoes: number;
+  ligacoes_conectadas: number;
   tarefas: number;
   contato_realizado: number;
   reunioes_agendadas: number;
@@ -50,6 +51,7 @@ export interface CloserRow {
 
 export interface SDRTotalsRow {
   ligacoes: number;
+  ligacoes_conectadas: number;
   tarefas: number;
   contato_realizado: number;
   reunioes_agendadas: number;
@@ -64,10 +66,13 @@ export function computeSDRStats(rows: SDRRow[]): SDRStats[] {
       const reunioesRealizadas = Number(r.reunioes_realizadas) || 0;
       const noShow = Number(r.no_show) || 0;
       const conversoes = Number(r.conversoes) || 0;
+      const ligacoes = Number(r.ligacoes) || 0;
+      const ligacoesConectadas = Number(r.ligacoes_conectadas) || 0;
       const showDenom = reunioesRealizadas + noShow;
       return {
         userId: r.user_id,
-        ligacoes: Number(r.ligacoes) || 0,
+        ligacoes,
+        ligacoesConectadas,
         tarefas: Number(r.tarefas) || 0,
         contatoRealizado: Number(r.contato_realizado) || 0,
         reunioesAgendadas: Number(r.reunioes_agendadas) || 0,
@@ -76,6 +81,7 @@ export function computeSDRStats(rows: SDRRow[]): SDRStats[] {
         conversoes,
         showRate: showDenom > 0 ? (reunioesRealizadas / showDenom) * 100 : 0,
         conversionRate: reunioesRealizadas > 0 ? (conversoes / reunioesRealizadas) * 100 : 0,
+        connectRate: ligacoes > 0 ? (ligacoesConectadas / ligacoes) * 100 : 0,
       };
     })
     .sort((a, b) => b.ligacoes - a.ligacoes);
