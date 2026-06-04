@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import { Calendar, ListTodo, Copy, MessageCircle, ExternalLink, Link2 } from "lucide-react";
+import { Calendar, ListTodo, Copy, MessageCircle, ExternalLink, Link2, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPhone, whatsappNumber } from "@/lib/ddd";
