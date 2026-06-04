@@ -95,8 +95,10 @@ const AtividadesCrm = () => {
     const filteredRows = (data?.sdrRows ?? [])
       .filter((r) => filters.userId === "all" || r.user_id === filters.userId);
     const identifiedLigacoes = filteredRows.reduce((acc, r) => acc + (Number(r.ligacoes) || 0), 0);
+    const identifiedConectadas = filteredRows.reduce((acc, r) => acc + (Number(r.ligacoes_conectadas) || 0), 0);
     const identifiedTarefas = filteredRows.reduce((acc, r) => acc + (Number(r.tarefas) || 0), 0);
-    return { ...base, ligacoes: identifiedLigacoes, tarefas: identifiedTarefas };
+    const connectRate = identifiedLigacoes > 0 ? (identifiedConectadas / identifiedLigacoes) * 100 : 0;
+    return { ...base, ligacoes: identifiedLigacoes, ligacoesConectadas: identifiedConectadas, connectRate, tarefas: identifiedTarefas };
   }, [sdr, closers, filters.userId, data?.sdrTotals, data?.sdrRows]);
 
   const conversionRate =
