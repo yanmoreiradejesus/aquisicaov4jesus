@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import { Copy, MessageCircle, Clock, ExternalLink, Link2 } from "lucide-react";
+import { Copy, MessageCircle, Clock, ExternalLink, Link2, AlertTriangle, Calendar } from "lucide-react";
 import { CSS } from "@dnd-kit/utilities";
 import { formatPhone, whatsappNumber, timeAgo } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
