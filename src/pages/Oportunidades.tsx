@@ -395,6 +395,9 @@ const Oportunidades = () => {
                     onEdit={(op) => openOp(op.id)}
                     onOpenInNewTab={(op) => window.open(`/comercial/oportunidades/${op.id}`, "_blank", "noopener,noreferrer")}
                     defaultCollapsed={etapa.id === "fechado_perdido" || etapa.id === "follow_infinito"}
+                    selectedIds={selectedIds}
+                    onToggleSelect={toggleSelect}
+                    onToggleColumn={setColumnSelection}
                   />
                 ))}
               </div>
