@@ -153,6 +153,10 @@ export const OportunidadeCard = ({ oportunidade, onClick, onOpenInNewTab, overla
     ? fmtDate(oportunidade.data_fechamento_previsto)
     : null;
 
+  const cardDays = oportunidade.created_at
+    ? Math.max(1, Math.floor((Date.now() - new Date(oportunidade.created_at).getTime()) / 86400000) + 1)
+    : 0;
+
   const stopHard = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
