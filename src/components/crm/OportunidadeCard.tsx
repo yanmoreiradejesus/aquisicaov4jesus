@@ -48,7 +48,7 @@ const resolveTemp = (raw?: string | null) => {
   return TEMP_PILL[raw.toLowerCase()] ?? null;
 };
 
-export const OportunidadeCard = ({ oportunidade, onClick, onOpenInNewTab, overlay = false }: Props) => {
+export const OportunidadeCard = ({ oportunidade, onClick, onOpenInNewTab, overlay = false, selected, onToggleSelect }: Props) => {
   const clickTimerRef = useRef<number | null>(null);
   useEffect(() => () => {
     if (clickTimerRef.current) window.clearTimeout(clickTimerRef.current);
