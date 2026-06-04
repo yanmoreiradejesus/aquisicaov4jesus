@@ -3,6 +3,7 @@
 export interface SDRStats {
   userId: string;
   ligacoes: number;
+  ligacoesConectadas: number;
   tarefas: number;
   contatoRealizado: number;
   reunioesAgendadas: number;
@@ -11,6 +12,7 @@ export interface SDRStats {
   conversoes: number;
   showRate: number;
   conversionRate: number;
+  connectRate: number;
 }
 
 export interface CloserStats {
