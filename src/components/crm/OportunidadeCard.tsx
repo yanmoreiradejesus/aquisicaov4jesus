@@ -257,6 +257,14 @@ export const OportunidadeCard = ({ oportunidade, onClick, onOpenInNewTab, overla
                 <ListTodo className="h-2.5 w-2.5" />{tarefasPendentes}
               </span>
             )}
+            {cardDays > 0 && (
+              <span
+                className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide bg-muted/40 text-muted-foreground border-border/60 inline-flex items-center gap-1 tabular-nums"
+                title="Dias desde a criação da oportunidade"
+              >
+                <Clock className="h-2.5 w-2.5" />Dia {cardDays}
+              </span>
+            )}
           </div>
 
           {oportunidade.etapa === "fechado_perdido" && oportunidade.motivo_perda && (
