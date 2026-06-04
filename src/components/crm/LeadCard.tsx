@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import { Copy, MessageCircle, Clock, ExternalLink, Link2 } from "lucide-react";
+import { Copy, MessageCircle, Clock, ExternalLink, Link2, AlertTriangle, Calendar } from "lucide-react";
 import { CSS } from "@dnd-kit/utilities";
 import { formatPhone, whatsappNumber, timeAgo } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +17,8 @@ interface Props {
   onClick: () => void;
   showAge?: boolean;
   showStageDays?: boolean;
+  showNoShowDays?: boolean;
+  showMeetingDate?: boolean;
   onPhoneInteract?: () => void;
   onOpenInNewTab?: () => void;
   selected?: boolean;
@@ -46,6 +48,8 @@ export const LeadCard = ({
   onClick,
   showAge,
   showStageDays,
+  showNoShowDays,
+  showMeetingDate,
   onPhoneInteract,
   onOpenInNewTab,
   selected,
@@ -106,6 +110,27 @@ export const LeadCard = ({
   const temp = lead.temperatura ? tempPill[lead.temperatura] : null;
   const accent = lead.temperatura ? tempAccent[lead.temperatura] : "bg-border/60";
   const stageDays = showStageDays ? daysSince(lead.data_criacao_origem || lead.created_at) : 0;
+  const noShowDays = showNoShowDays ? daysSince(lead.updated_at || lead.created_at) : 0;
+
+  // Meeting label (Hoje / Amanhã / dd MMM) + flag if overdue
+  let meetingLabel: string | null = null;
+  let meetingOverdue = false;
+  if (showMeetingDate && lead.data_reuniao_agendada) {
+    const m = new Date(lead.data_reuniao_agendada);
+    const today = new Date();
+    const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const diffDays = Math.round((startOfDay(m) - startOfDay(today)) / 86400000);
+    if (diffDays < 0) {
+      meetingOverdue = true;
+      meetingLabel = m.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+    } else if (diffDays === 0) {
+      meetingLabel = `Hoje · ${m.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+    } else if (diffDays === 1) {
+      meetingLabel = `Amanhã · ${m.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+    } else {
+      meetingLabel = m.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+    }
+  }
 
   const stopHard = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -213,6 +238,25 @@ export const LeadCard = ({
             {showStageDays && stageDays > 0 && (
               <span className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide bg-amber-500/10 text-amber-300 border-amber-500/30 tabular-nums">
                 Dia {stageDays}
+              </span>
+            )}
+            {showNoShowDays && noShowDays > 0 && (
+              <span className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide bg-red-500/10 text-red-300 border-red-500/30 tabular-nums">
+                Dia {noShowDays}
+              </span>
+            )}
+            {meetingLabel && (
+              <span
+                className={cn(
+                  "text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide inline-flex items-center gap-1 tabular-nums",
+                  meetingOverdue
+                    ? "bg-amber-500/15 text-amber-300 border-amber-500/40"
+                    : "bg-primary/10 text-primary border-primary/30"
+                )}
+                title={meetingOverdue ? "Reunião vencida — atualize para no show, reagende ou marque como realizada" : "Data da reunião"}
+              >
+                {meetingOverdue ? <AlertTriangle className="h-2.5 w-2.5" /> : <Calendar className="h-2.5 w-2.5" />}
+                {meetingLabel}
               </span>
             )}
           </div>

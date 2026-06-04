@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import { Calendar, ListTodo, Copy, MessageCircle, ExternalLink, Link2 } from "lucide-react";
+import { Calendar, ListTodo, Copy, MessageCircle, ExternalLink, Link2, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPhone, whatsappNumber } from "@/lib/ddd";
@@ -153,6 +153,10 @@ export const OportunidadeCard = ({ oportunidade, onClick, onOpenInNewTab, overla
     ? fmtDate(oportunidade.data_fechamento_previsto)
     : null;
 
+  const cardDays = oportunidade.created_at
+    ? Math.max(1, Math.floor((Date.now() - new Date(oportunidade.created_at).getTime()) / 86400000) + 1)
+    : 0;
+
   const stopHard = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
@@ -251,6 +255,14 @@ export const OportunidadeCard = ({ oportunidade, onClick, onOpenInNewTab, overla
             {tarefasPendentes > 0 && (
               <span className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide bg-primary/10 text-primary border-primary/30 inline-flex items-center gap-1 tabular-nums">
                 <ListTodo className="h-2.5 w-2.5" />{tarefasPendentes}
+              </span>
+            )}
+            {cardDays > 0 && (
+              <span
+                className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide bg-muted/40 text-muted-foreground border-border/60 inline-flex items-center gap-1 tabular-nums"
+                title="Dias desde a criação da oportunidade"
+              >
+                <Clock className="h-2.5 w-2.5" />Dia {cardDays}
               </span>
             )}
           </div>

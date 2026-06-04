@@ -145,6 +145,8 @@ export const LeadColumn = ({
             onClick={() => onEdit(lead)}
             showAge={id === "entrada"}
             showStageDays={id === "tentativa_contato" || id === "contato_realizado"}
+            showNoShowDays={id === "no_show"}
+            showMeetingDate={id === "reuniao_agendada"}
             onPhoneInteract={onPhoneInteract ? () => onPhoneInteract(lead) : undefined}
             onOpenInNewTab={onOpenInNewTab ? () => onOpenInNewTab(lead) : undefined}
             selected={selectedIds?.has(lead.id)}
