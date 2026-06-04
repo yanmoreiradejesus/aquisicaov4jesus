@@ -66,6 +66,7 @@ export function computeSDRStats(rows: SDRRow[]): SDRStats[] {
       return {
         userId: r.user_id,
         ligacoes: Number(r.ligacoes) || 0,
+        tarefas: Number(r.tarefas) || 0,
         contatoRealizado: Number(r.contato_realizado) || 0,
         reunioesAgendadas: Number(r.reunioes_agendadas) || 0,
         reunioesRealizadas,
