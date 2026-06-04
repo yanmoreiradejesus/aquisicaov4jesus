@@ -111,6 +111,8 @@ export function computeCloserStats(rows: CloserRow[]): CloserStats[] {
 
 export interface PeriodTotals {
   ligacoes: number;
+  ligacoesConectadas: number;
+  connectRate: number;
   tarefas: number;
   reunioesAgendadas: number;
   reunioesRealizadas: number;
@@ -125,12 +127,13 @@ export interface PeriodTotals {
 
 export function computeTotals(sdr: SDRStats[], closer: CloserStats[], sdrTotals?: SDRTotalsRow): PeriodTotals {
   const t: PeriodTotals = {
-    ligacoes: 0, tarefas: 0, reunioesAgendadas: 0, reunioesRealizadas: 0, noShow: 0, conversoes: 0,
+    ligacoes: 0, ligacoesConectadas: 0, connectRate: 0, tarefas: 0, reunioesAgendadas: 0, reunioesRealizadas: 0, noShow: 0, conversoes: 0,
     propostas: 0, fechamentosGanhos: 0, winRate: 0, ticketMedio: 0, receitaTotal: 0,
   };
   let perdidos = 0;
   if (sdrTotals) {
     t.ligacoes = Number(sdrTotals.ligacoes) || 0;
+    t.ligacoesConectadas = Number(sdrTotals.ligacoes_conectadas) || 0;
     t.tarefas = Number(sdrTotals.tarefas) || 0;
     t.reunioesAgendadas = Number(sdrTotals.reunioes_agendadas) || 0;
     t.reunioesRealizadas = Number(sdrTotals.reunioes_realizadas) || 0;
@@ -139,6 +142,7 @@ export function computeTotals(sdr: SDRStats[], closer: CloserStats[], sdrTotals?
   } else {
     sdr.forEach((s) => {
       t.ligacoes += s.ligacoes;
+      t.ligacoesConectadas += s.ligacoesConectadas;
       t.tarefas += s.tarefas;
       t.reunioesAgendadas += s.reunioesAgendadas;
       t.reunioesRealizadas += s.reunioesRealizadas;
@@ -146,6 +150,7 @@ export function computeTotals(sdr: SDRStats[], closer: CloserStats[], sdrTotals?
       t.conversoes += s.conversoes;
     });
   }
+  t.connectRate = t.ligacoes > 0 ? (t.ligacoesConectadas / t.ligacoes) * 100 : 0;
   closer.forEach((c) => {
     t.propostas += c.propostas;
     t.fechamentosGanhos += c.fechamentosGanhos;
