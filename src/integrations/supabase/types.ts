@@ -1267,6 +1267,7 @@ export type Database = {
           contato_realizado: number
           conversoes: number
           ligacoes: number
+          ligacoes_conectadas: number
           no_show: number
           reunioes_agendadas: number
           reunioes_realizadas: number
@@ -1280,6 +1281,7 @@ export type Database = {
           contato_realizado: number
           conversoes: number
           ligacoes: number
+          ligacoes_conectadas: number
           no_show: number
           reunioes_agendadas: number
           reunioes_realizadas: number

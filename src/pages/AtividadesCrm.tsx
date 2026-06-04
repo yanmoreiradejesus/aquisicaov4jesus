@@ -95,8 +95,10 @@ const AtividadesCrm = () => {
     const filteredRows = (data?.sdrRows ?? [])
       .filter((r) => filters.userId === "all" || r.user_id === filters.userId);
     const identifiedLigacoes = filteredRows.reduce((acc, r) => acc + (Number(r.ligacoes) || 0), 0);
+    const identifiedConectadas = filteredRows.reduce((acc, r) => acc + (Number(r.ligacoes_conectadas) || 0), 0);
     const identifiedTarefas = filteredRows.reduce((acc, r) => acc + (Number(r.tarefas) || 0), 0);
-    return { ...base, ligacoes: identifiedLigacoes, tarefas: identifiedTarefas };
+    const connectRate = identifiedLigacoes > 0 ? (identifiedConectadas / identifiedLigacoes) * 100 : 0;
+    return { ...base, ligacoes: identifiedLigacoes, ligacoesConectadas: identifiedConectadas, connectRate, tarefas: identifiedTarefas };
   }, [sdr, closers, filters.userId, data?.sdrTotals, data?.sdrRows]);
 
   const conversionRate =
@@ -143,8 +145,14 @@ const AtividadesCrm = () => {
                 </span>
                 <div className="h-px flex-1 bg-border/60" />
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                <KpiCard label="Ligações" hint="(VoIP)" value={totals.ligacoes} icon={PhoneCall} />
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+                <KpiCard label="Tentativas" hint="(VoIP)" value={totals.ligacoes} icon={PhoneCall} />
+                <KpiCard
+                  label="Conectadas"
+                  hint="(≥1s)"
+                  value={`${totals.ligacoesConectadas} · ${fmtPct(totals.connectRate)}`}
+                  icon={PhoneCall}
+                />
                 <KpiCard label="Tarefas" value={totals.tarefas} icon={ListChecks} />
                 <KpiCard label="Reuniões agendadas" value={totals.reunioesAgendadas} icon={Calendar} />
                 <KpiCard label="Reuniões realizadas" value={totals.reunioesRealizadas} icon={CheckCircle2} />

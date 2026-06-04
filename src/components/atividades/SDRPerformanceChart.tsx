@@ -67,16 +67,16 @@ export const SDRPerformanceChart = ({ rows, profiles }: Props) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
       <MiniChart
-        title="Ligações"
+        title="Tentativas"
         subtitle="Top 5 SDRs (VoIP)"
         data={topBy("ligacoes")}
-        color="hsl(var(--primary) / 0.5)"
+        color="hsl(var(--primary) / 0.4)"
       />
       <MiniChart
-        title="Reuniões agendadas"
+        title="Conectadas ≥1s"
         subtitle="Top 5 SDRs"
-        data={topBy("reunioesAgendadas")}
-        color="hsl(var(--primary) / 0.75)"
+        data={topBy("ligacoesConectadas")}
+        color="hsl(var(--primary) / 0.7)"
       />
       <MiniChart
         title="Reuniões realizadas"
