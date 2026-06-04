@@ -17,6 +17,8 @@ interface Props {
   onClick: () => void;
   onOpenInNewTab?: () => void;
   overlay?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }
 
 const fmtBRL = (v?: number | null) => {
