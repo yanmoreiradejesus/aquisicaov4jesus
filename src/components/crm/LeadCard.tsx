@@ -48,6 +48,8 @@ export const LeadCard = ({
   onClick,
   showAge,
   showStageDays,
+  showNoShowDays,
+  showMeetingDate,
   onPhoneInteract,
   onOpenInNewTab,
   selected,
