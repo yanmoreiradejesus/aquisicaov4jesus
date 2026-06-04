@@ -4,7 +4,7 @@ import { useHorizontalWheelScroll } from "@/hooks/useHorizontalWheelScroll";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, LayoutGrid, ListChecks, Upload, Download } from "lucide-react";
+import { Plus, Search, LayoutGrid, ListChecks, Upload, Download, UserCog, X } from "lucide-react";
 import { OportunidadeImportDialog } from "@/components/crm/OportunidadeImportDialog";
 import { OportunidadeExportDialog } from "@/components/crm/OportunidadeExportDialog";
 import { useCrmOportunidades, OPORTUNIDADE_ETAPAS } from "@/hooks/useCrmOportunidades";
@@ -19,6 +19,9 @@ import { cn } from "@/lib/utils";
 import { OportunidadesFilterPopover, EMPTY_OP_FILTERS, type OportunidadeFilters } from "@/components/crm/OportunidadesFilterPopover";
 import WinCelebration from "@/components/celebrations/WinCelebration";
 import { usePersistedState } from "@/hooks/usePersistedState";
+import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
+import { supabase } from "@/integrations/supabase/client";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const WORKFLOW_ETAPAS = new Set(["negociacao", "contrato", "follow_infinito", "fechado_ganho"]);
 
@@ -36,10 +39,41 @@ const Oportunidades = () => {
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [celebration, setCelebration] = useState<{ nome_oportunidade: string; valor_total?: number } | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const navigate = useNavigate();
   const { oportunidadeId } = useParams<{ oportunidadeId?: string }>();
   const notFoundToastedRef = useRef<string | null>(null);
+  const { profiles } = useProfilesList({ departamento: "Receitas" });
+
+  const toggleSelect = (id: string) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  const setColumnSelection = (ids: string[], select: boolean) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => (select ? next.add(id) : next.delete(id)));
+      return next;
+    });
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleBulkAssignCloser = async (closerId: string) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    const { error } = await supabase
+      .from("crm_oportunidades" as any)
+      .update({ closer_id: closerId })
+      .in("id", ids);
+    if (error) {
+      toast({ title: "Erro ao atribuir closer", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: `${ids.length} oportunidade(s) atualizada(s)` });
+    clearSelection();
+  };
 
   useEffect(() => {
     if (!oportunidadeId) {
@@ -101,7 +135,7 @@ const Oportunidades = () => {
     return oportunidades.filter((o: any) => {
       if (q && ![o.nome_oportunidade, o.lead?.nome, o.lead?.empresa].some((v) => v?.toLowerCase().includes(q))) return false;
       if (!inRange(o.lead?.data_criacao_origem ?? o.lead?.created_at, filters.leadDateFrom, filters.leadDateTo)) return false;
-      if (filters.responsavel !== "all" && (o.responsavel_id ?? o.responsavel?.id) !== filters.responsavel) return false;
+      if (filters.responsavel !== "all" && (o.closer_id ?? o.responsavel_id ?? o.responsavel?.id) !== filters.responsavel) return false;
       if (filters.temperatura !== "all" && o.temperatura !== filters.temperatura) return false;
       if (filters.canal !== "all" && o.lead?.canal !== filters.canal) return false;
       if (filters.tier !== "all" && o.lead?.tier !== filters.tier) return false;
@@ -361,6 +395,9 @@ const Oportunidades = () => {
                     onEdit={(op) => openOp(op.id)}
                     onOpenInNewTab={(op) => window.open(`/comercial/oportunidades/${op.id}`, "_blank", "noopener,noreferrer")}
                     defaultCollapsed={etapa.id === "fechado_perdido" || etapa.id === "follow_infinito"}
+                    selectedIds={selectedIds}
+                    onToggleSelect={toggleSelect}
+                    onToggleColumn={setColumnSelection}
                   />
                 ))}
               </div>
@@ -379,6 +416,34 @@ const Oportunidades = () => {
           />
         )}
       </main>
+
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-2.5 rounded-2xl glass shadow-ios-xl border border-border/40 animate-fade-in">
+          <span className="text-xs font-semibold text-foreground tabular-nums">
+            {selectedIds.size} oportunidade(s) selecionada(s)
+          </span>
+          <div className="flex items-center gap-1.5">
+            <UserCog className="h-3.5 w-3.5 text-muted-foreground" />
+            <Select onValueChange={handleBulkAssignCloser}>
+              <SelectTrigger className="h-8 w-56 rounded-lg text-xs">
+                <SelectValue placeholder="Atribuir closer..." />
+              </SelectTrigger>
+              <SelectContent>
+                {profiles.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{profileLabel(p)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <button
+            onClick={clearSelection}
+            className="p-1 rounded-md hover:bg-muted/40 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Limpar seleção"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
 
       <OportunidadeDetailSheet
         open={sheetOpen}

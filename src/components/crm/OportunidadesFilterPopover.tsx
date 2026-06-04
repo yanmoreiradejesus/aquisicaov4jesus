@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Filter, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
 
 export interface OportunidadeFilters {
   leadDateFrom: string;
@@ -38,21 +39,23 @@ interface Props {
 }
 
 export const OportunidadesFilterPopover = ({ filters, onChange, oportunidades }: Props) => {
+  const { profiles: allProfiles } = useProfilesList();
   const uniques = useMemo(() => {
     const getStr = (fn: (op: any) => any) =>
       Array.from(new Set(oportunidades.map(fn).filter((v: any) => v && String(v).trim())))
         .sort()
         .map((v) => String(v));
 
-    const respMap = new Map<string, string>();
+    const respIds = new Set<string>();
     oportunidades.forEach((op: any) => {
-      const id = op.responsavel_id || op.responsavel?.id;
-      if (!id) return;
-      const label = op.responsavel?.full_name || op.responsavel?.email || id;
-      if (!respMap.has(id)) respMap.set(id, label);
+      const id = op.closer_id || op.responsavel_id || op.responsavel?.id;
+      if (id) respIds.add(id);
     });
-    const responsavel = Array.from(respMap.entries())
-      .map(([value, label]) => ({ value, label }))
+    const responsavel = Array.from(respIds)
+      .map((id) => {
+        const p = allProfiles.find((x) => x.id === id);
+        return { value: id, label: p ? profileLabel(p) : id };
+      })
       .sort((a, b) => a.label.localeCompare(b.label));
 
     return {
@@ -60,7 +63,7 @@ export const OportunidadesFilterPopover = ({ filters, onChange, oportunidades }:
       tier: getStr((op) => op.lead?.tier),
       responsavel,
     };
-  }, [oportunidades]);
+  }, [oportunidades, allProfiles]);
 
   const activeCount = Object.entries(filters).filter(([k, v]) => {
     if (k.endsWith("DateFrom") || k.endsWith("DateTo")) return !!v;
@@ -132,7 +135,7 @@ export const OportunidadesFilterPopover = ({ filters, onChange, oportunidades }:
           </div>
 
           <FilterSelect
-            label="Responsável"
+            label="Closer responsável"
             value={filters.responsavel}
             options={uniques.responsavel}
             onChange={(v) => update({ responsavel: v })}
