@@ -1,33 +1,34 @@
-## Problema confirmado
+A discrepância ainda ocorre porque a tela de Atividades conta `Contato realizado` apenas quando houve um evento explícito de mudança para essa etapa no período. Já o funil considera progressão: se o lead chegou em `reuniao_agendada`, ele necessariamente passou pelo nível de contato, mesmo que tenha pulado direto de `entrada` para `reuniao_agendada`, tenha sido contatado antes do período, ou por outro usuário.
 
-`get_sdr_activity_stats` e `get_sdr_activity_totals` contam **eventos de mudança de etapa** em `crm_atividades` ao invés de **leads únicos**. Quando um lead é reagendado (sai de "no-show" / "contato realizado" e volta pra "reunião agendada"), conta de novo. Por isso João aparece com 30 reuniões agendadas e só 25 contatos realizados.
+No caso do João no mês passado, os 25 agendamentos se dividem assim:
+- 9 leads tiveram `contato_realizado` pelo João no período.
+- 1 lead teve `contato_realizado` pelo João antes do período.
+- 2 leads tiveram `contato_realizado` por outro usuário no período.
+- 13 leads pularam direto para `reuniao_agendada`, sem evento explícito de contato realizado.
 
-Dados do banco (João, mês passado): 30 eventos `reuniao_agendada` / **25 leads únicos**; 25 eventos `contato_realizado` / **23 leads únicos**.
+Por isso a leitura atual ainda pode mostrar contatos menores que agendadas.
 
-## Mudanças
+Plano de correção:
 
-### 1. Backend — alinhar com a lógica do funil (leads únicos)
+1. Ajustar a regra de `Contato realizado` na RPC de SDR
+- Em vez de contar somente eventos para `contato_realizado`, contar leads únicos que chegaram a pelo menos `contato_realizado` dentro do funil do período.
+- Para SDR, isso significa considerar como contato realizado:
+  - leads com evento para `contato_realizado` no período; ou
+  - leads com evento para `reuniao_agendada` no período, porque reunião agendada implica contato realizado na lógica do funil.
+- A atribuição fica para o usuário do evento que levou o lead a esse estágio no período.
 
-Migration alterando `get_sdr_activity_stats(p_start, p_end, p_pipe)` e `get_sdr_activity_totals(...)`:
+2. Manter `Reuniões agendadas` como leads únicos agendados
+- Continua `COUNT(DISTINCT lead_id)` para leads que chegaram em `reuniao_agendada` no período.
+- Assim, para um mesmo SDR, `Contato realizado` nunca fica menor que `Reuniões agendadas` por causa de lead que pulou etapa.
 
-- No CTE `etapa_stats`: trocar `COUNT(*)` por `COUNT(DISTINCT a.lead_id)` para `contato_realizado` e `reunioes_agendadas`.
-- Adicionar nova métrica `tarefas` = contagem de `crm_atividades` com `tipo = 'tarefa'` no período, agrupadas por `usuario_id` (criador da tarefa). Sem filtro por `lead_id`, conta toda tarefa criada pelo SDR no período (independente de estar vinculada a lead ou oportunidade).
-- Retornar nova coluna `tarefas bigint` em ambas as funções.
+3. Ajustar os totais da tela
+- Aplicar a mesma regra progressiva em `get_sdr_activity_totals`.
+- Manter ligações VoIP e tarefas como volume bruto, sem alterar.
 
-### 2. Frontend
+4. Validar com João no mês passado
+- Depois da migração, verificar que João deixa de aparecer com `22/23 contatos` contra `25 agendadas`.
+- Resultado esperado pela lógica progressiva: contatos realizados >= reuniões agendadas para cada SDR no período.
 
-- `src/utils/atividadesCalculator.ts`: adicionar `tarefas` em `SDRRow`, `SDRTotalsRow`, `SDRStats` e `PeriodTotals`.
-- `src/hooks/useCrmActivities.ts`: incluir `tarefas` no shape do retorno.
-- `src/pages/AtividadesCrm.tsx`: adicionar KPI **Tarefas** no bloco "Topo do funil · SDR" (ícone `ListChecks` da lucide), ao lado de Ligações.
-- `src/components/atividades/RankingTables.tsx`: adicionar coluna **Tarefas** na tabela SDR, ajustar `colSpan` do estado vazio.
-- `src/components/atividades/SDRPerformanceChart.tsx`: opcional — manter os 3 mini-gráficos atuais (ligações, reuniões agendadas, reuniões realizadas). Sem novo gráfico de tarefas pra não inflar a tela; o número fica no KPI e na tabela.
-
-### Fora de escopo
-
-- Mexer em `get_closer_activity_stats`.
-- Mudar a métrica de "ligações" (continua `COUNT(*)` de `crm_call_events`, faz sentido por ser volume bruto).
-- Mudar `reunioes_realizadas` / `no_show` (já usam estado atual do lead + data, alinhados com o funil).
-
-## Resultado esperado
-
-João no mês passado passa a mostrar **23 contatos realizados** e **25 reuniões agendadas** (leads únicos), alinhado com o funil. Surge nova coluna/KPI **Tarefas** mostrando quantas tarefas cada SDR criou no período.
+Detalhe técnico:
+- A mudança será feita apenas nas funções `get_sdr_activity_stats` e `get_sdr_activity_totals`.
+- Não muda `reunioes_realizadas`, `no_show`, `conversoes`, `ligacoes` ou `tarefas`.
