@@ -150,7 +150,7 @@ const AtividadesCrm = () => {
                 <KpiCard
                   label="Conectadas"
                   hint="(≥1s)"
-                  value={`${totals.ligacoesConectadas} · ${fmtPct(totals.connectRate)}`}
+                  value={totals.ligacoesConectadas}
                   icon={PhoneCall}
                 />
                 <KpiCard label="Tarefas" value={totals.tarefas} icon={ListChecks} />
