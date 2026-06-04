@@ -3,6 +3,7 @@
 export interface SDRStats {
   userId: string;
   ligacoes: number;
+  tarefas: number;
   contatoRealizado: number;
   reunioesAgendadas: number;
   reunioesRealizadas: number;
@@ -27,6 +28,7 @@ export interface CloserStats {
 export interface SDRRow {
   user_id: string;
   ligacoes: number;
+  tarefas: number;
   contato_realizado: number;
   reunioes_agendadas: number;
   reunioes_realizadas: number;
@@ -46,6 +48,7 @@ export interface CloserRow {
 
 export interface SDRTotalsRow {
   ligacoes: number;
+  tarefas: number;
   contato_realizado: number;
   reunioes_agendadas: number;
   reunioes_realizadas: number;
