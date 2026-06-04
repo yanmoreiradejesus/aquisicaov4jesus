@@ -83,11 +83,12 @@ const AtividadesCrm = () => {
 
   const totals = useMemo(() => {
     const base = computeTotals(sdr, closers, filters.userId === "all" ? data?.sdrTotals : undefined);
-    // Ligações VoIP: soma somente usuários identificados (todos os SDRs, sem filtro de reuniões)
-    const identifiedLigacoes = (data?.sdrRows ?? [])
-      .filter((r) => filters.userId === "all" || r.user_id === filters.userId)
-      .reduce((acc, r) => acc + (Number(r.ligacoes) || 0), 0);
-    return { ...base, ligacoes: identifiedLigacoes };
+    // Ligações VoIP / Tarefas: soma somente usuários identificados (todos os SDRs, sem filtro de reuniões)
+    const filteredRows = (data?.sdrRows ?? [])
+      .filter((r) => filters.userId === "all" || r.user_id === filters.userId);
+    const identifiedLigacoes = filteredRows.reduce((acc, r) => acc + (Number(r.ligacoes) || 0), 0);
+    const identifiedTarefas = filteredRows.reduce((acc, r) => acc + (Number(r.tarefas) || 0), 0);
+    return { ...base, ligacoes: identifiedLigacoes, tarefas: identifiedTarefas };
   }, [sdr, closers, filters.userId, data?.sdrTotals, data?.sdrRows]);
 
   const conversionRate =
