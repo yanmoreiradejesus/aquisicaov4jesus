@@ -145,8 +145,14 @@ const AtividadesCrm = () => {
                 </span>
                 <div className="h-px flex-1 bg-border/60" />
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                <KpiCard label="Ligações" hint="(VoIP)" value={totals.ligacoes} icon={PhoneCall} />
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+                <KpiCard label="Tentativas" hint="(VoIP)" value={totals.ligacoes} icon={PhoneCall} />
+                <KpiCard
+                  label="Conectadas"
+                  hint="(≥1s)"
+                  value={`${totals.ligacoesConectadas} · ${fmtPct(totals.connectRate)}`}
+                  icon={PhoneCall}
+                />
                 <KpiCard label="Tarefas" value={totals.tarefas} icon={ListChecks} />
                 <KpiCard label="Reuniões agendadas" value={totals.reunioesAgendadas} icon={Calendar} />
                 <KpiCard label="Reuniões realizadas" value={totals.reunioesRealizadas} icon={CheckCircle2} />
