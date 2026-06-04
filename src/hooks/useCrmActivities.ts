@@ -39,6 +39,7 @@ export function useCrmActivities({ startISO, endISO, pipe = "all" }: ActivitiesP
 
       const sdrTotals = ((sdrTotalsRes.data ?? []) as Array<{
         ligacoes: number;
+        tarefas: number;
         contato_realizado: number;
         reunioes_agendadas: number;
         reunioes_realizadas: number;
@@ -51,6 +52,7 @@ export function useCrmActivities({ startISO, endISO, pipe = "all" }: ActivitiesP
         sdrRows: (sdrRes.data ?? []) as Array<{
           user_id: string;
           ligacoes: number;
+          tarefas: number;
           contato_realizado: number;
           reunioes_agendadas: number;
           reunioes_realizadas: number;

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { format, subDays } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertCircle, PhoneCall, Calendar, CheckCircle2, XCircle, Target, Trophy, DollarSign, TrendingUp } from "lucide-react";
+import { AlertCircle, PhoneCall, Calendar, CheckCircle2, XCircle, Target, Trophy, DollarSign, TrendingUp, ListChecks } from "lucide-react";
 import { useCrmActivities } from "@/hooks/useCrmActivities";
 import { useProfilesList } from "@/hooks/useProfilesList";
 import {
@@ -83,11 +83,12 @@ const AtividadesCrm = () => {
 
   const totals = useMemo(() => {
     const base = computeTotals(sdr, closers, filters.userId === "all" ? data?.sdrTotals : undefined);
-    // Ligações VoIP: soma somente usuários identificados (todos os SDRs, sem filtro de reuniões)
-    const identifiedLigacoes = (data?.sdrRows ?? [])
-      .filter((r) => filters.userId === "all" || r.user_id === filters.userId)
-      .reduce((acc, r) => acc + (Number(r.ligacoes) || 0), 0);
-    return { ...base, ligacoes: identifiedLigacoes };
+    // Ligações VoIP / Tarefas: soma somente usuários identificados (todos os SDRs, sem filtro de reuniões)
+    const filteredRows = (data?.sdrRows ?? [])
+      .filter((r) => filters.userId === "all" || r.user_id === filters.userId);
+    const identifiedLigacoes = filteredRows.reduce((acc, r) => acc + (Number(r.ligacoes) || 0), 0);
+    const identifiedTarefas = filteredRows.reduce((acc, r) => acc + (Number(r.tarefas) || 0), 0);
+    return { ...base, ligacoes: identifiedLigacoes, tarefas: identifiedTarefas };
   }, [sdr, closers, filters.userId, data?.sdrTotals, data?.sdrRows]);
 
   const conversionRate =
@@ -134,8 +135,9 @@ const AtividadesCrm = () => {
                 </span>
                 <div className="h-px flex-1 bg-border/60" />
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 <KpiCard label="Ligações" hint="(VoIP)" value={totals.ligacoes} icon={PhoneCall} />
+                <KpiCard label="Tarefas" value={totals.tarefas} icon={ListChecks} />
                 <KpiCard label="Reuniões agendadas" value={totals.reunioesAgendadas} icon={Calendar} />
                 <KpiCard label="Reuniões realizadas" value={totals.reunioesRealizadas} icon={CheckCircle2} />
                 <KpiCard label="No-show" value={totals.noShow} icon={XCircle} />

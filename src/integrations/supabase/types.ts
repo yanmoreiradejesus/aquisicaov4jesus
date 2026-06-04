@@ -1270,6 +1270,7 @@ export type Database = {
           no_show: number
           reunioes_agendadas: number
           reunioes_realizadas: number
+          tarefas: number
           user_id: string
         }[]
       }
@@ -1282,6 +1283,7 @@ export type Database = {
           no_show: number
           reunioes_agendadas: number
           reunioes_realizadas: number
+          tarefas: number
         }[]
       }
       has_role: {
