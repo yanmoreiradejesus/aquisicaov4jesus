@@ -57,6 +57,7 @@ export const SDRRankingTable = ({ rows, profiles, onRowClick }: Props<SDRStats>)
           >
             <TableCell className="font-medium">{nameOf(r.userId, profiles)}</TableCell>
             <TableCell className="text-right">{r.ligacoes}</TableCell>
+            <TableCell className="text-right">{r.tarefas}</TableCell>
             <TableCell className="text-right">{r.contatoRealizado}</TableCell>
             <TableCell className="text-right">{r.reunioesAgendadas}</TableCell>
             <TableCell className="text-right">{r.reunioesRealizadas}</TableCell>
