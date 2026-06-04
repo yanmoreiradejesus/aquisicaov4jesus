@@ -17,6 +17,8 @@ interface Props {
   onClick: () => void;
   showAge?: boolean;
   showStageDays?: boolean;
+  showNoShowDays?: boolean;
+  showMeetingDate?: boolean;
   onPhoneInteract?: () => void;
   onOpenInNewTab?: () => void;
   selected?: boolean;
