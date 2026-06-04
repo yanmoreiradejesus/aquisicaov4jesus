@@ -85,7 +85,8 @@ const AtividadesCrm = () => {
 
   const closers = useMemo(() => {
     if (!data) return [];
-    const rows = computeCloserStats(data.closerRows);
+    const rows = computeCloserStats(data.closerRows)
+      .filter((r) => r.reunioesRealizadas >= 1);
     return filters.userId === "all" ? rows : rows.filter((r) => r.userId === filters.userId);
   }, [data, filters.userId]);
 
