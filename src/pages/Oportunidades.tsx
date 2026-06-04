@@ -39,10 +39,41 @@ const Oportunidades = () => {
   const [importOpen, setImportOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [celebration, setCelebration] = useState<{ nome_oportunidade: string; valor_total?: number } | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const navigate = useNavigate();
   const { oportunidadeId } = useParams<{ oportunidadeId?: string }>();
   const notFoundToastedRef = useRef<string | null>(null);
+  const { profiles } = useProfilesList({ departamento: "Receitas" });
+
+  const toggleSelect = (id: string) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  const setColumnSelection = (ids: string[], select: boolean) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => (select ? next.add(id) : next.delete(id)));
+      return next;
+    });
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleBulkAssignCloser = async (closerId: string) => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    const { error } = await supabase
+      .from("crm_oportunidades" as any)
+      .update({ closer_id: closerId })
+      .in("id", ids);
+    if (error) {
+      toast({ title: "Erro ao atribuir closer", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: `${ids.length} oportunidade(s) atualizada(s)` });
+    clearSelection();
+  };
 
   useEffect(() => {
     if (!oportunidadeId) {
