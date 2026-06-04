@@ -110,6 +110,27 @@ export const LeadCard = ({
   const temp = lead.temperatura ? tempPill[lead.temperatura] : null;
   const accent = lead.temperatura ? tempAccent[lead.temperatura] : "bg-border/60";
   const stageDays = showStageDays ? daysSince(lead.data_criacao_origem || lead.created_at) : 0;
+  const noShowDays = showNoShowDays ? daysSince(lead.updated_at || lead.created_at) : 0;
+
+  // Meeting label (Hoje / Amanhã / dd MMM) + flag if overdue
+  let meetingLabel: string | null = null;
+  let meetingOverdue = false;
+  if (showMeetingDate && lead.data_reuniao_agendada) {
+    const m = new Date(lead.data_reuniao_agendada);
+    const today = new Date();
+    const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const diffDays = Math.round((startOfDay(m) - startOfDay(today)) / 86400000);
+    if (diffDays < 0) {
+      meetingOverdue = true;
+      meetingLabel = m.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+    } else if (diffDays === 0) {
+      meetingLabel = `Hoje · ${m.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+    } else if (diffDays === 1) {
+      meetingLabel = `Amanhã · ${m.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+    } else {
+      meetingLabel = m.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+    }
+  }
 
   const stopHard = (e: React.MouseEvent) => {
     e.stopPropagation();
