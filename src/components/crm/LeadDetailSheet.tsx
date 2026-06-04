@@ -425,6 +425,50 @@ export const LeadDetailSheet = ({ open, onOpenChange, lead, onSave, onChangeEtap
           {/* TAB: Informações */}
           <TabsContent value="informacoes" className="mt-4">
             <div className="px-4 py-2 border border-border/40 rounded-lg bg-background/30">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-3 mb-3 border-b border-border/30">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1">
+                    SDR responsável
+                  </p>
+                  <Select
+                    value={form.responsavel_id ?? "none"}
+                    onValueChange={(v) => set("responsavel_id", v === "none" ? null : v)}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder="Sem SDR" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem SDR</SelectItem>
+                      {profiles.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.full_name || p.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1">
+                    Closer responsável
+                  </p>
+                  <Select
+                    value={(form as any).closer_id ?? "none"}
+                    onValueChange={(v) => set("closer_id" as any, v === "none" ? null : v)}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder="Sem closer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem closer</SelectItem>
+                      {profiles.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.full_name || p.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <HoverEditField label="Nome" value={form.nome ?? ""} onChange={(v) => set("nome", v)} />
               <HoverEditField label="Empresa" value={form.empresa ?? ""} onChange={(v) => set("empresa", v)} />
               <HoverEditField label="Telefone" value={form.telefone ?? ""} onChange={(v) => set("telefone", v)} />
