@@ -51,10 +51,18 @@ const KpiCard = ({
 
 const today = () => format(new Date(), "yyyy-MM-dd");
 const daysAgo = (n: number) => format(subDays(new Date(), n), "yyyy-MM-dd");
+const monthStart = () => {
+  const n = new Date();
+  return format(new Date(n.getFullYear(), n.getMonth(), 1), "yyyy-MM-dd");
+};
+const monthEnd = () => {
+  const n = new Date();
+  return format(new Date(n.getFullYear(), n.getMonth() + 1, 0), "yyyy-MM-dd");
+};
 
 const defaultFilters: AtividadesFiltersValue = {
-  start: daysAgo(30),
-  end: today(),
+  start: monthStart(),
+  end: monthEnd(),
   pipe: "all",
   userId: "all",
 };

@@ -45,6 +45,8 @@ export const AtividadesFilters = ({ value, onChange, onReset }: Props) => {
     onChange({ ...value, start, end });
 
   const presets = [
+    { label: "Hoje", run: () => { const t = ymd(new Date()); setRange(t, t); } },
+    { label: "Ontem", run: () => { const y = ymd(subDays(new Date(), 1)); setRange(y, y); } },
     { label: "7 dias", run: () => setRange(ymd(subDays(new Date(), 6)), ymd(new Date())) },
     { label: "30 dias", run: () => setRange(ymd(subDays(new Date(), 29)), ymd(new Date())) },
     { label: "Mês atual", run: () => { const r = monthRange(0); setRange(r.start, r.end); } },
