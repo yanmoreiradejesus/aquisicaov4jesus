@@ -337,6 +337,15 @@ export const OportunidadeDetailSheet = ({
 }: Props) => {
   const [form, setForm] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<string>("informacoes");
+  const [profiles, setProfiles] = useState<{ id: string; full_name: string | null; email: string }[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .order("full_name", { ascending: true })
+      .then(({ data }) => setProfiles((data as any) ?? []));
+  }, []);
   const [tarefaDialogOpen, setTarefaDialogOpen] = useState(false);
   const [aiResumo, setAiResumo] = useState<string>("");
   const [aiLoadingResumo, setAiLoadingResumo] = useState(false);
