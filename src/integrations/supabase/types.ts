@@ -132,6 +132,104 @@ export type Database = {
           },
         ]
       }
+      ai_model_pricing: {
+        Row: {
+          audio_price_per_minute_usd: number
+          input_price_per_1m_usd: number
+          model: string
+          notes: string | null
+          output_price_per_1m_usd: number
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          audio_price_per_minute_usd?: number
+          input_price_per_1m_usd?: number
+          model: string
+          notes?: string | null
+          output_price_per_1m_usd?: number
+          provider: string
+          updated_at?: string
+        }
+        Update: {
+          audio_price_per_minute_usd?: number
+          input_price_per_1m_usd?: number
+          model?: string
+          notes?: string | null
+          output_price_per_1m_usd?: number
+          provider?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_usage_events: {
+        Row: {
+          audio_seconds: number
+          cost_brl: number
+          cost_usd: number
+          created_at: string
+          error: string | null
+          function_name: string
+          id: string
+          input_tokens: number
+          metadata: Json | null
+          model: string
+          output_tokens: number
+          provider: string
+          request_id: string | null
+          status: string
+          tenant_id: string | null
+          total_tokens: number
+          user_id: string | null
+        }
+        Insert: {
+          audio_seconds?: number
+          cost_brl?: number
+          cost_usd?: number
+          created_at?: string
+          error?: string | null
+          function_name: string
+          id?: string
+          input_tokens?: number
+          metadata?: Json | null
+          model: string
+          output_tokens?: number
+          provider: string
+          request_id?: string | null
+          status?: string
+          tenant_id?: string | null
+          total_tokens?: number
+          user_id?: string | null
+        }
+        Update: {
+          audio_seconds?: number
+          cost_brl?: number
+          cost_usd?: number
+          created_at?: string
+          error?: string | null
+          function_name?: string
+          id?: string
+          input_tokens?: number
+          metadata?: Json | null
+          model?: string
+          output_tokens?: number
+          provider?: string
+          request_id?: string | null
+          status?: string
+          tenant_id?: string | null
+          total_tokens?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cobrancas: {
         Row: {
           account_id: string | null
@@ -1249,6 +1347,47 @@ export type Database = {
         }[]
       }
       current_tenant_id: { Args: never; Returns: string }
+      get_ai_usage_breakdown: {
+        Args: { p_end: string; p_start: string; p_tenant: string }
+        Returns: {
+          calls: number
+          cost_brl: number
+          cost_usd: number
+          day: string
+          function_name: string
+          input_tokens: number
+          model: string
+          output_tokens: number
+          provider: string
+          total_tokens: number
+          user_id: string
+          user_name: string
+        }[]
+      }
+      get_ai_usage_by_tenant: {
+        Args: { p_end: string; p_start: string }
+        Returns: {
+          calls: number
+          client_name: string
+          client_slug: string
+          cost_brl: number
+          cost_usd: number
+          input_tokens: number
+          output_tokens: number
+          tenant_id: string
+          total_tokens: number
+        }[]
+      }
+      get_ai_usage_daily: {
+        Args: { p_end: string; p_start: string; p_tenant: string }
+        Returns: {
+          calls: number
+          cost_brl: number
+          cost_usd: number
+          day: string
+          total_tokens: number
+        }[]
+      }
       get_closer_activity_stats: {
         Args: { p_end: string; p_pipe?: string; p_start: string }
         Returns: {
