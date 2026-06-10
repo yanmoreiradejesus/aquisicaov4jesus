@@ -37,6 +37,7 @@ export const OportunidadeColumn = ({
   selectedIds,
   onToggleSelect,
   onToggleColumn,
+  profiles,
 }: Props) => {
   const { setNodeRef, isOver } = useDroppable({ id });
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
