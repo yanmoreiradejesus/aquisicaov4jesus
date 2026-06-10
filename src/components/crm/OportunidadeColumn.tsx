@@ -16,6 +16,7 @@ interface Props {
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
   onToggleColumn?: (ids: string[], select: boolean) => void;
+  profiles?: ProfileLite[];
 }
 
 const fmtBRL = (v: number) =>
