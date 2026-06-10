@@ -3,6 +3,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import { OportunidadeCard } from "./OportunidadeCard";
 import { cn } from "@/lib/utils";
+import type { ProfileLite } from "@/hooks/useProfilesList";
 
 interface Props {
   id: string;
@@ -15,6 +16,7 @@ interface Props {
   selectedIds?: Set<string>;
   onToggleSelect?: (id: string) => void;
   onToggleColumn?: (ids: string[], select: boolean) => void;
+  profiles?: ProfileLite[];
 }
 
 const fmtBRL = (v: number) =>
@@ -35,6 +37,7 @@ export const OportunidadeColumn = ({
   selectedIds,
   onToggleSelect,
   onToggleColumn,
+  profiles,
 }: Props) => {
   const { setNodeRef, isOver } = useDroppable({ id });
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
@@ -157,6 +160,7 @@ export const OportunidadeColumn = ({
             onOpenInNewTab={onOpenInNewTab ? () => onOpenInNewTab(op) : undefined}
             selected={selectedIds?.has(op.id)}
             onToggleSelect={onToggleSelect ? () => onToggleSelect(op.id) : undefined}
+            profiles={profiles}
           />
         ))}
         {oportunidades.length === 0 && (

@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import { Calendar, ListTodo, Copy, MessageCircle, ExternalLink, Link2, Clock } from "lucide-react";
+import { Calendar, ListTodo, Copy, MessageCircle, ExternalLink, Link2, Clock, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { formatPhone, whatsappNumber } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
+import { profileLabel, type ProfileLite } from "@/hooks/useProfilesList";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -19,6 +20,7 @@ interface Props {
   overlay?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
+  profiles?: ProfileLite[];
 }
 
 const fmtBRL = (v?: number | null) => {
@@ -48,7 +50,7 @@ const resolveTemp = (raw?: string | null) => {
   return TEMP_PILL[raw.toLowerCase()] ?? null;
 };
 
-export const OportunidadeCard = ({ oportunidade, onClick, onOpenInNewTab, overlay = false, selected, onToggleSelect }: Props) => {
+export const OportunidadeCard = ({ oportunidade, onClick, onOpenInNewTab, overlay = false, selected, onToggleSelect, profiles }: Props) => {
   const clickTimerRef = useRef<number | null>(null);
   useEffect(() => () => {
     if (clickTimerRef.current) window.clearTimeout(clickTimerRef.current);
@@ -140,6 +142,9 @@ export const OportunidadeCard = ({ oportunidade, onClick, onOpenInNewTab, overla
   // Subtítulo só aparece se for diferente do título (evita repetir).
   const possiveisSub = [lead?.empresa, lead?.nome].filter(Boolean) as string[];
   const subtitulo = possiveisSub.find((v) => v !== titulo) ?? null;
+
+  const sdrName = profileLabel(profiles?.find((p) => p.id === lead?.responsavel_id));
+  const closerName = profileLabel(profiles?.find((p) => p.id === (oportunidade.closer_id || lead?.closer_id)));
 
   const phone = lead?.telefone as string | undefined;
   const phoneFmt = formatPhone(phone);
@@ -263,6 +268,22 @@ export const OportunidadeCard = ({ oportunidade, onClick, onOpenInNewTab, overla
                 title="Dias desde a criação da oportunidade"
               >
                 <Clock className="h-2.5 w-2.5" />Dia {cardDays}
+              </span>
+            )}
+            {sdrName !== "—" && (
+              <span
+                className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide bg-blue-500/10 text-blue-300 border-blue-500/30 inline-flex items-center gap-1"
+                title="SDR responsável"
+              >
+                <Users className="h-2.5 w-2.5" />SDR {sdrName}
+              </span>
+            )}
+            {closerName !== "—" && (
+              <span
+                className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide bg-violet-500/10 text-violet-300 border-violet-500/30 inline-flex items-center gap-1"
+                title="Closer responsável"
+              >
+                <Users className="h-2.5 w-2.5" />Closer {closerName}
               </span>
             )}
           </div>
