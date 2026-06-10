@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { OPORTUNIDADE_ETAPAS } from "@/hooks/useCrmOportunidades";
@@ -336,6 +337,15 @@ export const OportunidadeDetailSheet = ({
 }: Props) => {
   const [form, setForm] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<string>("informacoes");
+  const [profiles, setProfiles] = useState<{ id: string; full_name: string | null; email: string }[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .order("full_name", { ascending: true })
+      .then(({ data }) => setProfiles((data as any) ?? []));
+  }, []);
   const [tarefaDialogOpen, setTarefaDialogOpen] = useState(false);
   const [aiResumo, setAiResumo] = useState<string>("");
   const [aiLoadingResumo, setAiLoadingResumo] = useState(false);
@@ -763,6 +773,62 @@ export const OportunidadeDetailSheet = ({
                   Informações da oportunidade
                 </AccordionTrigger>
                 <AccordionContent className="pb-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-3 mb-3 border-b border-border/30">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1">
+                        SDR responsável
+                      </p>
+                      <Select
+                        value={lead?.responsavel_id ?? "none"}
+                        onValueChange={async (v) => {
+                          if (!lead?.id) return;
+                          const newVal = v === "none" ? null : v;
+                          setForm((p: any) => ({ ...p, lead: { ...(p.lead ?? {}), responsavel_id: newVal } }));
+                          const { error } = await supabase
+                            .from("crm_leads")
+                            .update({ responsavel_id: newVal })
+                            .eq("id", lead.id);
+                          if (error) {
+                            toast({ title: "Erro ao atualizar SDR", description: error.message, variant: "destructive" });
+                          }
+                        }}
+                        disabled={!lead?.id}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder={lead?.id ? "Sem SDR" : "Sem lead vinculado"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sem SDR</SelectItem>
+                          {profiles.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.full_name || p.email}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-1">
+                        Closer responsável
+                      </p>
+                      <Select
+                        value={form.closer_id ?? "none"}
+                        onValueChange={(v) => set("closer_id", v === "none" ? null : v)}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="Sem closer" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Sem closer</SelectItem>
+                          {profiles.map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.full_name || p.email}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                   <HoverEditField
                     label="Nome da oportunidade"
                     value={form.nome_oportunidade ?? ""}
