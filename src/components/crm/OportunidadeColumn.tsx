@@ -3,6 +3,7 @@ import { useDroppable } from "@dnd-kit/core";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import { OportunidadeCard } from "./OportunidadeCard";
 import { cn } from "@/lib/utils";
+import type { ProfileLite } from "@/hooks/useProfilesList";
 
 interface Props {
   id: string;
