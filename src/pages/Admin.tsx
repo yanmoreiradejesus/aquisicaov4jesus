@@ -51,6 +51,7 @@ import {
   Check,
   X,
   Trash2,
+  Cpu,
 } from "lucide-react";
 import { AdminVoipAccountsCard } from "@/components/admin/AdminVoipAccountsCard";
 import { AdminFixLeadsCard } from "@/components/admin/AdminFixLeadsCard";
@@ -265,23 +266,42 @@ const Admin = () => {
         </div>
 
         {isSuperAdminV4 && (
-          <Card
-            className="cursor-pointer hover:border-primary/50 transition-colors group"
-            onClick={() => navigate("/admin/clientes")}
-          >
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-primary/15 flex items-center justify-center">
-                  <Building2 className="h-5 w-5 text-primary" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Card
+              className="cursor-pointer hover:border-primary/50 transition-colors group"
+              onClick={() => navigate("/admin/clientes")}
+            >
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-primary/15 flex items-center justify-center">
+                    <Building2 className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">Clientes V4</p>
+                    <p className="text-sm text-muted-foreground">Gerenciar tenants e provisionar novos clientes</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium text-foreground">Clientes V4</p>
-                  <p className="text-sm text-muted-foreground">Gerenciar tenants e provisionar novos clientes</p>
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+              </CardContent>
+            </Card>
+            <Card
+              className="cursor-pointer hover:border-primary/50 transition-colors group"
+              onClick={() => navigate("/admin/consumo-ia")}
+            >
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-primary/15 flex items-center justify-center">
+                    <Cpu className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">Consumo de IA</p>
+                    <p className="text-sm text-muted-foreground">Tokens e custo por subconta, função e usuário</p>
+                  </div>
                 </div>
-              </div>
-              <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-            </CardContent>
-          </Card>
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         <Tabs defaultValue="users">
