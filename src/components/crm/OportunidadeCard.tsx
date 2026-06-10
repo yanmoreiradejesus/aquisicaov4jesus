@@ -6,6 +6,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatPhone, whatsappNumber } from "@/lib/ddd";
 import { useToast } from "@/hooks/use-toast";
 import { profileLabel, type ProfileLite } from "@/hooks/useProfilesList";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 
 interface Props {
   oportunidade: any;
@@ -14,6 +20,7 @@ interface Props {
   overlay?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
+  profiles?: ProfileLite[];
 }
 
 const fmtBRL = (v?: number | null) => {
