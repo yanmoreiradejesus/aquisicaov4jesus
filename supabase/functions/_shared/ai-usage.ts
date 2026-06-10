@@ -124,3 +124,47 @@ export async function resolveTenantForUser(userId: string | null): Promise<strin
     return isSuper ? (profile.active_tenant_id || profile.tenant_id) : profile.tenant_id;
   } catch { return null; }
 }
+
+// Wraps an OpenAI-compatible SSE response so we can capture the final `usage` chunk
+// and log it asynchronously without blocking the client stream.
+export function instrumentLovableStream(
+  response: Response,
+  logArgs: Omit<LogAiUsageInput, "inputTokens" | "outputTokens" | "status"> & { promptTokensFallback?: number },
+): Response {
+  if (!response.body) return response;
+  const [a, b] = response.body.tee();
+
+  (async () => {
+    try {
+      const reader = b.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+      let usage: any = null;
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        // SSE lines split by \n
+        const lines = buf.split("\n");
+        buf = lines.pop() || "";
+        for (const ln of lines) {
+          const s = ln.trim();
+          if (!s.startsWith("data:")) continue;
+          const payload = s.slice(5).trim();
+          if (!payload || payload === "[DONE]") continue;
+          try {
+            const obj = JSON.parse(payload);
+            if (obj.usage) usage = obj.usage;
+          } catch { /* ignore */ }
+        }
+      }
+      const inTok = Number(usage?.prompt_tokens || logArgs.promptTokensFallback || 0);
+      const outTok = Number(usage?.completion_tokens || 0);
+      await logAiUsage({ ...logArgs, inputTokens: inTok, outputTokens: outTok, status: "ok" });
+    } catch (e) {
+      console.error("[ai-usage] stream instrumentation failed", e);
+    }
+  })();
+
+  return new Response(a, { status: response.status, headers: response.headers });
+}
