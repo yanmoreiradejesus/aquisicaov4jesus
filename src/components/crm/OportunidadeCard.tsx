@@ -270,6 +270,22 @@ export const OportunidadeCard = ({ oportunidade, onClick, onOpenInNewTab, overla
                 <Clock className="h-2.5 w-2.5" />Dia {cardDays}
               </span>
             )}
+            {sdrName !== "—" && (
+              <span
+                className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide bg-blue-500/10 text-blue-300 border-blue-500/30 inline-flex items-center gap-1"
+                title="SDR responsável"
+              >
+                <Users className="h-2.5 w-2.5" />SDR {sdrName}
+              </span>
+            )}
+            {closerName !== "—" && (
+              <span
+                className="text-[9.5px] px-1.5 py-0.5 rounded-md border font-semibold tracking-wide bg-violet-500/10 text-violet-300 border-violet-500/30 inline-flex items-center gap-1"
+                title="Closer responsável"
+              >
+                <Users className="h-2.5 w-2.5" />Closer {closerName}
+              </span>
+            )}
           </div>
 
           {oportunidade.etapa === "fechado_perdido" && oportunidade.motivo_perda && (
