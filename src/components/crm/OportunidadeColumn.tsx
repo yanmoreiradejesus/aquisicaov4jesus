@@ -160,6 +160,7 @@ export const OportunidadeColumn = ({
             onOpenInNewTab={onOpenInNewTab ? () => onOpenInNewTab(op) : undefined}
             selected={selectedIds?.has(op.id)}
             onToggleSelect={onToggleSelect ? () => onToggleSelect(op.id) : undefined}
+            profiles={profiles}
           />
         ))}
         {oportunidades.length === 0 && (
