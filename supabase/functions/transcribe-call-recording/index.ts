@@ -2,6 +2,7 @@
 // Disparada automaticamente pelo trigger Postgres quando gravacao_url é preenchida,
 // ou manualmente com { event_id, force: true } pelo painel.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { logAiUsage, extractUsage, resolveUserIdFromAuth, resolveTenantForUser } from "../_shared/ai-usage.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -148,6 +149,10 @@ async function processEvent(eventId: string, force: boolean) {
     );
 
     const transcricao = await transcribeWithGemini(base64, mime, model);
+    try {
+      // Para transcrição cobramos por minuto de áudio; aproxima entrada/saída por chars.
+      await logAiUsage({ tenantId: null, userId: null, functionName: "transcribe-call-recording", provider: "lovable", model, audioSeconds: durationSec, outputTokens: Math.ceil(transcricao.length / 4), metadata: { event_id: eventId } });
+    } catch (_) {}
     console.log(`[transcribe] event=${eventId} transcrição OK (${transcricao.length} chars)`);
 
     await admin

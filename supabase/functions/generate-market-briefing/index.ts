@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { logAiUsage, extractUsage, resolveUserIdFromAuth, resolveTenantForUser } from "../_shared/ai-usage.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -161,6 +162,12 @@ Ao final, OBRIGATORIAMENTE chame a ferramenta salvar_briefing_mercado com o JSON
     }
 
     const data = await anthropicResp.json();
+    try {
+      const uid = await resolveUserIdFromAuth(req.headers.get("Authorization"));
+      const tid = await resolveTenantForUser(uid);
+      const u = extractUsage("anthropic", data);
+      await logAiUsage({ tenantId: tid, userId: uid, functionName: "generate-market-briefing", provider: "anthropic", model: "claude-sonnet-4-20250514", inputTokens: u.inputTokens, outputTokens: u.outputTokens, metadata: { lead_id } });
+    } catch (_) {}
 
     // procura o tool_use salvar_briefing_mercado
     let payload: any = null;

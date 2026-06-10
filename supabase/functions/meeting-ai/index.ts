@@ -1,4 +1,5 @@
 // Edge function: meeting-ai
+import { logAiUsage, extractUsage, resolveUserIdFromAuth, resolveTenantForUser } from "../_shared/ai-usage.ts";
 // Actions: "summarize" -> resumo da reunião | "pre_growth_class" -> relatório pré-GC
 // Providers (Anthropic only): "sonnet" (default), "opus45", "haiku45"
 const corsHeaders = {
@@ -196,6 +197,12 @@ ${JSON.stringify(contexto ?? {}, null, 2)}`;
     }
 
     const data = await resp.json();
+    try {
+      const uid = await resolveUserIdFromAuth(req.headers.get("Authorization"));
+      const tid = await resolveTenantForUser(uid);
+      const u = extractUsage("anthropic", data);
+      await logAiUsage({ tenantId: tid, userId: uid, functionName: "meeting-ai", provider: "anthropic", model: claudeModel, inputTokens: u.inputTokens, outputTokens: u.outputTokens, metadata: { action } });
+    } catch (_) {}
 
     if (action === "summarize") {
       const content = data.content?.find((b: any) => b.type === "text")?.text ?? "";

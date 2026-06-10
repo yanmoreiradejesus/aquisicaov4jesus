@@ -1,5 +1,6 @@
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { logAiUsage, extractUsage } from "../_shared/ai-usage.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -349,6 +350,10 @@ async function generateExecutiveSummary(payload: any): Promise<string> {
       return `Síntese executiva indisponível (erro ${resp.status}).`;
     }
     const data = await resp.json();
+    try {
+      const u = extractUsage("lovable", data);
+      await logAiUsage({ tenantId: (payload as any)?.tenantId || null, userId: (payload as any)?.userId || null, functionName: "generate-account-journey-pdf", provider: "lovable", model: "google/gemini-2.5-flash", inputTokens: u.inputTokens, outputTokens: u.outputTokens });
+    } catch (_) {}
     return data?.choices?.[0]?.message?.content ?? "Síntese não retornada.";
   } catch (e) {
     console.error("AI error", e);

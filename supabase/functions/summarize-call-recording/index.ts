@@ -1,5 +1,6 @@
 // Edge function: resume a transcrição da gravação via Lovable AI
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { logAiUsage, extractUsage, resolveUserIdFromAuth, resolveTenantForUser } from "../_shared/ai-usage.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -72,6 +73,12 @@ Deno.serve(async (req) => {
 
     const data = await resp.json();
     const resumo = data?.choices?.[0]?.message?.content ?? "";
+    try {
+      const uid = await resolveUserIdFromAuth(req.headers.get("Authorization"));
+      const tid = await resolveTenantForUser(uid);
+      const u = extractUsage("lovable", data);
+      await logAiUsage({ tenantId: tid, userId: uid, functionName: "summarize-call-recording", provider: "lovable", model: "google/gemini-2.5-flash", inputTokens: u.inputTokens, outputTokens: u.outputTokens, metadata: { event_id } });
+    } catch (_) {}
 
     await admin
       .from("crm_call_events")
