@@ -143,6 +143,9 @@ export const OportunidadeCard = ({ oportunidade, onClick, onOpenInNewTab, overla
   const possiveisSub = [lead?.empresa, lead?.nome].filter(Boolean) as string[];
   const subtitulo = possiveisSub.find((v) => v !== titulo) ?? null;
 
+  const sdrName = profileLabel(profiles?.find((p) => p.id === lead?.responsavel_id));
+  const closerName = profileLabel(profiles?.find((p) => p.id === (oportunidade.closer_id || lead?.closer_id)));
+
   const phone = lead?.telefone as string | undefined;
   const phoneFmt = formatPhone(phone);
   const wa = whatsappNumber(phone);
