@@ -2,6 +2,7 @@
 // Compara dados da oportunidade/account com o PDF do contrato assinado
 // e usa Lovable AI para detectar divergências em valores, datas e produtos.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { logAiUsage, extractUsage, resolveUserIdFromAuth, resolveTenantForUser } from "../_shared/ai-usage.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -219,6 +220,12 @@ ${contratoTexto}
     }
 
     const aiData = await aiResp.json();
+    try {
+      const uid = await resolveUserIdFromAuth(req.headers.get("Authorization"));
+      const tid = await resolveTenantForUser(uid);
+      const u = extractUsage("lovable", aiData);
+      await logAiUsage({ tenantId: tid, userId: uid, functionName: "validate-contract-divergence", provider: "lovable", model: "google/gemini-2.5-flash", inputTokens: u.inputTokens, outputTokens: u.outputTokens, metadata: { account_id } });
+    } catch (_) {}
     const toolCall = aiData?.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall?.function?.arguments) {
       throw new Error("IA não retornou tool call");

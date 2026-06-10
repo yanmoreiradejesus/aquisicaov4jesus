@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { logAiUsage, instrumentLovableStream, resolveUserIdFromAuth, resolveTenantForUser } from "../_shared/ai-usage.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -253,6 +254,7 @@ ${contextBlock}`;
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         stream: true,
+        stream_options: { include_usage: true },
         messages: aiMessages,
       }),
     });
@@ -278,7 +280,12 @@ ${contextBlock}`;
       });
     }
 
-    return new Response(aiResp.body, {
+    const uid = await resolveUserIdFromAuth(req.headers.get("Authorization"));
+    const tid = await resolveTenantForUser(uid);
+    const instrumented = instrumentLovableStream(aiResp, {
+      tenantId: tid, userId: uid, functionName: "closer-copilot", provider: "lovable", model: "google/gemini-2.5-flash", metadata: { oportunidade_id },
+    });
+    return new Response(instrumented.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
     });
   } catch (e) {
