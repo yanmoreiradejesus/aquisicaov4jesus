@@ -398,6 +398,7 @@ const Oportunidades = () => {
                     selectedIds={selectedIds}
                     onToggleSelect={toggleSelect}
                     onToggleColumn={setColumnSelection}
+                    profiles={profiles}
                   />
                 ))}
               </div>
