@@ -301,6 +301,25 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
     setSaving(true);
     try {
       await onSave(form);
+
+      // Persiste escopo contratado (Gestão de Contas) — só quando flag ligada
+      if (gestaoEnabled && form?.id && tenantConfig?.id && scopeItems.length > 0) {
+        const payload = scopeItems
+          .filter((s) => s.item && s.item.trim().length > 0)
+          .map((s) => ({
+            account_id: form.id,
+            tenant_id: tenantConfig.id,
+            item: s.item,
+            quantidade_contratada: Number(s.quantidade) || 0,
+          }));
+        if (payload.length > 0) {
+          const { error } = await supabase
+            .from("account_scope" as any)
+            .upsert(payload, { onConflict: "account_id,item" });
+          if (error) throw error;
+        }
+      }
+
       toast({ title: "Onboarding atualizado" });
       onOpenChange(false);
     } catch (e: any) {
@@ -309,6 +328,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
       setSaving(false);
     }
   };
+
 
   const handleGerarRelatorio = async () => {
     setGenerating(true);
