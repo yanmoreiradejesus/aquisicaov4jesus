@@ -70,6 +70,9 @@ const formatCategorias = (val?: string | null): string => {
 export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, fullPage = false, backTo }: Props) => {
   const [form, setForm] = useState<any>(null);
   const { profiles: amProfiles } = useProfilesList({ departamento: "Receitas" });
+  const { profiles: allProfiles } = useProfilesList({});
+  const { enabled: gestaoEnabled } = useGestaoContasEnabled();
+  const { config: tenantConfig } = useTenantConfig();
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [exportingPdf, setExportingPdf] = useState<false | "summary" | "appendix">(false);
@@ -79,6 +82,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
   const [editingContrato, setEditingContrato] = useState(false);
   const [contratoForm, setContratoForm] = useState<any>(null);
   const [savingContrato, setSavingContrato] = useState(false);
+  const [scopeItems, setScopeItems] = useState<{ item: string; quantidade: number; ordem: number }[]>([]);
   const [divergence, setDivergence] = useState<{
     status: "idle" | "loading" | "ok" | "error" | "no_contract" | "extract_failed";
     has_divergence?: boolean;
