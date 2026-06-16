@@ -1027,7 +1027,164 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
           <TabsContent value="copilot" className="mt-4">
             <OnboardingCopilot accountId={form.id} />
           </TabsContent>
+
+          {gestaoEnabled && (
+            <TabsContent value="gestao" className="space-y-5 mt-4">
+              <div className="rounded-lg border border-border/40 bg-background/40 p-4 space-y-4">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Squad</Label>
+                  <Select
+                    value={(form as any).squad ?? "none"}
+                    onValueChange={(v) => update({ squad: v === "none" ? null : v } as any)}
+                  >
+                    <SelectTrigger className="mt-1.5">
+                      <SelectValue placeholder="Selecione o squad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem squad</SelectItem>
+                      <SelectItem value="strikers">Strikers</SelectItem>
+                      <SelectItem value="fenix">Fênix</SelectItem>
+                      <SelectItem value="saber">Saber</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">MRR (R$)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      className="mt-1.5"
+                      value={(form as any).mrr ?? ""}
+                      onChange={(e) =>
+                        update({ mrr: e.target.value === "" ? null : Number(e.target.value) } as any)
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">MRR variável (R$)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      className="mt-1.5"
+                      value={(form as any).mrr_variavel ?? ""}
+                      onChange={(e) =>
+                        update({ mrr_variavel: e.target.value === "" ? null : Number(e.target.value) } as any)
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-border/40 bg-background/40 p-4 space-y-3">
+                <h3 className="font-display text-sm font-semibold tracking-[-0.01em] text-foreground/90">Time</h3>
+                {([
+                  { key: "gt_id", label: "GT (Gestor de Tráfego)" },
+                  { key: "designer_id", label: "Designer" },
+                  { key: "social_media_id", label: "Social Media" },
+                ] as const).map((f) => (
+                  <div key={f.key}>
+                    <Label className="text-xs text-muted-foreground">{f.label}</Label>
+                    <Select
+                      value={(form as any)[f.key] ?? "none"}
+                      onValueChange={(v) => update({ [f.key]: v === "none" ? null : v } as any)}
+                    >
+                      <SelectTrigger className="mt-1.5">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Sem responsável</SelectItem>
+                        {allProfiles.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{profileLabel(p)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-lg border border-border/40 bg-background/40 p-4 space-y-3">
+                <h3 className="font-display text-sm font-semibold tracking-[-0.01em] text-foreground/90">Links</h3>
+                {([
+                  { key: "playbook_url", label: "Playbook" },
+                  { key: "growthpack_url", label: "Growthpack" },
+                  { key: "drive_url", label: "Drive" },
+                ] as const).map((f) => (
+                  <div key={f.key}>
+                    <Label className="text-xs text-muted-foreground">{f.label}</Label>
+                    <Input
+                      type="url"
+                      placeholder="https://..."
+                      className="mt-1.5"
+                      value={(form as any)[f.key] ?? ""}
+                      onChange={(e) => update({ [f.key]: e.target.value || null } as any)}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-lg border border-border/40 bg-background/40 p-4">
+                <Label className="text-xs text-muted-foreground">eKyte workspace ID</Label>
+                <Input
+                  type="number"
+                  className="mt-1.5"
+                  value={(form as any).ekyte_workspace_id ?? ""}
+                  onChange={(e) =>
+                    update({
+                      ekyte_workspace_id: e.target.value === "" ? null : Number(e.target.value),
+                    } as any)
+                  }
+                />
+                <p className="text-[11px] text-muted-foreground mt-1.5">
+                  Usado na integração eKyte.
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-border/40 bg-background/40 p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-display text-sm font-semibold tracking-[-0.01em] text-foreground/90">
+                    Escopo contratado / mês
+                  </h3>
+                  {!(form as any).squad && (
+                    <span className="text-[11px] text-muted-foreground">Selecione o squad primeiro</span>
+                  )}
+                </div>
+                {scopeItems.length === 0 ? (
+                  <p className="text-[12px] text-muted-foreground py-2">
+                    Nenhum entregável configurado para este squad.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {scopeItems.map((s, i) => (
+                      <div key={s.item} className="flex items-center gap-3">
+                        <span className="flex-1 text-[13px] text-foreground/90">{s.item}</span>
+                        <Input
+                          type="number"
+                          min={0}
+                          step="1"
+                          className="w-24 text-right tabular-nums"
+                          value={s.quantidade}
+                          onChange={(e) => {
+                            const v = e.target.value === "" ? 0 : Number(e.target.value);
+                            setScopeItems((prev) => {
+                              const next = [...prev];
+                              next[i] = { ...next[i], quantidade: v };
+                              return next;
+                            });
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
+
 
         <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-border/40">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
