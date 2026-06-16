@@ -606,6 +606,11 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
             <TabsTrigger value="copilot">
               <Flame className="h-3.5 w-3.5 mr-1.5" /> Copilot
             </TabsTrigger>
+            {gestaoEnabled && (
+              <TabsTrigger value="gestao">
+                <Settings2 className="h-3.5 w-3.5 mr-1.5" /> Gestão da conta
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="pre-gc" className="space-y-5 mt-4">
