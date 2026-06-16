@@ -16,6 +16,8 @@ import { OnboardingCopilot } from "./OnboardingCopilot";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { DetailShell } from "./DetailShell";
 import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
+import { useGestaoContasEnabled } from "@/hooks/useGestaoContasEnabled";
+import { useTenantConfig } from "@/hooks/useTenantConfig";
 
 import ReactMarkdown from "react-markdown";
 
