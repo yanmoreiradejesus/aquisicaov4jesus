@@ -18,6 +18,8 @@ import { DetailShell } from "./DetailShell";
 import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
 import { useGestaoContasEnabled } from "@/hooks/useGestaoContasEnabled";
 import { useTenantConfig } from "@/hooks/useTenantConfig";
+import { useAccountScope, upsertAccountScope } from "@/hooks/useAccountScope";
+import { AccountManagementFields } from "@/components/accounts/AccountManagementFields";
 
 import ReactMarkdown from "react-markdown";
 
