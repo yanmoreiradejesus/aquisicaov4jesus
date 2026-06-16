@@ -29,6 +29,8 @@ import LeadDetailPage from "./pages/LeadDetailPage";
 import OportunidadeDetailPage from "./pages/OportunidadeDetailPage";
 import OnboardingDetailPage from "./pages/OnboardingDetailPage";
 import ComercialPlaceholder from "./pages/ComercialPlaceholder";
+import AccountsList from "./pages/AccountsList";
+import AccountDetail from "./pages/AccountDetail";
 import FunilAnalytics from "./pages/FunilAnalytics";
 import GoogleCallback from "./pages/GoogleCallback";
 import { useAppVersion } from "@/hooks/useAppVersion";
