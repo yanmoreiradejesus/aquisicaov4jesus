@@ -86,7 +86,7 @@ export const PAGE_CATALOG: Array<{
       { path: "/comercial/leads", label: "Leads" },
       { path: "/comercial/oportunidades", label: "Oportunidades" },
       { path: "/comercial/onboarding", label: "Onboarding" },
-      { path: "/comercial/accounts", label: "Accounts (em breve)" },
+      { path: "/comercial/accounts", label: "Gestão de Contas" },
       { path: "/comercial/cobrancas", label: "Cobranças (em breve)" },
     ],
   },
