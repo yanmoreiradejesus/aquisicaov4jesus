@@ -158,7 +158,12 @@ const AppRoutes = () => {
         } />
         <Route path="/comercial/accounts" element={
           <ProtectedRoute requiredPath="/comercial/accounts">
-            <PageTransition><ComercialPlaceholder titulo="Account Managing" descricao="Gestão de contas ativas, health score e renovações. Em breve." /></PageTransition>
+            <PageTransition><AccountsList /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/comercial/accounts/:accountId" element={
+          <ProtectedRoute requiredPath="/comercial/accounts">
+            <PageTransition><AccountDetail /></PageTransition>
           </ProtectedRoute>
         } />
         <Route path="/comercial/cobrancas" element={
