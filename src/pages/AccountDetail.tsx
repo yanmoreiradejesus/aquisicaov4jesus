@@ -43,12 +43,12 @@ export default function AccountDetail() {
     if (!accountId) return;
     supabase
       .from("account_scope" as any)
-      .select("item, quantidade_contratada")
+      .select("item, contratado, quantidade_contratada")
       .eq("account_id", accountId)
       .then(({ data }) => {
         const items = ((data ?? []) as any[]).map((s, i) => ({
           item: s.item,
-          quantidade: Number(s.quantidade_contratada) || 0,
+          contratado: s.contratado ?? (Number(s.quantidade_contratada) || 0) > 0,
           ordem: i,
         }));
         setContractedScope(items);
@@ -98,12 +98,12 @@ export default function AccountDetail() {
       // refresh local scope display
       const { data } = await supabase
         .from("account_scope" as any)
-        .select("item, quantidade_contratada")
+        .select("item, contratado, quantidade_contratada")
         .eq("account_id", account.id);
       setContractedScope(
         ((data ?? []) as any[]).map((s, i) => ({
           item: s.item,
-          quantidade: Number(s.quantidade_contratada) || 0,
+          contratado: s.contratado ?? (Number(s.quantidade_contratada) || 0) > 0,
           ordem: i,
         })),
       );
@@ -187,7 +187,7 @@ export default function AccountDetail() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card title="Escopo contratado / mês">
+          <Card title="Escopo contratado">
             {contractedScope.length === 0 ? (
               <p className="text-[12px] text-muted-foreground py-2">Sem escopo definido.</p>
             ) : (
@@ -195,14 +195,15 @@ export default function AccountDetail() {
                 {contractedScope.map((s) => (
                   <div key={s.item} className="flex items-center justify-between gap-3 text-[13px]">
                     <span className="text-foreground/90">{s.item}</span>
-                    <span className="tabular-nums text-foreground/80">
-                      <span className="text-muted-foreground">—</span> / {s.quantidade}
-                    </span>
+                    {s.contratado ? (
+                      <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-400">
+                        Sim
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-muted-foreground">Não</span>
+                    )}
                   </div>
                 ))}
-                <p className="text-[11px] text-muted-foreground pt-2 border-t border-border/40 mt-2">
-                  Entregue aparece com integração eKyte.
-                </p>
               </div>
             )}
           </Card>

@@ -84,7 +84,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
   const [editingContrato, setEditingContrato] = useState(false);
   const [contratoForm, setContratoForm] = useState<any>(null);
   const [savingContrato, setSavingContrato] = useState(false);
-  const [scopeItems, setScopeItems] = useState<{ item: string; quantidade: number; ordem: number }[]>([]);
+  const [scopeItems, setScopeItems] = useState<{ item: string; contratado: boolean; ordem: number }[]>([]);
   const [divergence, setDivergence] = useState<{
     status: "idle" | "loading" | "ok" | "error" | "no_contract" | "extract_failed";
     has_divergence?: boolean;

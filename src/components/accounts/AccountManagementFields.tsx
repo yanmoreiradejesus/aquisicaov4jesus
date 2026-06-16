@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { ProfileLite } from "@/hooks/useProfilesList";
 import { profileLabel } from "@/hooks/useProfilesList";
@@ -19,7 +20,7 @@ export interface AccountFieldsValue {
 
 export interface ScopeItem {
   item: string;
-  quantidade: number;
+  contratado: boolean;
   ordem: number;
 }
 
@@ -146,7 +147,7 @@ export function AccountManagementFields({ value, onChange, profiles, scope, onSc
       <div className="rounded-lg border border-border/40 bg-background/40 p-4 space-y-3">
         <div className="flex items-center justify-between gap-2">
           <h3 className="font-display text-sm font-semibold tracking-[-0.01em] text-foreground/90">
-            Escopo contratado / mês
+            Escopo contratado
           </h3>
           {!value.squad && (
             <span className="text-[11px] text-muted-foreground">Selecione o squad primeiro</span>
@@ -157,24 +158,22 @@ export function AccountManagementFields({ value, onChange, profiles, scope, onSc
             Nenhum entregável configurado para este squad.
           </p>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1">
             {scope.map((s, i) => (
-              <div key={s.item} className="flex items-center gap-3">
+              <label
+                key={s.item}
+                className="flex items-center justify-between gap-3 py-1.5 cursor-pointer"
+              >
                 <span className="flex-1 text-[13px] text-foreground/90">{s.item}</span>
-                <Input
-                  type="number"
-                  min={0}
-                  step="1"
-                  className="w-24 text-right tabular-nums"
-                  value={s.quantidade}
-                  onChange={(e) => {
-                    const v = e.target.value === "" ? 0 : Number(e.target.value);
+                <Switch
+                  checked={!!s.contratado}
+                  onCheckedChange={(checked) => {
                     const next = [...scope];
-                    next[i] = { ...next[i], quantidade: v };
+                    next[i] = { ...next[i], contratado: !!checked };
                     onScopeChange(next);
                   }}
                 />
-              </div>
+              </label>
             ))}
           </div>
         )}
