@@ -4,9 +4,7 @@ import type { ScopeItem } from "@/components/accounts/AccountManagementFields";
 
 /**
  * Carrega o escopo contratado de uma account mesclado com o template do squad.
- * Itens do template aparecem primeiro (na ordem do template);
- * itens extras presentes em account_scope (que não estão no template atual)
- * são incluídos no final.
+ * Cada item é um booleano (contratado sim/não).
  */
 export function useAccountScope(params: {
   accountId: string | null | undefined;
@@ -37,25 +35,31 @@ export function useAccountScope(params: {
           : Promise.resolve({ data: [] as any[], error: null }),
         supabase
           .from("account_scope" as any)
-          .select("item, quantidade_contratada")
+          .select("item, contratado, quantidade_contratada")
           .eq("account_id", accountId),
       ]);
       if (!active) return;
       const tpl = ((tplRes as any).data ?? []) as { item: string; ordem: number }[];
       const existing = ((scopeRes as any).data ?? []) as {
         item: string;
-        quantidade_contratada: number;
+        contratado: boolean | null;
+        quantidade_contratada: number | null;
       }[];
-      const map = new Map(existing.map((s) => [s.item, Number(s.quantidade_contratada) || 0]));
+      const map = new Map(
+        existing.map((s) => [
+          s.item,
+          s.contratado ?? (Number(s.quantidade_contratada) || 0) > 0,
+        ]),
+      );
       const merged: ScopeItem[] = [];
       const seen = new Set<string>();
       tpl.forEach((t) => {
-        merged.push({ item: t.item, quantidade: map.get(t.item) ?? 0, ordem: t.ordem });
+        merged.push({ item: t.item, contratado: map.get(t.item) ?? false, ordem: t.ordem });
         seen.add(t.item);
       });
       existing.forEach((s) => {
         if (!seen.has(s.item))
-          merged.push({ item: s.item, quantidade: Number(s.quantidade_contratada) || 0, ordem: 999 });
+          merged.push({ item: s.item, contratado: map.get(s.item) ?? false, ordem: 999 });
       });
       setScope(merged);
       setLoading(false);
@@ -79,7 +83,8 @@ export async function upsertAccountScope(
       account_id: accountId,
       tenant_id: tenantId,
       item: s.item,
-      quantidade_contratada: Number(s.quantidade) || 0,
+      contratado: !!s.contratado,
+      quantidade_contratada: s.contratado ? 1 : 0,
     }));
   if (payload.length === 0) return;
   const { error } = await supabase
