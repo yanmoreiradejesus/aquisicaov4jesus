@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_scope: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          item: string
+          quantidade_contratada: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          item: string
+          quantidade_contratada?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          item?: string
+          quantidade_contratada?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_scope_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_scope_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       accounts: {
         Row: {
           account_manager_id: string | null
@@ -24,6 +69,9 @@ export type Database = {
           created_at: string
           data_fim_contrato: string | null
           data_inicio_contrato: string
+          designer_id: string | null
+          drive_url: string | null
+          ekyte_workspace_id: number | null
           growth_class_ata: string | null
           growth_class_data_agendada: string | null
           growth_class_data_realizada: string | null
@@ -33,15 +81,22 @@ export type Database = {
           growth_class_oportunidades_monetizacao: string | null
           growth_class_proximos_passos: string | null
           growth_class_transcricao_reuniao: string | null
+          growthpack_url: string | null
+          gt_id: string | null
           health_score: number | null
           id: string
+          mrr: number | null
+          mrr_variavel: number | null
           notas: string | null
           onboarding_status: Database["public"]["Enums"]["onboarding_status"]
           oportunidade_id: string | null
+          playbook_url: string | null
           pre_growth_class_gerado_em: string | null
           pre_growth_class_relatorio: string | null
           produtos_contratados: Json | null
           proxima_revisao: string | null
+          social_media_id: string | null
+          squad: Database["public"]["Enums"]["squad_type"] | null
           status: Database["public"]["Enums"]["account_status"]
           tenant_id: string
           updated_at: string
@@ -55,6 +110,9 @@ export type Database = {
           created_at?: string
           data_fim_contrato?: string | null
           data_inicio_contrato?: string
+          designer_id?: string | null
+          drive_url?: string | null
+          ekyte_workspace_id?: number | null
           growth_class_ata?: string | null
           growth_class_data_agendada?: string | null
           growth_class_data_realizada?: string | null
@@ -64,15 +122,22 @@ export type Database = {
           growth_class_oportunidades_monetizacao?: string | null
           growth_class_proximos_passos?: string | null
           growth_class_transcricao_reuniao?: string | null
+          growthpack_url?: string | null
+          gt_id?: string | null
           health_score?: number | null
           id?: string
+          mrr?: number | null
+          mrr_variavel?: number | null
           notas?: string | null
           onboarding_status?: Database["public"]["Enums"]["onboarding_status"]
           oportunidade_id?: string | null
+          playbook_url?: string | null
           pre_growth_class_gerado_em?: string | null
           pre_growth_class_relatorio?: string | null
           produtos_contratados?: Json | null
           proxima_revisao?: string | null
+          social_media_id?: string | null
+          squad?: Database["public"]["Enums"]["squad_type"] | null
           status?: Database["public"]["Enums"]["account_status"]
           tenant_id?: string
           updated_at?: string
@@ -86,6 +151,9 @@ export type Database = {
           created_at?: string
           data_fim_contrato?: string | null
           data_inicio_contrato?: string
+          designer_id?: string | null
+          drive_url?: string | null
+          ekyte_workspace_id?: number | null
           growth_class_ata?: string | null
           growth_class_data_agendada?: string | null
           growth_class_data_realizada?: string | null
@@ -95,15 +163,22 @@ export type Database = {
           growth_class_oportunidades_monetizacao?: string | null
           growth_class_proximos_passos?: string | null
           growth_class_transcricao_reuniao?: string | null
+          growthpack_url?: string | null
+          gt_id?: string | null
           health_score?: number | null
           id?: string
+          mrr?: number | null
+          mrr_variavel?: number | null
           notas?: string | null
           onboarding_status?: Database["public"]["Enums"]["onboarding_status"]
           oportunidade_id?: string | null
+          playbook_url?: string | null
           pre_growth_class_gerado_em?: string | null
           pre_growth_class_relatorio?: string | null
           produtos_contratados?: Json | null
           proxima_revisao?: string | null
+          social_media_id?: string | null
+          squad?: Database["public"]["Enums"]["squad_type"] | null
           status?: Database["public"]["Enums"]["account_status"]
           tenant_id?: string
           updated_at?: string
@@ -117,10 +192,31 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "accounts_designer_id_fkey"
+            columns: ["designer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_gt_id_fkey"
+            columns: ["gt_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "accounts_oportunidade_id_fkey"
             columns: ["oportunidade_id"]
             isOneToOne: false
             referencedRelation: "crm_oportunidades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_social_media_id_fkey"
+            columns: ["social_media_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -1042,6 +1138,44 @@ export type Database = {
           },
         ]
       }
+      squad_scope_template: {
+        Row: {
+          created_at: string
+          id: string
+          item: string
+          ordem: number
+          squad: Database["public"]["Enums"]["squad_type"]
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item: string
+          ordem?: number
+          squad: Database["public"]["Enums"]["squad_type"]
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item?: string
+          ordem?: number
+          squad?: Database["public"]["Enums"]["squad_type"]
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "squad_scope_template_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_enabled_pages: {
         Row: {
           created_at: string
@@ -1530,6 +1664,7 @@ export type Database = {
         | "fechado_ganho"
         | "fechado_perdido"
         | "follow_infinito"
+      squad_type: "strikers" | "fenix" | "saber"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1693,6 +1828,7 @@ export const Constants = {
         "fechado_perdido",
         "follow_infinito",
       ],
+      squad_type: ["strikers", "fenix", "saber"],
     },
   },
 } as const
