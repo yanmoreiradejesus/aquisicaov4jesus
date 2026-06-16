@@ -17,6 +17,7 @@ export type Database = {
       account_scope: {
         Row: {
           account_id: string
+          contratado: boolean
           created_at: string
           id: string
           item: string
@@ -26,6 +27,7 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          contratado?: boolean
           created_at?: string
           id?: string
           item: string
@@ -35,6 +37,7 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          contratado?: boolean
           created_at?: string
           id?: string
           item?: string
