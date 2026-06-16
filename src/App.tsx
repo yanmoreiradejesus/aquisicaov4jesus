@@ -29,6 +29,8 @@ import LeadDetailPage from "./pages/LeadDetailPage";
 import OportunidadeDetailPage from "./pages/OportunidadeDetailPage";
 import OnboardingDetailPage from "./pages/OnboardingDetailPage";
 import ComercialPlaceholder from "./pages/ComercialPlaceholder";
+import AccountsList from "./pages/AccountsList";
+import AccountDetail from "./pages/AccountDetail";
 import FunilAnalytics from "./pages/FunilAnalytics";
 import GoogleCallback from "./pages/GoogleCallback";
 import { useAppVersion } from "@/hooks/useAppVersion";
@@ -156,7 +158,12 @@ const AppRoutes = () => {
         } />
         <Route path="/comercial/accounts" element={
           <ProtectedRoute requiredPath="/comercial/accounts">
-            <PageTransition><ComercialPlaceholder titulo="Account Managing" descricao="Gestão de contas ativas, health score e renovações. Em breve." /></PageTransition>
+            <PageTransition><AccountsList /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/comercial/accounts/:accountId" element={
+          <ProtectedRoute requiredPath="/comercial/accounts">
+            <PageTransition><AccountDetail /></PageTransition>
           </ProtectedRoute>
         } />
         <Route path="/comercial/cobrancas" element={
