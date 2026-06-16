@@ -149,7 +149,56 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
     if (account) setForm({ ...account });
   }, [account]);
 
-  // (lista de responsáveis agora vem de useProfilesList acima)
+  // Carrega escopo contratado (Gestão de Contas) + merge com template do squad
+  useEffect(() => {
+    if (!gestaoEnabled || !form?.id || !tenantConfig?.id) {
+      setScopeItems([]);
+      return;
+    }
+    let active = true;
+    (async () => {
+      const tenantId = tenantConfig.id;
+      const squad = (form as any).squad as "strikers" | "fenix" | "saber" | null;
+
+      const [tplRes, scopeRes] = await Promise.all([
+        squad
+          ? supabase
+              .from("squad_scope_template" as any)
+              .select("item, ordem")
+              .eq("tenant_id", tenantId)
+              .eq("squad", squad)
+              .order("ordem", { ascending: true })
+          : Promise.resolve({ data: [] as any[], error: null }),
+        supabase
+          .from("account_scope" as any)
+          .select("item, quantidade_contratada")
+          .eq("account_id", form.id),
+      ]);
+      if (!active) return;
+      const tpl = ((tplRes as any).data ?? []) as { item: string; ordem: number }[];
+      const scope = ((scopeRes as any).data ?? []) as { item: string; quantidade_contratada: number }[];
+      const scopeMap = new Map(scope.map((s) => [s.item, Number(s.quantidade_contratada) || 0]));
+
+      // Template em ordem + extras do account_scope que não estão no template
+      const merged: { item: string; quantidade: number; ordem: number }[] = [];
+      const seen = new Set<string>();
+      tpl.forEach((t) => {
+        merged.push({ item: t.item, quantidade: scopeMap.get(t.item) ?? 0, ordem: t.ordem });
+        seen.add(t.item);
+      });
+      scope.forEach((s) => {
+        if (!seen.has(s.item)) {
+          merged.push({ item: s.item, quantidade: Number(s.quantidade_contratada) || 0, ordem: 999 });
+        }
+      });
+      setScopeItems(merged);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [gestaoEnabled, form?.id, (form as any)?.squad, tenantConfig?.id]);
+
+
 
   // Sign contrato URL when present
   useEffect(() => {
