@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { GraduationCap, Building2, ExternalLink, FileText, Copy, RefreshCw, CheckCircle2, Flame, Pencil, X, Save, AlertTriangle, ShieldCheck, Loader2, FileDown } from "lucide-react";
+import { GraduationCap, Building2, ExternalLink, FileText, Copy, RefreshCw, CheckCircle2, Flame, Pencil, X, Save, AlertTriangle, ShieldCheck, Loader2, FileDown, Settings2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MultiSelect } from "@/components/ui/multi-select";
@@ -16,6 +16,8 @@ import { OnboardingCopilot } from "./OnboardingCopilot";
 import { CopyLinkButton } from "./CopyLinkButton";
 import { DetailShell } from "./DetailShell";
 import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
+import { useGestaoContasEnabled } from "@/hooks/useGestaoContasEnabled";
+import { useTenantConfig } from "@/hooks/useTenantConfig";
 
 import ReactMarkdown from "react-markdown";
 
@@ -68,6 +70,9 @@ const formatCategorias = (val?: string | null): string => {
 export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, fullPage = false, backTo }: Props) => {
   const [form, setForm] = useState<any>(null);
   const { profiles: amProfiles } = useProfilesList({ departamento: "Receitas" });
+  const { profiles: allProfiles } = useProfilesList({});
+  const { enabled: gestaoEnabled } = useGestaoContasEnabled();
+  const { config: tenantConfig } = useTenantConfig();
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [exportingPdf, setExportingPdf] = useState<false | "summary" | "appendix">(false);
@@ -77,6 +82,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
   const [editingContrato, setEditingContrato] = useState(false);
   const [contratoForm, setContratoForm] = useState<any>(null);
   const [savingContrato, setSavingContrato] = useState(false);
+  const [scopeItems, setScopeItems] = useState<{ item: string; quantidade: number; ordem: number }[]>([]);
   const [divergence, setDivergence] = useState<{
     status: "idle" | "loading" | "ok" | "error" | "no_contract" | "extract_failed";
     has_divergence?: boolean;
@@ -143,7 +149,56 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
     if (account) setForm({ ...account });
   }, [account]);
 
-  // (lista de responsáveis agora vem de useProfilesList acima)
+  // Carrega escopo contratado (Gestão de Contas) + merge com template do squad
+  useEffect(() => {
+    if (!gestaoEnabled || !form?.id || !tenantConfig?.id) {
+      setScopeItems([]);
+      return;
+    }
+    let active = true;
+    (async () => {
+      const tenantId = tenantConfig.id;
+      const squad = (form as any).squad as "strikers" | "fenix" | "saber" | null;
+
+      const [tplRes, scopeRes] = await Promise.all([
+        squad
+          ? supabase
+              .from("squad_scope_template" as any)
+              .select("item, ordem")
+              .eq("tenant_id", tenantId)
+              .eq("squad", squad)
+              .order("ordem", { ascending: true })
+          : Promise.resolve({ data: [] as any[], error: null }),
+        supabase
+          .from("account_scope" as any)
+          .select("item, quantidade_contratada")
+          .eq("account_id", form.id),
+      ]);
+      if (!active) return;
+      const tpl = ((tplRes as any).data ?? []) as { item: string; ordem: number }[];
+      const scope = ((scopeRes as any).data ?? []) as { item: string; quantidade_contratada: number }[];
+      const scopeMap = new Map(scope.map((s) => [s.item, Number(s.quantidade_contratada) || 0]));
+
+      // Template em ordem + extras do account_scope que não estão no template
+      const merged: { item: string; quantidade: number; ordem: number }[] = [];
+      const seen = new Set<string>();
+      tpl.forEach((t) => {
+        merged.push({ item: t.item, quantidade: scopeMap.get(t.item) ?? 0, ordem: t.ordem });
+        seen.add(t.item);
+      });
+      scope.forEach((s) => {
+        if (!seen.has(s.item)) {
+          merged.push({ item: s.item, quantidade: Number(s.quantidade_contratada) || 0, ordem: 999 });
+        }
+      });
+      setScopeItems(merged);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [gestaoEnabled, form?.id, (form as any)?.squad, tenantConfig?.id]);
+
+
 
   // Sign contrato URL when present
   useEffect(() => {
@@ -246,6 +301,25 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
     setSaving(true);
     try {
       await onSave(form);
+
+      // Persiste escopo contratado (Gestão de Contas) — só quando flag ligada
+      if (gestaoEnabled && form?.id && tenantConfig?.id && scopeItems.length > 0) {
+        const payload = scopeItems
+          .filter((s) => s.item && s.item.trim().length > 0)
+          .map((s) => ({
+            account_id: form.id,
+            tenant_id: tenantConfig.id,
+            item: s.item,
+            quantidade_contratada: Number(s.quantidade) || 0,
+          }));
+        if (payload.length > 0) {
+          const { error } = await supabase
+            .from("account_scope" as any)
+            .upsert(payload, { onConflict: "account_id,item" });
+          if (error) throw error;
+        }
+      }
+
       toast({ title: "Onboarding atualizado" });
       onOpenChange(false);
     } catch (e: any) {
@@ -254,6 +328,7 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
       setSaving(false);
     }
   };
+
 
   const handleGerarRelatorio = async () => {
     setGenerating(true);
@@ -531,6 +606,11 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
             <TabsTrigger value="copilot">
               <Flame className="h-3.5 w-3.5 mr-1.5" /> Copilot
             </TabsTrigger>
+            {gestaoEnabled && (
+              <TabsTrigger value="gestao">
+                <Settings2 className="h-3.5 w-3.5 mr-1.5" /> Gestão da conta
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="pre-gc" className="space-y-5 mt-4">
@@ -947,7 +1027,164 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
           <TabsContent value="copilot" className="mt-4">
             <OnboardingCopilot accountId={form.id} />
           </TabsContent>
+
+          {gestaoEnabled && (
+            <TabsContent value="gestao" className="space-y-5 mt-4">
+              <div className="rounded-lg border border-border/40 bg-background/40 p-4 space-y-4">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Squad</Label>
+                  <Select
+                    value={(form as any).squad ?? "none"}
+                    onValueChange={(v) => update({ squad: v === "none" ? null : v } as any)}
+                  >
+                    <SelectTrigger className="mt-1.5">
+                      <SelectValue placeholder="Selecione o squad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem squad</SelectItem>
+                      <SelectItem value="strikers">Strikers</SelectItem>
+                      <SelectItem value="fenix">Fênix</SelectItem>
+                      <SelectItem value="saber">Saber</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">MRR (R$)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      className="mt-1.5"
+                      value={(form as any).mrr ?? ""}
+                      onChange={(e) =>
+                        update({ mrr: e.target.value === "" ? null : Number(e.target.value) } as any)
+                      }
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">MRR variável (R$)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      className="mt-1.5"
+                      value={(form as any).mrr_variavel ?? ""}
+                      onChange={(e) =>
+                        update({ mrr_variavel: e.target.value === "" ? null : Number(e.target.value) } as any)
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-border/40 bg-background/40 p-4 space-y-3">
+                <h3 className="font-display text-sm font-semibold tracking-[-0.01em] text-foreground/90">Time</h3>
+                {([
+                  { key: "gt_id", label: "GT (Gestor de Tráfego)" },
+                  { key: "designer_id", label: "Designer" },
+                  { key: "social_media_id", label: "Social Media" },
+                ] as const).map((f) => (
+                  <div key={f.key}>
+                    <Label className="text-xs text-muted-foreground">{f.label}</Label>
+                    <Select
+                      value={(form as any)[f.key] ?? "none"}
+                      onValueChange={(v) => update({ [f.key]: v === "none" ? null : v } as any)}
+                    >
+                      <SelectTrigger className="mt-1.5">
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Sem responsável</SelectItem>
+                        {allProfiles.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>{profileLabel(p)}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-lg border border-border/40 bg-background/40 p-4 space-y-3">
+                <h3 className="font-display text-sm font-semibold tracking-[-0.01em] text-foreground/90">Links</h3>
+                {([
+                  { key: "playbook_url", label: "Playbook" },
+                  { key: "growthpack_url", label: "Growthpack" },
+                  { key: "drive_url", label: "Drive" },
+                ] as const).map((f) => (
+                  <div key={f.key}>
+                    <Label className="text-xs text-muted-foreground">{f.label}</Label>
+                    <Input
+                      type="url"
+                      placeholder="https://..."
+                      className="mt-1.5"
+                      value={(form as any)[f.key] ?? ""}
+                      onChange={(e) => update({ [f.key]: e.target.value || null } as any)}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-lg border border-border/40 bg-background/40 p-4">
+                <Label className="text-xs text-muted-foreground">eKyte workspace ID</Label>
+                <Input
+                  type="number"
+                  className="mt-1.5"
+                  value={(form as any).ekyte_workspace_id ?? ""}
+                  onChange={(e) =>
+                    update({
+                      ekyte_workspace_id: e.target.value === "" ? null : Number(e.target.value),
+                    } as any)
+                  }
+                />
+                <p className="text-[11px] text-muted-foreground mt-1.5">
+                  Usado na integração eKyte.
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-border/40 bg-background/40 p-4 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-display text-sm font-semibold tracking-[-0.01em] text-foreground/90">
+                    Escopo contratado / mês
+                  </h3>
+                  {!(form as any).squad && (
+                    <span className="text-[11px] text-muted-foreground">Selecione o squad primeiro</span>
+                  )}
+                </div>
+                {scopeItems.length === 0 ? (
+                  <p className="text-[12px] text-muted-foreground py-2">
+                    Nenhum entregável configurado para este squad.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {scopeItems.map((s, i) => (
+                      <div key={s.item} className="flex items-center gap-3">
+                        <span className="flex-1 text-[13px] text-foreground/90">{s.item}</span>
+                        <Input
+                          type="number"
+                          min={0}
+                          step="1"
+                          className="w-24 text-right tabular-nums"
+                          value={s.quantidade}
+                          onChange={(e) => {
+                            const v = e.target.value === "" ? 0 : Number(e.target.value);
+                            setScopeItems((prev) => {
+                              const next = [...prev];
+                              next[i] = { ...next[i], quantidade: v };
+                              return next;
+                            });
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
+
 
         <div className="flex items-center justify-end gap-2 mt-6 pt-4 border-t border-border/40">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
