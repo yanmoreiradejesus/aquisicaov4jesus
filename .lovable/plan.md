@@ -1,58 +1,109 @@
-## Objetivo
-Permitir que super admins visualizem o consumo de tokens de IA por subconta (tenant), com quebra por função, usuário e dia, e custo estimado em R$.
+## Migration: Gestão de Contas — base
 
-## Como funciona hoje
-Nenhuma das 10 edge functions que chamam IA (`meeting-ai`, `closer-copilot`, `generate-market-briefing`, `generate-pre-qualification`, `summarize-call-recording`, `spiced-call-analysis`, `validate-contract-divergence`, `transcribe-call-recording`, `onboarding-copilot`, `generate-account-journey-pdf`) grava o `usage` que o provider devolve. Sem registro, não há como medir.
+Tenant alvo do seed: **Jesus & Co** (`ca48961c-9ee0-470d-9d9e-cfecbd7e26c2`).
 
-## Plano
+### 1. ENUM novo
+```sql
+CREATE TYPE public.squad_type AS ENUM ('strikers', 'fenix', 'saber');
+```
 
-### 1. Banco — duas novas tabelas
-- `ai_usage_events` (registro de cada chamada):
-  - `id`, `created_at`, `tenant_id`, `user_id`, `function_name`, `provider` (`lovable` ou `anthropic`), `model`, `input_tokens`, `output_tokens`, `total_tokens`, `cost_usd`, `cost_brl`, `request_id`, `status`, `error`
-  - RLS: `SELECT` apenas para `super_admin_v4`; `INSERT` apenas via service role (edge functions).
-  - Índices por `tenant_id`, `created_at`, `function_name`, `user_id`.
-- `ai_model_pricing` (preços por modelo):
-  - `model` (PK), `provider`, `input_price_per_1m_usd`, `output_price_per_1m_usd`, `updated_at`
-  - RLS: leitura para autenticados, escrita só super admin.
-  - Seed inicial com os modelos em uso (Gemini 3 Flash, Claude Sonnet, Opus, Whisper, etc).
+### 2. ALTER TABLE public.accounts
+Adiciona colunas para classificação/segmentação (não recria a tabela, não toca `produtos_contratados`). Assumindo do prompt original colunas como:
+- `squad public.squad_type`
+- `segmento text`
+- `ticket_mensal numeric`
+- `data_inicio_contrato date` (se ainda não existir)
+- demais colunas listadas no prompt original truncado
 
-### 2. Helper compartilhado em `supabase/functions/_shared/ai-usage.ts`
-- `logAiUsage({ tenantId, userId, functionName, provider, model, usage, status })`
-- Lê `input_tokens`/`output_tokens` do retorno da API (Anthropic devolve em `response.usage`; Lovable AI devolve no header `X-Lovable-AIG-Run-ID` + body `usage`).
-- Calcula custo cruzando com `ai_model_pricing` (cache em memória de 5 min) e converte USD→BRL com cotação fixa configurável (constante por enquanto).
-- Insere em `ai_usage_events` com o service role; nunca bloqueia a resposta (fire-and-forget com `try/catch`).
+*(vou confirmar a lista exata das colunas do ALTER lendo o trecho truncado no momento da implementação — se você puder colar de novo a parte cortada do item 2, garanto fidelidade 100%)*
 
-### 3. Instrumentar as 10 edge functions
-Cada uma passa a:
-1. Resolver `tenant_id` (já fazem isso para outras gravações) e `user_id` a partir do JWT.
-2. Após a chamada de IA, chamar `logAiUsage(...)` com o `usage` retornado.
-3. Em caso de erro, logar com `status='error'` e tokens zerados.
+### 3. Nova tabela `public.squad_entregaveis`
+Catálogo de entregáveis por squad (alimenta o form de contas).
 
-### 4. RPCs para o painel
-- `get_ai_usage_by_tenant(p_start, p_end)` → total por tenant.
-- `get_ai_usage_breakdown(p_tenant, p_start, p_end)` → tenant × função × usuário × dia (com tokens e custo).
-- `get_ai_usage_top_models(p_tenant, p_start, p_end)` → ranking por modelo.
-Todas `SECURITY DEFINER`, exigem `has_role(auth.uid(), 'super_admin_v4')`.
+```sql
+CREATE TABLE public.squad_entregaveis (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+  squad public.squad_type NOT NULL,
+  item text NOT NULL,
+  ordem int NOT NULL DEFAULT 0,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (tenant_id, squad, item)
+);
 
-### 5. Página `/admin/consumo-ia` (somente super admin)
-- Filtros: período (default mês atual), tenant (multi-select), função, usuário.
-- Cards no topo: total de chamadas, tokens in/out, custo USD/BRL.
-- Tabela 1: ranking de tenants (chamadas, tokens, custo) — clique abre detalhe.
-- Tabela 2 (detalhe do tenant): quebra por função × usuário × dia.
-- Gráfico de linha: custo diário do período.
-- Export CSV.
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.squad_entregaveis TO authenticated;
+GRANT ALL ON public.squad_entregaveis TO service_role;
 
-### 6. Manutenção
-- Job opcional (`pg_cron`) para alertar se um tenant ultrapassa um limite mensal (fora deste escopo, fica como hook).
-- Atualização de preços é manual via `ai_model_pricing` no super admin (UI simples de edição).
+ALTER TABLE public.squad_entregaveis ENABLE ROW LEVEL SECURITY;
+```
 
-## Detalhes técnicos
-- Sem mudar contratos de API existentes — instrumentação é puramente aditiva.
-- Para transcrição (Whisper), o "token" não se aplica: gravar `input_tokens = segundos_audio` e usar preço por minuto na pricing table (campo separado `audio_price_per_minute_usd`).
-- Anthropic direto (`ANTHROPIC_API_KEY`) e Lovable Gateway são distinguidos via `provider` para análise comparativa de custo.
-- Sem retenção infinita: índice em `created_at` permite purge futuro se necessário.
+### 4. RLS (mesmo padrão de `cobrancas`)
+```sql
+CREATE POLICY "tenant_select" ON public.squad_entregaveis
+  FOR SELECT TO authenticated
+  USING (tenant_id = public.current_tenant_id());
 
-## Fora de escopo
-- Limites/quotas por tenant (bloqueio automático).
-- Cobrança real / billing para o cliente final.
-- Conversão dinâmica USD→BRL via API de câmbio.
+CREATE POLICY "tenant_insert" ON public.squad_entregaveis
+  FOR INSERT TO authenticated
+  WITH CHECK (tenant_id = public.current_tenant_id());
+
+CREATE POLICY "tenant_update" ON public.squad_entregaveis
+  FOR UPDATE TO authenticated
+  USING (tenant_id = public.current_tenant_id())
+  WITH CHECK (tenant_id = public.current_tenant_id());
+
+CREATE POLICY "tenant_delete" ON public.squad_entregaveis
+  FOR DELETE TO authenticated
+  USING (tenant_id = public.current_tenant_id());
+```
+
++ trigger `set_tenant_id_on_insert` BEFORE INSERT (igual `cobrancas`)
++ trigger `update_updated_at_column` BEFORE UPDATE
+
+### 5. Seed (tenant Jesus & Co)
+
+**Saber** (3):
+1. Estruturação Estratégica
+2. Estruturação Comercial
+3. Branding
+
+**Strikers** (7):
+1. Gestão de Tráfego
+2. Criativos
+3. Social Media
+4. CRM
+5. Estruturação Estratégica
+6. Estruturação Comercial
+7. Branding
+
+**Fênix** (7): mesmos itens de Strikers, mesma ordem.
+
+```sql
+INSERT INTO public.squad_entregaveis (tenant_id, squad, item, ordem) VALUES
+('ca48961c-9ee0-470d-9d9e-cfecbd7e26c2','saber','Estruturação Estratégica',1),
+('ca48961c-9ee0-470d-9d9e-cfecbd7e26c2','saber','Estruturação Comercial',2),
+('ca48961c-9ee0-470d-9d9e-cfecbd7e26c2','saber','Branding',3),
+('ca48961c-9ee0-470d-9d9e-cfecbd7e26c2','strikers','Gestão de Tráfego',1),
+('ca48961c-9ee0-470d-9d9e-cfecbd7e26c2','strikers','Criativos',2),
+('ca48961c-9ee0-470d-9d9e-cfecbd7e26c2','strikers','Social Media',3),
+('ca48961c-9ee0-470d-9d9e-cfecbd7e26c2','strikers','CRM',4),
+('ca48961c-9ee0-470d-9d9e-cfecbd7e26c2','strikers','Estruturação Estratégica',5),
+('ca48961c-9ee0-470d-9d9e-cfecbd7e26c2','strikers','Estruturação Comercial',6),
+('ca48961c-9ee0-470d-9d9e-cfecbd7e26c2','strikers','Branding',7),
+('ca48961c-9ee0-470d-9d9e-cfecbd7e26c2','fenix','Gestão de Tráfego',1),
+('ca48961c-9ee0-470d-9d9e-cfecbd7e26c2','fenix','Criativos',2),
+('ca48961c-9ee0-470d-9d9e-cfecbd7e26c2','fenix','Social Media',3),
+('ca48961c-9ee0-470d-9d9e-cfecbd7e26c2','fenix','CRM',4),
+('ca48961c-9ee0-470d-9d9e-cfecbd7e26c2','fenix','Estruturação Estratégica',5),
+('ca48961c-9ee0-470d-9d9e-cfecbd7e26c2','fenix','Estruturação Comercial',6),
+('ca48961c-9ee0-470d-9d9e-cfecbd7e26c2','fenix','Branding',7)
+ON CONFLICT (tenant_id, squad, item) DO NOTHING;
+```
+
+### Não toca
+- `accounts.produtos_contratados` (Json existente) permanece intacto.
+- Nenhum CREATE TABLE accounts.
+
+### Pendente antes de aplicar
+Preciso que você reenvie o trecho truncado do **item 2 (ALTER TABLE accounts)** com a lista completa das colunas a adicionar, para incluir no SQL final. Confirma esse trecho e eu executo a migration?
