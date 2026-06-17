@@ -923,6 +923,390 @@ export type Database = {
           },
         ]
       }
+      ekyte_phase_performance: {
+        Row: {
+          created_at: string
+          ekyte_id: number
+          executor: string | null
+          executor_email: string | null
+          expected_phase_due_date: string | null
+          flow: string | null
+          id_local: string
+          overdue: boolean | null
+          phase: string | null
+          raw: Json | null
+          real_phase_due_date: string | null
+          synced_at: string
+          task_ekyte_id: number | null
+          task_title: string | null
+          tenant_id: string
+          updated_at: string
+          workspace_ekyte_id: number | null
+        }
+        Insert: {
+          created_at?: string
+          ekyte_id: number
+          executor?: string | null
+          executor_email?: string | null
+          expected_phase_due_date?: string | null
+          flow?: string | null
+          id_local?: string
+          overdue?: boolean | null
+          phase?: string | null
+          raw?: Json | null
+          real_phase_due_date?: string | null
+          synced_at?: string
+          task_ekyte_id?: number | null
+          task_title?: string | null
+          tenant_id: string
+          updated_at?: string
+          workspace_ekyte_id?: number | null
+        }
+        Update: {
+          created_at?: string
+          ekyte_id?: number
+          executor?: string | null
+          executor_email?: string | null
+          expected_phase_due_date?: string | null
+          flow?: string | null
+          id_local?: string
+          overdue?: boolean | null
+          phase?: string | null
+          raw?: Json | null
+          real_phase_due_date?: string | null
+          synced_at?: string
+          task_ekyte_id?: number | null
+          task_title?: string | null
+          tenant_id?: string
+          updated_at?: string
+          workspace_ekyte_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ekyte_phase_performance_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ekyte_projects: {
+        Row: {
+          accomplished_tasks_count: number | null
+          accomplished_tasks_time: number | null
+          created_at: string
+          ekyte_id: number
+          end_date: string | null
+          id_local: string
+          name: string | null
+          planned_tasks_count: number | null
+          planned_tasks_time: number | null
+          raw: Json | null
+          situation: number | null
+          start_date: string | null
+          synced_at: string
+          tenant_id: string
+          updated_at: string
+          workspace_ekyte_id: number | null
+        }
+        Insert: {
+          accomplished_tasks_count?: number | null
+          accomplished_tasks_time?: number | null
+          created_at?: string
+          ekyte_id: number
+          end_date?: string | null
+          id_local?: string
+          name?: string | null
+          planned_tasks_count?: number | null
+          planned_tasks_time?: number | null
+          raw?: Json | null
+          situation?: number | null
+          start_date?: string | null
+          synced_at?: string
+          tenant_id: string
+          updated_at?: string
+          workspace_ekyte_id?: number | null
+        }
+        Update: {
+          accomplished_tasks_count?: number | null
+          accomplished_tasks_time?: number | null
+          created_at?: string
+          ekyte_id?: number
+          end_date?: string | null
+          id_local?: string
+          name?: string | null
+          planned_tasks_count?: number | null
+          planned_tasks_time?: number | null
+          raw?: Json | null
+          situation?: number | null
+          start_date?: string | null
+          synced_at?: string
+          tenant_id?: string
+          updated_at?: string
+          workspace_ekyte_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ekyte_projects_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ekyte_sync_log: {
+        Row: {
+          created_at: string
+          endpoint: string
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          last_cursor: string | null
+          records_synced: number | null
+          started_at: string
+          status: string | null
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          last_cursor?: string | null
+          records_synced?: number | null
+          started_at?: string
+          status?: string | null
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          last_cursor?: string | null
+          records_synced?: number | null
+          started_at?: string
+          status?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ekyte_sync_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ekyte_tasks: {
+        Row: {
+          actual_time: number | null
+          created_at: string
+          creation_date: string | null
+          ctc_task_type_id: number | null
+          current_due_date: string | null
+          ekyte_id: number
+          estimated_time: number | null
+          executor: string | null
+          executor_id: string | null
+          id_local: string
+          phase: string | null
+          phase_id: number | null
+          raw: Json | null
+          resolved_date: string | null
+          situation: number | null
+          synced_at: string
+          task_type: string | null
+          tenant_id: string
+          title: string | null
+          updated_at: string
+          workspace_ekyte_id: number | null
+        }
+        Insert: {
+          actual_time?: number | null
+          created_at?: string
+          creation_date?: string | null
+          ctc_task_type_id?: number | null
+          current_due_date?: string | null
+          ekyte_id: number
+          estimated_time?: number | null
+          executor?: string | null
+          executor_id?: string | null
+          id_local?: string
+          phase?: string | null
+          phase_id?: number | null
+          raw?: Json | null
+          resolved_date?: string | null
+          situation?: number | null
+          synced_at?: string
+          task_type?: string | null
+          tenant_id: string
+          title?: string | null
+          updated_at?: string
+          workspace_ekyte_id?: number | null
+        }
+        Update: {
+          actual_time?: number | null
+          created_at?: string
+          creation_date?: string | null
+          ctc_task_type_id?: number | null
+          current_due_date?: string | null
+          ekyte_id?: number
+          estimated_time?: number | null
+          executor?: string | null
+          executor_id?: string | null
+          id_local?: string
+          phase?: string | null
+          phase_id?: number | null
+          raw?: Json | null
+          resolved_date?: string | null
+          situation?: number | null
+          synced_at?: string
+          task_type?: string | null
+          tenant_id?: string
+          title?: string | null
+          updated_at?: string
+          workspace_ekyte_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ekyte_tasks_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ekyte_time_trackings: {
+        Row: {
+          accomplished_hourly_rate: number | null
+          created_at: string
+          created_in: string | null
+          ctc_task_id: number | null
+          ctc_task_type: string | null
+          effort: number | null
+          ekyte_id: number
+          end_date: string | null
+          executor: string | null
+          executor_id: string | null
+          id_local: string
+          phase: string | null
+          raw: Json | null
+          start_date: string | null
+          status: number | null
+          synced_at: string
+          tenant_id: string
+          updated_at: string
+          workspace_ekyte_id: number | null
+        }
+        Insert: {
+          accomplished_hourly_rate?: number | null
+          created_at?: string
+          created_in?: string | null
+          ctc_task_id?: number | null
+          ctc_task_type?: string | null
+          effort?: number | null
+          ekyte_id: number
+          end_date?: string | null
+          executor?: string | null
+          executor_id?: string | null
+          id_local?: string
+          phase?: string | null
+          raw?: Json | null
+          start_date?: string | null
+          status?: number | null
+          synced_at?: string
+          tenant_id: string
+          updated_at?: string
+          workspace_ekyte_id?: number | null
+        }
+        Update: {
+          accomplished_hourly_rate?: number | null
+          created_at?: string
+          created_in?: string | null
+          ctc_task_id?: number | null
+          ctc_task_type?: string | null
+          effort?: number | null
+          ekyte_id?: number
+          end_date?: string | null
+          executor?: string | null
+          executor_id?: string | null
+          id_local?: string
+          phase?: string | null
+          raw?: Json | null
+          start_date?: string | null
+          status?: number | null
+          synced_at?: string
+          tenant_id?: string
+          updated_at?: string
+          workspace_ekyte_id?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ekyte_time_trackings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ekyte_workspaces: {
+        Row: {
+          active: boolean | null
+          created_at: string
+          ekyte_id: number
+          external_id: string | null
+          id_local: string
+          name: string | null
+          raw: Json | null
+          squad_name: string | null
+          synced_at: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string
+          ekyte_id: number
+          external_id?: string | null
+          id_local?: string
+          name?: string | null
+          raw?: Json | null
+          squad_name?: string | null
+          synced_at?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string
+          ekyte_id?: number
+          external_id?: string | null
+          id_local?: string
+          name?: string | null
+          raw?: Json | null
+          squad_name?: string | null
+          synced_at?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ekyte_workspaces_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mix_goals: {
         Row: {
           ass_rate: number | null
