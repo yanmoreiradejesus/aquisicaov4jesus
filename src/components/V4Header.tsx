@@ -71,6 +71,9 @@ const V4Header = () => {
       if (comercialRef.current && !comercialRef.current.contains(event.target as Node)) {
         setComercialOpen(false);
       }
+      if (pegRef.current && !pegRef.current.contains(event.target as Node)) {
+        setPegOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
