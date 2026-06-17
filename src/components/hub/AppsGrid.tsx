@@ -36,8 +36,16 @@ export const APPS: AppEntry[] = [
       "/comercial/leads",
       "/comercial/oportunidades",
       "/comercial/onboarding",
-      "/comercial/accounts",
       "/comercial/cobrancas",
+    ],
+  },
+  {
+    id: "peg",
+    title: "PE&G",
+    description: "Performance, expansão e gestão de contas.",
+    href: "/comercial/accounts",
+    accessPaths: [
+      "/comercial/accounts",
     ],
   },
 ];
