@@ -16,10 +16,12 @@ const V4Header = () => {
   const logo = config.client_logo_url || defaultLogo;
   const [aquisicaoOpen, setAquisicaoOpen] = useState(false);
   const [comercialOpen, setComercialOpen] = useState(false);
+  const [pegOpen, setPegOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const comercialRef = useRef<HTMLDivElement>(null);
+  const pegRef = useRef<HTMLDivElement>(null);
 
   const isActive = (path: string) => location.pathname === path;
 
