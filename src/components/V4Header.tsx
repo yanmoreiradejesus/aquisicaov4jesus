@@ -447,6 +447,31 @@ const V4Header = () => {
                 </div>
               )}
 
+              {visiblePegItems.length > 0 && (
+                <div className="px-3 py-2">
+                  <span className="px-3 text-foreground/40 text-[10px] font-semibold uppercase tracking-widest">
+                    PE&amp;G
+                  </span>
+                  <div className="mt-1.5 space-y-0.5">
+                    {visiblePegItems.map((item) => (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        className={`block px-3 py-2 rounded-xl text-[13px] font-medium transition-colors ${
+                          isActive(item.path)
+                            ? "bg-white/[0.08] text-foreground"
+                            : "text-foreground/75 hover:bg-white/[0.05] hover:text-foreground"
+                        }`}
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              
+
               
 
               {isAdmin && (
