@@ -42,8 +42,11 @@ const V4Header = () => {
     { path: "/comercial/leads", label: "Leads" },
     { path: "/comercial/oportunidades", label: "Oportunidades" },
     { path: "/comercial/onboarding", label: "Onboarding" },
-    { path: "/comercial/accounts", label: "Accounts" },
     { path: "/comercial/cobrancas", label: "Cobranças" },
+  ];
+
+  const pegItems = [
+    { path: "/comercial/accounts", label: "Accounts" },
   ];
 
   const { isPageEnabled } = useTenantEnabledPages();
@@ -57,6 +60,8 @@ const V4Header = () => {
   const visibleAquisicaoItems = aquisicaoItems.filter((item) => canSee(item.path));
   const isComercialActive = comercialItems.some((item) => isActive(item.path));
   const visibleComercialItems = comercialItems.filter((item) => canSee(item.path));
+  const isPegActive = pegItems.some((item) => isActive(item.path)) || location.pathname.startsWith("/comercial/accounts");
+  const visiblePegItems = pegItems.filter((item) => canSee(item.path));
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
