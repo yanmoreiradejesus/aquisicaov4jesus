@@ -16,6 +16,7 @@ import {
   type ScopeItem,
 } from "@/components/accounts/AccountManagementFields";
 import { useToast } from "@/hooks/use-toast";
+import { AccountEkyteTasks } from "@/components/accounts/AccountEkyteTasks";
 
 const fmtBRL = (v?: number | null) =>
   v == null
