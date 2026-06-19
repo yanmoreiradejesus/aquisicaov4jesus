@@ -819,16 +819,22 @@ export const OportunidadeAvancarDialog = ({
 
               <div className="space-y-2.5">
                 <Label className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-                  Categoria de produtos *
+                  Categoria de produtos * <span className="text-muted-foreground/70 normal-case tracking-normal">(selecione uma ou mais)</span>
                 </Label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {CATEGORIAS_PRODUTOS.map((n) => {
-                    const active = nivelConsciencia === n.value;
+                    const selected = nivelConsciencia.split(",").map((s) => s.trim()).filter(Boolean);
+                    const active = selected.includes(n.value);
                     return (
                       <button
                         key={n.value}
                         type="button"
-                        onClick={() => setNivelConsciencia(n.value)}
+                        onClick={() => {
+                          const next = active
+                            ? selected.filter((v) => v !== n.value)
+                            : [...selected, n.value];
+                          setNivelConsciencia(next.join(","));
+                        }}
                         className={cn(
                           "py-2.5 px-2 rounded-lg border text-[12px] font-semibold transition-all",
                           active
