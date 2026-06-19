@@ -26,6 +26,8 @@ const OUTBOUND_CANAIS = [
   "Reativação",
   "Inside box",
   "Eventos",
+  "Indicação",
+  "Recomendação",
 ];
 
 const empty = {
