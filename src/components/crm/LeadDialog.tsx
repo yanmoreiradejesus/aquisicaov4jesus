@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LEAD_ETAPAS } from "@/hooks/useCrmLeads";
 import { Trash2 } from "lucide-react";
 import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
+import { useToast } from "@/hooks/use-toast";
 
 interface Props {
   open: boolean;
