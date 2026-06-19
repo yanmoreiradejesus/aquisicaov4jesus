@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { LEAD_ETAPAS } from "@/hooks/useCrmLeads";
 import { Trash2 } from "lucide-react";
 import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
+import { useToast } from "@/hooks/use-toast";
 
 interface Props {
   open: boolean;
@@ -25,6 +26,8 @@ const OUTBOUND_CANAIS = [
   "Reativação",
   "Inside box",
   "Eventos",
+  "Indicação",
+  "Recomendação",
 ];
 
 const empty = {
@@ -44,6 +47,7 @@ const formatBRL = (n: any) =>
 export const LeadDialog = ({ open, onOpenChange, lead, pipe, onSave, onDelete }: Props) => {
   const isOutbound = (lead?.pipe ?? pipe) === "outbound";
   const { profiles } = useProfilesList({ departamento: "Receitas" });
+  const { toast } = useToast();
 
   const [form, setForm] = useState<any>(empty);
   const [saving, setSaving] = useState(false);
@@ -72,6 +76,13 @@ export const LeadDialog = ({ open, onOpenChange, lead, pipe, onSave, onDelete }:
       }
       await onSave(payload);
       onOpenChange(false);
+    } catch (e: any) {
+      console.error("[LeadDialog] save error:", e);
+      toast({
+        title: "Erro ao salvar lead",
+        description: e?.message ?? "Falha desconhecida ao salvar.",
+        variant: "destructive",
+      });
     } finally {
       setSaving(false);
     }
