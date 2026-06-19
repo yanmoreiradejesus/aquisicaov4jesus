@@ -78,9 +78,13 @@ export const LeadDialog = ({ open, onOpenChange, lead, pipe, onSave, onDelete }:
       onOpenChange(false);
     } catch (e: any) {
       console.error("[LeadDialog] save error:", e);
+      const isDupPhone =
+        e?.code === "23505" && String(e?.message ?? "").includes("crm_leads_tenant_phone_uidx");
       toast({
-        title: "Erro ao salvar lead",
-        description: e?.message ?? "Falha desconhecida ao salvar.",
+        title: isDupPhone ? "Telefone já cadastrado" : "Erro ao salvar lead",
+        description: isDupPhone
+          ? `Já existe um lead com o telefone ${form.telefone}. Procure-o no pipeline em vez de criar um novo.`
+          : e?.message ?? "Falha desconhecida ao salvar.",
         variant: "destructive",
       });
     } finally {
