@@ -159,21 +159,9 @@ const ProjetoDetail = () => {
             <TabsTrigger value="fin">Financeiro</TabsTrigger>
           </TabsList>
 
-          {/* Visão geral */}
+          {/* Visão geral — Timeline */}
           <TabsContent value="visao" className="space-y-4">
-            <Section title="Prazos">
-              <div className="grid md:grid-cols-2 gap-4">
-                <Field label="Início">
-                  <Input type="date" value={local.prazo_inicio ?? ""} onChange={(e) => patch({ prazo_inicio: e.target.value || null })} />
-                </Field>
-                <Field label="Fim previsto">
-                  <Input type="date" value={local.prazo_fim ?? ""} onChange={(e) => patch({ prazo_fim: e.target.value || null })} />
-                </Field>
-              </div>
-            </Section>
-            <Section title="KPIs alvo">
-              <KpisEditor value={local.kpis_alvo ?? []} onChange={(v) => patch({ kpis_alvo: v })} />
-            </Section>
+            <TimelinePanel projeto={projeto} anexos={anexos.data ?? []} />
           </TabsContent>
 
           {/* Venda */}
@@ -189,11 +177,24 @@ const ProjetoDetail = () => {
 
           {/* Escopo */}
           <TabsContent value="escopo" className="space-y-4">
+            <Section title="Prazos">
+              <div className="grid md:grid-cols-2 gap-4">
+                <Field label="Início">
+                  <Input type="date" value={local.prazo_inicio ?? ""} onChange={(e) => patch({ prazo_inicio: e.target.value || null })} />
+                </Field>
+                <Field label="Fim previsto">
+                  <Input type="date" value={local.prazo_fim ?? ""} onChange={(e) => patch({ prazo_fim: e.target.value || null })} />
+                </Field>
+              </div>
+            </Section>
             <Section title="Descrição do projeto">
               <Textarea rows={4} value={local.descricao ?? ""} onChange={(e) => patch({ descricao: e.target.value })} placeholder="O que este projeto entrega..." />
             </Section>
             <Section title="Objetivos">
               <Textarea rows={6} value={local.objetivos ?? ""} onChange={(e) => patch({ objetivos: e.target.value })} placeholder="Objetivos estratégicos, resultados esperados..." />
+            </Section>
+            <Section title="KPIs alvo">
+              <KpisEditor value={local.kpis_alvo ?? []} onChange={(v) => patch({ kpis_alvo: v })} />
             </Section>
           </TabsContent>
 
