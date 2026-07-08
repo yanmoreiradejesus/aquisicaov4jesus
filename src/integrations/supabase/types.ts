@@ -923,6 +923,132 @@ export type Database = {
           },
         ]
       }
+      crm_projeto_anexos: {
+        Row: {
+          created_at: string
+          filename: string
+          id: string
+          mime: string | null
+          projeto_id: string
+          size_bytes: number | null
+          storage_path: string
+          tenant_id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          filename: string
+          id?: string
+          mime?: string | null
+          projeto_id: string
+          size_bytes?: number | null
+          storage_path: string
+          tenant_id: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          filename?: string
+          id?: string
+          mime?: string | null
+          projeto_id?: string
+          size_bytes?: number | null
+          storage_path?: string
+          tenant_id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_projeto_anexos_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "crm_projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_projeto_anexos_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_projetos: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          documentacao: string | null
+          id: string
+          kpis_alvo: Json
+          links: Json
+          nome: string
+          objetivos: string | null
+          prazo_fim: string | null
+          prazo_inicio: string | null
+          stack: Json
+          status_projeto: Database["public"]["Enums"]["projeto_status"]
+          tenant_id: string
+          time: Json
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          documentacao?: string | null
+          id?: string
+          kpis_alvo?: Json
+          links?: Json
+          nome: string
+          objetivos?: string | null
+          prazo_fim?: string | null
+          prazo_inicio?: string | null
+          stack?: Json
+          status_projeto?: Database["public"]["Enums"]["projeto_status"]
+          tenant_id: string
+          time?: Json
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          documentacao?: string | null
+          id?: string
+          kpis_alvo?: Json
+          links?: Json
+          nome?: string
+          objetivos?: string | null
+          prazo_fim?: string | null
+          prazo_inicio?: string | null
+          stack?: Json
+          status_projeto?: Database["public"]["Enums"]["projeto_status"]
+          tenant_id?: string
+          time?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_projetos_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_projetos_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ekyte_phase_performance: {
         Row: {
           created_at: string
@@ -2051,6 +2177,7 @@ export type Database = {
         | "fechado_ganho"
         | "fechado_perdido"
         | "follow_infinito"
+      projeto_status: "ativo" | "em_risco" | "pausado" | "encerrado" | "churn"
       squad_type: "strikers" | "fenix" | "saber"
     }
     CompositeTypes: {
@@ -2215,6 +2342,7 @@ export const Constants = {
         "fechado_perdido",
         "follow_infinito",
       ],
+      projeto_status: ["ativo", "em_risco", "pausado", "encerrado", "churn"],
       squad_type: ["strikers", "fenix", "saber"],
     },
   },

@@ -28,6 +28,8 @@ import Onboarding from "./pages/Onboarding";
 import LeadDetailPage from "./pages/LeadDetailPage";
 import OportunidadeDetailPage from "./pages/OportunidadeDetailPage";
 import OnboardingDetailPage from "./pages/OnboardingDetailPage";
+import Projetos from "./pages/Projetos";
+import ProjetoDetail from "./pages/ProjetoDetail";
 import ComercialPlaceholder from "./pages/ComercialPlaceholder";
 import AccountsList from "./pages/AccountsList";
 import AccountDetail from "./pages/AccountDetail";
@@ -154,6 +156,16 @@ const AppRoutes = () => {
         <Route path="/comercial/onboarding/:accountId" element={
           <ProtectedRoute requiredPath="/comercial/onboarding">
             <PageTransition><OnboardingDetailPage /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/comercial/projetos" element={
+          <ProtectedRoute requiredPath="/comercial/projetos">
+            <PageTransition><Projetos /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/comercial/projetos/:projetoId" element={
+          <ProtectedRoute requiredPath="/comercial/projetos">
+            <PageTransition><ProjetoDetail /></PageTransition>
           </ProtectedRoute>
         } />
         <Route path="/comercial/accounts" element={
