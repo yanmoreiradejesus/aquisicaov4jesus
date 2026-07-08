@@ -181,12 +181,7 @@ const ProjetoDetail = () => {
 
           {/* Growth Class */}
           <TabsContent value="gc" className="space-y-4">
-            <GrowthClassPanel
-              relatorio={projeto.account?.pre_growth_class_relatorio ?? null}
-              geradoEm={projeto.account?.pre_growth_class_gerado_em ?? null}
-              accountId={projeto.account_id}
-              onOpenAccount={(id) => navigate(`/comercial/accounts/${id}`)}
-            />
+            <GrowthClassPanel projeto={projeto} />
           </TabsContent>
 
 
