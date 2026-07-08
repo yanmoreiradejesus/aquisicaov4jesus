@@ -981,6 +981,8 @@ export type Database = {
           created_by: string | null
           descricao: string | null
           documentacao: string | null
+          growth_class_ia_gerado_em: string | null
+          growth_class_ia_relatorio: string | null
           id: string
           kpis_alvo: Json
           links: Json
@@ -1000,6 +1002,8 @@ export type Database = {
           created_by?: string | null
           descricao?: string | null
           documentacao?: string | null
+          growth_class_ia_gerado_em?: string | null
+          growth_class_ia_relatorio?: string | null
           id?: string
           kpis_alvo?: Json
           links?: Json
@@ -1019,6 +1023,8 @@ export type Database = {
           created_by?: string | null
           descricao?: string | null
           documentacao?: string | null
+          growth_class_ia_gerado_em?: string | null
+          growth_class_ia_relatorio?: string | null
           id?: string
           kpis_alvo?: Json
           links?: Json
