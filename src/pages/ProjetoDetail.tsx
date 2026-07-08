@@ -11,6 +11,8 @@ import { useProjeto, type KpiAlvo, type StackItem, type LinkItem, type TimeMembe
 import { useProjetoAnexos, type AnexoRow } from "@/hooks/useProjetoAnexos";
 import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
 import { PROJETO_STATUS_LABEL, PROJETO_STATUS_COLOR, type ProjetoStatus } from "@/hooks/useProjetos";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const fmtBRL = (v?: number | null) =>
   v == null
