@@ -602,17 +602,48 @@ function VendaPanel({ projeto, onOpenOportunidade }: { projeto: any; onOpenOport
 }
 
 function GrowthClassPanel({ projeto }: { projeto: any }) {
+  const { toast } = useToast();
+  const [generating, setGenerating] = useState(false);
+  const [relatorio, setRelatorio] = useState<string | null>(projeto?.growth_class_ia_relatorio ?? null);
+  const [geradoEm, setGeradoEm] = useState<string | null>(projeto?.growth_class_ia_gerado_em ?? null);
+
+  useEffect(() => {
+    setRelatorio(projeto?.growth_class_ia_relatorio ?? null);
+    setGeradoEm(projeto?.growth_class_ia_gerado_em ?? null);
+  }, [projeto?.id, projeto?.growth_class_ia_relatorio, projeto?.growth_class_ia_gerado_em]);
+
   const expectativa = projeto?.account?.growth_class_expectativas ?? null;
-  const transcricao = projeto?.account?.oportunidade?.transcricao_reuniao ?? null;
   const notas = projeto?.account?.oportunidade?.notas ?? null;
+  const transcricao = projeto?.account?.oportunidade?.transcricao_reuniao ?? null;
+  const hasSourceMaterial = !!(expectativa || notas || transcricao);
 
-  const hasAny = expectativa || transcricao || notas;
+  async function gerar(force = false) {
+    setGenerating(true);
+    try {
+      const { data, error } = await (await import("@/integrations/supabase/client")).supabase
+        .functions.invoke("generate-growth-class-summary", {
+          body: { projeto_id: projeto.id, force },
+        });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const rel = (data as any)?.relatorio;
+      if (rel) {
+        setRelatorio(rel);
+        setGeradoEm(new Date().toISOString());
+        toast({ title: "Resumo gerado" });
+      }
+    } catch (e: any) {
+      toast({ title: "Falha ao gerar resumo", description: e.message, variant: "destructive" });
+    } finally {
+      setGenerating(false);
+    }
+  }
 
-  if (!hasAny) {
+  if (!hasSourceMaterial && !relatorio) {
     return (
       <Section title="Growth Class — expectativas do cliente">
         <p className="text-sm text-muted-foreground">
-          Ainda não há expectativas registradas. Preencha o campo de expectativa no onboarding
+          Ainda não há material para gerar o resumo. Preencha a expectativa no onboarding
           ou anexe a transcrição/notas da reunião na oportunidade.
         </p>
       </Section>
@@ -621,32 +652,48 @@ function GrowthClassPanel({ projeto }: { projeto: any }) {
 
   return (
     <>
+      <Section title="Resumo de expectativas (gerado por IA)">
+        <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+          <p className="text-xs text-muted-foreground">
+            {geradoEm ? `Gerado em ${new Date(geradoEm).toLocaleString("pt-BR")}` : "Ainda não gerado"}
+            <span className="ml-2 opacity-70">· fontes: expectativa do onboarding + transcrição + notas</span>
+          </p>
+          <Button
+            variant={relatorio ? "outline" : "default"}
+            size="sm"
+            className="gap-2"
+            onClick={() => gerar(!!relatorio)}
+            disabled={generating || !hasSourceMaterial}
+          >
+            {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+            {relatorio ? "Regerar resumo" : "Gerar resumo"}
+          </Button>
+        </div>
+
+        {generating && !relatorio && (
+          <div className="rounded-xl bg-surface-2/40 p-6 flex items-center gap-3 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Analisando expectativa, transcrição e notas...
+          </div>
+        )}
+
+        {relatorio ? (
+          <div className="rounded-xl bg-surface-1/60 border border-border/40 p-5 prose prose-sm prose-invert max-w-none prose-headings:mt-4 prose-headings:mb-2 prose-h2:text-base prose-h2:font-semibold prose-h2:text-foreground prose-ul:my-2 prose-li:my-0.5">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{relatorio}</ReactMarkdown>
+          </div>
+        ) : !generating ? (
+          <p className="text-sm text-muted-foreground">
+            Clique em "Gerar resumo" para produzir uma análise estruturada com perfil do cliente,
+            expectativas de curto/médio/longo prazo, prioridades e pontos de atenção.
+          </p>
+        ) : null}
+      </Section>
+
       {expectativa && (
-        <Section title="Expectativa do cliente">
-          <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 prose prose-sm prose-invert max-w-none">
+        <Section title="Expectativa registrada no onboarding (original)">
+          <div className="rounded-xl bg-surface-2/30 p-4 prose prose-sm prose-invert max-w-none">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{expectativa}</ReactMarkdown>
           </div>
-        </Section>
-      )}
-
-      {notas && (
-        <Section title="Notas da venda">
-          <div className="rounded-xl bg-surface-2/40 p-4 prose prose-sm prose-invert max-w-none">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{notas}</ReactMarkdown>
-          </div>
-        </Section>
-      )}
-
-      {transcricao && (
-        <Section title="Transcrição da reunião de fechamento">
-          <details className="rounded-xl bg-surface-2/40 border border-border/40">
-            <summary className="cursor-pointer px-4 py-3 text-sm font-medium hover:bg-surface-2/60 rounded-xl">
-              Ver transcrição completa ({transcricao.length.toLocaleString("pt-BR")} caracteres)
-            </summary>
-            <div className="px-4 pb-4 pt-2 max-h-[60vh] overflow-y-auto">
-              <p className="text-sm whitespace-pre-wrap leading-relaxed text-muted-foreground">{transcricao}</p>
-            </div>
-          </details>
         </Section>
       )}
     </>
