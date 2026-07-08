@@ -78,10 +78,16 @@ export interface ProjetoDetail {
         telefone: string | null;
         segmento: string | null;
         faturamento: string | null;
+        created_at: string | null;
+        data_reuniao_agendada: string | null;
+        data_reuniao_realizada: string | null;
       } | null;
     } | null;
+    created_at?: string | null;
+    onboarding_status?: string | null;
   };
-  cobrancas?: { id: string; valor: number | null; status: string | null; vencimento: string | null; tipo: string | null; parcela_num: number | null; parcela_total: number | null }[];
+  cobrancas?: { id: string; valor: number | null; status: string | null; vencimento: string | null; tipo: string | null; parcela_num: number | null; parcela_total: number | null; created_at?: string | null }[];
+  atividades?: { id: string; tipo: string | null; titulo: string | null; descricao: string | null; created_at: string }[];
 }
 
 export function useProjeto(id: string | undefined) {
@@ -94,7 +100,7 @@ export function useProjeto(id: string | undefined) {
       const { data, error } = await (supabase as any)
         .from("crm_projetos")
         .select(
-          "*, account:accounts(id, cliente_nome, account_manager_id, data_inicio_contrato, data_fim_contrato, pre_growth_class_relatorio, pre_growth_class_gerado_em, growth_class_expectativas, oportunidade:crm_oportunidades(id, nome_oportunidade, valor_ef, valor_fee, etapa, temperatura, nivel_consciencia, data_proposta, data_fechamento_real, info_deal, oportunidades_monetizacao, resumo_reuniao, notas, transcricao_reuniao, contrato_url, lead:crm_leads(id, nome, empresa, email, telefone, segmento, faturamento)))"
+          "*, account:accounts(id, cliente_nome, account_manager_id, data_inicio_contrato, data_fim_contrato, created_at, onboarding_status, pre_growth_class_relatorio, pre_growth_class_gerado_em, growth_class_expectativas, oportunidade:crm_oportunidades(id, nome_oportunidade, valor_ef, valor_fee, etapa, temperatura, nivel_consciencia, data_proposta, data_fechamento_real, info_deal, oportunidades_monetizacao, resumo_reuniao, notas, transcricao_reuniao, contrato_url, lead:crm_leads(id, nome, empresa, email, telefone, segmento, faturamento, created_at, data_reuniao_agendada, data_reuniao_realizada)))"
         )
         .eq("id", id!)
         .maybeSingle();
@@ -103,9 +109,25 @@ export function useProjeto(id: string | undefined) {
 
       const { data: cobs } = await (supabase as any)
         .from("cobrancas")
-        .select("id, valor, status, vencimento, tipo, parcela_num, parcela_total")
+        .select("id, valor, status, vencimento, tipo, parcela_num, parcela_total, created_at")
         .eq("account_id", (data as any).account_id)
         .order("vencimento", { ascending: true });
+
+      // Atividades ligadas ao lead ou à oportunidade
+      const opId = (data as any)?.account?.oportunidade?.id;
+      const leadId = (data as any)?.account?.oportunidade?.lead?.id;
+      let atividades: any[] = [];
+      if (opId || leadId) {
+        const filters: string[] = [];
+        if (opId) filters.push(`oportunidade_id.eq.${opId}`);
+        if (leadId) filters.push(`lead_id.eq.${leadId}`);
+        const { data: atv } = await (supabase as any)
+          .from("crm_atividades")
+          .select("id, tipo, titulo, descricao, created_at")
+          .or(filters.join(","))
+          .order("created_at", { ascending: true });
+        atividades = atv ?? [];
+      }
 
       const normalized = {
         ...(data as any),
@@ -114,6 +136,7 @@ export function useProjeto(id: string | undefined) {
         links: (data as any).links ?? [],
         time: (data as any).time ?? [],
         cobrancas: cobs ?? [],
+        atividades,
       } as ProjetoDetail;
       return normalized;
     },
