@@ -66,6 +66,7 @@ export interface ProjetoDetail {
       oportunidades_monetizacao: string | null;
       resumo_reuniao: string | null;
       notas: string | null;
+      transcricao_reuniao: string | null;
       contrato_url: string | null;
       lead?: {
         id: string;
