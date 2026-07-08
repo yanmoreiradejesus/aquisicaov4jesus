@@ -78,10 +78,16 @@ export interface ProjetoDetail {
         telefone: string | null;
         segmento: string | null;
         faturamento: string | null;
+        created_at: string | null;
+        data_reuniao_agendada: string | null;
+        data_reuniao_realizada: string | null;
       } | null;
     } | null;
+    created_at?: string | null;
+    onboarding_status?: string | null;
   };
-  cobrancas?: { id: string; valor: number | null; status: string | null; vencimento: string | null; tipo: string | null; parcela_num: number | null; parcela_total: number | null }[];
+  cobrancas?: { id: string; valor: number | null; status: string | null; vencimento: string | null; tipo: string | null; parcela_num: number | null; parcela_total: number | null; created_at?: string | null }[];
+  atividades?: { id: string; tipo: string | null; titulo: string | null; descricao: string | null; created_at: string }[];
 }
 
 export function useProjeto(id: string | undefined) {
