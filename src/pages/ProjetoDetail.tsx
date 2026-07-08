@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ExternalLink, Plus, Trash2, Upload, Download, Loader2, Save, FileText } from "lucide-react";
+import { ArrowLeft, ExternalLink, Plus, Trash2, Upload, Download, Loader2, Save, FileText, Circle, CheckCircle2, AlertCircle, DollarSign, Rocket, Flag, MessageSquare, Paperclip, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
