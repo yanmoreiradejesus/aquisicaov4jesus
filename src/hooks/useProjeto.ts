@@ -41,6 +41,8 @@ export interface ProjetoDetail {
   links: LinkItem[];
   time: TimeMember[];
   documentacao: string | null;
+  growth_class_ia_relatorio: string | null;
+  growth_class_ia_gerado_em: string | null;
   created_at: string;
   updated_at: string;
   account?: {
