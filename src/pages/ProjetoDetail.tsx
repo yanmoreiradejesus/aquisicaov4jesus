@@ -174,6 +174,22 @@ const ProjetoDetail = () => {
             </Section>
           </TabsContent>
 
+          {/* Venda */}
+          <TabsContent value="venda" className="space-y-4">
+            <VendaPanel projeto={projeto} onOpenOportunidade={(id) => navigate(`/comercial/oportunidades/${id}`)} />
+          </TabsContent>
+
+          {/* Growth Class */}
+          <TabsContent value="gc" className="space-y-4">
+            <GrowthClassPanel
+              relatorio={projeto.account?.pre_growth_class_relatorio ?? null}
+              geradoEm={projeto.account?.pre_growth_class_gerado_em ?? null}
+              accountId={projeto.account_id}
+              onOpenAccount={(id) => navigate(`/comercial/accounts/${id}`)}
+            />
+          </TabsContent>
+
+
           {/* Escopo */}
           <TabsContent value="escopo" className="space-y-4">
             <Section title="Descrição do projeto">
