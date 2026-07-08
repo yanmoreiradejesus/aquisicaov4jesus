@@ -49,11 +49,32 @@ export interface ProjetoDetail {
     account_manager_id: string | null;
     data_inicio_contrato: string | null;
     data_fim_contrato: string | null;
+    pre_growth_class_relatorio: string | null;
+    pre_growth_class_gerado_em: string | null;
     oportunidade?: {
       id: string;
       nome_oportunidade: string | null;
       valor_ef: number | null;
       valor_fee: number | null;
+      etapa: string | null;
+      temperatura: string | null;
+      nivel_consciencia: string | null;
+      data_proposta: string | null;
+      data_fechamento_real: string | null;
+      info_deal: string | null;
+      oportunidades_monetizacao: string | null;
+      resumo_reuniao: string | null;
+      notas: string | null;
+      contrato_url: string | null;
+      lead?: {
+        id: string;
+        nome: string | null;
+        empresa: string | null;
+        email: string | null;
+        telefone: string | null;
+        segmento: string | null;
+        faturamento: string | null;
+      } | null;
     } | null;
   };
   cobrancas?: { id: string; valor: number | null; status: string | null; vencimento: string | null; tipo: string | null; parcela_num: number | null; parcela_total: number | null }[];
@@ -69,7 +90,7 @@ export function useProjeto(id: string | undefined) {
       const { data, error } = await (supabase as any)
         .from("crm_projetos")
         .select(
-          "*, account:accounts(id, cliente_nome, account_manager_id, data_inicio_contrato, data_fim_contrato, oportunidade:crm_oportunidades(id, nome_oportunidade, valor_ef, valor_fee))"
+          "*, account:accounts(id, cliente_nome, account_manager_id, data_inicio_contrato, data_fim_contrato, pre_growth_class_relatorio, pre_growth_class_gerado_em, oportunidade:crm_oportunidades(id, nome_oportunidade, valor_ef, valor_fee, etapa, temperatura, nivel_consciencia, data_proposta, data_fechamento_real, info_deal, oportunidades_monetizacao, resumo_reuniao, notas, contrato_url, lead:crm_leads(id, nome, empresa, email, telefone, segmento, faturamento)))"
         )
         .eq("id", id!)
         .maybeSingle();

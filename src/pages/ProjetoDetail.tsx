@@ -145,8 +145,10 @@ const ProjetoDetail = () => {
         </div>
 
         <Tabs defaultValue="visao" className="space-y-4">
-          <TabsList className="glass rounded-xl">
+          <TabsList className="glass rounded-xl flex-wrap h-auto">
             <TabsTrigger value="visao">Visão geral</TabsTrigger>
+            <TabsTrigger value="venda">Venda</TabsTrigger>
+            <TabsTrigger value="gc">Growth Class</TabsTrigger>
             <TabsTrigger value="escopo">Escopo</TabsTrigger>
             <TabsTrigger value="stack">Stack & Acessos</TabsTrigger>
             <TabsTrigger value="time">Time</TabsTrigger>
@@ -171,6 +173,22 @@ const ProjetoDetail = () => {
               <KpisEditor value={local.kpis_alvo ?? []} onChange={(v) => patch({ kpis_alvo: v })} />
             </Section>
           </TabsContent>
+
+          {/* Venda */}
+          <TabsContent value="venda" className="space-y-4">
+            <VendaPanel projeto={projeto} onOpenOportunidade={(id) => navigate(`/comercial/oportunidades/${id}`)} />
+          </TabsContent>
+
+          {/* Growth Class */}
+          <TabsContent value="gc" className="space-y-4">
+            <GrowthClassPanel
+              relatorio={projeto.account?.pre_growth_class_relatorio ?? null}
+              geradoEm={projeto.account?.pre_growth_class_gerado_em ?? null}
+              accountId={projeto.account_id}
+              onOpenAccount={(id) => navigate(`/comercial/accounts/${id}`)}
+            />
+          </TabsContent>
+
 
           {/* Escopo */}
           <TabsContent value="escopo" className="space-y-4">
@@ -475,6 +493,123 @@ function AnexosPanel({
             </div>
           ))}
         </div>
+      )}
+    </Section>
+  );
+}
+
+function VendaPanel({ projeto, onOpenOportunidade }: { projeto: any; onOpenOportunidade: (id: string) => void }) {
+  const op = projeto?.account?.oportunidade;
+  const lead = op?.lead;
+  const valorTotal = (Number(op?.valor_ef) || 0) + (Number(op?.valor_fee) || 0);
+
+  if (!op) {
+    return (
+      <Section title="Venda">
+        <p className="text-sm text-muted-foreground">Sem oportunidade vinculada a esta conta.</p>
+      </Section>
+    );
+  }
+
+  return (
+    <>
+      <Section title="Resumo da venda">
+        <div className="grid md:grid-cols-3 gap-4">
+          <Field label="Oportunidade">
+            <div className="flex items-center gap-2">
+              <p className="text-sm">{op.nome_oportunidade ?? "—"}</p>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onOpenOportunidade(op.id)}>
+                <ExternalLink className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </Field>
+          <Field label="Etapa"><p className="text-sm">{op.etapa ?? "—"}</p></Field>
+          <Field label="Temperatura"><p className="text-sm capitalize">{op.temperatura ?? "—"}</p></Field>
+          <Field label="Valor EF"><p className="text-sm">{fmtBRL(op.valor_ef)}</p></Field>
+          <Field label="Valor Fee (mensal)"><p className="text-sm">{fmtBRL(op.valor_fee)}</p></Field>
+          <Field label="Valor total (EF + Fee)"><p className="text-sm font-medium">{fmtBRL(valorTotal)}</p></Field>
+          <Field label="Data da proposta"><p className="text-sm">{fmtDate(op.data_proposta)}</p></Field>
+          <Field label="Fechamento"><p className="text-sm">{fmtDate(op.data_fechamento_real)}</p></Field>
+          <Field label="Nível de consciência"><p className="text-sm capitalize">{op.nivel_consciencia ?? "—"}</p></Field>
+        </div>
+      </Section>
+
+      {lead && (
+        <Section title="Lead">
+          <div className="grid md:grid-cols-3 gap-4">
+            <Field label="Nome"><p className="text-sm">{lead.nome ?? "—"}</p></Field>
+            <Field label="Empresa"><p className="text-sm">{lead.empresa ?? "—"}</p></Field>
+            <Field label="E-mail"><p className="text-sm break-all">{lead.email ?? "—"}</p></Field>
+            <Field label="Telefone"><p className="text-sm">{lead.telefone ?? "—"}</p></Field>
+            <Field label="Segmento"><p className="text-sm">{lead.segmento ?? "—"}</p></Field>
+            <Field label="Faturamento"><p className="text-sm">{lead.faturamento ?? "—"}</p></Field>
+          </div>
+        </Section>
+      )}
+
+      {(op.info_deal || op.oportunidades_monetizacao || op.resumo_reuniao || op.notas) && (
+        <Section title="Contexto comercial">
+          <div className="space-y-4">
+            {op.info_deal && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Info do deal</p>
+                <p className="text-sm whitespace-pre-wrap">{op.info_deal}</p>
+              </div>
+            )}
+            {op.oportunidades_monetizacao && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Oportunidades de monetização</p>
+                <p className="text-sm whitespace-pre-wrap">{op.oportunidades_monetizacao}</p>
+              </div>
+            )}
+            {op.resumo_reuniao && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Resumo da reunião</p>
+                <p className="text-sm whitespace-pre-wrap">{op.resumo_reuniao}</p>
+              </div>
+            )}
+            {op.notas && (
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Notas</p>
+                <p className="text-sm whitespace-pre-wrap">{op.notas}</p>
+              </div>
+            )}
+          </div>
+        </Section>
+      )}
+    </>
+  );
+}
+
+function GrowthClassPanel({
+  relatorio,
+  geradoEm,
+  accountId,
+  onOpenAccount,
+}: {
+  relatorio: string | null;
+  geradoEm: string | null;
+  accountId: string;
+  onOpenAccount: (id: string) => void;
+}) {
+  return (
+    <Section title="Pré Growth Class">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs text-muted-foreground">
+          {geradoEm ? `Gerado em ${new Date(geradoEm).toLocaleString("pt-BR")}` : "Ainda não gerado"}
+        </p>
+        <Button variant="outline" size="sm" className="gap-2" onClick={() => onOpenAccount(accountId)}>
+          <ExternalLink className="h-3.5 w-3.5" /> Abrir account
+        </Button>
+      </div>
+      {relatorio ? (
+        <div className="rounded-xl bg-surface-2/40 p-4 max-h-[70vh] overflow-y-auto">
+          <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed">{relatorio}</pre>
+        </div>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          O relatório de Pré Growth Class ainda não foi gerado. Ele é criado automaticamente após o fechamento da venda.
+        </p>
       )}
     </Section>
   );
