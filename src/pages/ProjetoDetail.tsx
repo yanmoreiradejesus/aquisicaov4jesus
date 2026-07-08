@@ -1,0 +1,483 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, ExternalLink, Plus, Trash2, Upload, Download, Loader2, Save, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { useProjeto, type KpiAlvo, type StackItem, type LinkItem, type TimeMember } from "@/hooks/useProjeto";
+import { useProjetoAnexos, type AnexoRow } from "@/hooks/useProjetoAnexos";
+import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
+import { PROJETO_STATUS_LABEL, PROJETO_STATUS_COLOR, type ProjetoStatus } from "@/hooks/useProjetos";
+
+const fmtBRL = (v?: number | null) =>
+  v == null
+    ? "—"
+    : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(Number(v));
+const fmtDate = (v?: string | null) => (!v ? "—" : new Date(v).toLocaleDateString("pt-BR"));
+const fmtBytes = (n?: number | null) => {
+  if (!n) return "—";
+  const kb = n / 1024;
+  if (kb < 1024) return `${kb.toFixed(0)} KB`;
+  return `${(kb / 1024).toFixed(1)} MB`;
+};
+
+const STATUS_OPTS: ProjetoStatus[] = ["ativo", "em_risco", "pausado", "encerrado", "churn"];
+
+const ProjetoDetail = () => {
+  const { projetoId } = useParams<{ projetoId: string }>();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { data: projeto, isLoading, update } = useProjeto(projetoId);
+  const anexos = useProjetoAnexos(projetoId, projeto?.tenant_id);
+  const { profiles } = useProfilesList();
+
+  const [local, setLocal] = useState<any>(null);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const saveTimer = useRef<any>(null);
+
+  useEffect(() => {
+    if (projeto) setLocal(projeto);
+  }, [projeto?.id]); // eslint-disable-line
+
+  useEffect(() => {
+    if (!local || !projeto) return;
+    const patch: any = {};
+    const keys = ["nome", "status_projeto", "descricao", "objetivos", "kpis_alvo", "prazo_inicio", "prazo_fim", "stack", "links", "time", "documentacao"];
+    for (const k of keys) {
+      if (JSON.stringify(local[k]) !== JSON.stringify((projeto as any)[k])) patch[k] = local[k];
+    }
+    if (Object.keys(patch).length === 0) return;
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      setSaving(true);
+      try {
+        await update.mutateAsync(patch);
+        setSavedAt(Date.now());
+      } catch (e: any) {
+        toast({ title: "Erro ao salvar", description: e.message, variant: "destructive" });
+      } finally {
+        setSaving(false);
+      }
+    }, 800);
+    return () => clearTimeout(saveTimer.current);
+  }, [local]); // eslint-disable-line
+
+  const amProfile = useMemo(() => {
+    const id = local?.account?.account_manager_id;
+    return id ? profiles.find((p) => p.id === id) : null;
+  }, [local, profiles]);
+
+  if (isLoading || !local) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!projeto) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+        <p className="text-muted-foreground">Projeto não encontrado.</p>
+        <Button variant="outline" onClick={() => navigate("/comercial/projetos")}>Voltar</Button>
+      </div>
+    );
+  }
+
+  const patch = (p: any) => setLocal((v: any) => ({ ...v, ...p }));
+
+  return (
+    <div className="min-h-screen bg-background">
+      <main className="w-full max-w-6xl mx-auto px-4 lg:px-8 py-6 lg:py-10 animate-fade-in">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/comercial/projetos")} className="gap-2">
+            <ArrowLeft className="h-4 w-4" /> Projetos
+          </Button>
+          <div className="text-xs text-muted-foreground flex items-center gap-2">
+            {saving ? (
+              <><Loader2 className="h-3 w-3 animate-spin" /> Salvando…</>
+            ) : savedAt ? (
+              <><Save className="h-3 w-3" /> Salvo</>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="glass rounded-2xl p-6 mb-6 shadow-ios-sm">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+            <div className="flex-1">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-1">Projeto</p>
+              <Input
+                value={local.nome ?? ""}
+                onChange={(e) => patch({ nome: e.target.value })}
+                className="font-display text-2xl font-semibold border-none px-0 h-auto bg-transparent focus-visible:ring-0"
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                Cliente: <span className="text-foreground">{local.account?.cliente_nome ?? "—"}</span>
+                {amProfile && <> · AM: <span className="text-foreground">{profileLabel(amProfile)}</span></>}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={local.status_projeto} onValueChange={(v) => patch({ status_projeto: v })}>
+                <SelectTrigger className={`w-[160px] h-9 rounded-xl border ${PROJETO_STATUS_COLOR[local.status_projeto as ProjetoStatus]}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTS.map((s) => (
+                    <SelectItem key={s} value={s}>{PROJETO_STATUS_LABEL[s]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => navigate(`/comercial/onboarding/${local.account_id}`)}
+              >
+                <ExternalLink className="h-3.5 w-3.5" /> Onboarding
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <Tabs defaultValue="visao" className="space-y-4">
+          <TabsList className="glass rounded-xl">
+            <TabsTrigger value="visao">Visão geral</TabsTrigger>
+            <TabsTrigger value="escopo">Escopo</TabsTrigger>
+            <TabsTrigger value="stack">Stack & Acessos</TabsTrigger>
+            <TabsTrigger value="time">Time</TabsTrigger>
+            <TabsTrigger value="doc">Documentação</TabsTrigger>
+            <TabsTrigger value="anexos">Anexos</TabsTrigger>
+            <TabsTrigger value="fin">Financeiro</TabsTrigger>
+          </TabsList>
+
+          {/* Visão geral */}
+          <TabsContent value="visao" className="space-y-4">
+            <Section title="Prazos">
+              <div className="grid md:grid-cols-2 gap-4">
+                <Field label="Início">
+                  <Input type="date" value={local.prazo_inicio ?? ""} onChange={(e) => patch({ prazo_inicio: e.target.value || null })} />
+                </Field>
+                <Field label="Fim previsto">
+                  <Input type="date" value={local.prazo_fim ?? ""} onChange={(e) => patch({ prazo_fim: e.target.value || null })} />
+                </Field>
+              </div>
+            </Section>
+            <Section title="KPIs alvo">
+              <KpisEditor value={local.kpis_alvo ?? []} onChange={(v) => patch({ kpis_alvo: v })} />
+            </Section>
+          </TabsContent>
+
+          {/* Escopo */}
+          <TabsContent value="escopo" className="space-y-4">
+            <Section title="Descrição do projeto">
+              <Textarea rows={4} value={local.descricao ?? ""} onChange={(e) => patch({ descricao: e.target.value })} placeholder="O que este projeto entrega..." />
+            </Section>
+            <Section title="Objetivos">
+              <Textarea rows={6} value={local.objetivos ?? ""} onChange={(e) => patch({ objetivos: e.target.value })} placeholder="Objetivos estratégicos, resultados esperados..." />
+            </Section>
+          </TabsContent>
+
+          {/* Stack */}
+          <TabsContent value="stack" className="space-y-4">
+            <Section title="Stack (ferramentas usadas)">
+              <StackEditor value={local.stack ?? []} onChange={(v) => patch({ stack: v })} />
+            </Section>
+            <Section title="Links & acessos">
+              <LinksEditor value={local.links ?? []} onChange={(v) => patch({ links: v })} />
+            </Section>
+          </TabsContent>
+
+          {/* Time */}
+          <TabsContent value="time" className="space-y-4">
+            <Section title="Time & responsáveis">
+              <TimeEditor value={local.time ?? []} onChange={(v) => patch({ time: v })} profiles={profiles} />
+            </Section>
+          </TabsContent>
+
+          {/* Doc */}
+          <TabsContent value="doc" className="space-y-4">
+            <Section title="Documentação, briefing, histórico e decisões">
+              <Textarea
+                rows={20}
+                value={local.documentacao ?? ""}
+                onChange={(e) => patch({ documentacao: e.target.value })}
+                placeholder="Espaço livre para documentar tudo sobre o projeto. Aceita markdown simples."
+                className="font-mono text-sm"
+              />
+            </Section>
+          </TabsContent>
+
+          {/* Anexos */}
+          <TabsContent value="anexos">
+            <AnexosPanel anexos={anexos.data ?? []} upload={anexos.upload} remove={anexos.remove} getSignedUrl={anexos.getSignedUrl} />
+          </TabsContent>
+
+          {/* Financeiro */}
+          <TabsContent value="fin">
+            <Section title="Cobranças do contrato">
+              {(projeto.cobrancas?.length ?? 0) === 0 ? (
+                <p className="text-sm text-muted-foreground">Sem cobranças registradas.</p>
+              ) : (
+                <div className="rounded-xl border border-border/40 overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-surface-2/40 text-xs text-muted-foreground">
+                      <tr>
+                        <th className="text-left px-3 py-2">Tipo</th>
+                        <th className="text-left px-3 py-2">Parcela</th>
+                        <th className="text-right px-3 py-2">Valor</th>
+                        <th className="text-left px-3 py-2">Vencimento</th>
+                        <th className="text-left px-3 py-2">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {projeto.cobrancas!.map((c) => (
+                        <tr key={c.id} className="border-t border-border/30">
+                          <td className="px-3 py-2">{c.tipo ?? "—"}</td>
+                          <td className="px-3 py-2">{c.parcela_num && c.parcela_total ? `${c.parcela_num}/${c.parcela_total}` : "—"}</td>
+                          <td className="px-3 py-2 text-right">{fmtBRL(c.valor)}</td>
+                          <td className="px-3 py-2">{fmtDate(c.vencimento)}</td>
+                          <td className="px-3 py-2">
+                            <span className={
+                              c.status === "pago" ? "text-emerald-300"
+                              : c.status === "atrasado" ? "text-red-300"
+                              : "text-muted-foreground"
+                            }>{c.status ?? "—"}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Section>
+          </TabsContent>
+        </Tabs>
+      </main>
+    </div>
+  );
+};
+
+/* ============= Subcomponents ============= */
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-border/40 bg-surface-1/40 p-5">
+      <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground mb-3">{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="text-xs text-muted-foreground mb-1 block">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function KpisEditor({ value, onChange }: { value: KpiAlvo[]; onChange: (v: KpiAlvo[]) => void }) {
+  const add = () => onChange([...value, { nome: "", meta: "", unidade: "" }]);
+  const upd = (i: number, patch: Partial<KpiAlvo>) => onChange(value.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
+  const del = (i: number) => onChange(value.filter((_, idx) => idx !== i));
+  return (
+    <div className="space-y-2">
+      {value.map((k, i) => (
+        <div key={i} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_120px_auto] gap-2">
+          <Input placeholder="KPI (ex: CAC)" value={k.nome} onChange={(e) => upd(i, { nome: e.target.value })} />
+          <Input placeholder="Meta" value={k.meta} onChange={(e) => upd(i, { meta: e.target.value })} />
+          <Input placeholder="Unidade" value={k.unidade ?? ""} onChange={(e) => upd(i, { unidade: e.target.value })} />
+          <Button variant="ghost" size="icon" onClick={() => del(i)}><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      ))}
+      <Button variant="outline" size="sm" onClick={add} className="gap-2"><Plus className="h-4 w-4" /> Adicionar KPI</Button>
+    </div>
+  );
+}
+
+function StackEditor({ value, onChange }: { value: StackItem[]; onChange: (v: StackItem[]) => void }) {
+  const add = () => onChange([...value, { ferramenta: "", categoria: "" }]);
+  const upd = (i: number, patch: Partial<StackItem>) => onChange(value.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
+  const del = (i: number) => onChange(value.filter((_, idx) => idx !== i));
+  return (
+    <div className="space-y-2">
+      {value.map((s, i) => (
+        <div key={i} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2">
+          <Input placeholder="Ferramenta (ex: Meta Ads)" value={s.ferramenta} onChange={(e) => upd(i, { ferramenta: e.target.value })} />
+          <Input placeholder="Categoria (ex: mídia paga)" value={s.categoria} onChange={(e) => upd(i, { categoria: e.target.value })} />
+          <Button variant="ghost" size="icon" onClick={() => del(i)}><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      ))}
+      <Button variant="outline" size="sm" onClick={add} className="gap-2"><Plus className="h-4 w-4" /> Adicionar ferramenta</Button>
+    </div>
+  );
+}
+
+function LinksEditor({ value, onChange }: { value: LinkItem[]; onChange: (v: LinkItem[]) => void }) {
+  const add = () => onChange([...value, { label: "", url: "", categoria: "outros" }]);
+  const upd = (i: number, patch: Partial<LinkItem>) => onChange(value.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
+  const del = (i: number) => onChange(value.filter((_, idx) => idx !== i));
+  return (
+    <div className="space-y-2">
+      {value.map((l, i) => (
+        <div key={i} className="grid grid-cols-1 md:grid-cols-[1fr_2fr_140px_auto] gap-2 items-center">
+          <Input placeholder="Label" value={l.label} onChange={(e) => upd(i, { label: e.target.value })} />
+          <div className="flex gap-1">
+            <Input placeholder="https://..." value={l.url} onChange={(e) => upd(i, { url: e.target.value })} />
+            {l.url && (
+              <a href={l.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center px-2 rounded-md bg-surface-2/60 hover:bg-surface-2">
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            )}
+          </div>
+          <Select value={l.categoria || "outros"} onValueChange={(v) => upd(i, { categoria: v })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="drive">Drive</SelectItem>
+              <SelectItem value="figma">Figma</SelectItem>
+              <SelectItem value="ga">Google Analytics</SelectItem>
+              <SelectItem value="meta">Meta Ads</SelectItem>
+              <SelectItem value="google_ads">Google Ads</SelectItem>
+              <SelectItem value="dashboard">Dashboard</SelectItem>
+              <SelectItem value="outros">Outros</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="ghost" size="icon" onClick={() => del(i)}><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      ))}
+      <Button variant="outline" size="sm" onClick={add} className="gap-2"><Plus className="h-4 w-4" /> Adicionar link</Button>
+    </div>
+  );
+}
+
+function TimeEditor({ value, onChange, profiles }: { value: TimeMember[]; onChange: (v: TimeMember[]) => void; profiles: any[] }) {
+  const add = () => onChange([...value, { profile_id: null, nome_livre: "", papel: "" }]);
+  const upd = (i: number, patch: Partial<TimeMember>) => onChange(value.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
+  const del = (i: number) => onChange(value.filter((_, idx) => idx !== i));
+  return (
+    <div className="space-y-2">
+      {value.map((m, i) => (
+        <div key={i} className="grid grid-cols-1 md:grid-cols-[1.5fr_1fr_1fr_auto] gap-2">
+          <Select
+            value={m.profile_id ?? "__free__"}
+            onValueChange={(v) => upd(i, { profile_id: v === "__free__" ? null : v, nome_livre: v === "__free__" ? m.nome_livre ?? "" : null })}
+          >
+            <SelectTrigger><SelectValue placeholder="Membro" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__free__">— nome livre —</SelectItem>
+              {profiles.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{profileLabel(p)}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {m.profile_id ? (
+            <div className="flex items-center text-sm text-muted-foreground px-2">
+              {profileLabel(profiles.find((p) => p.id === m.profile_id))}
+            </div>
+          ) : (
+            <Input placeholder="Nome livre" value={m.nome_livre ?? ""} onChange={(e) => upd(i, { nome_livre: e.target.value })} />
+          )}
+          <Input placeholder="Papel (ex: Gestor de tráfego)" value={m.papel} onChange={(e) => upd(i, { papel: e.target.value })} />
+          <Button variant="ghost" size="icon" onClick={() => del(i)}><Trash2 className="h-4 w-4" /></Button>
+        </div>
+      ))}
+      <Button variant="outline" size="sm" onClick={add} className="gap-2"><Plus className="h-4 w-4" /> Adicionar membro</Button>
+    </div>
+  );
+}
+
+function AnexosPanel({
+  anexos,
+  upload,
+  remove,
+  getSignedUrl,
+}: {
+  anexos: AnexoRow[];
+  upload: ReturnType<typeof useProjetoAnexos>["upload"];
+  remove: ReturnType<typeof useProjetoAnexos>["remove"];
+  getSignedUrl: ReturnType<typeof useProjetoAnexos>["getSignedUrl"];
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  async function handleFiles(files: FileList | null) {
+    if (!files) return;
+    for (const f of Array.from(files)) {
+      try {
+        await upload.mutateAsync(f);
+      } catch (e: any) {
+        toast({ title: `Falha ao enviar ${f.name}`, description: e.message, variant: "destructive" });
+      }
+    }
+  }
+
+  async function handleDownload(row: AnexoRow) {
+    const url = await getSignedUrl(row);
+    if (!url) {
+      toast({ title: "Não foi possível gerar link", variant: "destructive" });
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  return (
+    <Section title="Anexos">
+      <div className="mb-4">
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            handleFiles(e.target.files);
+            if (inputRef.current) inputRef.current.value = "";
+          }}
+        />
+        <Button
+          onClick={() => inputRef.current?.click()}
+          disabled={upload.isPending}
+          className="gap-2"
+        >
+          {upload.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+          Enviar arquivo
+        </Button>
+      </div>
+
+      {anexos.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Nenhum anexo ainda.</p>
+      ) : (
+        <div className="space-y-2">
+          {anexos.map((a) => (
+            <div key={a.id} className="flex items-center justify-between gap-3 rounded-xl border border-border/40 bg-surface-2/40 px-3 py-2">
+              <div className="flex items-center gap-3 min-w-0">
+                <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm truncate">{a.filename}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {fmtBytes(a.size_bytes)} · {fmtDate(a.created_at)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <Button variant="ghost" size="icon" onClick={() => handleDownload(a)}>
+                  <Download className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => remove.mutate(a)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Section>
+  );
+}
+
+export default ProjetoDetail;
