@@ -51,6 +51,7 @@ export interface ProjetoDetail {
     data_fim_contrato: string | null;
     pre_growth_class_relatorio: string | null;
     pre_growth_class_gerado_em: string | null;
+    growth_class_expectativas: string | null;
     oportunidade?: {
       id: string;
       nome_oportunidade: string | null;
@@ -65,6 +66,7 @@ export interface ProjetoDetail {
       oportunidades_monetizacao: string | null;
       resumo_reuniao: string | null;
       notas: string | null;
+      transcricao_reuniao: string | null;
       contrato_url: string | null;
       lead?: {
         id: string;
@@ -90,7 +92,7 @@ export function useProjeto(id: string | undefined) {
       const { data, error } = await (supabase as any)
         .from("crm_projetos")
         .select(
-          "*, account:accounts(id, cliente_nome, account_manager_id, data_inicio_contrato, data_fim_contrato, pre_growth_class_relatorio, pre_growth_class_gerado_em, oportunidade:crm_oportunidades(id, nome_oportunidade, valor_ef, valor_fee, etapa, temperatura, nivel_consciencia, data_proposta, data_fechamento_real, info_deal, oportunidades_monetizacao, resumo_reuniao, notas, contrato_url, lead:crm_leads(id, nome, empresa, email, telefone, segmento, faturamento)))"
+          "*, account:accounts(id, cliente_nome, account_manager_id, data_inicio_contrato, data_fim_contrato, pre_growth_class_relatorio, pre_growth_class_gerado_em, growth_class_expectativas, oportunidade:crm_oportunidades(id, nome_oportunidade, valor_ef, valor_fee, etapa, temperatura, nivel_consciencia, data_proposta, data_fechamento_real, info_deal, oportunidades_monetizacao, resumo_reuniao, notas, transcricao_reuniao, contrato_url, lead:crm_leads(id, nome, empresa, email, telefone, segmento, faturamento)))"
         )
         .eq("id", id!)
         .maybeSingle();

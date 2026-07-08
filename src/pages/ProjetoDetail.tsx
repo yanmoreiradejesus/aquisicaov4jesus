@@ -11,6 +11,8 @@ import { useProjeto, type KpiAlvo, type StackItem, type LinkItem, type TimeMembe
 import { useProjetoAnexos, type AnexoRow } from "@/hooks/useProjetoAnexos";
 import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
 import { PROJETO_STATUS_LABEL, PROJETO_STATUS_COLOR, type ProjetoStatus } from "@/hooks/useProjetos";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const fmtBRL = (v?: number | null) =>
   v == null
@@ -181,12 +183,7 @@ const ProjetoDetail = () => {
 
           {/* Growth Class */}
           <TabsContent value="gc" className="space-y-4">
-            <GrowthClassPanel
-              relatorio={projeto.account?.pre_growth_class_relatorio ?? null}
-              geradoEm={projeto.account?.pre_growth_class_gerado_em ?? null}
-              accountId={projeto.account_id}
-              onOpenAccount={(id) => navigate(`/comercial/accounts/${id}`)}
-            />
+            <GrowthClassPanel projeto={projeto} />
           </TabsContent>
 
 
@@ -577,41 +574,82 @@ function VendaPanel({ projeto, onOpenOportunidade }: { projeto: any; onOpenOport
           </div>
         </Section>
       )}
+
+      <Section title="Pré Growth Class (contexto da venda gerado por IA)">
+        {(() => {
+          const rel = projeto?.account?.pre_growth_class_relatorio ?? null;
+          const geradoEm = projeto?.account?.pre_growth_class_gerado_em ?? null;
+          return (
+            <>
+              <p className="text-xs text-muted-foreground mb-3">
+                {geradoEm ? `Gerado em ${new Date(geradoEm).toLocaleString("pt-BR")}` : "Ainda não gerado"}
+              </p>
+              {rel ? (
+                <div className="rounded-xl bg-surface-2/40 p-4 max-h-[70vh] overflow-y-auto prose prose-sm prose-invert max-w-none">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{rel}</ReactMarkdown>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Ainda não gerado. É criado automaticamente após o fechamento da venda.
+                </p>
+              )}
+            </>
+          );
+        })()}
+      </Section>
     </>
   );
 }
 
-function GrowthClassPanel({
-  relatorio,
-  geradoEm,
-  accountId,
-  onOpenAccount,
-}: {
-  relatorio: string | null;
-  geradoEm: string | null;
-  accountId: string;
-  onOpenAccount: (id: string) => void;
-}) {
-  return (
-    <Section title="Pré Growth Class">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs text-muted-foreground">
-          {geradoEm ? `Gerado em ${new Date(geradoEm).toLocaleString("pt-BR")}` : "Ainda não gerado"}
-        </p>
-        <Button variant="outline" size="sm" className="gap-2" onClick={() => onOpenAccount(accountId)}>
-          <ExternalLink className="h-3.5 w-3.5" /> Abrir account
-        </Button>
-      </div>
-      {relatorio ? (
-        <div className="rounded-xl bg-surface-2/40 p-4 max-h-[70vh] overflow-y-auto">
-          <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed">{relatorio}</pre>
-        </div>
-      ) : (
+function GrowthClassPanel({ projeto }: { projeto: any }) {
+  const expectativa = projeto?.account?.growth_class_expectativas ?? null;
+  const transcricao = projeto?.account?.oportunidade?.transcricao_reuniao ?? null;
+  const notas = projeto?.account?.oportunidade?.notas ?? null;
+
+  const hasAny = expectativa || transcricao || notas;
+
+  if (!hasAny) {
+    return (
+      <Section title="Growth Class — expectativas do cliente">
         <p className="text-sm text-muted-foreground">
-          O relatório de Pré Growth Class ainda não foi gerado. Ele é criado automaticamente após o fechamento da venda.
+          Ainda não há expectativas registradas. Preencha o campo de expectativa no onboarding
+          ou anexe a transcrição/notas da reunião na oportunidade.
         </p>
+      </Section>
+    );
+  }
+
+  return (
+    <>
+      {expectativa && (
+        <Section title="Expectativa do cliente">
+          <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 prose prose-sm prose-invert max-w-none">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{expectativa}</ReactMarkdown>
+          </div>
+        </Section>
       )}
-    </Section>
+
+      {notas && (
+        <Section title="Notas da venda">
+          <div className="rounded-xl bg-surface-2/40 p-4 prose prose-sm prose-invert max-w-none">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{notas}</ReactMarkdown>
+          </div>
+        </Section>
+      )}
+
+      {transcricao && (
+        <Section title="Transcrição da reunião de fechamento">
+          <details className="rounded-xl bg-surface-2/40 border border-border/40">
+            <summary className="cursor-pointer px-4 py-3 text-sm font-medium hover:bg-surface-2/60 rounded-xl">
+              Ver transcrição completa ({transcricao.length.toLocaleString("pt-BR")} caracteres)
+            </summary>
+            <div className="px-4 pb-4 pt-2 max-h-[60vh] overflow-y-auto">
+              <p className="text-sm whitespace-pre-wrap leading-relaxed text-muted-foreground">{transcricao}</p>
+            </div>
+          </details>
+        </Section>
+      )}
+    </>
   );
 }
 
