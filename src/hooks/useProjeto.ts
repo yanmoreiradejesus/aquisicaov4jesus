@@ -49,11 +49,32 @@ export interface ProjetoDetail {
     account_manager_id: string | null;
     data_inicio_contrato: string | null;
     data_fim_contrato: string | null;
+    pre_growth_class_relatorio: string | null;
+    pre_growth_class_gerado_em: string | null;
     oportunidade?: {
       id: string;
       nome_oportunidade: string | null;
       valor_ef: number | null;
       valor_fee: number | null;
+      etapa: string | null;
+      temperatura: string | null;
+      nivel_consciencia: string | null;
+      data_proposta: string | null;
+      data_fechamento_real: string | null;
+      info_deal: string | null;
+      oportunidades_monetizacao: string | null;
+      resumo_reuniao: string | null;
+      notas: string | null;
+      contrato_url: string | null;
+      lead?: {
+        id: string;
+        nome: string | null;
+        empresa: string | null;
+        email: string | null;
+        telefone: string | null;
+        segmento: string | null;
+        faturamento: string | null;
+      } | null;
     } | null;
   };
   cobrancas?: { id: string; valor: number | null; status: string | null; vencimento: string | null; tipo: string | null; parcela_num: number | null; parcela_total: number | null }[];
