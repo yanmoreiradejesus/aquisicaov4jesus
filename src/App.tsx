@@ -28,6 +28,8 @@ import Onboarding from "./pages/Onboarding";
 import LeadDetailPage from "./pages/LeadDetailPage";
 import OportunidadeDetailPage from "./pages/OportunidadeDetailPage";
 import OnboardingDetailPage from "./pages/OnboardingDetailPage";
+import Projetos from "./pages/Projetos";
+import ProjetoDetail from "./pages/ProjetoDetail";
 import ComercialPlaceholder from "./pages/ComercialPlaceholder";
 import AccountsList from "./pages/AccountsList";
 import AccountDetail from "./pages/AccountDetail";
