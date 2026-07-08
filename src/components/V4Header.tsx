@@ -42,6 +42,7 @@ const V4Header = () => {
     { path: "/comercial/leads", label: "Leads" },
     { path: "/comercial/oportunidades", label: "Oportunidades" },
     { path: "/comercial/onboarding", label: "Onboarding" },
+    { path: "/comercial/projetos", label: "Projetos" },
     { path: "/comercial/cobrancas", label: "Cobranças" },
   ];
 
