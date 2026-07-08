@@ -145,8 +145,10 @@ const ProjetoDetail = () => {
         </div>
 
         <Tabs defaultValue="visao" className="space-y-4">
-          <TabsList className="glass rounded-xl">
+          <TabsList className="glass rounded-xl flex-wrap h-auto">
             <TabsTrigger value="visao">Visão geral</TabsTrigger>
+            <TabsTrigger value="venda">Venda</TabsTrigger>
+            <TabsTrigger value="gc">Growth Class</TabsTrigger>
             <TabsTrigger value="escopo">Escopo</TabsTrigger>
             <TabsTrigger value="stack">Stack & Acessos</TabsTrigger>
             <TabsTrigger value="time">Time</TabsTrigger>
