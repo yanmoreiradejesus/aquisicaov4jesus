@@ -51,6 +51,7 @@ export interface ProjetoDetail {
     data_fim_contrato: string | null;
     pre_growth_class_relatorio: string | null;
     pre_growth_class_gerado_em: string | null;
+    growth_class_expectativas: string | null;
     oportunidade?: {
       id: string;
       nome_oportunidade: string | null;
