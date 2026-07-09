@@ -258,6 +258,22 @@ function EditCellDialog({ row, field, onClose, onSaved }: { row: Row; field: Fie
 
   const [value, setValue] = useState<string>(initial);
   const [file, setFile] = useState<File | null>(null);
+  const [contratoSignedUrl, setContratoSignedUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (field !== "contrato_url" || !row.contrato_url) return;
+    const path = row.contrato_url;
+    // Se já é uma URL completa, usa direto
+    if (/^https?:\/\//i.test(path)) {
+      setContratoSignedUrl(path);
+      return;
+    }
+    let cancelled = false;
+    supabase.storage.from("contratos-assinados").createSignedUrl(path, 3600).then(({ data }) => {
+      if (!cancelled) setContratoSignedUrl(data?.signedUrl ?? null);
+    });
+    return () => { cancelled = true; };
+  }, [field, row.contrato_url]);
 
   const save = async () => {
     setSaving(true);
