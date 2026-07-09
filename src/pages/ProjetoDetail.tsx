@@ -703,230 +703,129 @@ function GrowthClassPanel({ projeto }: { projeto: any }) {
 
 /* ============= Timeline ============= */
 
-type TimelineEvent = {
+type TimelineStep = {
   id: string;
-  date: string; // ISO
+  date: string | null;
   title: string;
-  description?: string | null;
-  category: "lead" | "reuniao" | "proposta" | "venda" | "onboarding" | "projeto" | "cobranca" | "atividade" | "anexo" | "hoje";
-  tone?: "success" | "warning" | "danger" | "neutral" | "info";
+  category: "lead" | "reuniao" | "venda" | "gc";
+  tone: "success" | "info" | "neutral" | "pending";
+  summary?: string | null; // markdown
+  meta?: string | null; // one-line meta (ex: "João · Empresa X")
 };
 
-function TimelinePanel({ projeto, anexos }: { projeto: any; anexos: any[] }) {
-  const events = useMemo<TimelineEvent[]>(() => {
-    const out: TimelineEvent[] = [];
+function TimelinePanel({ projeto }: { projeto: any; anexos?: any[] }) {
+  const steps = useMemo<TimelineStep[]>(() => {
     const acc = projeto?.account;
     const op = acc?.oportunidade;
     const lead = op?.lead;
 
-    if (lead?.created_at) {
-      out.push({
-        id: `lead-${lead.id}`,
-        date: lead.created_at,
+    // Reunião realizada — dores + sugestões: usa resumo_reuniao (gerado pela meeting-ai) como base
+    const resumoReu = op?.resumo_reuniao || op?.notas || null;
+    // Growth class — objetivos: mesma fonte da aba, o relatório IA completo (será truncado no display)
+    const gcRel = projeto?.growth_class_ia_relatorio || acc?.growth_class_expectativas || null;
+
+    return [
+      {
+        id: "lead",
+        date: lead?.created_at ?? null,
         title: "Lead cadastrado",
-        description: [lead.nome, lead.empresa].filter(Boolean).join(" · ") || null,
         category: "lead",
-        tone: "info",
-      });
-    }
-    if (lead?.data_reuniao_agendada) {
-      out.push({
-        id: `reu-ag-${lead.id}`,
-        date: lead.data_reuniao_agendada,
+        tone: lead?.created_at ? "info" : "pending",
+        meta: [lead?.nome, lead?.empresa].filter(Boolean).join(" · ") || null,
+      },
+      {
+        id: "reu-ag",
+        date: lead?.data_reuniao_agendada ?? null,
         title: "Reunião agendada",
         category: "reuniao",
-        tone: "info",
-      });
-    }
-    if (lead?.data_reuniao_realizada) {
-      out.push({
-        id: `reu-real-${lead.id}`,
-        date: lead.data_reuniao_realizada,
+        tone: lead?.data_reuniao_agendada ? "info" : "pending",
+        summary: lead?.qualificacao || null,
+      },
+      {
+        id: "reu-real",
+        date: lead?.data_reuniao_realizada ?? null,
         title: "Reunião realizada",
         category: "reuniao",
-        tone: "success",
-      });
-    }
-    if (op?.data_proposta) {
-      out.push({
-        id: `prop-${op.id}`,
-        date: op.data_proposta,
-        title: "Proposta enviada",
-        description: op.nome_oportunidade,
-        category: "proposta",
-        tone: "info",
-      });
-    }
-    if (op?.data_fechamento_real) {
-      const total = (Number(op.valor_ef) || 0) + (Number(op.valor_fee) || 0);
-      out.push({
-        id: `venda-${op.id}`,
-        date: op.data_fechamento_real,
-        title: "Venda fechada 🎉",
-        description: total ? `Valor total: ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(total)}` : null,
+        tone: lead?.data_reuniao_realizada ? "success" : "pending",
+        summary: resumoReu,
+      },
+      {
+        id: "venda",
+        date: op?.data_fechamento_real ?? null,
+        title: "Venda fechada",
         category: "venda",
-        tone: "success",
-      });
-    }
-    if (acc?.created_at) {
-      out.push({
-        id: `acc-${acc.id}`,
-        date: acc.created_at,
-        title: "Onboarding iniciado",
-        description: acc.cliente_nome,
-        category: "onboarding",
-        tone: "info",
-      });
-    }
-    if (projeto?.created_at) {
-      out.push({
-        id: `proj-${projeto.id}`,
-        date: projeto.created_at,
-        title: "Projeto ativo",
-        description: "Onboarding concluído — projeto entra em execução",
-        category: "projeto",
-        tone: "success",
-      });
-    }
-
-    // Cobranças (só as pagas ou atrasadas — as pendentes futuras poluem)
-    (projeto?.cobrancas ?? []).forEach((c: any) => {
-      if (c.status === "pago" && c.vencimento) {
-        out.push({
-          id: `cob-pago-${c.id}`,
-          date: c.vencimento,
-          title: "Cobrança paga",
-          description: `${c.tipo ?? "—"}${c.parcela_num && c.parcela_total ? ` · parcela ${c.parcela_num}/${c.parcela_total}` : ""} · ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(Number(c.valor) || 0)}`,
-          category: "cobranca",
-          tone: "success",
-        });
-      } else if (c.status === "atrasado" && c.vencimento) {
-        out.push({
-          id: `cob-atr-${c.id}`,
-          date: c.vencimento,
-          title: "Cobrança atrasada",
-          description: `${c.tipo ?? "—"} · ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(Number(c.valor) || 0)}`,
-          category: "cobranca",
-          tone: "danger",
-        });
-      }
-    });
-
-    // Atividades (crm_atividades) — filtra só as ricas
-    (projeto?.atividades ?? []).forEach((a: any) => {
-      if (!a.created_at) return;
-      // pula "criação" — já temos "Lead cadastrado"
-      if (a.tipo === "criacao") return;
-      out.push({
-        id: `atv-${a.id}`,
-        date: a.created_at,
-        title: a.titulo || tipoLabel(a.tipo),
-        description: a.descricao,
-        category: "atividade",
-        tone: "neutral",
-      });
-    });
-
-    // Anexos
-    (anexos ?? []).forEach((an: any) => {
-      out.push({
-        id: `anx-${an.id}`,
-        date: an.created_at,
-        title: "Anexo adicionado",
-        description: an.filename,
-        category: "anexo",
-        tone: "neutral",
-      });
-    });
-
-    // Hoje
-    out.push({
-      id: "hoje",
-      date: new Date().toISOString(),
-      title: "Hoje",
-      category: "hoje",
-      tone: "info",
-    });
-
-    return out
-      .filter((e) => !!e.date)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [projeto, anexos]);
-
-  if (events.length <= 1) {
-    return (
-      <Section title="Timeline do projeto">
-        <p className="text-sm text-muted-foreground">Sem eventos registrados ainda.</p>
-      </Section>
-    );
-  }
+        tone: op?.data_fechamento_real ? "success" : "pending",
+        meta: (() => {
+          const total = (Number(op?.valor_ef) || 0) + (Number(op?.valor_fee) || 0);
+          return total
+            ? `Valor total: ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(total)}`
+            : null;
+        })(),
+      },
+      {
+        id: "gc",
+        date: projeto?.growth_class_ia_gerado_em ?? null,
+        title: "Growth Class — expectativas do cliente",
+        category: "gc",
+        tone: gcRel ? "info" : "pending",
+        summary: gcRel,
+      },
+    ];
+  }, [projeto]);
 
   return (
     <Section title="Timeline do projeto">
-      <ol className="relative border-l border-border/50 ml-3 space-y-6 pt-1">
-        {events.map((e) => (
-          <TimelineItem key={e.id} event={e} />
+      <ol className="relative border-l border-border/50 ml-3 space-y-8 pt-1">
+        {steps.map((s) => (
+          <TimelineItem key={s.id} step={s} />
         ))}
       </ol>
     </Section>
   );
 }
 
-function TimelineItem({ event }: { event: TimelineEvent }) {
-  const { icon: Icon, dotClass, textClass } = iconForCategory(event.category, event.tone);
-  const isHoje = event.category === "hoje";
+function TimelineItem({ step }: { step: TimelineStep }) {
+  const { icon: Icon, dotClass, textClass } = iconForCategory(step.category, step.tone);
+  const isPending = step.tone === "pending";
   return (
     <li className="ml-6">
       <span className={`absolute -left-[13px] flex h-6 w-6 items-center justify-center rounded-full ring-4 ring-background ${dotClass}`}>
         <Icon className="h-3.5 w-3.5" />
       </span>
       <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
-        <p className={`text-sm font-medium ${textClass} ${isHoje ? "italic opacity-70" : ""}`}>{event.title}</p>
+        <p className={`text-sm font-medium ${textClass} ${isPending ? "opacity-50" : ""}`}>{step.title}</p>
         <time className="text-xs text-muted-foreground shrink-0">
-          {new Date(event.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+          {step.date
+            ? new Date(step.date).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })
+            : "pendente"}
         </time>
       </div>
-      {event.description && (
-        <p className="text-xs text-muted-foreground mt-0.5 whitespace-pre-wrap">{event.description}</p>
+      {step.meta && (
+        <p className="text-xs text-muted-foreground mt-0.5">{step.meta}</p>
+      )}
+      {step.summary && (
+        <div className="mt-2 rounded-lg bg-surface-2/40 border border-border/30 p-3 max-h-56 overflow-y-auto prose prose-xs prose-invert max-w-none prose-p:my-1 prose-headings:mt-2 prose-headings:mb-1 prose-h2:text-xs prose-h2:font-semibold prose-h2:uppercase prose-h2:tracking-wider prose-h2:text-muted-foreground prose-ul:my-1 prose-li:my-0 text-xs">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{step.summary}</ReactMarkdown>
+        </div>
       )}
     </li>
   );
 }
 
-function tipoLabel(t?: string | null) {
-  switch (t) {
-    case "tarefa": return "Tarefa";
-    case "nota": return "Nota adicionada";
-    case "mudanca_etapa": return "Mudança de etapa";
-    case "ligacao": return "Ligação";
-    case "email": return "Email";
-    case "reuniao": return "Reunião";
-    default: return t ?? "Atividade";
-  }
-}
-
-function iconForCategory(cat: TimelineEvent["category"], tone?: TimelineEvent["tone"]) {
+function iconForCategory(cat: TimelineStep["category"], tone: TimelineStep["tone"]) {
   const toneMap = {
     success: { dotClass: "bg-emerald-500/20 text-emerald-300", textClass: "text-foreground" },
-    danger: { dotClass: "bg-red-500/20 text-red-300", textClass: "text-foreground" },
-    warning: { dotClass: "bg-amber-500/20 text-amber-300", textClass: "text-foreground" },
     info: { dotClass: "bg-primary/20 text-primary", textClass: "text-foreground" },
     neutral: { dotClass: "bg-surface-2 text-muted-foreground", textClass: "text-foreground" },
+    pending: { dotClass: "bg-surface-2/60 text-muted-foreground/60", textClass: "text-muted-foreground" },
   } as const;
-  const t = toneMap[tone ?? "neutral"];
   const iconMap = {
     lead: User,
     reuniao: MessageSquare,
-    proposta: FileText,
     venda: Rocket,
-    onboarding: Flag,
-    projeto: CheckCircle2,
-    cobranca: DollarSign,
-    atividade: MessageSquare,
-    anexo: Paperclip,
-    hoje: Circle,
+    gc: Flag,
   } as const;
-  return { icon: iconMap[cat] ?? AlertCircle, ...t };
+  return { icon: iconMap[cat] ?? AlertCircle, ...toneMap[tone] };
 }
 
 export default ProjetoDetail;
