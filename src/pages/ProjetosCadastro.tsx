@@ -283,7 +283,7 @@ function EditCellDialog({ row, field, onClose, onSaved }: { row: Row; field: Fie
       } else if (field === "transcricao_gc") {
         const { error } = await (supabase as any)
           .from("accounts")
-          .update({ growth_class_transcricao: value || null })
+          .update({ growth_class_transcricao_reuniao: value || null })
           .eq("id", row.account_id);
         if (error) throw error;
       } else if (field === "squad") {
