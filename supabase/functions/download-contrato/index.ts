@@ -87,6 +87,15 @@ Deno.serve(async (req) => {
       }
     }
 
+    if (!opp.contrato_url) {
+      return new Response(JSON.stringify({ error: "Contrato não anexado" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+
+
     let fileBytes: ArrayBuffer;
     let contentType = "application/pdf";
     const raw = opp.contrato_url as string;
