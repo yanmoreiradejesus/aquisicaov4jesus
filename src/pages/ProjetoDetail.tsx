@@ -161,7 +161,7 @@ const ProjetoDetail = () => {
 
           {/* Visão geral — Timeline */}
           <TabsContent value="visao" className="space-y-4">
-            <TimelinePanel projeto={projeto} anexos={anexos.data ?? []} />
+            <TimelinePanel projeto={projeto} />
           </TabsContent>
 
           {/* Venda */}
