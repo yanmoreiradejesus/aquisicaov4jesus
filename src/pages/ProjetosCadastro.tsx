@@ -74,20 +74,27 @@ async function fetchRows(): Promise<Row[]> {
 }
 
 async function openContrato(value: string) {
-  // Se já é uma URL completa, abre direto.
+  // Se já é uma URL completa, abre direto (mesmo gesto do usuário).
   if (/^https?:\/\//i.test(value)) {
     window.open(value, "_blank", "noopener");
     return;
   }
-  // Caso contrário, trata como path no bucket privado e gera signed URL.
+  // Abre a janela sincronamente para evitar bloqueio de pop-up após o await.
+  const win = window.open("about:blank", "_blank", "noopener");
   const { data, error } = await supabase.storage
     .from("contratos-assinados")
     .createSignedUrl(value, 60 * 10);
   if (error || !data?.signedUrl) {
+    if (win) win.close();
     toast({ title: "Não foi possível abrir o contrato", description: error?.message, variant: "destructive" });
     return;
   }
-  window.open(data.signedUrl, "_blank", "noopener");
+  if (win) {
+    win.location.href = data.signedUrl;
+  } else {
+    // Fallback: navega na aba atual se o pop-up foi bloqueado.
+    window.location.href = data.signedUrl;
+  }
 }
 
 const StatusIcon = ({ ok }: { ok: boolean }) =>
