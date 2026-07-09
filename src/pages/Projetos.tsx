@@ -100,17 +100,6 @@ const Projetos = () => {
               ))}
             </SelectContent>
           </Select>
-          <Select value={amFilter} onValueChange={setAmFilter}>
-            <SelectTrigger className="w-[200px] h-9 rounded-xl border-transparent bg-surface-2/60">
-              <SelectValue placeholder="Account Manager" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os AMs</SelectItem>
-              {profiles.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{profileLabel(p)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
         {isLoading ? (
@@ -132,9 +121,9 @@ const Projetos = () => {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-border/40">
-                  <TableHead>Cliente / Projeto</TableHead>
+                  <TableHead>Cliente</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Account Manager</TableHead>
+                  <TableHead>Categorias</TableHead>
                   <TableHead>Início contrato</TableHead>
                   <TableHead className="text-right">EF</TableHead>
                   <TableHead className="text-right">Fee/mês</TableHead>
@@ -147,8 +136,8 @@ const Projetos = () => {
               <TableBody>
                 {filtered.map((p) => {
                   const fin = agregarFinanceiro(p.cobrancas);
-                  const am = p.account?.account_manager_id ? profileMap[p.account.account_manager_id] : null;
                   const opp = p.account?.oportunidade;
+                  const categorias = parseCategorias(opp?.nivel_consciencia);
                   return (
                     <TableRow
                       key={p.id}
@@ -156,17 +145,29 @@ const Projetos = () => {
                       className="cursor-pointer border-border/40"
                     >
                       <TableCell>
-                        <div className="font-medium text-foreground">{p.nome}</div>
-                        {opp?.nome_oportunidade && (
-                          <div className="text-xs text-muted-foreground">{opp.nome_oportunidade}</div>
-                        )}
+                        <div className="font-medium text-foreground">{p.account?.cliente_nome ?? p.nome}</div>
                       </TableCell>
                       <TableCell>
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] border ${PROJETO_STATUS_COLOR[p.status_projeto]}`}>
                           {PROJETO_STATUS_LABEL[p.status_projeto]}
                         </span>
                       </TableCell>
-                      <TableCell className="text-sm">{am ? profileLabel(am) : <span className="text-muted-foreground">—</span>}</TableCell>
+                      <TableCell>
+                        {categorias.length === 0 ? (
+                          <span className="text-muted-foreground text-sm">—</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {categorias.map((c) => (
+                              <span
+                                key={c}
+                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] border capitalize ${CATEGORIA_COLOR[c.toLowerCase()] ?? "bg-muted/40 text-muted-foreground border-border/40"}`}
+                              >
+                                {c}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="text-sm">{fmtDate(p.account?.data_inicio_contrato)}</TableCell>
                       <TableCell className="text-right text-sm">{fmtBRL(opp?.valor_ef)}</TableCell>
                       <TableCell className="text-right text-sm">{fmtBRL(opp?.valor_fee)}</TableCell>
