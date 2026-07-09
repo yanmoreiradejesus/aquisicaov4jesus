@@ -145,7 +145,9 @@ const ProjetosCadastro = () => {
               </TableHeader>
               <TableBody>
                 {filtered.map((r) => {
-                  const hasReuniao = !!r.data_reuniao_agendada;
+                  const reuniaoDate = r.data_reuniao_agendada ?? r.data_reuniao_realizada;
+                  const reuniaoFromRealizada = !r.data_reuniao_agendada && !!r.data_reuniao_realizada;
+                  const hasReuniao = !!reuniaoDate;
                   const hasTrans = !!(r.transcricao_reuniao && r.transcricao_reuniao.trim());
                   const hasContrato = !!r.contrato_url;
                   const hasResumo = !!((r.growth_class_ia_relatorio ?? r.pre_growth_class_relatorio) ?? "").trim();
@@ -163,7 +165,8 @@ const ProjetosCadastro = () => {
                         <div className="flex items-center gap-2">
                           <StatusIcon ok={hasReuniao} />
                           <span className="text-xs text-muted-foreground">
-                            {hasReuniao ? new Date(r.data_reuniao_agendada!).toLocaleDateString("pt-BR") : "—"}
+                            {hasReuniao ? new Date(reuniaoDate!).toLocaleDateString("pt-BR") : "—"}
+                            {reuniaoFromRealizada && <span className="ml-1 text-[10px] text-muted-foreground/70">(realizada)</span>}
                           </span>
                         </div>
                       </TableCell>
