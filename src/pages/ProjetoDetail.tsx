@@ -835,7 +835,6 @@ function TimelinePanel({ projeto }: { projeto: any; anexos?: any[] }) {
 function TimelineItem({ step }: { step: TimelineStep }) {
   const { icon: Icon, dotClass, textClass } = iconForCategory(step.category, step.tone);
   const isPending = step.tone === "pending";
-  const gc = step.gcMeta;
   return (
     <li className="ml-6">
       <span className={`absolute -left-[13px] flex h-6 w-6 items-center justify-center rounded-full ring-4 ring-background ${dotClass}`}>
@@ -851,34 +850,6 @@ function TimelineItem({ step }: { step: TimelineStep }) {
       </div>
       {step.meta && (
         <p className="text-xs text-muted-foreground mt-0.5">{step.meta}</p>
-      )}
-      {gc?.hasOriginal && (
-        <div className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
-          {gc.revisando ? (
-            <span className="inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Revisando com IA…</span>
-          ) : gc.hasRevisado ? (
-            <>
-              <span className="inline-flex items-center gap-1 text-emerald-400/80">
-                <CheckCircle2 className="h-3 w-3" /> Revisado por IA
-              </span>
-              <button
-                type="button"
-                onClick={gc.onRevisar}
-                className="underline underline-offset-2 hover:text-foreground"
-              >
-                Revisar novamente
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={gc.onRevisar}
-              className="underline underline-offset-2 hover:text-foreground"
-            >
-              Revisar com IA
-            </button>
-          )}
-        </div>
       )}
       {step.summary && (
         <div className="mt-2 rounded-lg bg-surface-2/40 border border-border/30 p-3 max-h-56 overflow-y-auto prose prose-xs prose-invert max-w-none prose-p:my-1 prose-headings:mt-2 prose-headings:mb-1 prose-h2:text-xs prose-h2:font-semibold prose-h2:uppercase prose-h2:tracking-wider prose-h2:text-muted-foreground prose-ul:my-1 prose-li:my-0 text-xs">
