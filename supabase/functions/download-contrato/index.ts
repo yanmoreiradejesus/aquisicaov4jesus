@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     // Fetch oportunidade with service role (RLS pode filtrar por tenant switching)
     const { data: opp, error: oppErr } = await admin
       .from("crm_oportunidades")
-      .select("id, contrato_url, cliente_nome, tenant_id")
+      .select("id, contrato_url, nome_oportunidade, tenant_id")
       .eq("id", oportunidadeId)
       .maybeSingle();
 
@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
       fileBytes = await blob.arrayBuffer();
     }
 
-    const safeName = (opp.cliente_nome ?? "contrato").replace(/[^a-zA-Z0-9-_ ]/g, "_");
+    const safeName = (opp.nome_oportunidade ?? "contrato").replace(/[^a-zA-Z0-9-_ ]/g, "_");
     return new Response(fileBytes, {
       status: 200,
       headers: {
