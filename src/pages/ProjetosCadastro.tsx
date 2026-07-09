@@ -25,6 +25,7 @@ interface Row {
   transcricao_reuniao: string | null;
   contrato_url: string | null;
   data_reuniao_agendada: string | null;
+  data_reuniao_realizada: string | null;
   lead_id: string | null;
 }
 
@@ -49,7 +50,7 @@ async function fetchRows(): Promise<Row[]> {
   const { data, error } = await (supabase as any)
     .from("crm_projetos")
     .select(
-      "id, account_id, account:accounts(id, cliente_nome, squad, growth_class_transcricao, pre_growth_class_relatorio, oportunidade:crm_oportunidades(id, transcricao_reuniao, contrato_url, lead:crm_leads(id, data_reuniao_agendada))), growth_class_ia_relatorio"
+      "id, account_id, account:accounts(id, cliente_nome, squad, growth_class_transcricao, pre_growth_class_relatorio, oportunidade:crm_oportunidades(id, transcricao_reuniao, contrato_url, lead:crm_leads(id, data_reuniao_agendada, data_reuniao_realizada))), growth_class_ia_relatorio"
     )
     .order("updated_at", { ascending: false });
   if (error) throw error;
@@ -65,6 +66,7 @@ async function fetchRows(): Promise<Row[]> {
     transcricao_reuniao: p.account?.oportunidade?.transcricao_reuniao ?? null,
     contrato_url: p.account?.oportunidade?.contrato_url ?? null,
     data_reuniao_agendada: p.account?.oportunidade?.lead?.data_reuniao_agendada ?? null,
+    data_reuniao_realizada: p.account?.oportunidade?.lead?.data_reuniao_realizada ?? null,
     lead_id: p.account?.oportunidade?.lead?.id ?? null,
   }));
 }
@@ -143,7 +145,9 @@ const ProjetosCadastro = () => {
               </TableHeader>
               <TableBody>
                 {filtered.map((r) => {
-                  const hasReuniao = !!r.data_reuniao_agendada;
+                  const reuniaoDate = r.data_reuniao_agendada ?? r.data_reuniao_realizada;
+                  const reuniaoFromRealizada = !r.data_reuniao_agendada && !!r.data_reuniao_realizada;
+                  const hasReuniao = !!reuniaoDate;
                   const hasTrans = !!(r.transcricao_reuniao && r.transcricao_reuniao.trim());
                   const hasContrato = !!r.contrato_url;
                   const hasResumo = !!((r.growth_class_ia_relatorio ?? r.pre_growth_class_relatorio) ?? "").trim();
@@ -161,7 +165,8 @@ const ProjetosCadastro = () => {
                         <div className="flex items-center gap-2">
                           <StatusIcon ok={hasReuniao} />
                           <span className="text-xs text-muted-foreground">
-                            {hasReuniao ? new Date(r.data_reuniao_agendada!).toLocaleDateString("pt-BR") : "—"}
+                            {hasReuniao ? new Date(reuniaoDate!).toLocaleDateString("pt-BR") : "—"}
+                            {reuniaoFromRealizada && <span className="ml-1 text-[10px] text-muted-foreground/70">(realizada)</span>}
                           </span>
                         </div>
                       </TableCell>
