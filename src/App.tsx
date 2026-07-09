@@ -29,6 +29,7 @@ import LeadDetailPage from "./pages/LeadDetailPage";
 import OportunidadeDetailPage from "./pages/OportunidadeDetailPage";
 import OnboardingDetailPage from "./pages/OnboardingDetailPage";
 import Projetos from "./pages/Projetos";
+import ProjetosCadastro from "./pages/ProjetosCadastro";
 import ProjetoDetail from "./pages/ProjetoDetail";
 import ComercialPlaceholder from "./pages/ComercialPlaceholder";
 import AccountsList from "./pages/AccountsList";
