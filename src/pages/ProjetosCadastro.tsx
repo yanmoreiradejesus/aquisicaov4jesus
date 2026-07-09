@@ -66,6 +66,7 @@ async function fetchRows(): Promise<Row[]> {
     transcricao_reuniao: p.account?.oportunidade?.transcricao_reuniao ?? null,
     contrato_url: p.account?.oportunidade?.contrato_url ?? null,
     data_reuniao_agendada: p.account?.oportunidade?.lead?.data_reuniao_agendada ?? null,
+    data_reuniao_realizada: p.account?.oportunidade?.lead?.data_reuniao_realizada ?? null,
     lead_id: p.account?.oportunidade?.lead?.id ?? null,
   }));
 }
