@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useProjetos, agregarFinanceiro, PROJETO_STATUS_LABEL, PROJETO_STATUS_COLOR, type ProjetoStatus } from "@/hooks/useProjetos";
-import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
 import { usePersistedState } from "@/hooks/usePersistedState";
 
 const fmtBRL = (v?: number | null) =>
