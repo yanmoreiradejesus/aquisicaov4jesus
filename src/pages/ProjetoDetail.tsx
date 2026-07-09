@@ -818,12 +818,6 @@ function TimelinePanel({ projeto }: { projeto: any; anexos?: any[] }) {
       category: "gc",
       tone: gcSummary ? "info" : "pending",
       summary: gcSummary,
-      gcMeta: {
-        hasOriginal: !!expectativaOriginal,
-        hasRevisado: !!revisadoLocal,
-        revisando,
-        onRevisar: () => revisarExpectativa(true),
-      },
     },
   ];
 
