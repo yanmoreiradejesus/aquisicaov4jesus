@@ -258,22 +258,35 @@ function EditCellDialog({ row, field, onClose, onSaved }: { row: Row; field: Fie
 
   const [value, setValue] = useState<string>(initial);
   const [file, setFile] = useState<File | null>(null);
-  const [contratoSignedUrl, setContratoSignedUrl] = useState<string | null>(null);
+  const [openingContrato, setOpeningContrato] = useState(false);
 
-  useEffect(() => {
-    if (field !== "contrato_url" || !row.contrato_url) return;
-    const path = row.contrato_url;
-    // Se já é uma URL completa, usa direto
-    if (/^https?:\/\//i.test(path)) {
-      setContratoSignedUrl(path);
+  const openContratoViaProxy = async () => {
+    if (!row.oportunidade_id) {
+      toast({ title: "Sem oportunidade vinculada", variant: "destructive" });
       return;
     }
-    let cancelled = false;
-    supabase.storage.from("contratos-assinados").createSignedUrl(path, 3600).then(({ data }) => {
-      if (!cancelled) setContratoSignedUrl(data?.signedUrl ?? null);
-    });
-    return () => { cancelled = true; };
-  }, [field, row.contrato_url]);
+    setOpeningContrato(true);
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token;
+      if (!token) throw new Error("Sessão expirada");
+      const projectId = (import.meta as any).env.VITE_SUPABASE_PROJECT_ID;
+      const url = `https://${projectId}.supabase.co/functions/v1/download-contrato?oportunidade_id=${encodeURIComponent(row.oportunidade_id)}`;
+      const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: `HTTP ${resp.status}` }));
+        throw new Error(err.error ?? `HTTP ${resp.status}`);
+      }
+      const blob = await resp.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, "_blank", "noopener,noreferrer");
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+    } catch (e: any) {
+      toast({ title: "Não foi possível abrir o contrato", description: e.message ?? String(e), variant: "destructive" });
+    } finally {
+      setOpeningContrato(false);
+    }
+  };
 
   const save = async () => {
     setSaving(true);
@@ -376,15 +389,15 @@ function EditCellDialog({ row, field, onClose, onSaved }: { row: Row; field: Fie
                 <input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
               </label>
               {row.contrato_url && (
-                contratoSignedUrl ? (
-                  <a href={contratoSignedUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
-                    <ExternalLink className="h-3 w-3" /> Contrato atual
-                  </a>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <ExternalLink className="h-3 w-3" /> Gerando link…
-                  </span>
-                )
+                <button
+                  type="button"
+                  onClick={openContratoViaProxy}
+                  disabled={openingContrato}
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline disabled:opacity-60"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  {openingContrato ? "Abrindo…" : "Abrir contrato atual"}
+                </button>
               )}
             </div>
           )}
