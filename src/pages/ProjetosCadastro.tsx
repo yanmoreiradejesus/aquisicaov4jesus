@@ -51,7 +51,7 @@ async function fetchRows(): Promise<Row[]> {
   const { data, error } = await (supabase as any)
     .from("crm_projetos")
     .select(
-      "id, account_id, account:accounts(id, cliente_nome, squad, growth_class_transcricao, pre_growth_class_relatorio, oportunidade:crm_oportunidades(id, transcricao_reuniao, contrato_url, lead:crm_leads(id, data_reuniao_agendada, data_reuniao_realizada))), growth_class_ia_relatorio"
+      "id, account_id, account:accounts(id, cliente_nome, squad, growth_class_transcricao, growth_class_transcricao_reuniao, pre_growth_class_relatorio, oportunidade:crm_oportunidades(id, transcricao_reuniao, contrato_url, lead:crm_leads(id, data_reuniao_agendada, data_reuniao_realizada))), growth_class_ia_relatorio"
     )
     .order("updated_at", { ascending: false });
   if (error) throw error;
@@ -61,6 +61,7 @@ async function fetchRows(): Promise<Row[]> {
     cliente_nome: p.account?.cliente_nome ?? null,
     squad: p.account?.squad ?? null,
     growth_class_transcricao: p.account?.growth_class_transcricao ?? null,
+    growth_class_transcricao_reuniao: p.account?.growth_class_transcricao_reuniao ?? null,
     pre_growth_class_relatorio: p.account?.pre_growth_class_relatorio ?? null,
     growth_class_ia_relatorio: p.growth_class_ia_relatorio ?? null,
     oportunidade_id: p.account?.oportunidade?.id ?? null,
