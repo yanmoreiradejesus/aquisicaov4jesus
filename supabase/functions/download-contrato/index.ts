@@ -44,18 +44,47 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Usa o client do usuário para respeitar RLS
-    const { data: opp, error: oppErr } = await userClient
+    const userId = claimsData.claims.sub as string;
+
+    const admin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    // Fetch oportunidade with service role (RLS pode filtrar por tenant switching)
+    const { data: opp, error: oppErr } = await admin
       .from("crm_oportunidades")
-      .select("id, contrato_url, cliente_nome")
+      .select("id, contrato_url, cliente_nome, tenant_id")
       .eq("id", oportunidadeId)
       .maybeSingle();
 
     if (oppErr || !opp) {
-      return new Response(JSON.stringify({ error: "Oportunidade não encontrada ou sem permissão" }), {
+      return new Response(JSON.stringify({ error: "Oportunidade não encontrada" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Autorização: super_admin_v4 OU mesmo tenant do usuário
+    const { data: roleRow } = await admin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "super_admin_v4")
+      .maybeSingle();
+
+    if (!roleRow) {
+      const { data: profile } = await admin
+        .from("profiles")
+        .select("tenant_id")
+        .eq("id", userId)
+        .maybeSingle();
+      if (!profile || profile.tenant_id !== opp.tenant_id) {
+        return new Response(JSON.stringify({ error: "Sem permissão" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     if (!opp.contrato_url) {
@@ -65,10 +94,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const admin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+
 
     let fileBytes: ArrayBuffer;
     let contentType = "application/pdf";
