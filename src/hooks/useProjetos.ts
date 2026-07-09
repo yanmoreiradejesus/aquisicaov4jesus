@@ -54,7 +54,7 @@ export function useProjetos() {
       const { data, error } = await (supabase as any)
         .from("crm_projetos")
         .select(
-          "id, account_id, nome, status_projeto, prazo_inicio, prazo_fim, updated_at, account:accounts(id, cliente_nome, account_manager_id, data_inicio_contrato, data_fim_contrato, oportunidade:crm_oportunidades(id, nome_oportunidade, valor_ef, valor_fee))"
+          "id, account_id, nome, status_projeto, prazo_inicio, prazo_fim, updated_at, account:accounts(id, cliente_nome, account_manager_id, data_inicio_contrato, data_fim_contrato, oportunidade:crm_oportunidades(id, nome_oportunidade, valor_ef, valor_fee, nivel_consciencia))"
         )
         .order("updated_at", { ascending: false });
       if (error) throw error;
