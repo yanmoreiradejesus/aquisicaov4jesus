@@ -54,6 +54,8 @@ export interface ProjetoDetail {
     pre_growth_class_relatorio: string | null;
     pre_growth_class_gerado_em: string | null;
     growth_class_expectativas: string | null;
+    growth_class_expectativas_revisado: string | null;
+    growth_class_expectativas_revisado_em: string | null;
     oportunidade?: {
       id: string;
       nome_oportunidade: string | null;
