@@ -29,6 +29,7 @@ import LeadDetailPage from "./pages/LeadDetailPage";
 import OportunidadeDetailPage from "./pages/OportunidadeDetailPage";
 import OnboardingDetailPage from "./pages/OnboardingDetailPage";
 import Projetos from "./pages/Projetos";
+import ProjetosCadastro from "./pages/ProjetosCadastro";
 import ProjetoDetail from "./pages/ProjetoDetail";
 import ComercialPlaceholder from "./pages/ComercialPlaceholder";
 import AccountsList from "./pages/AccountsList";
@@ -163,11 +164,17 @@ const AppRoutes = () => {
             <PageTransition><Projetos /></PageTransition>
           </ProtectedRoute>
         } />
+        <Route path="/comercial/projetos/cadastro" element={
+          <ProtectedRoute requiredPath="/comercial/projetos/cadastro">
+            <PageTransition><ProjetosCadastro /></PageTransition>
+          </ProtectedRoute>
+        } />
         <Route path="/comercial/projetos/:projetoId" element={
           <ProtectedRoute requiredPath="/comercial/projetos">
             <PageTransition><ProjetoDetail /></PageTransition>
           </ProtectedRoute>
         } />
+
         <Route path="/comercial/accounts" element={
           <ProtectedRoute requiredPath="/comercial/accounts">
             <PageTransition><AccountsList /></PageTransition>
