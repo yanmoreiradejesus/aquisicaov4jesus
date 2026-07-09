@@ -39,6 +39,7 @@ export interface ProjetoListRow {
       nome_oportunidade: string | null;
       valor_ef: number | null;
       valor_fee: number | null;
+      nivel_consciencia: string | null;
     } | null;
   } | null;
   cobrancas: { valor: number | null; status: string | null }[];
