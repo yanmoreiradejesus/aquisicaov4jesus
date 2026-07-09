@@ -715,13 +715,11 @@ type TimelineStep = {
 };
 
 function TimelinePanel({ projeto }: { projeto: any; anexos?: any[] }) {
-  const { toast } = useToast();
   const acc = projeto?.account;
   const accountId = acc?.id;
   const expectativaOriginal = acc?.growth_class_expectativas ?? null;
   const expectativaRevisadaDb = acc?.growth_class_expectativas_revisado ?? null;
 
-  const [revisando, setRevisando] = useState(false);
   const [revisadoLocal, setRevisadoLocal] = useState<string | null>(expectativaRevisadaDb);
   const triggeredRef = useRef(false);
 
@@ -730,27 +728,6 @@ function TimelinePanel({ projeto }: { projeto: any; anexos?: any[] }) {
     triggeredRef.current = false;
   }, [projeto?.id, expectativaRevisadaDb]);
 
-  const revisarExpectativa = async (force = false) => {
-    if (!accountId || !expectativaOriginal || revisando) return;
-    setRevisando(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("revise-gc-expectativas", {
-        body: { account_id: accountId, force },
-      });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
-      const rev = (data as any)?.revisado;
-      if (rev) {
-        setRevisadoLocal(rev);
-        if (force) toast({ title: "Expectativa revisada" });
-      }
-    } catch (e: any) {
-      if (force) toast({ title: "Falha ao revisar", description: e.message, variant: "destructive" });
-      else console.error("revise-gc-expectativas silent fail:", e);
-    } finally {
-      setRevisando(false);
-    }
-  };
 
   // Auto-revisão silenciosa quando há expectativa mas nunca foi revisada
   useEffect(() => {
