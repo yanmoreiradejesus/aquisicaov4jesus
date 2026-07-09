@@ -25,6 +25,7 @@ interface Row {
   transcricao_reuniao: string | null;
   contrato_url: string | null;
   data_reuniao_agendada: string | null;
+  data_reuniao_realizada: string | null;
   lead_id: string | null;
 }
 
