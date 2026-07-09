@@ -104,7 +104,7 @@ export function useProjeto(id: string | undefined) {
       const { data, error } = await (supabase as any)
         .from("crm_projetos")
         .select(
-          "*, account:accounts(id, cliente_nome, account_manager_id, data_inicio_contrato, data_fim_contrato, created_at, onboarding_status, pre_growth_class_relatorio, pre_growth_class_gerado_em, growth_class_expectativas, oportunidade:crm_oportunidades(id, nome_oportunidade, valor_ef, valor_fee, etapa, temperatura, nivel_consciencia, data_proposta, data_fechamento_real, info_deal, oportunidades_monetizacao, resumo_reuniao, notas, transcricao_reuniao, contrato_url, lead:crm_leads(id, nome, empresa, email, telefone, segmento, faturamento, created_at, data_reuniao_agendada, data_reuniao_realizada, qualificacao, notas)))"
+          "*, account:accounts(id, cliente_nome, account_manager_id, data_inicio_contrato, data_fim_contrato, created_at, onboarding_status, pre_growth_class_relatorio, pre_growth_class_gerado_em, growth_class_expectativas, growth_class_expectativas_revisado, growth_class_expectativas_revisado_em, oportunidade:crm_oportunidades(id, nome_oportunidade, valor_ef, valor_fee, etapa, temperatura, nivel_consciencia, data_proposta, data_fechamento_real, info_deal, oportunidades_monetizacao, resumo_reuniao, notas, transcricao_reuniao, contrato_url, lead:crm_leads(id, nome, empresa, email, telefone, segmento, faturamento, created_at, data_reuniao_agendada, data_reuniao_realizada, qualificacao, notas)))"
         )
         .eq("id", id!)
         .maybeSingle();
