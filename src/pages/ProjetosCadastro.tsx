@@ -153,7 +153,7 @@ const ProjetosCadastro = () => {
                   const hasTrans = !!(r.transcricao_reuniao && r.transcricao_reuniao.trim());
                   const hasContrato = !!r.contrato_url;
                   const hasResumo = !!((r.growth_class_ia_relatorio ?? r.pre_growth_class_relatorio) ?? "").trim();
-                  const hasTransGc = !!(r.growth_class_transcricao && r.growth_class_transcricao.trim());
+                  const hasTransGc = !!((r.growth_class_transcricao_reuniao ?? r.growth_class_transcricao ?? "").trim());
                   const hasSquad = !!r.squad;
                   const cellCls =
                     "cursor-pointer hover:bg-surface-2/40 transition-colors";
