@@ -728,15 +728,25 @@ function TimelinePanel({ projeto }: { projeto: any; anexos?: any[] }) {
     triggeredRef.current = false;
   }, [projeto?.id, expectativaRevisadaDb]);
 
-
-  // Auto-revisão silenciosa quando há expectativa mas nunca foi revisada
+  // Auto-revisão silenciosa uma única vez: se há expectativa e ainda não foi revisada
   useEffect(() => {
     if (triggeredRef.current) return;
     if (!accountId || !expectativaOriginal) return;
     if (expectativaRevisadaDb) return;
     triggeredRef.current = true;
-    revisarExpectativa(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("revise-gc-expectativas", {
+          body: { account_id: accountId, force: false },
+        });
+        if (error) throw error;
+        if ((data as any)?.error) throw new Error((data as any).error);
+        const rev = (data as any)?.revisado;
+        if (rev) setRevisadoLocal(rev);
+      } catch (e) {
+        console.error("revise-gc-expectativas silent fail:", e);
+      }
+    })();
   }, [accountId, expectativaOriginal, expectativaRevisadaDb]);
 
   const op = acc?.oportunidade;
