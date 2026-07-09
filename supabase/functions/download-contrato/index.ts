@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
       fileBytes = await blob.arrayBuffer();
     }
 
-    const safeName = (opp.cliente_nome ?? "contrato").replace(/[^a-zA-Z0-9-_ ]/g, "_");
+    const safeName = (opp.nome_oportunidade ?? "contrato").replace(/[^a-zA-Z0-9-_ ]/g, "_");
     return new Response(fileBytes, {
       status: 200,
       headers: {
