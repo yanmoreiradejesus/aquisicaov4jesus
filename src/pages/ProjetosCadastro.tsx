@@ -19,6 +19,7 @@ interface Row {
   cliente_nome: string | null;
   squad: Squad | null;
   growth_class_transcricao: string | null;
+  growth_class_transcricao_reuniao: string | null;
   pre_growth_class_relatorio: string | null;
   growth_class_ia_relatorio: string | null;
   oportunidade_id: string | null;
