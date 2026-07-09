@@ -127,10 +127,8 @@ const Projetos = () => {
                   <TableHead>Início contrato</TableHead>
                   <TableHead className="text-right">EF</TableHead>
                   <TableHead className="text-right">Fee/mês</TableHead>
-                  <TableHead className="text-right">Pago</TableHead>
                   <TableHead className="text-right">Pendente</TableHead>
-                  <TableHead className="text-right">Atrasado</TableHead>
-                  <TableHead>Atualizado</TableHead>
+
                 </TableRow>
               </TableHeader>
               <TableBody>
