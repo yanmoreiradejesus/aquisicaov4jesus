@@ -42,12 +42,12 @@ const V4Header = () => {
     { path: "/comercial/leads", label: "Leads" },
     { path: "/comercial/oportunidades", label: "Oportunidades" },
     { path: "/comercial/onboarding", label: "Onboarding" },
-    { path: "/comercial/projetos", label: "Projetos" },
     { path: "/comercial/cobrancas", label: "Cobranças" },
   ];
 
   const pegItems = [
     { path: "/comercial/accounts", label: "Accounts" },
+    { path: "/comercial/projetos", label: "Database" },
   ];
 
   const { isPageEnabled } = useTenantEnabledPages();
