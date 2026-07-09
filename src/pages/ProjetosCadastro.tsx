@@ -175,8 +175,26 @@ const ProjetosCadastro = () => {
                       <TableCell className={cellCls} onClick={() => setEditing({ row: r, field: "transcricao_reuniao" })}>
                         <StatusIcon ok={hasTrans} />
                       </TableCell>
-                      <TableCell className={cellCls} onClick={() => setEditing({ row: r, field: "contrato_url" })}>
-                        <StatusIcon ok={hasContrato} />
+                      <TableCell className={cellCls}>
+                        <div className="flex items-center gap-2">
+                          <button
+                            className="flex items-center gap-1"
+                            onClick={(e) => { e.stopPropagation(); setEditing({ row: r, field: "contrato_url" }); }}
+                          >
+                            <StatusIcon ok={hasContrato} />
+                          </button>
+                          {hasContrato && (
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                await openContrato(r.contrato_url!);
+                              }}
+                              className="text-[11px] text-primary hover:underline inline-flex items-center gap-1"
+                            >
+                              <ExternalLink className="h-3 w-3" /> abrir
+                            </button>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className={cellCls} onClick={() => setEditing({ row: r, field: "resumo_gc" })}>
                         <StatusIcon ok={hasResumo} />
