@@ -79,6 +79,8 @@ export type Database = {
           growth_class_data_agendada: string | null
           growth_class_data_realizada: string | null
           growth_class_expectativas: string | null
+          growth_class_expectativas_revisado: string | null
+          growth_class_expectativas_revisado_em: string | null
           growth_class_google_event_id: string | null
           growth_class_meet_link: string | null
           growth_class_oportunidades_monetizacao: string | null
@@ -120,6 +122,8 @@ export type Database = {
           growth_class_data_agendada?: string | null
           growth_class_data_realizada?: string | null
           growth_class_expectativas?: string | null
+          growth_class_expectativas_revisado?: string | null
+          growth_class_expectativas_revisado_em?: string | null
           growth_class_google_event_id?: string | null
           growth_class_meet_link?: string | null
           growth_class_oportunidades_monetizacao?: string | null
@@ -161,6 +165,8 @@ export type Database = {
           growth_class_data_agendada?: string | null
           growth_class_data_realizada?: string | null
           growth_class_expectativas?: string | null
+          growth_class_expectativas_revisado?: string | null
+          growth_class_expectativas_revisado_em?: string | null
           growth_class_google_event_id?: string | null
           growth_class_meet_link?: string | null
           growth_class_oportunidades_monetizacao?: string | null
