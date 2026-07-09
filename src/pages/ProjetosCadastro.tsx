@@ -248,7 +248,7 @@ function EditCellDialog({ row, field, onClose, onSaved }: { row: Row; field: Fie
       case "resumo_gc":
         return row.growth_class_ia_relatorio ?? row.pre_growth_class_relatorio ?? "";
       case "transcricao_gc":
-        return row.growth_class_transcricao ?? "";
+        return row.growth_class_transcricao_reuniao ?? row.growth_class_transcricao ?? "";
       case "squad":
         return row.squad ?? "";
       case "contrato_url":
