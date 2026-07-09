@@ -73,30 +73,6 @@ async function fetchRows(): Promise<Row[]> {
   }));
 }
 
-async function openContrato(value: string) {
-  // Se já é uma URL completa, abre direto (mesmo gesto do usuário).
-  if (/^https?:\/\//i.test(value)) {
-    window.open(value, "_blank", "noopener");
-    return;
-  }
-  // Abre a janela sincronamente para evitar bloqueio de pop-up após o await.
-  const win = window.open("about:blank", "_blank", "noopener");
-  const { data, error } = await supabase.storage
-    .from("contratos-assinados")
-    .createSignedUrl(value, 60 * 10);
-  if (error || !data?.signedUrl) {
-    if (win) win.close();
-    toast({ title: "Não foi possível abrir o contrato", description: error?.message, variant: "destructive" });
-    return;
-  }
-  if (win) {
-    win.location.href = data.signedUrl;
-  } else {
-    // Fallback: navega na aba atual se o pop-up foi bloqueado.
-    window.location.href = data.signedUrl;
-  }
-}
-
 const StatusIcon = ({ ok }: { ok: boolean }) =>
   ok ? (
     <Check className="h-4 w-4 text-emerald-400" />
@@ -199,26 +175,8 @@ const ProjetosCadastro = () => {
                       <TableCell className={cellCls} onClick={() => setEditing({ row: r, field: "transcricao_reuniao" })}>
                         <StatusIcon ok={hasTrans} />
                       </TableCell>
-                      <TableCell className={cellCls}>
-                        <div className="flex items-center gap-2">
-                          <button
-                            className="flex items-center gap-1"
-                            onClick={(e) => { e.stopPropagation(); setEditing({ row: r, field: "contrato_url" }); }}
-                          >
-                            <StatusIcon ok={hasContrato} />
-                          </button>
-                          {hasContrato && (
-                            <button
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                await openContrato(r.contrato_url!);
-                              }}
-                              className="text-[11px] text-primary hover:underline inline-flex items-center gap-1"
-                            >
-                              <ExternalLink className="h-3 w-3" /> abrir
-                            </button>
-                          )}
-                        </div>
+                      <TableCell className={cellCls} onClick={() => setEditing({ row: r, field: "contrato_url" })}>
+                        <StatusIcon ok={hasContrato} />
                       </TableCell>
                       <TableCell className={cellCls} onClick={() => setEditing({ row: r, field: "resumo_gc" })}>
                         <StatusIcon ok={hasResumo} />
@@ -341,7 +299,8 @@ function EditCellDialog({ row, field, onClose, onSaved }: { row: Row; field: Fie
           const path = `${row.account_id}/${Date.now()}-${file.name}`;
           const up = await supabase.storage.from("contratos-assinados").upload(path, file, { upsert: true });
           if (up.error) throw up.error;
-          url = path; // bucket é privado — salvamos o path e geramos signed URL no clique
+          const { data: pub } = supabase.storage.from("contratos-assinados").getPublicUrl(path);
+          url = pub.publicUrl;
         }
         const { error } = await (supabase as any).from("crm_oportunidades").update({ contrato_url: url }).eq("id", row.oportunidade_id);
         if (error) throw error;
@@ -401,9 +360,9 @@ function EditCellDialog({ row, field, onClose, onSaved }: { row: Row; field: Fie
                 <input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
               </label>
               {row.contrato_url && (
-                <button type="button" onClick={() => openContrato(row.contrato_url!)} className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                <a href={row.contrato_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
                   <ExternalLink className="h-3 w-3" /> Contrato atual
-                </button>
+                </a>
               )}
             </div>
           )}
