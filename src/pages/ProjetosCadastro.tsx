@@ -73,6 +73,23 @@ async function fetchRows(): Promise<Row[]> {
   }));
 }
 
+async function openContrato(value: string) {
+  // Se já é uma URL completa, abre direto.
+  if (/^https?:\/\//i.test(value)) {
+    window.open(value, "_blank", "noopener");
+    return;
+  }
+  // Caso contrário, trata como path no bucket privado e gera signed URL.
+  const { data, error } = await supabase.storage
+    .from("contratos-assinados")
+    .createSignedUrl(value, 60 * 10);
+  if (error || !data?.signedUrl) {
+    toast({ title: "Não foi possível abrir o contrato", description: error?.message, variant: "destructive" });
+    return;
+  }
+  window.open(data.signedUrl, "_blank", "noopener");
+}
+
 const StatusIcon = ({ ok }: { ok: boolean }) =>
   ok ? (
     <Check className="h-4 w-4 text-emerald-400" />
