@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useProjetos, agregarFinanceiro, PROJETO_STATUS_LABEL, PROJETO_STATUS_COLOR, type ProjetoStatus } from "@/hooks/useProjetos";
-import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
 import { usePersistedState } from "@/hooks/usePersistedState";
 
 const fmtBRL = (v?: number | null) =>
@@ -17,28 +16,33 @@ const fmtDate = (v?: string | null) => (!v ? "—" : new Date(v).toLocaleDateStr
 
 const STATUS_OPTS: (ProjetoStatus | "all")[] = ["all", "ativo", "em_risco", "pausado", "encerrado", "churn"];
 
+const CATEGORIA_COLOR: Record<string, string> = {
+  saber: "bg-blue-500/10 text-blue-300 border-blue-500/30",
+  ter: "bg-purple-500/10 text-purple-300 border-purple-500/30",
+  executar: "bg-emerald-500/10 text-emerald-300 border-emerald-500/30",
+  potencializar: "bg-amber-500/10 text-amber-300 border-amber-500/30",
+};
+
+const parseCategorias = (v?: string | null): string[] =>
+  !v ? [] : v.split(",").map((s) => s.trim()).filter(Boolean);
+
 const Projetos = () => {
   const navigate = useNavigate();
   const { data: projetos = [], isLoading } = useProjetos();
-  const { profiles } = useProfilesList();
 
   const [search, setSearch] = usePersistedState<string>("crm:projetos:search", "");
   const [statusFilter, setStatusFilter] = usePersistedState<string>("crm:projetos:status", "all");
-  const [amFilter, setAmFilter] = usePersistedState<string>("crm:projetos:am", "all");
-
-  const profileMap = useMemo(() => Object.fromEntries(profiles.map((p) => [p.id, p])), [profiles]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return projetos.filter((p) => {
       if (statusFilter !== "all" && p.status_projeto !== statusFilter) return false;
-      if (amFilter !== "all" && p.account?.account_manager_id !== amFilter) return false;
       if (!q) return true;
       const opp = p.account?.oportunidade;
-      return [p.nome, p.account?.cliente_nome, opp?.nome_oportunidade]
+      return [p.nome, p.account?.cliente_nome, opp?.nome_oportunidade, opp?.nivel_consciencia]
         .some((v) => v?.toLowerCase().includes(q));
     });
-  }, [projetos, search, statusFilter, amFilter]);
+  }, [projetos, search, statusFilter]);
 
   const kpis = useMemo(() => {
     const c = { total: projetos.length, ativos: 0, em_risco: 0, encerrados: 0 };
@@ -96,17 +100,6 @@ const Projetos = () => {
               ))}
             </SelectContent>
           </Select>
-          <Select value={amFilter} onValueChange={setAmFilter}>
-            <SelectTrigger className="w-[200px] h-9 rounded-xl border-transparent bg-surface-2/60">
-              <SelectValue placeholder="Account Manager" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os AMs</SelectItem>
-              {profiles.map((p) => (
-                <SelectItem key={p.id} value={p.id}>{profileLabel(p)}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
         {isLoading ? (
@@ -128,9 +121,9 @@ const Projetos = () => {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-border/40">
-                  <TableHead>Cliente / Projeto</TableHead>
+                  <TableHead>Cliente</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Account Manager</TableHead>
+                  <TableHead>Categorias</TableHead>
                   <TableHead>Início contrato</TableHead>
                   <TableHead className="text-right">EF</TableHead>
                   <TableHead className="text-right">Fee/mês</TableHead>
@@ -143,8 +136,8 @@ const Projetos = () => {
               <TableBody>
                 {filtered.map((p) => {
                   const fin = agregarFinanceiro(p.cobrancas);
-                  const am = p.account?.account_manager_id ? profileMap[p.account.account_manager_id] : null;
                   const opp = p.account?.oportunidade;
+                  const categorias = parseCategorias(opp?.nivel_consciencia);
                   return (
                     <TableRow
                       key={p.id}
@@ -152,17 +145,29 @@ const Projetos = () => {
                       className="cursor-pointer border-border/40"
                     >
                       <TableCell>
-                        <div className="font-medium text-foreground">{p.nome}</div>
-                        {opp?.nome_oportunidade && (
-                          <div className="text-xs text-muted-foreground">{opp.nome_oportunidade}</div>
-                        )}
+                        <div className="font-medium text-foreground">{p.account?.cliente_nome ?? p.nome}</div>
                       </TableCell>
                       <TableCell>
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] border ${PROJETO_STATUS_COLOR[p.status_projeto]}`}>
                           {PROJETO_STATUS_LABEL[p.status_projeto]}
                         </span>
                       </TableCell>
-                      <TableCell className="text-sm">{am ? profileLabel(am) : <span className="text-muted-foreground">—</span>}</TableCell>
+                      <TableCell>
+                        {categorias.length === 0 ? (
+                          <span className="text-muted-foreground text-sm">—</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {categorias.map((c) => (
+                              <span
+                                key={c}
+                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] border capitalize ${CATEGORIA_COLOR[c.toLowerCase()] ?? "bg-muted/40 text-muted-foreground border-border/40"}`}
+                              >
+                                {c}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="text-sm">{fmtDate(p.account?.data_inicio_contrato)}</TableCell>
                       <TableCell className="text-right text-sm">{fmtBRL(opp?.valor_ef)}</TableCell>
                       <TableCell className="text-right text-sm">{fmtBRL(opp?.valor_fee)}</TableCell>
