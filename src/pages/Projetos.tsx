@@ -16,28 +16,33 @@ const fmtDate = (v?: string | null) => (!v ? "—" : new Date(v).toLocaleDateStr
 
 const STATUS_OPTS: (ProjetoStatus | "all")[] = ["all", "ativo", "em_risco", "pausado", "encerrado", "churn"];
 
+const CATEGORIA_COLOR: Record<string, string> = {
+  saber: "bg-blue-500/10 text-blue-300 border-blue-500/30",
+  ter: "bg-purple-500/10 text-purple-300 border-purple-500/30",
+  executar: "bg-emerald-500/10 text-emerald-300 border-emerald-500/30",
+  potencializar: "bg-amber-500/10 text-amber-300 border-amber-500/30",
+};
+
+const parseCategorias = (v?: string | null): string[] =>
+  !v ? [] : v.split(",").map((s) => s.trim()).filter(Boolean);
+
 const Projetos = () => {
   const navigate = useNavigate();
   const { data: projetos = [], isLoading } = useProjetos();
-  const { profiles } = useProfilesList();
 
   const [search, setSearch] = usePersistedState<string>("crm:projetos:search", "");
   const [statusFilter, setStatusFilter] = usePersistedState<string>("crm:projetos:status", "all");
-  const [amFilter, setAmFilter] = usePersistedState<string>("crm:projetos:am", "all");
-
-  const profileMap = useMemo(() => Object.fromEntries(profiles.map((p) => [p.id, p])), [profiles]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return projetos.filter((p) => {
       if (statusFilter !== "all" && p.status_projeto !== statusFilter) return false;
-      if (amFilter !== "all" && p.account?.account_manager_id !== amFilter) return false;
       if (!q) return true;
       const opp = p.account?.oportunidade;
-      return [p.nome, p.account?.cliente_nome, opp?.nome_oportunidade]
+      return [p.nome, p.account?.cliente_nome, opp?.nome_oportunidade, opp?.nivel_consciencia]
         .some((v) => v?.toLowerCase().includes(q));
     });
-  }, [projetos, search, statusFilter, amFilter]);
+  }, [projetos, search, statusFilter]);
 
   const kpis = useMemo(() => {
     const c = { total: projetos.length, ativos: 0, em_risco: 0, encerrados: 0 };
