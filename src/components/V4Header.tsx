@@ -48,7 +48,9 @@ const V4Header = () => {
   const pegItems = [
     { path: "/comercial/accounts", label: "Accounts" },
     { path: "/comercial/projetos", label: "Database" },
+    { path: "/comercial/projetos/cadastro", label: "Cadastro" },
   ];
+
 
   const { isPageEnabled } = useTenantEnabledPages();
   // Usuário só vê item se (a) tem permissão individual E (b) tenant tem a página habilitada
