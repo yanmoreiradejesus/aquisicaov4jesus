@@ -334,8 +334,7 @@ function EditCellDialog({ row, field, onClose, onSaved }: { row: Row; field: Fie
           const path = `${row.account_id}/${Date.now()}-${file.name}`;
           const up = await supabase.storage.from("contratos-assinados").upload(path, file, { upsert: true });
           if (up.error) throw up.error;
-          const { data: pub } = supabase.storage.from("contratos-assinados").getPublicUrl(path);
-          url = pub.publicUrl;
+          url = path; // bucket é privado — salvamos o path e geramos signed URL no clique
         }
         const { error } = await (supabase as any).from("crm_oportunidades").update({ contrato_url: url }).eq("id", row.oportunidade_id);
         if (error) throw error;
