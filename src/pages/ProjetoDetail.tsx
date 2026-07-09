@@ -712,22 +712,14 @@ type TimelineStep = {
   tone: "success" | "info" | "neutral" | "pending";
   summary?: string | null; // markdown
   meta?: string | null;
-  gcMeta?: {
-    hasOriginal: boolean;
-    hasRevisado: boolean;
-    revisando: boolean;
-    onRevisar: () => void;
-  };
 };
 
 function TimelinePanel({ projeto }: { projeto: any; anexos?: any[] }) {
-  const { toast } = useToast();
   const acc = projeto?.account;
   const accountId = acc?.id;
   const expectativaOriginal = acc?.growth_class_expectativas ?? null;
   const expectativaRevisadaDb = acc?.growth_class_expectativas_revisado ?? null;
 
-  const [revisando, setRevisando] = useState(false);
   const [revisadoLocal, setRevisadoLocal] = useState<string | null>(expectativaRevisadaDb);
   const triggeredRef = useRef(false);
 
@@ -736,36 +728,25 @@ function TimelinePanel({ projeto }: { projeto: any; anexos?: any[] }) {
     triggeredRef.current = false;
   }, [projeto?.id, expectativaRevisadaDb]);
 
-  const revisarExpectativa = async (force = false) => {
-    if (!accountId || !expectativaOriginal || revisando) return;
-    setRevisando(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("revise-gc-expectativas", {
-        body: { account_id: accountId, force },
-      });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
-      const rev = (data as any)?.revisado;
-      if (rev) {
-        setRevisadoLocal(rev);
-        if (force) toast({ title: "Expectativa revisada" });
-      }
-    } catch (e: any) {
-      if (force) toast({ title: "Falha ao revisar", description: e.message, variant: "destructive" });
-      else console.error("revise-gc-expectativas silent fail:", e);
-    } finally {
-      setRevisando(false);
-    }
-  };
-
-  // Auto-revisão silenciosa quando há expectativa mas nunca foi revisada
+  // Auto-revisão silenciosa uma única vez: se há expectativa e ainda não foi revisada
   useEffect(() => {
     if (triggeredRef.current) return;
     if (!accountId || !expectativaOriginal) return;
     if (expectativaRevisadaDb) return;
     triggeredRef.current = true;
-    revisarExpectativa(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    (async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke("revise-gc-expectativas", {
+          body: { account_id: accountId, force: false },
+        });
+        if (error) throw error;
+        if ((data as any)?.error) throw new Error((data as any).error);
+        const rev = (data as any)?.revisado;
+        if (rev) setRevisadoLocal(rev);
+      } catch (e) {
+        console.error("revise-gc-expectativas silent fail:", e);
+      }
+    })();
   }, [accountId, expectativaOriginal, expectativaRevisadaDb]);
 
   const op = acc?.oportunidade;
@@ -818,12 +799,6 @@ function TimelinePanel({ projeto }: { projeto: any; anexos?: any[] }) {
       category: "gc",
       tone: gcSummary ? "info" : "pending",
       summary: gcSummary,
-      gcMeta: {
-        hasOriginal: !!expectativaOriginal,
-        hasRevisado: !!revisadoLocal,
-        revisando,
-        onRevisar: () => revisarExpectativa(true),
-      },
     },
   ];
 
@@ -841,7 +816,6 @@ function TimelinePanel({ projeto }: { projeto: any; anexos?: any[] }) {
 function TimelineItem({ step }: { step: TimelineStep }) {
   const { icon: Icon, dotClass, textClass } = iconForCategory(step.category, step.tone);
   const isPending = step.tone === "pending";
-  const gc = step.gcMeta;
   return (
     <li className="ml-6">
       <span className={`absolute -left-[13px] flex h-6 w-6 items-center justify-center rounded-full ring-4 ring-background ${dotClass}`}>
@@ -857,34 +831,6 @@ function TimelineItem({ step }: { step: TimelineStep }) {
       </div>
       {step.meta && (
         <p className="text-xs text-muted-foreground mt-0.5">{step.meta}</p>
-      )}
-      {gc?.hasOriginal && (
-        <div className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
-          {gc.revisando ? (
-            <span className="inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Revisando com IA…</span>
-          ) : gc.hasRevisado ? (
-            <>
-              <span className="inline-flex items-center gap-1 text-emerald-400/80">
-                <CheckCircle2 className="h-3 w-3" /> Revisado por IA
-              </span>
-              <button
-                type="button"
-                onClick={gc.onRevisar}
-                className="underline underline-offset-2 hover:text-foreground"
-              >
-                Revisar novamente
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              onClick={gc.onRevisar}
-              className="underline underline-offset-2 hover:text-foreground"
-            >
-              Revisar com IA
-            </button>
-          )}
-        </div>
       )}
       {step.summary && (
         <div className="mt-2 rounded-lg bg-surface-2/40 border border-border/30 p-3 max-h-56 overflow-y-auto prose prose-xs prose-invert max-w-none prose-p:my-1 prose-headings:mt-2 prose-headings:mb-1 prose-h2:text-xs prose-h2:font-semibold prose-h2:uppercase prose-h2:tracking-wider prose-h2:text-muted-foreground prose-ul:my-1 prose-li:my-0 text-xs">
