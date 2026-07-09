@@ -712,12 +712,6 @@ type TimelineStep = {
   tone: "success" | "info" | "neutral" | "pending";
   summary?: string | null; // markdown
   meta?: string | null;
-  gcMeta?: {
-    hasOriginal: boolean;
-    hasRevisado: boolean;
-    revisando: boolean;
-    onRevisar: () => void;
-  };
 };
 
 function TimelinePanel({ projeto }: { projeto: any; anexos?: any[] }) {
