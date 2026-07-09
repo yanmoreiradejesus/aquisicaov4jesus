@@ -127,10 +127,8 @@ const Projetos = () => {
                   <TableHead>Início contrato</TableHead>
                   <TableHead className="text-right">EF</TableHead>
                   <TableHead className="text-right">Fee/mês</TableHead>
-                  <TableHead className="text-right">Pago</TableHead>
                   <TableHead className="text-right">Pendente</TableHead>
-                  <TableHead className="text-right">Atrasado</TableHead>
-                  <TableHead>Atualizado</TableHead>
+
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -171,12 +169,8 @@ const Projetos = () => {
                       <TableCell className="text-sm">{fmtDate(p.account?.data_inicio_contrato)}</TableCell>
                       <TableCell className="text-right text-sm">{fmtBRL(opp?.valor_ef)}</TableCell>
                       <TableCell className="text-right text-sm">{fmtBRL(opp?.valor_fee)}</TableCell>
-                      <TableCell className="text-right text-sm text-emerald-300">{fmtBRL(fin.pago)}</TableCell>
                       <TableCell className="text-right text-sm">{fmtBRL(fin.pendente)}</TableCell>
-                      <TableCell className={`text-right text-sm ${fin.atrasado > 0 ? "text-red-300 font-medium" : ""}`}>
-                        {fmtBRL(fin.atrasado)}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{fmtDate(p.updated_at)}</TableCell>
+
                     </TableRow>
                   );
                 })}
