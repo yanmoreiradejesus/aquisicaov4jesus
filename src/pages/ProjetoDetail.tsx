@@ -13,6 +13,7 @@ import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
 import { PROJETO_STATUS_LABEL, PROJETO_STATUS_COLOR, type ProjetoStatus } from "@/hooks/useProjetos";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { supabase } from "@/integrations/supabase/client";
 
 const fmtBRL = (v?: number | null) =>
   v == null
