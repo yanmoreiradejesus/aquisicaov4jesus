@@ -376,9 +376,15 @@ function EditCellDialog({ row, field, onClose, onSaved }: { row: Row; field: Fie
                 <input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
               </label>
               {row.contrato_url && (
-                <a href={row.contrato_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
-                  <ExternalLink className="h-3 w-3" /> Contrato atual
-                </a>
+                contratoSignedUrl ? (
+                  <a href={contratoSignedUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                    <ExternalLink className="h-3 w-3" /> Contrato atual
+                  </a>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <ExternalLink className="h-3 w-3" /> Gerando link…
+                  </span>
+                )
               )}
             </div>
           )}
