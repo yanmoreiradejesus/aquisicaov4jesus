@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Clock, Plus, Search, X, Upload, Trash2, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -258,6 +258,22 @@ function EditCellDialog({ row, field, onClose, onSaved }: { row: Row; field: Fie
 
   const [value, setValue] = useState<string>(initial);
   const [file, setFile] = useState<File | null>(null);
+  const [contratoSignedUrl, setContratoSignedUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (field !== "contrato_url" || !row.contrato_url) return;
+    const path = row.contrato_url;
+    // Se já é uma URL completa, usa direto
+    if (/^https?:\/\//i.test(path)) {
+      setContratoSignedUrl(path);
+      return;
+    }
+    let cancelled = false;
+    supabase.storage.from("contratos-assinados").createSignedUrl(path, 3600).then(({ data }) => {
+      if (!cancelled) setContratoSignedUrl(data?.signedUrl ?? null);
+    });
+    return () => { cancelled = true; };
+  }, [field, row.contrato_url]);
 
   const save = async () => {
     setSaving(true);
@@ -360,9 +376,15 @@ function EditCellDialog({ row, field, onClose, onSaved }: { row: Row; field: Fie
                 <input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
               </label>
               {row.contrato_url && (
-                <a href={row.contrato_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
-                  <ExternalLink className="h-3 w-3" /> Contrato atual
-                </a>
+                contratoSignedUrl ? (
+                  <a href={contratoSignedUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                    <ExternalLink className="h-3 w-3" /> Contrato atual
+                  </a>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <ExternalLink className="h-3 w-3" /> Gerando link…
+                  </span>
+                )
               )}
             </div>
           )}
