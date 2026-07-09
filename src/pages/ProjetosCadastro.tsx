@@ -19,6 +19,7 @@ interface Row {
   cliente_nome: string | null;
   squad: Squad | null;
   growth_class_transcricao: string | null;
+  growth_class_transcricao_reuniao: string | null;
   pre_growth_class_relatorio: string | null;
   growth_class_ia_relatorio: string | null;
   oportunidade_id: string | null;
@@ -50,7 +51,7 @@ async function fetchRows(): Promise<Row[]> {
   const { data, error } = await (supabase as any)
     .from("crm_projetos")
     .select(
-      "id, account_id, account:accounts(id, cliente_nome, squad, growth_class_transcricao, pre_growth_class_relatorio, oportunidade:crm_oportunidades(id, transcricao_reuniao, contrato_url, lead:crm_leads(id, data_reuniao_agendada, data_reuniao_realizada))), growth_class_ia_relatorio"
+      "id, account_id, account:accounts(id, cliente_nome, squad, growth_class_transcricao, growth_class_transcricao_reuniao, pre_growth_class_relatorio, oportunidade:crm_oportunidades(id, transcricao_reuniao, contrato_url, lead:crm_leads(id, data_reuniao_agendada, data_reuniao_realizada))), growth_class_ia_relatorio"
     )
     .order("updated_at", { ascending: false });
   if (error) throw error;
@@ -60,6 +61,7 @@ async function fetchRows(): Promise<Row[]> {
     cliente_nome: p.account?.cliente_nome ?? null,
     squad: p.account?.squad ?? null,
     growth_class_transcricao: p.account?.growth_class_transcricao ?? null,
+    growth_class_transcricao_reuniao: p.account?.growth_class_transcricao_reuniao ?? null,
     pre_growth_class_relatorio: p.account?.pre_growth_class_relatorio ?? null,
     growth_class_ia_relatorio: p.growth_class_ia_relatorio ?? null,
     oportunidade_id: p.account?.oportunidade?.id ?? null,
@@ -151,7 +153,7 @@ const ProjetosCadastro = () => {
                   const hasTrans = !!(r.transcricao_reuniao && r.transcricao_reuniao.trim());
                   const hasContrato = !!r.contrato_url;
                   const hasResumo = !!((r.growth_class_ia_relatorio ?? r.pre_growth_class_relatorio) ?? "").trim();
-                  const hasTransGc = !!(r.growth_class_transcricao && r.growth_class_transcricao.trim());
+                  const hasTransGc = !!((r.growth_class_transcricao_reuniao ?? r.growth_class_transcricao ?? "").trim());
                   const hasSquad = !!r.squad;
                   const cellCls =
                     "cursor-pointer hover:bg-surface-2/40 transition-colors";
@@ -246,7 +248,7 @@ function EditCellDialog({ row, field, onClose, onSaved }: { row: Row; field: Fie
       case "resumo_gc":
         return row.growth_class_ia_relatorio ?? row.pre_growth_class_relatorio ?? "";
       case "transcricao_gc":
-        return row.growth_class_transcricao ?? "";
+        return row.growth_class_transcricao_reuniao ?? row.growth_class_transcricao ?? "";
       case "squad":
         return row.squad ?? "";
       case "contrato_url":
@@ -281,7 +283,7 @@ function EditCellDialog({ row, field, onClose, onSaved }: { row: Row; field: Fie
       } else if (field === "transcricao_gc") {
         const { error } = await (supabase as any)
           .from("accounts")
-          .update({ growth_class_transcricao: value || null })
+          .update({ growth_class_transcricao_reuniao: value || null })
           .eq("id", row.account_id);
         if (error) throw error;
       } else if (field === "squad") {
