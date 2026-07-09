@@ -81,6 +81,8 @@ export interface ProjetoDetail {
         created_at: string | null;
         data_reuniao_agendada: string | null;
         data_reuniao_realizada: string | null;
+        qualificacao: string | null;
+        notas: string | null;
       } | null;
     } | null;
     created_at?: string | null;
