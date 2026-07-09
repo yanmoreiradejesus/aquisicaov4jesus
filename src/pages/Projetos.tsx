@@ -56,10 +56,10 @@ const Projetos = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div>
             <p className="text-[10px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-1">
-              Revenue
+              PE&G
             </p>
             <h1 className="font-display text-[28px] lg:text-[34px] font-semibold text-foreground tracking-[-0.02em]">
-              Projetos
+              Database
             </h1>
             <p className="text-xs text-muted-foreground mt-1">
               Banco de dados de todos os contratos que passaram pelo onboarding.
