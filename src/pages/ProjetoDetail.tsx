@@ -13,6 +13,7 @@ import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
 import { PROJETO_STATUS_LABEL, PROJETO_STATUS_COLOR, type ProjetoStatus } from "@/hooks/useProjetos";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { supabase } from "@/integrations/supabase/client";
 
 const fmtBRL = (v?: number | null) =>
   v == null
@@ -710,68 +711,121 @@ type TimelineStep = {
   category: "lead" | "reuniao" | "venda" | "gc";
   tone: "success" | "info" | "neutral" | "pending";
   summary?: string | null; // markdown
-  meta?: string | null; // one-line meta (ex: "João · Empresa X")
+  meta?: string | null;
+  gcMeta?: {
+    hasOriginal: boolean;
+    hasRevisado: boolean;
+    revisando: boolean;
+    onRevisar: () => void;
+  };
 };
 
 function TimelinePanel({ projeto }: { projeto: any; anexos?: any[] }) {
-  const steps = useMemo<TimelineStep[]>(() => {
-    const acc = projeto?.account;
-    const op = acc?.oportunidade;
-    const lead = op?.lead;
+  const { toast } = useToast();
+  const acc = projeto?.account;
+  const accountId = acc?.id;
+  const expectativaOriginal = acc?.growth_class_expectativas ?? null;
+  const expectativaRevisadaDb = acc?.growth_class_expectativas_revisado ?? null;
 
-    // Reunião realizada — dores + sugestões: usa resumo_reuniao (gerado pela meeting-ai) como base
-    const resumoReu = op?.resumo_reuniao || op?.notas || null;
-    // Growth class — objetivos: mesma fonte da aba, o relatório IA completo (será truncado no display)
-    const gcRel = projeto?.growth_class_ia_relatorio || acc?.growth_class_expectativas || null;
+  const [revisando, setRevisando] = useState(false);
+  const [revisadoLocal, setRevisadoLocal] = useState<string | null>(expectativaRevisadaDb);
+  const triggeredRef = useRef(false);
 
-    return [
-      {
-        id: "lead",
-        date: lead?.created_at ?? null,
-        title: "Lead cadastrado",
-        category: "lead",
-        tone: lead?.created_at ? "info" : "pending",
-        meta: [lead?.nome, lead?.empresa].filter(Boolean).join(" · ") || null,
+  useEffect(() => {
+    setRevisadoLocal(expectativaRevisadaDb);
+    triggeredRef.current = false;
+  }, [projeto?.id, expectativaRevisadaDb]);
+
+  const revisarExpectativa = async (force = false) => {
+    if (!accountId || !expectativaOriginal || revisando) return;
+    setRevisando(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("revise-gc-expectativas", {
+        body: { account_id: accountId, force },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      const rev = (data as any)?.revisado;
+      if (rev) {
+        setRevisadoLocal(rev);
+        if (force) toast({ title: "Expectativa revisada" });
+      }
+    } catch (e: any) {
+      if (force) toast({ title: "Falha ao revisar", description: e.message, variant: "destructive" });
+      else console.error("revise-gc-expectativas silent fail:", e);
+    } finally {
+      setRevisando(false);
+    }
+  };
+
+  // Auto-revisão silenciosa quando há expectativa mas nunca foi revisada
+  useEffect(() => {
+    if (triggeredRef.current) return;
+    if (!accountId || !expectativaOriginal) return;
+    if (expectativaRevisadaDb) return;
+    triggeredRef.current = true;
+    revisarExpectativa(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountId, expectativaOriginal, expectativaRevisadaDb]);
+
+  const op = acc?.oportunidade;
+  const lead = op?.lead;
+  const resumoReu = op?.resumo_reuniao || op?.notas || null;
+  const gcSummary = revisadoLocal || expectativaOriginal || null;
+
+  const steps: TimelineStep[] = [
+    {
+      id: "lead",
+      date: lead?.created_at ?? null,
+      title: "Lead cadastrado",
+      category: "lead",
+      tone: lead?.created_at ? "info" : "pending",
+      meta: [lead?.nome, lead?.empresa].filter(Boolean).join(" · ") || null,
+    },
+    {
+      id: "reu-ag",
+      date: lead?.data_reuniao_agendada ?? null,
+      title: "Reunião agendada",
+      category: "reuniao",
+      tone: lead?.data_reuniao_agendada ? "info" : "pending",
+      summary: lead?.qualificacao || null,
+    },
+    {
+      id: "reu-real",
+      date: lead?.data_reuniao_realizada ?? null,
+      title: "Reunião realizada",
+      category: "reuniao",
+      tone: lead?.data_reuniao_realizada ? "success" : "pending",
+      summary: resumoReu,
+    },
+    {
+      id: "venda",
+      date: op?.data_fechamento_real ?? null,
+      title: "Venda fechada",
+      category: "venda",
+      tone: op?.data_fechamento_real ? "success" : "pending",
+      meta: (() => {
+        const total = (Number(op?.valor_ef) || 0) + (Number(op?.valor_fee) || 0);
+        return total
+          ? `Valor total: ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(total)}`
+          : null;
+      })(),
+    },
+    {
+      id: "gc",
+      date: acc?.growth_class_expectativas_revisado_em ?? null,
+      title: "Growth Class — expectativa do cliente",
+      category: "gc",
+      tone: gcSummary ? "info" : "pending",
+      summary: gcSummary,
+      gcMeta: {
+        hasOriginal: !!expectativaOriginal,
+        hasRevisado: !!revisadoLocal,
+        revisando,
+        onRevisar: () => revisarExpectativa(true),
       },
-      {
-        id: "reu-ag",
-        date: lead?.data_reuniao_agendada ?? null,
-        title: "Reunião agendada",
-        category: "reuniao",
-        tone: lead?.data_reuniao_agendada ? "info" : "pending",
-        summary: lead?.qualificacao || null,
-      },
-      {
-        id: "reu-real",
-        date: lead?.data_reuniao_realizada ?? null,
-        title: "Reunião realizada",
-        category: "reuniao",
-        tone: lead?.data_reuniao_realizada ? "success" : "pending",
-        summary: resumoReu,
-      },
-      {
-        id: "venda",
-        date: op?.data_fechamento_real ?? null,
-        title: "Venda fechada",
-        category: "venda",
-        tone: op?.data_fechamento_real ? "success" : "pending",
-        meta: (() => {
-          const total = (Number(op?.valor_ef) || 0) + (Number(op?.valor_fee) || 0);
-          return total
-            ? `Valor total: ${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(total)}`
-            : null;
-        })(),
-      },
-      {
-        id: "gc",
-        date: projeto?.growth_class_ia_gerado_em ?? null,
-        title: "Growth Class — expectativas do cliente",
-        category: "gc",
-        tone: gcRel ? "info" : "pending",
-        summary: gcRel,
-      },
-    ];
-  }, [projeto]);
+    },
+  ];
 
   return (
     <Section title="Timeline do projeto">
@@ -787,6 +841,7 @@ function TimelinePanel({ projeto }: { projeto: any; anexos?: any[] }) {
 function TimelineItem({ step }: { step: TimelineStep }) {
   const { icon: Icon, dotClass, textClass } = iconForCategory(step.category, step.tone);
   const isPending = step.tone === "pending";
+  const gc = step.gcMeta;
   return (
     <li className="ml-6">
       <span className={`absolute -left-[13px] flex h-6 w-6 items-center justify-center rounded-full ring-4 ring-background ${dotClass}`}>
@@ -802,6 +857,34 @@ function TimelineItem({ step }: { step: TimelineStep }) {
       </div>
       {step.meta && (
         <p className="text-xs text-muted-foreground mt-0.5">{step.meta}</p>
+      )}
+      {gc?.hasOriginal && (
+        <div className="mt-1 flex items-center gap-2 text-[10px] text-muted-foreground">
+          {gc.revisando ? (
+            <span className="inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Revisando com IA…</span>
+          ) : gc.hasRevisado ? (
+            <>
+              <span className="inline-flex items-center gap-1 text-emerald-400/80">
+                <CheckCircle2 className="h-3 w-3" /> Revisado por IA
+              </span>
+              <button
+                type="button"
+                onClick={gc.onRevisar}
+                className="underline underline-offset-2 hover:text-foreground"
+              >
+                Revisar novamente
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={gc.onRevisar}
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              Revisar com IA
+            </button>
+          )}
+        </div>
       )}
       {step.summary && (
         <div className="mt-2 rounded-lg bg-surface-2/40 border border-border/30 p-3 max-h-56 overflow-y-auto prose prose-xs prose-invert max-w-none prose-p:my-1 prose-headings:mt-2 prose-headings:mb-1 prose-h2:text-xs prose-h2:font-semibold prose-h2:uppercase prose-h2:tracking-wider prose-h2:text-muted-foreground prose-ul:my-1 prose-li:my-0 text-xs">
