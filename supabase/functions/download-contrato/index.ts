@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     // Fetch oportunidade with service role (RLS pode filtrar por tenant switching)
     const { data: opp, error: oppErr } = await admin
       .from("crm_oportunidades")
-      .select("id, contrato_url, cliente_nome, tenant_id")
+      .select("id, contrato_url, nome_oportunidade, tenant_id")
       .eq("id", oportunidadeId)
       .maybeSingle();
 
