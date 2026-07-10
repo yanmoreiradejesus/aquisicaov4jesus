@@ -17,11 +17,13 @@ const V4Header = () => {
   const [aquisicaoOpen, setAquisicaoOpen] = useState(false);
   const [comercialOpen, setComercialOpen] = useState(false);
   const [pegOpen, setPegOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const comercialRef = useRef<HTMLDivElement>(null);
   const pegRef = useRef<HTMLDivElement>(null);
+  const adminRef = useRef<HTMLDivElement>(null);
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -51,6 +53,11 @@ const V4Header = () => {
     { path: "/comercial/projetos/cadastro", label: "Cadastro" },
   ];
 
+  const adminMenuItems = [
+    { path: "/admin/people", label: "People" },
+    { path: "/admin/financeiro", label: "Financeiro" },
+  ];
+
 
   const { isPageEnabled } = useTenantEnabledPages();
   // Usuário só vê item se (a) tem permissão individual E (b) tenant tem a página habilitada
@@ -65,6 +72,8 @@ const V4Header = () => {
   const visibleComercialItems = comercialItems.filter((item) => canSee(item.path));
   const isPegActive = pegItems.some((item) => isActive(item.path)) || location.pathname.startsWith("/comercial/accounts");
   const visiblePegItems = pegItems.filter((item) => canSee(item.path));
+  const isAdminMenuActive = adminMenuItems.some((item) => isActive(item.path));
+  const visibleAdminMenuItems = adminMenuItems.filter((item) => canSee(item.path));
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -76,6 +85,9 @@ const V4Header = () => {
       }
       if (pegRef.current && !pegRef.current.contains(event.target as Node)) {
         setPegOpen(false);
+      }
+      if (adminRef.current && !adminRef.current.contains(event.target as Node)) {
+        setAdminOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
