@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Clock, Plus, Search, X, Upload, Trash2, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -258,35 +258,6 @@ function EditCellDialog({ row, field, onClose, onSaved }: { row: Row; field: Fie
 
   const [value, setValue] = useState<string>(initial);
   const [file, setFile] = useState<File | null>(null);
-  const [openingContrato, setOpeningContrato] = useState(false);
-
-  const openContratoViaProxy = async () => {
-    if (!row.oportunidade_id) {
-      toast({ title: "Sem oportunidade vinculada", variant: "destructive" });
-      return;
-    }
-    setOpeningContrato(true);
-    try {
-      const { data: sess } = await supabase.auth.getSession();
-      const token = sess.session?.access_token;
-      if (!token) throw new Error("Sessão expirada");
-      const projectId = (import.meta as any).env.VITE_SUPABASE_PROJECT_ID;
-      const url = `https://${projectId}.supabase.co/functions/v1/download-contrato?oportunidade_id=${encodeURIComponent(row.oportunidade_id)}`;
-      const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({ error: `HTTP ${resp.status}` }));
-        throw new Error(err.error ?? `HTTP ${resp.status}`);
-      }
-      const blob = await resp.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      window.open(blobUrl, "_blank", "noopener,noreferrer");
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
-    } catch (e: any) {
-      toast({ title: "Não foi possível abrir o contrato", description: e.message ?? String(e), variant: "destructive" });
-    } finally {
-      setOpeningContrato(false);
-    }
-  };
 
   const save = async () => {
     setSaving(true);
@@ -389,15 +360,9 @@ function EditCellDialog({ row, field, onClose, onSaved }: { row: Row; field: Fie
                 <input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
               </label>
               {row.contrato_url && (
-                <button
-                  type="button"
-                  onClick={openContratoViaProxy}
-                  disabled={openingContrato}
-                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline disabled:opacity-60"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  {openingContrato ? "Abrindo…" : "Abrir contrato atual"}
-                </button>
+                <a href={row.contrato_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                  <ExternalLink className="h-3 w-3" /> Contrato atual
+                </a>
               )}
             </div>
           )}
