@@ -299,6 +299,39 @@ const V4Header = () => {
                   )}
                 </div>
               )}
+
+              {visibleAdminMenuItems.length > 0 && (
+                <div className="relative" ref={adminRef}>
+                  <button
+                    onClick={() => setAdminOpen(!adminOpen)}
+                    className={`${navItemBase} ${isAdminMenuActive ? navItemActive : navItemIdle}`}
+                  >
+                    <span>Admin</span>
+                    <ChevronDown
+                      className={`h-3 w-3 opacity-60 transition-transform duration-200 ${adminOpen ? "rotate-180" : ""}`}
+                    />
+                    {isAdminMenuActive && <ActiveDot />}
+                  </button>
+                  {adminOpen && (
+                    <div className="absolute top-full left-0 mt-2.5 min-w-[200px] z-50 rounded-2xl border border-white/[0.08] bg-popover/80 backdrop-blur-2xl backdrop-saturate-200 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.08)] p-1.5 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150">
+                      {visibleAdminMenuItems.map((item) => (
+                        <Link
+                          key={item.path}
+                          to={item.path}
+                          onClick={() => setAdminOpen(false)}
+                          className={`block px-3 py-2 rounded-xl font-body text-[13px] font-medium tracking-tight transition-all duration-150 ${
+                            isActive(item.path)
+                              ? "bg-white/[0.08] text-foreground"
+                              : "text-foreground/75 hover:bg-white/[0.05] hover:text-foreground"
+                          }`}
+                        >
+                          {item.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </nav>
 
 
