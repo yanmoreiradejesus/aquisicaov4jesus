@@ -13,6 +13,8 @@ import Admin from "./pages/Admin";
 import AdminClientes from "./pages/AdminClientes";
 import AdminClienteNovo from "./pages/AdminClienteNovo";
 import AdminConsumoIA from "./pages/AdminConsumoIA";
+import AdminPeople from "./pages/AdminPeople";
+import AdminFinanceiro from "./pages/AdminFinanceiro";
 import Perfil from "./pages/Perfil";
 import Financeiro from "./pages/Financeiro";
 import DashboardComercial from "./pages/DashboardComercial";
@@ -210,6 +212,16 @@ const AppRoutes = () => {
         <Route path="/admin/consumo-ia" element={
           <ProtectedRoute>
             <PageTransition><AdminConsumoIA /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/people" element={
+          <ProtectedRoute requiredPath="/admin/people">
+            <PageTransition><AdminPeople /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/financeiro" element={
+          <ProtectedRoute requiredPath="/admin/financeiro">
+            <PageTransition><AdminFinanceiro /></PageTransition>
           </ProtectedRoute>
         } />
 
