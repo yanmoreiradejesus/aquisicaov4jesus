@@ -75,6 +75,10 @@ export type Database = {
           designer_id: string | null
           drive_url: string | null
           ekyte_workspace_id: number | null
+          faturamento_status: string
+          faturamento_validated_at: string | null
+          faturamento_validated_by: string | null
+          forma_pagamento: string | null
           growth_class_ata: string | null
           growth_class_data_agendada: string | null
           growth_class_data_realizada: string | null
@@ -91,6 +95,7 @@ export type Database = {
           gt_id: string | null
           health_score: number | null
           id: string
+          modelo_contrato: string | null
           mrr: number | null
           mrr_variavel: number | null
           notas: string | null
@@ -101,6 +106,7 @@ export type Database = {
           pre_growth_class_relatorio: string | null
           produtos_contratados: Json | null
           proxima_revisao: string | null
+          qtd_parcelas: number | null
           social_media_id: string | null
           squad: Database["public"]["Enums"]["squad_type"] | null
           status: Database["public"]["Enums"]["account_status"]
@@ -119,6 +125,10 @@ export type Database = {
           designer_id?: string | null
           drive_url?: string | null
           ekyte_workspace_id?: number | null
+          faturamento_status?: string
+          faturamento_validated_at?: string | null
+          faturamento_validated_by?: string | null
+          forma_pagamento?: string | null
           growth_class_ata?: string | null
           growth_class_data_agendada?: string | null
           growth_class_data_realizada?: string | null
@@ -135,6 +145,7 @@ export type Database = {
           gt_id?: string | null
           health_score?: number | null
           id?: string
+          modelo_contrato?: string | null
           mrr?: number | null
           mrr_variavel?: number | null
           notas?: string | null
@@ -145,6 +156,7 @@ export type Database = {
           pre_growth_class_relatorio?: string | null
           produtos_contratados?: Json | null
           proxima_revisao?: string | null
+          qtd_parcelas?: number | null
           social_media_id?: string | null
           squad?: Database["public"]["Enums"]["squad_type"] | null
           status?: Database["public"]["Enums"]["account_status"]
@@ -163,6 +175,10 @@ export type Database = {
           designer_id?: string | null
           drive_url?: string | null
           ekyte_workspace_id?: number | null
+          faturamento_status?: string
+          faturamento_validated_at?: string | null
+          faturamento_validated_by?: string | null
+          forma_pagamento?: string | null
           growth_class_ata?: string | null
           growth_class_data_agendada?: string | null
           growth_class_data_realizada?: string | null
@@ -179,6 +195,7 @@ export type Database = {
           gt_id?: string | null
           health_score?: number | null
           id?: string
+          modelo_contrato?: string | null
           mrr?: number | null
           mrr_variavel?: number | null
           notas?: string | null
@@ -189,6 +206,7 @@ export type Database = {
           pre_growth_class_relatorio?: string | null
           produtos_contratados?: Json | null
           proxima_revisao?: string | null
+          qtd_parcelas?: number | null
           social_media_id?: string | null
           squad?: Database["public"]["Enums"]["squad_type"] | null
           status?: Database["public"]["Enums"]["account_status"]
@@ -2156,6 +2174,15 @@ export type Database = {
           sheet_ids: Json
           voip_provider: string
         }[]
+      }
+      validar_faturamento_account: {
+        Args: {
+          p_account_id: string
+          p_forma_pagamento: string
+          p_modelo_contrato: string
+          p_qtd_parcelas: number
+        }
+        Returns: undefined
       }
     }
     Enums: {
