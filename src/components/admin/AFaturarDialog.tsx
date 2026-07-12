@@ -40,6 +40,8 @@ const FORMA_OPTIONS: { value: string; label: string; needsParcelas: boolean }[] 
   { value: "cheque", label: "Cheque", needsParcelas: false },
 ];
 
+const FORMA_EF_VALUES = ["cheque", "pix", "boleto", "cartao_credito_parcelado"] as const;
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
