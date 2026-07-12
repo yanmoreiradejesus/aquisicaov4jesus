@@ -42,7 +42,33 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
   const [qtdParcelas, setQtdParcelas] = useState<number>(1);
   const [modelo, setModelo] = useState<"escopo_fechado" | "recorrente">("recorrente");
   const [saving, setSaving] = useState(false);
+  const [detecting, setDetecting] = useState(false);
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
+
+  const needsParcelas = FORMA_OPTIONS.find((o) => o.value === formaPagamento)?.needsParcelas ?? false;
+
+  // Preenche a partir da account e dispara auto-detecção se faltar dado
+  useEffect(() => {
+    if (!row) return;
+    setFormaPagamento(row.forma_pagamento || "");
+    setQtdParcelas(row.qtd_parcelas || 1);
+    setModelo((row.modelo_contrato as any) || "recorrente");
+
+    const missing = !row.forma_pagamento || !row.modelo_contrato;
+    if (missing && row.contrato_url) {
+      setDetecting(true);
+      (supabase as any).functions
+        .invoke("extract-contract-billing", { body: { account_id: row.id } })
+        .then(({ data }: any) => {
+          const d = data?.detected;
+          if (d?.forma && !row.forma_pagamento) setFormaPagamento(d.forma);
+          if (d?.modelo && !row.modelo_contrato) setModelo(d.modelo);
+          if (d?.parcelas && !row.qtd_parcelas) setQtdParcelas(d.parcelas);
+        })
+        .catch(() => {})
+        .finally(() => setDetecting(false));
+    }
+  }, [row?.id]);
 
   useEffect(() => {
     let objectUrl: string | null = null;
