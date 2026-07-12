@@ -177,6 +177,7 @@ const ProjetosCadastro = () => {
                   <TableHead>Resumo GC</TableHead>
                   <TableHead>Transcrição GC</TableHead>
                   <TableHead>Squad</TableHead>
+                  <TableHead className="min-w-[220px]">Escopo</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
