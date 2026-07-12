@@ -314,10 +314,21 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
               </div>
             )}
 
-            <Button className="w-full" onClick={handleValidate} disabled={saving || detecting}>
-              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Validar e gerar cobranças
-            </Button>
+            <div className="pt-2 flex items-center justify-end gap-2 border-t border-border/50">
+              <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} disabled={saving}>
+                Cancelar
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-emerald-500/30 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20 hover:text-emerald-100"
+                onClick={handleValidate}
+                disabled={saving || detecting}
+              >
+                {saving && <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />}
+                Validar e gerar cobranças
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>
