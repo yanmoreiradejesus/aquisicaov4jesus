@@ -15,7 +15,19 @@ export type AFaturarRow = {
   contrato_url: string | null;
   valor_ef: number | null;
   valor_fee: number | null;
+  forma_pagamento?: string | null;
+  qtd_parcelas?: number | null;
+  modelo_contrato?: string | null;
 };
+
+const FORMA_OPTIONS: { value: string; label: string; needsParcelas: boolean }[] = [
+  { value: "cartao_credito_vista", label: "Cartão de crédito à vista", needsParcelas: false },
+  { value: "cartao_credito_recorrente", label: "Cartão de crédito recorrente", needsParcelas: false },
+  { value: "cartao_credito_parcelado", label: "Cartão de crédito parcelado", needsParcelas: true },
+  { value: "pix", label: "Pix", needsParcelas: false },
+  { value: "boleto", label: "Boleto", needsParcelas: true },
+  { value: "cheque", label: "Cheque", needsParcelas: false },
+];
 
 interface Props {
   open: boolean;
