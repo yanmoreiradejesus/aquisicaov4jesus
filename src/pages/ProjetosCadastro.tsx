@@ -86,6 +86,30 @@ const ProjetosCadastro = () => {
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<{ row: Row; field: Field } | null>(null);
   const [novoOpen, setNovoOpen] = useState(false);
+  const [generatingGc, setGeneratingGc] = useState<Record<string, boolean>>({});
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["projetos_cadastro"] });
+
+  const gerarResumoGc = async (accountId: string) => {
+    setGeneratingGc((s) => ({ ...s, [accountId]: true }));
+    try {
+      const { data, error } = await supabase.functions.invoke("auto-generate-pre-gc", {
+        body: { account_id: accountId, force: true },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast({ title: "Resumo GC gerado", description: "Anexado ao projeto e ao onboarding." });
+      invalidate();
+    } catch (e: any) {
+      toast({ title: "Erro ao gerar resumo GC", description: e.message ?? String(e), variant: "destructive" });
+    } finally {
+      setGeneratingGc((s) => {
+        const n = { ...s };
+        delete n[accountId];
+        return n;
+      });
+    }
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
