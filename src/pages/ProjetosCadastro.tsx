@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { ProjetoEscopoDialog } from "@/components/projetos/ProjetoEscopoDialog";
 
 type Squad = "strikers" | "fenix" | "saber";
 const SQUADS: Squad[] = ["strikers", "fenix", "saber"];
@@ -28,6 +29,11 @@ interface Row {
   data_reuniao_agendada: string | null;
   data_reuniao_realizada: string | null;
   lead_id: string | null;
+  escopo_trafego: boolean;
+  escopo_social_media: boolean;
+  escopo_design: boolean;
+  escopo_crm: boolean;
+  escopo_validado: boolean;
 }
 
 type Field =
