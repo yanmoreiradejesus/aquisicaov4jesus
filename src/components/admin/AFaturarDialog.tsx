@@ -214,25 +214,39 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
             </div>
 
             <div className="space-y-2">
-              <Label>Forma de pagamento</Label>
-              <Input
-                value={formaPagamento}
-                onChange={(e) => setFormaPagamento(e.target.value)}
-                placeholder="Boleto, Pix, cartão..."
-              />
+              <div className="flex items-center justify-between">
+                <Label>Forma de pagamento</Label>
+                {detecting && (
+                  <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" /> detectando...
+                  </span>
+                )}
+              </div>
+              <Select value={formaPagamento} onValueChange={setFormaPagamento}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {FORMA_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Quantidade de parcelas</Label>
-              <Input
-                type="number"
-                min={1}
-                value={qtdParcelas}
-                onChange={(e) => setQtdParcelas(parseInt(e.target.value) || 1)}
-              />
-            </div>
+            {needsParcelas && (
+              <div className="space-y-2">
+                <Label>Quantidade de parcelas</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={qtdParcelas}
+                  onChange={(e) => setQtdParcelas(parseInt(e.target.value) || 1)}
+                />
+              </div>
+            )}
 
-            <Button className="w-full" onClick={handleValidate} disabled={saving}>
+            <Button className="w-full" onClick={handleValidate} disabled={saving || detecting}>
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Validar e gerar cobranças
             </Button>
