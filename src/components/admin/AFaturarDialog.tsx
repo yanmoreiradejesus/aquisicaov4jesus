@@ -58,6 +58,8 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
   const [diaPrimeiroEf, setDiaPrimeiroEf] = useState<number>(10);
   const [diaDemaisEf, setDiaDemaisEf] = useState<number>(10);
 
+  const [dataVencEf, setDataVencEf] = useState<string>(""); // YYYY-MM-DD (para cartão parcelado, pix à vista, etc.)
+
   // Parte "Recorrente"
   const [valorFee, setValorFee] = useState<string>("");
   const [formaRec, setFormaRec] = useState("");
@@ -65,6 +67,7 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
   const [diaPrimeiroRec, setDiaPrimeiroRec] = useState<number>(10);
   const [diaDemaisRec, setDiaDemaisRec] = useState<number>(10);
   const [tcv, setTcv] = useState<boolean>(false);
+  const [dataVencRec, setDataVencRec] = useState<string>(""); // YYYY-MM-DD para TCV
 
   const [saving, setSaving] = useState(false);
   const [detecting, setDetecting] = useState(false);
