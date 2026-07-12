@@ -58,9 +58,10 @@ export const ExpansaoCard = ({ expansao, onClick, overlay = false, responsavelNo
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground truncate">{cliente}</div>
-          <div className="text-sm font-medium text-foreground/95 leading-snug line-clamp-2">{expansao.titulo}</div>
+        <div className="min-w-0 flex-1">
+          <div className="font-display font-semibold text-[13px] leading-snug text-foreground truncate tracking-[-0.01em]">
+            {expansao.titulo}
+          </div>
         </div>
         {expansao.etapa === "ganho" && expansao.tipo_ganho && (
           <span className="shrink-0 text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-300">
