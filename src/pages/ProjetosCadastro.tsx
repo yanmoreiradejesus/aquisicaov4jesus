@@ -196,7 +196,14 @@ const ProjetosCadastro = () => {
                   return (
                     <TableRow key={r.projeto_id} className="border-border/40">
                       <TableCell className="font-medium text-foreground">
-                        {r.cliente_nome ?? "—"}
+                        <div className="flex items-center gap-2">
+                          <span>{r.cliente_nome ?? "—"}</span>
+                          {!r.escopo_validado && (
+                            <span className="inline-flex items-center rounded-full bg-primary/15 text-primary border border-primary/30 px-1.5 py-0.5 text-[9px] font-bold tracking-wider uppercase">
+                              New
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className={cellCls} onClick={() => setEditing({ row: r, field: "data_reuniao_agendada" })}>
                         <div className="flex items-center gap-2">
