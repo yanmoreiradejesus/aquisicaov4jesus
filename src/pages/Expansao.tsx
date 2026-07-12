@@ -94,14 +94,14 @@ export default function Expansao() {
   }, [expansoes, search]);
 
   const byEtapa = useMemo(() => {
-    const g: Record<string, ExpansaoRow[]> = { mapeada: [], proposta: [], negociacao: [], ganho: [] };
+    const g: Record<string, ExpansaoRow[]> = { mapeada: [], proposta: [], negociacao: [], ganho: [], perdido: [] };
     filtered.forEach((e) => {
-      if (e.etapa !== "perdido") g[e.etapa]?.push(e);
+      g[e.etapa]?.push(e);
     });
     return g;
   }, [filtered]);
 
-  const perdidas = filtered.filter((e) => e.etapa === "perdido");
+  const perdidas = byEtapa.perdido;
 
   // KPIs
   const kpis = useMemo(() => {
@@ -176,6 +176,13 @@ export default function Expansao() {
         contratoFile: null,
       });
       setGanhoOpen(true);
+      return;
+    }
+
+    if (to === "perdido") {
+      setPerdaTarget(op);
+      setPerdaMotivo(op.motivo_perda ?? "");
+      setPerdaOpen(true);
       return;
     }
 
@@ -321,25 +328,6 @@ export default function Expansao() {
             )}
           </DragOverlay>
         </DndContext>
-
-        {perdidas.length > 0 && (
-          <details className="mt-6">
-            <summary className="text-xs uppercase tracking-[0.18em] text-muted-foreground cursor-pointer hover:text-foreground/80">
-              Perdidas ({perdidas.length})
-            </summary>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
-              {perdidas.map((e) => (
-                <div key={e.id} onClick={() => openEdit(e)} className="cursor-pointer">
-                  <ExpansaoCard
-                    expansao={e}
-                    onClick={() => openEdit(e)}
-                    responsavelNome={e.responsavel_id ? responsaveis[e.responsavel_id] : null}
-                  />
-                </div>
-              ))}
-            </div>
-          </details>
-        )}
 
         {isLoading && (
           <div className="text-center text-sm text-muted-foreground py-8">Carregando…</div>
