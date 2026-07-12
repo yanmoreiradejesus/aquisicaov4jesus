@@ -34,7 +34,6 @@ export const ExpansaoCard = ({ expansao, onClick, overlay = false, responsavelNo
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
     : {};
 
-  const cliente = expansao.projeto?.account?.cliente_nome || expansao.projeto?.nome || "Projeto";
   const valor = expansao.etapa === "ganho"
     ? (expansao.valor_aumento_fee ?? 0) + (expansao.valor_escopo_fechado ?? 0)
     : expansao.valor_estimado;
