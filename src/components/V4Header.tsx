@@ -276,7 +276,7 @@ const V4Header = () => {
                     onClick={() => setPegOpen(!pegOpen)}
                     className={`${navItemBase} ${isPegActive ? navItemActive : navItemIdle}`}
                   >
-                    <span>PE&amp;G</span>
+                    <span>Tarefas</span>
                     <ChevronDown
                       className={`h-3 w-3 opacity-60 transition-transform duration-200 ${pegOpen ? "rotate-180" : ""}`}
                     />
