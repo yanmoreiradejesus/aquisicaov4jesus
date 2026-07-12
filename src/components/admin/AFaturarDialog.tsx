@@ -19,9 +19,13 @@ export type AFaturarRow = {
   forma_pagamento_ef?: string | null;
   qtd_parcelas_ef?: number | null;
   valor_ef_override?: number | null;
+  dia_vencimento_primeiro_ef?: number | null;
+  dia_vencimento_demais_ef?: number | null;
   forma_pagamento_recorrente?: string | null;
   qtd_parcelas_recorrente?: number | null;
   valor_fee_override?: number | null;
+  dia_vencimento_primeiro_recorrente?: number | null;
+  dia_vencimento_demais_recorrente?: number | null;
 };
 
 type Modelo = "escopo_fechado" | "recorrente" | "hibrido";
