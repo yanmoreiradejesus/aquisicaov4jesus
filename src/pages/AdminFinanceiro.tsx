@@ -320,7 +320,9 @@ const AdminFinanceiro = () => {
                         <TableCell className="text-right font-mono">{fmtBRL(feeDisplay)}</TableCell>
 
                       </TableRow>
-                    ))
+                      );
+                    })
+
                   )}
                 </TableBody>
               </Table>
