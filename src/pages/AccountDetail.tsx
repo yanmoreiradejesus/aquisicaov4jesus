@@ -55,7 +55,7 @@ export default function AccountDetail() {
       playbook_url: account.playbook_url,
       growthpack_url: account.growthpack_url,
       drive_url: account.drive_url,
-      ekyte_workspace_id: account.ekyte_workspace_id,
+
     });
     setEditOpen(true);
   };
