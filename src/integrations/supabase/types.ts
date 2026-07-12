@@ -78,7 +78,6 @@ export type Database = {
           dia_vencimento_primeiro_ef: number | null
           dia_vencimento_primeiro_recorrente: number | null
           drive_url: string | null
-          ekyte_workspace_id: number | null
           expansao_id: string | null
           faturamento_status: string
           faturamento_validated_at: string | null
@@ -140,7 +139,6 @@ export type Database = {
           dia_vencimento_primeiro_ef?: number | null
           dia_vencimento_primeiro_recorrente?: number | null
           drive_url?: string | null
-          ekyte_workspace_id?: number | null
           expansao_id?: string | null
           faturamento_status?: string
           faturamento_validated_at?: string | null
@@ -202,7 +200,6 @@ export type Database = {
           dia_vencimento_primeiro_ef?: number | null
           dia_vencimento_primeiro_recorrente?: number | null
           drive_url?: string | null
-          ekyte_workspace_id?: number | null
           expansao_id?: string | null
           faturamento_status?: string
           faturamento_validated_at?: string | null
@@ -1492,6 +1489,388 @@ export type Database = {
           },
         ]
       }
+      tarefa_anexos: {
+        Row: {
+          created_at: string
+          id: string
+          mime: string | null
+          nome_arquivo: string
+          storage_path: string
+          tamanho: number | null
+          tarefa_id: string
+          tenant_id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mime?: string | null
+          nome_arquivo: string
+          storage_path: string
+          tamanho?: number | null
+          tarefa_id: string
+          tenant_id: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mime?: string | null
+          nome_arquivo?: string
+          storage_path?: string
+          tamanho?: number | null
+          tarefa_id?: string
+          tenant_id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tarefa_anexos_tarefa_id_fkey"
+            columns: ["tarefa_id"]
+            isOneToOne: false
+            referencedRelation: "tarefas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tarefa_atividades: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          id: string
+          metadata: Json | null
+          tarefa_id: string
+          tenant_id: string
+          tipo: string
+          usuario_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          metadata?: Json | null
+          tarefa_id: string
+          tenant_id: string
+          tipo: string
+          usuario_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          metadata?: Json | null
+          tarefa_id?: string
+          tenant_id?: string
+          tipo?: string
+          usuario_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tarefa_atividades_tarefa_id_fkey"
+            columns: ["tarefa_id"]
+            isOneToOne: false
+            referencedRelation: "tarefas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tarefa_checklist_items: {
+        Row: {
+          concluido: boolean
+          concluido_em: string | null
+          concluido_por: string | null
+          created_at: string
+          id: string
+          ordem: number
+          tarefa_id: string
+          tenant_id: string
+          texto: string
+        }
+        Insert: {
+          concluido?: boolean
+          concluido_em?: string | null
+          concluido_por?: string | null
+          created_at?: string
+          id?: string
+          ordem?: number
+          tarefa_id: string
+          tenant_id: string
+          texto: string
+        }
+        Update: {
+          concluido?: boolean
+          concluido_em?: string | null
+          concluido_por?: string | null
+          created_at?: string
+          id?: string
+          ordem?: number
+          tarefa_id?: string
+          tenant_id?: string
+          texto?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tarefa_checklist_items_tarefa_id_fkey"
+            columns: ["tarefa_id"]
+            isOneToOne: false
+            referencedRelation: "tarefas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tarefa_comentarios: {
+        Row: {
+          autor_id: string | null
+          created_at: string
+          id: string
+          tarefa_id: string
+          tenant_id: string
+          texto: string
+        }
+        Insert: {
+          autor_id?: string | null
+          created_at?: string
+          id?: string
+          tarefa_id: string
+          tenant_id: string
+          texto: string
+        }
+        Update: {
+          autor_id?: string | null
+          created_at?: string
+          id?: string
+          tarefa_id?: string
+          tenant_id?: string
+          texto?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tarefa_comentarios_tarefa_id_fkey"
+            columns: ["tarefa_id"]
+            isOneToOne: false
+            referencedRelation: "tarefas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tarefa_etapas: {
+        Row: {
+          concluida_em: string | null
+          concluida_por: string | null
+          created_at: string
+          funcao: string | null
+          id: string
+          iniciada_em: string | null
+          nome: string
+          observacao_conclusao: string | null
+          ordem: number
+          prazo: string | null
+          responsavel_id: string | null
+          status: Database["public"]["Enums"]["tarefa_etapa_status"]
+          tarefa_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          concluida_em?: string | null
+          concluida_por?: string | null
+          created_at?: string
+          funcao?: string | null
+          id?: string
+          iniciada_em?: string | null
+          nome: string
+          observacao_conclusao?: string | null
+          ordem: number
+          prazo?: string | null
+          responsavel_id?: string | null
+          status?: Database["public"]["Enums"]["tarefa_etapa_status"]
+          tarefa_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          concluida_em?: string | null
+          concluida_por?: string | null
+          created_at?: string
+          funcao?: string | null
+          id?: string
+          iniciada_em?: string | null
+          nome?: string
+          observacao_conclusao?: string | null
+          ordem?: number
+          prazo?: string | null
+          responsavel_id?: string | null
+          status?: Database["public"]["Enums"]["tarefa_etapa_status"]
+          tarefa_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tarefa_etapas_tarefa_id_fkey"
+            columns: ["tarefa_id"]
+            isOneToOne: false
+            referencedRelation: "tarefas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tarefa_fluxo_template_etapas: {
+        Row: {
+          created_at: string
+          funcao_sugerida: string | null
+          id: string
+          nome: string
+          ordem: number
+          responsavel_padrao_id: string | null
+          template_id: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          funcao_sugerida?: string | null
+          id?: string
+          nome: string
+          ordem: number
+          responsavel_padrao_id?: string | null
+          template_id: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          funcao_sugerida?: string | null
+          id?: string
+          nome?: string
+          ordem?: number
+          responsavel_padrao_id?: string | null
+          template_id?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tarefa_fluxo_template_etapas_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "tarefa_fluxo_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tarefa_fluxo_templates: {
+        Row: {
+          created_at: string
+          criado_por: string | null
+          descricao: string | null
+          escopo: Database["public"]["Enums"]["tarefa_escopo"] | null
+          id: string
+          nome: string
+          squad: string | null
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          criado_por?: string | null
+          descricao?: string | null
+          escopo?: Database["public"]["Enums"]["tarefa_escopo"] | null
+          id?: string
+          nome: string
+          squad?: string | null
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          criado_por?: string | null
+          descricao?: string | null
+          escopo?: Database["public"]["Enums"]["tarefa_escopo"] | null
+          id?: string
+          nome?: string
+          squad?: string | null
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tarefas: {
+        Row: {
+          account_id: string | null
+          cancelada_em: string | null
+          concluida_em: string | null
+          created_at: string
+          criado_por: string | null
+          descricao: string | null
+          escopo: Database["public"]["Enums"]["tarefa_escopo"] | null
+          etapa_atual_id: string | null
+          id: string
+          prazo_final: string | null
+          prioridade: Database["public"]["Enums"]["tarefa_prioridade"]
+          projeto_id: string | null
+          status: Database["public"]["Enums"]["tarefa_status"]
+          tenant_id: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          account_id?: string | null
+          cancelada_em?: string | null
+          concluida_em?: string | null
+          created_at?: string
+          criado_por?: string | null
+          descricao?: string | null
+          escopo?: Database["public"]["Enums"]["tarefa_escopo"] | null
+          etapa_atual_id?: string | null
+          id?: string
+          prazo_final?: string | null
+          prioridade?: Database["public"]["Enums"]["tarefa_prioridade"]
+          projeto_id?: string | null
+          status?: Database["public"]["Enums"]["tarefa_status"]
+          tenant_id: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string | null
+          cancelada_em?: string | null
+          concluida_em?: string | null
+          created_at?: string
+          criado_por?: string | null
+          descricao?: string | null
+          escopo?: Database["public"]["Enums"]["tarefa_escopo"] | null
+          etapa_atual_id?: string | null
+          id?: string
+          prazo_final?: string | null
+          prioridade?: Database["public"]["Enums"]["tarefa_prioridade"]
+          projeto_id?: string | null
+          status?: Database["public"]["Enums"]["tarefa_status"]
+          tenant_id?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tarefas_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarefas_etapa_atual_fk"
+            columns: ["etapa_atual_id"]
+            isOneToOne: false
+            referencedRelation: "tarefa_etapas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarefas_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "crm_projetos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_anexos: {
         Row: {
           created_at: string
@@ -2268,6 +2647,15 @@ export type Database = {
           voip_provider: string
         }[]
       }
+      tarefa_log: {
+        Args: {
+          _descricao: string
+          _metadata?: Json
+          _tarefa_id: string
+          _tipo: string
+        }
+        Returns: undefined
+      }
       validar_faturamento_account: {
         Args: {
           p_account_id: string
@@ -2352,6 +2740,15 @@ export type Database = {
         | "follow_infinito"
       projeto_status: "ativo" | "em_risco" | "pausado" | "encerrado" | "churn"
       squad_type: "strikers" | "fenix" | "saber"
+      tarefa_escopo: "trafego" | "social_media" | "design" | "crm"
+      tarefa_etapa_status: "pendente" | "em_execucao" | "concluida" | "pulada"
+      tarefa_prioridade: "baixa" | "media" | "alta" | "urgente"
+      tarefa_status:
+        | "a_fazer"
+        | "em_execucao"
+        | "bloqueada"
+        | "concluida"
+        | "cancelada"
       task_prioridade: "baixa" | "media" | "alta" | "urgente"
       task_status:
         | "backlog"
@@ -2527,6 +2924,16 @@ export const Constants = {
       ],
       projeto_status: ["ativo", "em_risco", "pausado", "encerrado", "churn"],
       squad_type: ["strikers", "fenix", "saber"],
+      tarefa_escopo: ["trafego", "social_media", "design", "crm"],
+      tarefa_etapa_status: ["pendente", "em_execucao", "concluida", "pulada"],
+      tarefa_prioridade: ["baixa", "media", "alta", "urgente"],
+      tarefa_status: [
+        "a_fazer",
+        "em_execucao",
+        "bloqueada",
+        "concluida",
+        "cancelada",
+      ],
       task_prioridade: ["baixa", "media", "alta", "urgente"],
       task_status: [
         "backlog",
