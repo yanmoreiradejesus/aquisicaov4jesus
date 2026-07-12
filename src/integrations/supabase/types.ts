@@ -79,6 +79,7 @@ export type Database = {
           dia_vencimento_primeiro_recorrente: number | null
           drive_url: string | null
           ekyte_workspace_id: number | null
+          expansao_id: string | null
           faturamento_status: string
           faturamento_validated_at: string | null
           faturamento_validated_by: string | null
@@ -107,6 +108,7 @@ export type Database = {
           notas: string | null
           onboarding_status: Database["public"]["Enums"]["onboarding_status"]
           oportunidade_id: string | null
+          origem: string
           playbook_url: string | null
           pre_growth_class_gerado_em: string | null
           pre_growth_class_relatorio: string | null
@@ -139,6 +141,7 @@ export type Database = {
           dia_vencimento_primeiro_recorrente?: number | null
           drive_url?: string | null
           ekyte_workspace_id?: number | null
+          expansao_id?: string | null
           faturamento_status?: string
           faturamento_validated_at?: string | null
           faturamento_validated_by?: string | null
@@ -167,6 +170,7 @@ export type Database = {
           notas?: string | null
           onboarding_status?: Database["public"]["Enums"]["onboarding_status"]
           oportunidade_id?: string | null
+          origem?: string
           playbook_url?: string | null
           pre_growth_class_gerado_em?: string | null
           pre_growth_class_relatorio?: string | null
@@ -199,6 +203,7 @@ export type Database = {
           dia_vencimento_primeiro_recorrente?: number | null
           drive_url?: string | null
           ekyte_workspace_id?: number | null
+          expansao_id?: string | null
           faturamento_status?: string
           faturamento_validated_at?: string | null
           faturamento_validated_by?: string | null
@@ -227,6 +232,7 @@ export type Database = {
           notas?: string | null
           onboarding_status?: Database["public"]["Enums"]["onboarding_status"]
           oportunidade_id?: string | null
+          origem?: string
           playbook_url?: string | null
           pre_growth_class_gerado_em?: string | null
           pre_growth_class_relatorio?: string | null
@@ -256,6 +262,13 @@ export type Database = {
             columns: ["designer_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounts_expansao_id_fkey"
+            columns: ["expansao_id"]
+            isOneToOne: false
+            referencedRelation: "crm_expansoes"
             referencedColumns: ["id"]
           },
           {
