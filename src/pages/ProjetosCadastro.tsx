@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Clock, Plus, Search, X, Upload, Trash2, ExternalLink } from "lucide-react";
+import { Check, Clock, Plus, Search, X, Upload, Trash2, ExternalLink, Sparkles, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
