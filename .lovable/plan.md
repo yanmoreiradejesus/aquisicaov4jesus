@@ -1,96 +1,89 @@
-## Objetivo
+## Contexto
 
-Página **Projetos** como banco de dados vivo: cada account com `onboarding_status = 'concluida'` gera automaticamente 1 projeto em `crm_projetos`. A tela é onde o time documenta escopo, stack, time e histórico rico do projeto, com anexos.
+Entendido: **Revenue** é o menu comercial (`Leads`, `Oportunidades`, `Onboarding`, `Cobranças`), e **PE&G** é onde vivem `Accounts`, `Database` e `Cadastro`. Vou criar **Expansão** como novo submenu **dentro de Revenue**, ao lado dos existentes.
 
-## Estrutura
+Todo projeto cadastrado (via CRM de aquisição ou manualmente na Database) é candidato a expansão. O submenu Expansão será um CRM kanban de monetização de clientes ativos.
 
-### Rotas
-- `/comercial/projetos` — lista/tabela filtrável (índice do banco).
-- `/comercial/projetos/:id` — página dedicada por projeto, seções longas editáveis.
+## Kanban
 
-### Menu
-- Novo item "Projetos" ao lado de "Onboarding" na navegação Comercial.
+4 colunas de progressão + coluna secundária de perdidos:
+
+```
+Oportunidades mapeadas  →  Proposta  →  Negociação  →  Ganho
+```
+
+Cada card = 1 oportunidade de expansão vinculada a 1 projeto (`crm_projetos`). Um mesmo projeto pode gerar várias expansões ao longo do tempo.
+
+Ao mover para **Ganho**, um dialog obrigatório pede o tipo de resultado:
+- **Aumento de fee** (delta mensal recorrente)
+- **Escopo fechado** (valor one-shot)
+- **Ambos** (preenche os dois)
 
 ## Modelo de dados
 
-**Nova tabela `crm_projetos`** (multi-tenant, RLS por `tenant_id`):
+Nova tabela `crm_expansoes`:
 
-Campos principais:
-- `account_id` (FK accounts, unique — 1:1) e `tenant_id`.
-- `nome` (default = `accounts.cliente_nome`).
-- `status_projeto`: enum `ativo | em_risco | pausado | encerrado | churn`.
-- **Escopo & objetivos**: `descricao` (markdown), `objetivos` (markdown), `kpis_alvo` (jsonb — array de {nome, meta, unidade}), `prazo_inicio`, `prazo_fim`.
-- **Stack & acessos**: `stack` (jsonb — array de {ferramenta, categoria}), `links` (jsonb — array de {label, url, categoria: drive/figma/ga/meta/outros}).
-- **Time & responsáveis**: `time` (jsonb — array de {profile_id (nullable), nome_livre, papel}). Permite tanto membro do sistema quanto texto livre.
-- **Documentação rica**: `documentacao` (markdown longo — briefing, histórico, decisões).
-- `created_at`, `updated_at`, `created_by`.
+- `projeto_id` → FK `crm_projetos` (obrigatório)
+- `titulo`, `descricao`
+- `etapa` — enum `expansao_etapa`: `mapeada` | `proposta` | `negociacao` | `ganho` | `perdido`
+- `responsavel_id` → profiles
+- `valor_estimado` numeric
+- Resultado do ganho: `tipo_ganho` (`aumento_fee` | `escopo_fechado` | `ambos`), `valor_aumento_fee`, `valor_escopo_fechado`, `data_ganho`
+- `motivo_perda` texto
+- `data_proposta`, `data_negociacao` (carimbadas por trigger ao entrar na etapa)
+- `tenant_id`, `created_by`, `created_at`, `updated_at`
 
-**Auto-provisionamento**: trigger `AFTER UPDATE ON accounts` — quando `onboarding_status` muda para `concluida`, insere em `crm_projetos` (idempotente por `account_id`).
+RLS por tenant + GRANTs (`authenticated`, `service_role`) + triggers `set_tenant_id_on_insert`, `update_updated_at_column` e um trigger que carimba as datas de etapa.
 
-**Anexos**: nova tabela `crm_projeto_anexos` (id, projeto_id, tenant_id, storage_path, filename, mime, size_bytes, uploaded_by, created_at) + bucket privado `projeto-anexos` com RLS por tenant.
+Sem alterações em `accounts`/`cobrancas` neste momento — o ganho fica registrado no próprio card; refletir no financeiro fica como próximo passo.
 
-**RLS**: SELECT/INSERT/UPDATE/DELETE para `authenticated` restrito a `tenant_id = current_tenant_id()`. Super admin via `has_role`.
+## UI
 
-GRANTs padrão em ambas as tabelas para `authenticated` e `service_role`.
+### Menu (V4Header)
 
-## Telas
+Adicionar item ao array `comercialItems`:
 
-### `/comercial/projetos` — índice
-- Header: título + KPIs (total projetos, ativos, em risco, encerrados).
-- Filtros (glass bar, persistidos): busca livre, status, account manager, período de início.
-- Tabela: Cliente · Status (badge) · AM · Início · Prazo fim · Financeiro (EF, fee, pago/pendente/atrasado) · última atualização. Linha clica → `/comercial/projetos/:id`.
-- Botão "Exportar CSV".
+```ts
+{ path: "/comercial/expansao", label: "Expansão" }
+```
 
-### `/comercial/projetos/:id` — página dedicada
-Layout: header fixo (nome, status editável, cliente, AM, links rápidos para account/oportunidade) + tabs verticais ou navegação por âncora entre seções longas editáveis inline:
+Aparece automaticamente no dropdown Revenue (desktop) e no bloco Revenue do menu mobile.
 
-1. **Visão geral** — descrição, prazo, status, KPIs alvo (editor de lista).
-2. **Escopo & objetivos** — markdown editor (textarea rico simples com preview).
-3. **Stack & acessos** — CRUD de itens de stack (ferramenta + categoria) e links (label + URL + categoria com ícone).
-4. **Time** — lista de membros: picker de `profiles` do tenant OU nome livre + papel. Add/remove inline.
-5. **Documentação** — bloco markdown grande (briefing, histórico, decisões). Salva com debounce.
-6. **Anexos** — upload (drag&drop), lista com download signed URL, delete. Bucket `projeto-anexos`, path `{tenant_id}/{projeto_id}/{uuid}-{filename}`.
-7. **Financeiro** (read-only) — resumo das cobranças do account (mesma agregação do índice).
+### Página `/comercial/expansao` (`src/pages/Expansao.tsx`)
 
-Salvamento: cada seção com "Salvar" explícito OU auto-save com debounce em campos de texto longo. Escolha: **auto-save com debounce (800ms)** + indicador "salvo há Xs" — reduz atrito de "banco de dados vivo".
-
-Realtime: canal em `crm_projetos` + `crm_projeto_anexos` para colaboração básica.
+- Cabeçalho VD Brasil (Reseda/Bone/Outfit).
+- Botão **Nova oportunidade** → dialog: autocomplete de projeto sobre `crm_projetos`, título, valor estimado, responsável, descrição. Cria com `etapa = 'mapeada'`.
+- Barra de KPIs: valor mapeado, pipeline (proposta + negociação), ganho no período (fee + escopo), taxa de conversão.
+- Kanban horizontal, 4 colunas visíveis + aba/toggle discreto para ver perdidas.
+- **ExpansaoCard**: cliente do projeto em destaque, título, valor estimado (BRL), responsável, dias desde criação.
+- Drag & drop entre colunas atualiza `etapa` no banco.
+- Ao soltar em **Ganho**, abre `ExpansaoGanhoDialog` obrigatório (tipo + valores). Só confirma com preenchimento válido.
+- Menu do card com "Marcar como perdida" → pede motivo.
+- Clique no card abre `ExpansaoDetailSheet` (lateral) para editar todos os campos e ver timeline de etapas.
 
 ## Arquivos
 
-**Migrations:**
-- `crm_projetos` + `crm_projeto_anexos` (tabelas, GRANTs, RLS, policies, trigger de auto-criação, trigger `updated_at`).
-- Bucket `projeto-anexos` (privado) + policies em `storage.objects` (tenant scoping).
-- Backfill: insert em `crm_projetos` para todas as accounts já concluídas.
+**Migração:** `crm_expansoes` + enums + RLS + GRANTs + triggers.
 
-**Frontend:**
-- `src/pages/Projetos.tsx` — índice.
-- `src/pages/ProjetoDetail.tsx` — página dedicada.
-- `src/hooks/useProjetos.ts` — lista + agregações financeiras.
-- `src/hooks/useProjeto.ts` — single + update com debounce + realtime.
-- `src/hooks/useProjetoAnexos.ts` — listar/upload/delete/signed URL.
-- `src/components/crm/projetos/ProjetosTable.tsx`
-- `src/components/crm/projetos/ProjetosFilters.tsx`
-- `src/components/crm/projetos/ProjetoHeader.tsx`
-- `src/components/crm/projetos/ProjetoEscopoSection.tsx`
-- `src/components/crm/projetos/ProjetoStackSection.tsx`
-- `src/components/crm/projetos/ProjetoTimeSection.tsx`
-- `src/components/crm/projetos/ProjetoDocSection.tsx` (markdown editor + preview)
-- `src/components/crm/projetos/ProjetoAnexosSection.tsx`
-- `src/components/crm/projetos/ProjetoFinanceiroSection.tsx`
-- `src/App.tsx` — rotas.
-- Nav comercial — item "Projetos".
+**Novos:**
+- `src/pages/Expansao.tsx`
+- `src/hooks/useExpansoes.ts`, `src/hooks/useExpansao.ts`
+- `src/components/expansao/ExpansaoColumn.tsx`
+- `src/components/expansao/ExpansaoCard.tsx`
+- `src/components/expansao/ExpansaoDialog.tsx`
+- `src/components/expansao/ExpansaoGanhoDialog.tsx`
+- `src/components/expansao/ExpansaoDetailSheet.tsx`
 
-## Fora de escopo (confirmar depois)
-- Múltiplos projetos por account.
-- Versionamento/histórico de edições da documentação.
-- Comentários por seção.
-- Integração com Ekyte (tarefas do projeto).
-- Vínculo entre KPIs alvo e dados reais de performance.
+**Alterar:**
+- `src/App.tsx` — rota protegida `/comercial/expansao`.
+- `src/components/V4Header.tsx` — novo item em `comercialItems`.
+- Seed de `role_access_templates` / `tenant_enabled_pages` liberando `/comercial/expansao`.
 
-## Ordem de execução
-1. Migration (tabelas + trigger + backfill + bucket + policies).
-2. Hooks + tipos.
-3. Página índice.
-4. Página detail com todas as seções.
-5. Navegação/menu.
+## Fora de escopo (para depois)
+
+- Refletir ganho automaticamente em `accounts` (MRR) e gerar cobranças.
+- Templates de proposta / anexos.
+- Alertas no Google Chat ao entrar em Proposta ou Ganho.
+- Métricas de expansão por CS no dashboard.
+
+Confirma que sigo assim?
