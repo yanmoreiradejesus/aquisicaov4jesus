@@ -193,6 +193,11 @@ const AppRoutes = () => {
             <PageTransition><ComercialPlaceholder titulo="Cobranças" descricao="Conciliação de parcelas geradas automaticamente a partir de contratos fechados. Em breve." /></PageTransition>
           </ProtectedRoute>
         } />
+        <Route path="/comercial/expansao" element={
+          <ProtectedRoute requiredPath="/comercial/expansao">
+            <PageTransition><Expansao /></PageTransition>
+          </ProtectedRoute>
+        } />
 
         {/* Admin */}
         <Route path="/admin" element={
