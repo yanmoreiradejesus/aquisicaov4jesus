@@ -554,26 +554,39 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
                     {previewInvoices.length} {previewInvoices.length === 1 ? "fatura" : "faturas"} · Total {fmtBRL(previewTotal)}
                   </div>
                 </div>
-                <div className="max-h-56 overflow-y-auto rounded-md border border-border/40 divide-y divide-border/40">
-                  {previewInvoices.map((inv, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between px-3 py-2 text-xs hover:bg-muted/30"
-                    >
-                      <div className="flex flex-col min-w-0">
-                        <span className="font-medium text-foreground/90 truncate">{inv.label}</span>
-                        <span className="text-[10px] text-muted-foreground truncate">
-                          {fmtDate(inv.date)} · {inv.forma}
-                        </span>
-                      </div>
-                      <span className="font-mono tabular-nums text-foreground/90 shrink-0 ml-3">
-                        {fmtBRL(inv.valor)}
-                      </span>
-                    </div>
-                  ))}
+                <div className="max-h-64 overflow-y-auto rounded-md border border-border/40">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground">
+                      <tr>
+                        <th className="text-left px-3 py-2 font-medium">Contrato</th>
+                        <th className="text-right px-3 py-2 font-medium">Valor</th>
+                        <th className="text-left px-3 py-2 font-medium">Parcela</th>
+                        <th className="text-left px-3 py-2 font-medium">Data</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/40">
+                      {previewInvoices.map((inv) => (
+                        <tr key={inv.key} className="hover:bg-muted/30">
+                          <td className="px-3 py-2 whitespace-nowrap text-foreground/90">{inv.contrato}</td>
+                          <td className="px-3 py-2 text-right font-mono tabular-nums text-foreground/90">{fmtBRL(inv.valor)}</td>
+                          <td className="px-3 py-2 whitespace-nowrap text-muted-foreground">{inv.parcela}</td>
+                          <td className="px-3 py-2">
+                            <Input
+                              type="date"
+                              value={toISO(inv.date)}
+                              onChange={(e) =>
+                                setDateOverrides((prev) => ({ ...prev, [inv.key]: e.target.value }))
+                              }
+                              className="h-7 text-xs px-2 py-1"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
                 <p className="text-[10px] text-muted-foreground/70 leading-relaxed">
-                  Prévia calculada com base no modelo, forma de pagamento, valores e datas informados acima. As cobranças reais serão criadas ao clicar em "Validar e gerar cobranças".
+                  Ajuste as datas manualmente se necessário. As cobranças serão criadas ao clicar em "Validar e gerar cobranças".
                 </p>
               </div>
             )}
