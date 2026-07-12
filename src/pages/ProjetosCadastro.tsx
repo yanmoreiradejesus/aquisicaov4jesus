@@ -98,6 +98,7 @@ const ProjetosCadastro = () => {
   const [editing, setEditing] = useState<{ row: Row; field: Field } | null>(null);
   const [novoOpen, setNovoOpen] = useState(false);
   const [generatingGc, setGeneratingGc] = useState<Record<string, boolean>>({});
+  const [escopoEditing, setEscopoEditing] = useState<Row | null>(null);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["projetos_cadastro"] });
 
