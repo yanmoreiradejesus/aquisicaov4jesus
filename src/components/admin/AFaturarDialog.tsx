@@ -58,6 +58,8 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
   const [diaPrimeiroEf, setDiaPrimeiroEf] = useState<number>(10);
   const [diaDemaisEf, setDiaDemaisEf] = useState<number>(10);
 
+  const [dataVencEf, setDataVencEf] = useState<string>(""); // YYYY-MM-DD (para cartão parcelado, pix à vista, etc.)
+
   // Parte "Recorrente"
   const [valorFee, setValorFee] = useState<string>("");
   const [formaRec, setFormaRec] = useState("");
@@ -65,6 +67,7 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
   const [diaPrimeiroRec, setDiaPrimeiroRec] = useState<number>(10);
   const [diaDemaisRec, setDiaDemaisRec] = useState<number>(10);
   const [tcv, setTcv] = useState<boolean>(false);
+  const [dataVencRec, setDataVencRec] = useState<string>(""); // YYYY-MM-DD para TCV
 
   const [saving, setSaving] = useState(false);
   const [detecting, setDetecting] = useState(false);
@@ -156,6 +159,19 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
       if (!mesesRec || mesesRec < 1) { toast({ title: "Meses de recorrência inválidos", variant: "destructive" }); return; }
     }
 
+    // Deriva dia-do-mês a partir da data completa quando aplicável
+    const efUsaData = temEf && formaEf !== "boleto";
+    const recUsaData = temRec && tcv;
+    const dayFromISO = (iso: string, fallback: number) => {
+      if (!iso) return fallback;
+      const d = parseInt(iso.slice(8, 10), 10);
+      return Number.isFinite(d) && d >= 1 && d <= 31 ? d : fallback;
+    };
+    const efPrimeiro = efUsaData ? dayFromISO(dataVencEf, diaPrimeiroEf) : diaPrimeiroEf;
+    const efDemais = efUsaData ? efPrimeiro : diaDemaisEf;
+    const recPrimeiro = recUsaData ? dayFromISO(dataVencRec, diaPrimeiroRec) : diaPrimeiroRec;
+    const recDemais = recUsaData ? recPrimeiro : diaDemaisRec;
+
     setSaving(true);
     const { error } = await (supabase as any).rpc("validar_faturamento_account_v2", {
       p_account_id: row.id,
@@ -166,10 +182,10 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
       p_forma_recorrente: temRec ? formaRec : null,
       p_qtd_parcelas_recorrente: temRec ? mesesRec : null,
       p_valor_fee: temRec ? parseFloat(valorFee || "0") : null,
-      p_dia_venc_primeiro_ef: temEf ? diaPrimeiroEf : null,
-      p_dia_venc_demais_ef: temEf ? diaDemaisEf : null,
-      p_dia_venc_primeiro_rec: temRec ? diaPrimeiroRec : null,
-      p_dia_venc_demais_rec: temRec ? diaDemaisRec : null,
+      p_dia_venc_primeiro_ef: temEf ? efPrimeiro : null,
+      p_dia_venc_demais_ef: temEf ? efDemais : null,
+      p_dia_venc_primeiro_rec: temRec ? recPrimeiro : null,
+      p_dia_venc_demais_rec: temRec ? recDemais : null,
     });
     setSaving(false);
     if (error) {
@@ -267,16 +283,35 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
                     <p className="text-[10px] text-muted-foreground">Forma sem parcelamento — as parcelas serão geradas mesmo assim como cobranças mensais.</p>
                   )}
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Dia venc. 1ª parcela</Label>
-                    <Input type="number" min={1} max={31} value={diaPrimeiroEf} onChange={(e) => setDiaPrimeiroEf(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} />
+                {formaEf === "boleto" ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Dia venc. 1ª parcela</Label>
+                      <Input type="number" min={1} max={31} value={diaPrimeiroEf} onChange={(e) => setDiaPrimeiroEf(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Dia venc. demais</Label>
+                      <Input type="number" min={1} max={31} value={diaDemaisEf} onChange={(e) => setDiaDemaisEf(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} disabled={parcelasEf <= 1} />
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Dia venc. demais</Label>
-                    <Input type="number" min={1} max={31} value={diaDemaisEf} onChange={(e) => setDiaDemaisEf(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} disabled={parcelasEf <= 1} />
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Data de vencimento</Label>
+                      <Input type="date" value={dataVencEf} onChange={(e) => setDataVencEf(e.target.value)} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Qtd. parcelas no cartão</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={parcelasEf}
+                        onChange={(e) => setParcelasEf(Math.max(1, parseInt(e.target.value) || 1))}
+                        disabled={formaEf !== "cartao_credito_parcelado"}
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
 
@@ -353,16 +388,36 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">{tcv ? "Dia venc. 1ª parcela" : "Dia venc. 1º mês"}</Label>
-                    <Input type="number" min={1} max={31} value={diaPrimeiroRec} onChange={(e) => setDiaPrimeiroRec(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} />
+                {tcv ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Data de vencimento</Label>
+                      <Input type="date" value={dataVencRec} onChange={(e) => setDataVencRec(e.target.value)} />
+                    </div>
+                    {isTcvParcelado && (
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Qtd. parcelas no cartão</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={mesesRec}
+                          onChange={(e) => setMesesRec(Math.max(1, parseInt(e.target.value) || 1))}
+                        />
+                      </div>
+                    )}
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Dia venc. demais</Label>
-                    <Input type="number" min={1} max={31} value={diaDemaisRec} onChange={(e) => setDiaDemaisRec(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} disabled={tcv && !isTcvParcelado} />
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Dia venc. 1º mês</Label>
+                      <Input type="number" min={1} max={31} value={diaPrimeiroRec} onChange={(e) => setDiaPrimeiroRec(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Dia venc. demais</Label>
+                      <Input type="number" min={1} max={31} value={diaDemaisRec} onChange={(e) => setDiaDemaisRec(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
               );
             })()}
