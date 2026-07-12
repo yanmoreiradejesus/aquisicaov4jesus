@@ -46,12 +46,11 @@ const AdminFinanceiro = () => {
   const [view, setView] = usePersistedState<"faturado" | "a_faturar">("admin:financeiro:view", "faturado");
   const { data: cobrancas = [], isLoading } = useCobrancas();
   const { data: aFaturar = [], isLoading: loadingAFaturar } = useAFaturar();
-  const qc = useQueryClient();
+  const navigate = useNavigate();
 
   const [search, setSearch] = usePersistedState<string>("admin:financeiro:search", "");
   const [statusFilter, setStatusFilter] = usePersistedState<string>("admin:financeiro:status", "all");
   const [tipoFilter, setTipoFilter] = usePersistedState<string>("admin:financeiro:tipo", "all");
-  const [dialogRow, setDialogRow] = useState<AFaturarRow | null>(null);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
