@@ -1,5 +1,5 @@
-// Extrai forma de pagamento, quantidade de parcelas e modelo do contrato PDF
-// e atualiza a account com esses dados para o financeiro apenas validar.
+// Extrai forma de pagamento, quantidade de parcelas e modelo do contrato PDF.
+// Suporta modelo híbrido: escopo fechado + recorrente, cada um com sua própria forma.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.11.0";
 
@@ -31,21 +31,20 @@ Deno.serve(async (req) => {
 
     const { data: acc } = await supabase
       .from("accounts")
-      .select("id, forma_pagamento, qtd_parcelas, modelo_contrato, oportunidade_id, faturamento_status")
+      .select("id, modelo_contrato, oportunidade_id, faturamento_status, forma_pagamento_ef, qtd_parcelas_ef, valor_ef_override, forma_pagamento_recorrente, qtd_parcelas_recorrente, valor_fee_override")
       .eq("id", account_id)
       .maybeSingle();
     if (!acc) throw new Error("account não encontrada");
 
     const { data: op } = await supabase
       .from("crm_oportunidades")
-      .select("contrato_url")
+      .select("contrato_url, valor_ef, valor_fee")
       .eq("id", acc.oportunidade_id)
       .maybeSingle();
 
     const path = op?.contrato_url;
     if (!path) return json({ ok: false, reason: "sem_contrato" });
 
-    // Baixa PDF
     let pdfBytes: Uint8Array;
     if (/^https?:\/\//i.test(path)) {
       const r = await fetch(path);
@@ -56,22 +55,33 @@ Deno.serve(async (req) => {
       pdfBytes = new Uint8Array(await file.arrayBuffer());
     }
 
-    // Extrai texto
     const pdf = await getDocumentProxy(pdfBytes);
     const { text } = await extractText(pdf, { mergePages: true });
     const trimmed = (text || "").slice(0, 18000);
 
-    // LLM
     const apiKey = Deno.env.get("LOVABLE_API_KEY")!;
-    const prompt = `Extraia do contrato abaixo estas informações em JSON puro (sem markdown):
+    const prompt = `Você recebe um contrato de prestação de serviço. Um contrato pode ter:
+- APENAS uma parte de "escopo fechado" (setup/one-shot, geralmente parcelável), OU
+- APENAS uma parte "recorrente" (fee mensal), OU
+- AS DUAS partes juntas (híbrido).
+
+Extraia em JSON puro (sem markdown), com forma de pagamento e parcelas INDEPENDENTES para cada parte:
 {
-  "forma_pagamento": "cartao_credito_vista" | "cartao_credito_recorrente" | "cartao_credito_parcelado" | "pix" | "boleto" | "cheque" | null,
-  "qtd_parcelas": number | null,
-  "modelo_contrato": "escopo_fechado" | "recorrente" | null
+  "modelo_contrato": "escopo_fechado" | "recorrente" | "hibrido" | null,
+  "escopo_fechado": {
+    "valor": number | null,
+    "forma_pagamento": "cartao_credito_vista"|"cartao_credito_recorrente"|"cartao_credito_parcelado"|"pix"|"boleto"|"cheque"|null,
+    "qtd_parcelas": number | null
+  } | null,
+  "recorrente": {
+    "valor_mensal": number | null,
+    "forma_pagamento": "cartao_credito_vista"|"cartao_credito_recorrente"|"cartao_credito_parcelado"|"pix"|"boleto"|"cheque"|null,
+    "qtd_meses": number | null
+  } | null
 }
 Regras:
-- "recorrente" se houver fee/mensalidade mensal recorrente; "escopo_fechado" se for pagamento único parcelado sem recorrência.
-- qtd_parcelas: número de parcelas (para boleto ou cartão parcelado) ou meses de recorrência. Se não achar, null.
+- "hibrido" quando existir setup/escopo one-shot E fee mensal recorrente.
+- "cartao_credito_recorrente" é típico da parte recorrente; "cartao_credito_parcelado"/"boleto" costumam ser da parte de escopo fechado.
 - Retorne SOMENTE o JSON.
 
 CONTRATO:
@@ -92,22 +102,48 @@ ${trimmed}`;
     let parsed: any = {};
     try { parsed = JSON.parse(jsonStr); } catch { parsed = {}; }
 
-    const forma = FORMAS.includes(parsed.forma_pagamento) ? parsed.forma_pagamento : null;
-    const modelo = parsed.modelo_contrato === "escopo_fechado" || parsed.modelo_contrato === "recorrente"
+    const normForma = (f: any) => (FORMAS as readonly string[]).includes(f) ? f as string : null;
+    const normInt = (n: any) => typeof n === "number" && n >= 1 ? Math.round(n) : null;
+    const normNum = (n: any) => typeof n === "number" && n > 0 ? n : null;
+
+    const modelo = ["escopo_fechado","recorrente","hibrido"].includes(parsed.modelo_contrato)
       ? parsed.modelo_contrato : null;
-    const parcelas = typeof parsed.qtd_parcelas === "number" && parsed.qtd_parcelas >= 1
-      ? Math.round(parsed.qtd_parcelas) : null;
 
+    const ef = parsed.escopo_fechado || null;
+    const rec = parsed.recorrente || null;
+
+    const detected = {
+      modelo,
+      escopo_fechado: ef ? {
+        valor: normNum(ef.valor),
+        forma_pagamento: normForma(ef.forma_pagamento),
+        qtd_parcelas: normInt(ef.qtd_parcelas),
+      } : null,
+      recorrente: rec ? {
+        valor_mensal: normNum(rec.valor_mensal),
+        forma_pagamento: normForma(rec.forma_pagamento),
+        qtd_meses: normInt(rec.qtd_meses),
+      } : null,
+    };
+
+    // Pré-preenche apenas se faltar dado
     const update: Record<string, unknown> = {};
-    if (!acc.forma_pagamento && forma) update.forma_pagamento = forma;
-    if (!acc.modelo_contrato && modelo) update.modelo_contrato = modelo;
-    if (!acc.qtd_parcelas && parcelas) update.qtd_parcelas = parcelas;
-
+    if (!acc.modelo_contrato && detected.modelo) update.modelo_contrato = detected.modelo;
+    if (detected.escopo_fechado) {
+      if (!acc.forma_pagamento_ef && detected.escopo_fechado.forma_pagamento) update.forma_pagamento_ef = detected.escopo_fechado.forma_pagamento;
+      if (!acc.qtd_parcelas_ef && detected.escopo_fechado.qtd_parcelas) update.qtd_parcelas_ef = detected.escopo_fechado.qtd_parcelas;
+      if (!acc.valor_ef_override && detected.escopo_fechado.valor) update.valor_ef_override = detected.escopo_fechado.valor;
+    }
+    if (detected.recorrente) {
+      if (!acc.forma_pagamento_recorrente && detected.recorrente.forma_pagamento) update.forma_pagamento_recorrente = detected.recorrente.forma_pagamento;
+      if (!acc.qtd_parcelas_recorrente && detected.recorrente.qtd_meses) update.qtd_parcelas_recorrente = detected.recorrente.qtd_meses;
+      if (!acc.valor_fee_override && detected.recorrente.valor_mensal) update.valor_fee_override = detected.recorrente.valor_mensal;
+    }
     if (Object.keys(update).length) {
       await supabase.from("accounts").update(update).eq("id", account_id);
     }
 
-    return json({ ok: true, detected: { forma, modelo, parcelas }, applied: update });
+    return json({ ok: true, detected, applied: update });
   } catch (e) {
     return json({ ok: false, error: String((e as Error).message) }, 500);
   }
