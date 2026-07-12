@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Search, DollarSign } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -14,7 +14,6 @@ import {
   type CobrancaStatus,
 } from "@/hooks/useCobrancas";
 import { usePersistedState } from "@/hooks/usePersistedState";
-import AFaturarDialog, { type AFaturarRow } from "@/components/admin/AFaturarDialog";
 
 const fmtBRL = (v?: number | null) =>
   v == null
