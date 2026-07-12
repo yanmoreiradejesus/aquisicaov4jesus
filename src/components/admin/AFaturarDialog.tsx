@@ -276,44 +276,31 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
                   <Select value={formaEf} onValueChange={setFormaEf}>
                     <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>
-                      {FORMA_OPTIONS.map((o) => (
+                      {FORMA_OPTIONS.filter((o) => FORMA_EF_VALUES.includes(o.value as any)).map((o) => (
                         <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  {!parcelasEfLabelNeeded && parcelasEf > 1 && (
-                    <p className="text-[10px] text-muted-foreground">Forma sem parcelamento — as parcelas serão geradas mesmo assim como cobranças mensais.</p>
-                  )}
                 </div>
-                {formaEf === "boleto" ? (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Dia venc. 1ª parcela</Label>
-                      <Input type="number" min={1} max={31} value={diaPrimeiroEf} onChange={(e) => setDiaPrimeiroEf(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Dia venc. demais</Label>
-                      <Input type="number" min={1} max={31} value={diaDemaisEf} onChange={(e) => setDiaDemaisEf(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} disabled={parcelasEf <= 1} />
-                    </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Data do primeiro vencimento</Label>
+                    <Input type="date" value={dataVencEf} onChange={(e) => setDataVencEf(e.target.value)} />
                   </div>
-                ) : (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Data de vencimento</Label>
-                      <Input type="date" value={dataVencEf} onChange={(e) => setDataVencEf(e.target.value)} />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Qtd. parcelas no cartão</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        value={parcelasEf}
-                        onChange={(e) => setParcelasEf(Math.max(1, parseInt(e.target.value) || 1))}
-                        disabled={formaEf !== "cartao_credito_parcelado"}
-                      />
-                    </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Dia venc. demais</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={31}
+                      value={diaDemaisEf}
+                      onChange={(e) => setDiaDemaisEf(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))}
+                      disabled={parcelasEf <= 1}
+                    />
                   </div>
-                )}
+                </div>
+              </div>
+            )}
               </div>
             )}
 
