@@ -120,7 +120,7 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
       toast({ title: "Informe a forma de pagamento", variant: "destructive" });
       return;
     }
-    if (!qtdParcelas || qtdParcelas < 1) {
+    if (needsParcelas && (!qtdParcelas || qtdParcelas < 1)) {
       toast({ title: "Quantidade de parcelas inválida", variant: "destructive" });
       return;
     }
@@ -128,7 +128,7 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
     const { error } = await (supabase as any).rpc("validar_faturamento_account", {
       p_account_id: row.id,
       p_forma_pagamento: formaPagamento,
-      p_qtd_parcelas: qtdParcelas,
+      p_qtd_parcelas: needsParcelas ? qtdParcelas : 1,
       p_modelo_contrato: modelo,
     });
     setSaving(false);
