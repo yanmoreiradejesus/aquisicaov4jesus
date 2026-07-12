@@ -94,14 +94,14 @@ export default function Expansao() {
   }, [expansoes, search]);
 
   const byEtapa = useMemo(() => {
-    const g: Record<string, ExpansaoRow[]> = { mapeada: [], proposta: [], negociacao: [], ganho: [] };
+    const g: Record<string, ExpansaoRow[]> = { mapeada: [], proposta: [], negociacao: [], ganho: [], perdido: [] };
     filtered.forEach((e) => {
-      if (e.etapa !== "perdido") g[e.etapa]?.push(e);
+      g[e.etapa]?.push(e);
     });
     return g;
   }, [filtered]);
 
-  const perdidas = filtered.filter((e) => e.etapa === "perdido");
+  const perdidas = byEtapa.perdido;
 
   // KPIs
   const kpis = useMemo(() => {
