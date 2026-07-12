@@ -101,9 +101,6 @@ const Onboarding = () => {
             <h1 className="font-display text-[28px] lg:text-[34px] font-semibold text-foreground tracking-[-0.02em] normal-case">
               Onboarding
             </h1>
-            <p className="text-xs text-muted-foreground mt-1">
-              Contratos ganhos em fluxo de Growth Class — alinhamento e preparação para monetização.
-            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 glass rounded-2xl p-1.5 shadow-ios-sm">
             <div className="relative">
