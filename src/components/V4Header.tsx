@@ -45,6 +45,7 @@ const V4Header = () => {
     { path: "/comercial/oportunidades", label: "Oportunidades" },
     { path: "/comercial/onboarding", label: "Onboarding" },
     { path: "/comercial/cobrancas", label: "Cobranças" },
+    { path: "/comercial/expansao", label: "Expansão" },
   ];
 
   const pegItems = [
