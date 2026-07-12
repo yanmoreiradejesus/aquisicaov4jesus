@@ -329,25 +329,6 @@ export default function Expansao() {
           </DragOverlay>
         </DndContext>
 
-        {perdidas.length > 0 && (
-          <details className="mt-6">
-            <summary className="text-xs uppercase tracking-[0.18em] text-muted-foreground cursor-pointer hover:text-foreground/80">
-              Perdidas ({perdidas.length})
-            </summary>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
-              {perdidas.map((e) => (
-                <div key={e.id} onClick={() => openEdit(e)} className="cursor-pointer">
-                  <ExpansaoCard
-                    expansao={e}
-                    onClick={() => openEdit(e)}
-                    responsavelNome={e.responsavel_id ? responsaveis[e.responsavel_id] : null}
-                  />
-                </div>
-              ))}
-            </div>
-          </details>
-        )}
-
         {isLoading && (
           <div className="text-center text-sm text-muted-foreground py-8">Carregando…</div>
         )}
