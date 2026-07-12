@@ -16,6 +16,7 @@ import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
 import { ExpansaoColumn } from "@/components/expansao/ExpansaoColumn";
 import { ExpansaoCard } from "@/components/expansao/ExpansaoCard";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 const fmtBRL = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(v);
