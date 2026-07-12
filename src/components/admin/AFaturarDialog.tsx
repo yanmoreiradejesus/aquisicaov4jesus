@@ -33,21 +33,43 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    const path = row?.contrato_url;
-    if (!path) {
+    let objectUrl: string | null = null;
+    const load = async () => {
+      const path = row?.contrato_url;
+      if (!path) {
+        setSignedUrl(null);
+        return;
+      }
+      if (/^https?:\/\//i.test(path)) {
+        setSignedUrl(path);
+        return;
+      }
       setSignedUrl(null);
-      return;
-    }
-    // If already a full URL, use as-is
-    if (/^https?:\/\//i.test(path)) {
-      setSignedUrl(path);
-      return;
-    }
-    supabase.storage
-      .from("contratos-assinados")
-      .createSignedUrl(path, 60 * 60)
-      .then(({ data }) => setSignedUrl(data?.signedUrl ?? null));
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token;
+      if (!token) return;
+      const projectId = (import.meta as any).env.VITE_SUPABASE_PROJECT_ID;
+      const url = `https://${projectId}.supabase.co/functions/v1/serve-contrato?path=${encodeURIComponent(path)}&token=${encodeURIComponent(token)}`;
+      try {
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const blob = await res.blob();
+        const pdfBlob = new Blob([blob], { type: "application/pdf" });
+        objectUrl = URL.createObjectURL(pdfBlob);
+        setSignedUrl(objectUrl);
+      } catch {
+        // ignore
+      }
+    };
+    load();
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
   }, [row?.contrato_url]);
+
+  const openInNewTab = () => {
+    if (signedUrl) window.open(signedUrl, "_blank");
+  };
 
   const fmtBRL = (v?: number | null) =>
     v == null ? "—" : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(v));
@@ -92,10 +114,23 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
         </DialogHeader>
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_360px] overflow-hidden">
           {/* PDF viewer */}
-          <div className="bg-muted/30 border-r overflow-hidden">
+          <div className="bg-muted/30 border-r overflow-hidden flex flex-col">
             {row?.contrato_url ? (
               signedUrl ? (
-                <iframe src={signedUrl} className="w-full h-full" title="Contrato" />
+                <>
+                  <div className="p-2 border-b flex justify-end gap-2 bg-background/60">
+                    <Button size="sm" variant="outline" onClick={openInNewTab}>Abrir em nova aba</Button>
+                    <Button size="sm" variant="outline" asChild>
+                      <a href={signedUrl} download>Baixar</a>
+                    </Button>
+                  </div>
+                  <object data={signedUrl} type="application/pdf" className="flex-1 w-full">
+                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2 p-4">
+                      <FileText className="h-10 w-10 opacity-50" />
+                      <p className="text-sm text-center">Seu navegador não conseguiu exibir o PDF inline. Use os botões acima.</p>
+                    </div>
+                  </object>
+                </>
               ) : (
                 <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Carregando contrato...
