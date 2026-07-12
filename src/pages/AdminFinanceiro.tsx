@@ -300,9 +300,13 @@ const AdminFinanceiro = () => {
                                 forma_pagamento_ef: a.forma_pagamento_ef ?? null,
                                 qtd_parcelas_ef: a.qtd_parcelas_ef ?? null,
                                 valor_ef_override: a.valor_ef_override ?? null,
+                                dia_vencimento_primeiro_ef: (a as any).dia_vencimento_primeiro_ef ?? null,
+                                dia_vencimento_demais_ef: (a as any).dia_vencimento_demais_ef ?? null,
                                 forma_pagamento_recorrente: a.forma_pagamento_recorrente ?? null,
                                 qtd_parcelas_recorrente: a.qtd_parcelas_recorrente ?? null,
                                 valor_fee_override: a.valor_fee_override ?? null,
+                                dia_vencimento_primeiro_recorrente: (a as any).dia_vencimento_primeiro_recorrente ?? null,
+                                dia_vencimento_demais_recorrente: (a as any).dia_vencimento_demais_recorrente ?? null,
                               })
                             }
                           >
