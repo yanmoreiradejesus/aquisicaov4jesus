@@ -116,17 +116,28 @@ ${trimmed}`;
     const ef = parsed.escopo_fechado || null;
     const rec = parsed.recorrente || null;
 
+    const normDate = (s: any) => {
+      if (typeof s !== "string") return null;
+      const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!m) return null;
+      const y = parseInt(m[1], 10), mo = parseInt(m[2], 10), d = parseInt(m[3], 10);
+      if (y < 2000 || y > 2100 || mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+      return s;
+    };
+
     const detected = {
       modelo,
       escopo_fechado: ef ? {
         valor: normNum(ef.valor),
         forma_pagamento: normForma(ef.forma_pagamento),
         qtd_parcelas: normInt(ef.qtd_parcelas),
+        data_primeiro_vencimento: normDate(ef.data_primeiro_vencimento),
       } : null,
       recorrente: rec ? {
         valor_mensal: normNum(rec.valor_mensal),
         forma_pagamento: normForma(rec.forma_pagamento),
         qtd_meses: normInt(rec.qtd_meses),
+        data_primeiro_vencimento: normDate(rec.data_primeiro_vencimento),
       } : null,
     };
 
