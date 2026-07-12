@@ -257,12 +257,43 @@ const ProjetosCadastro = () => {
                           <StatusIcon ok={false} />
                         )}
                       </TableCell>
+                      <TableCell className={cellCls} onClick={() => setEscopoEditing(r)}>
+                        <div className="flex flex-wrap items-center gap-1">
+                          {(() => {
+                            const chips = [
+                              r.escopo_trafego && "Tráfego",
+                              r.escopo_social_media && "Social",
+                              r.escopo_design && "Design",
+                              r.escopo_crm && "CRM",
+                            ].filter(Boolean) as string[];
+                            if (chips.length === 0) {
+                              return (
+                                <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                                  <Sparkles className="h-3 w-3" /> Definir
+                                </span>
+                              );
+                            }
+                            return chips.map((c) => (
+                              <span
+                                key={c}
+                                className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] border ${
+                                  r.escopo_validado
+                                    ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+                                    : "bg-amber-500/10 text-amber-300 border-amber-500/30"
+                                }`}
+                              >
+                                {c}
+                              </span>
+                            ));
+                          })()}
+                        </div>
+                      </TableCell>
                     </TableRow>
                   );
                 })}
                 {filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-10">
+                    <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-10">
                       Nenhum projeto encontrado.
                     </TableCell>
                   </TableRow>
