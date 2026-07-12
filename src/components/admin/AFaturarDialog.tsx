@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -30,9 +30,29 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
   const [qtdParcelas, setQtdParcelas] = useState<number>(1);
   const [modelo, setModelo] = useState<"escopo_fechado" | "recorrente">("recorrente");
   const [saving, setSaving] = useState(false);
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const path = row?.contrato_url;
+    if (!path) {
+      setSignedUrl(null);
+      return;
+    }
+    // If already a full URL, use as-is
+    if (/^https?:\/\//i.test(path)) {
+      setSignedUrl(path);
+      return;
+    }
+    supabase.storage
+      .from("contratos-assinados")
+      .createSignedUrl(path, 60 * 60)
+      .then(({ data }) => setSignedUrl(data?.signedUrl ?? null));
+  }, [row?.contrato_url]);
 
   const fmtBRL = (v?: number | null) =>
     v == null ? "—" : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(v));
+
+
 
   const handleValidate = async () => {
     if (!row) return;
@@ -74,7 +94,13 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
           {/* PDF viewer */}
           <div className="bg-muted/30 border-r overflow-hidden">
             {row?.contrato_url ? (
-              <iframe src={row.contrato_url} className="w-full h-full" title="Contrato" />
+              signedUrl ? (
+                <iframe src={signedUrl} className="w-full h-full" title="Contrato" />
+              ) : (
+                <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Carregando contrato...
+                </div>
+              )
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
                 <FileText className="h-10 w-10 opacity-50" />
