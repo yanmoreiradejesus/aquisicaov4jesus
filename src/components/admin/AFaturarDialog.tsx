@@ -101,7 +101,7 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Carregando contrato...
                 </div>
               )
-            ) : (<div className="hidden" />) && false ? null : row?.contrato_url ? null : (
+            ) : (
               <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
                 <FileText className="h-10 w-10 opacity-50" />
                 <p className="text-sm">Nenhum contrato anexado nesta oportunidade.</p>
