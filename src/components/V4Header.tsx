@@ -501,7 +501,7 @@ const V4Header = () => {
               {visiblePegItems.length > 0 && (
                 <div className="px-3 py-2">
                   <span className="px-3 text-foreground/40 text-[10px] font-semibold uppercase tracking-widest">
-                    PE&amp;G
+                    Tarefas
                   </span>
                   <div className="mt-1.5 space-y-0.5">
                     {visiblePegItems.map((item) => (
