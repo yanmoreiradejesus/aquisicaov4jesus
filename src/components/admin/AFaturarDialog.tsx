@@ -309,8 +309,27 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Valor mensal</Label>
-                    <Input type="number" step="0.01" value={valorFee} onChange={(e) => setValorFee(e.target.value)} placeholder={fmtBRL(row?.valor_fee)} />
+                    <Label className="text-xs">{tcv ? "Valor total do contrato" : "Valor mensal"}</Label>
+                    {tcv ? (
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={valorFee ? String((parseFloat(valorFee) || 0) * (mesesRec || 1)) : ""}
+                        onChange={(e) => {
+                          const total = parseFloat(e.target.value) || 0;
+                          const meses = mesesRec || 1;
+                          setValorFee(String(total / meses));
+                        }}
+                        placeholder={fmtBRL((row?.valor_fee ?? 0) * (mesesRec || 1))}
+                      />
+                    ) : (
+                      <Input type="number" step="0.01" value={valorFee} onChange={(e) => setValorFee(e.target.value)} placeholder={fmtBRL(row?.valor_fee)} />
+                    )}
+                    {tcv && valorFee && (
+                      <p className="text-[10px] text-muted-foreground">
+                        Fee mensal equivalente: {fmtBRL(parseFloat(valorFee) || 0)}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Meses</Label>
