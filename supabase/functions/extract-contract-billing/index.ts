@@ -65,23 +65,27 @@ Deno.serve(async (req) => {
 - APENAS uma parte "recorrente" (fee mensal), OU
 - AS DUAS partes juntas (híbrido).
 
-Extraia em JSON puro (sem markdown), com forma de pagamento e parcelas INDEPENDENTES para cada parte:
+Extraia em JSON puro (sem markdown), com forma de pagamento, parcelas e data do primeiro vencimento INDEPENDENTES para cada parte:
 {
   "modelo_contrato": "escopo_fechado" | "recorrente" | "hibrido" | null,
   "escopo_fechado": {
     "valor": number | null,
     "forma_pagamento": "cartao_credito_vista"|"cartao_credito_recorrente"|"cartao_credito_parcelado"|"pix"|"boleto"|"cheque"|null,
-    "qtd_parcelas": number | null
+    "qtd_parcelas": number | null,
+    "data_primeiro_vencimento": "YYYY-MM-DD" | null
   } | null,
   "recorrente": {
     "valor_mensal": number | null,
     "forma_pagamento": "cartao_credito_vista"|"cartao_credito_recorrente"|"cartao_credito_parcelado"|"pix"|"boleto"|"cheque"|null,
-    "qtd_meses": number | null
+    "qtd_meses": number | null,
+    "data_primeiro_vencimento": "YYYY-MM-DD" | null
   } | null
 }
 Regras:
 - "hibrido" quando existir setup/escopo one-shot E fee mensal recorrente.
 - "cartao_credito_recorrente" é típico da parte recorrente; "cartao_credito_parcelado"/"boleto" costumam ser da parte de escopo fechado.
+- Para data_primeiro_vencimento procure expressões como "primeiro vencimento", "vencimento em", "pagamento em DD/MM/AAAA", "1ª parcela em ...", "primeira fatura em ...", ou datas explícitas de vencimento. Se só houver dia do mês (ex.: "todo dia 10"), estime o próximo dia 10 a partir da data de assinatura do contrato quando houver; se não houver âncora, use null.
+- Converta datas em português (DD/MM/AAAA) para ISO YYYY-MM-DD.
 - Retorne SOMENTE o JSON.
 
 CONTRATO:
@@ -112,17 +116,28 @@ ${trimmed}`;
     const ef = parsed.escopo_fechado || null;
     const rec = parsed.recorrente || null;
 
+    const normDate = (s: any) => {
+      if (typeof s !== "string") return null;
+      const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!m) return null;
+      const y = parseInt(m[1], 10), mo = parseInt(m[2], 10), d = parseInt(m[3], 10);
+      if (y < 2000 || y > 2100 || mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+      return s;
+    };
+
     const detected = {
       modelo,
       escopo_fechado: ef ? {
         valor: normNum(ef.valor),
         forma_pagamento: normForma(ef.forma_pagamento),
         qtd_parcelas: normInt(ef.qtd_parcelas),
+        data_primeiro_vencimento: normDate(ef.data_primeiro_vencimento),
       } : null,
       recorrente: rec ? {
         valor_mensal: normNum(rec.valor_mensal),
         forma_pagamento: normForma(rec.forma_pagamento),
         qtd_meses: normInt(rec.qtd_meses),
+        data_primeiro_vencimento: normDate(rec.data_primeiro_vencimento),
       } : null,
     };
 

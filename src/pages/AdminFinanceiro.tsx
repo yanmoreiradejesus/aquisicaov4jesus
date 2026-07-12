@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Search, DollarSign } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -14,7 +14,6 @@ import {
   type CobrancaStatus,
 } from "@/hooks/useCobrancas";
 import { usePersistedState } from "@/hooks/usePersistedState";
-import AFaturarDialog, { type AFaturarRow } from "@/components/admin/AFaturarDialog";
 
 const fmtBRL = (v?: number | null) =>
   v == null
@@ -47,12 +46,11 @@ const AdminFinanceiro = () => {
   const [view, setView] = usePersistedState<"faturado" | "a_faturar">("admin:financeiro:view", "faturado");
   const { data: cobrancas = [], isLoading } = useCobrancas();
   const { data: aFaturar = [], isLoading: loadingAFaturar } = useAFaturar();
-  const qc = useQueryClient();
+  const navigate = useNavigate();
 
   const [search, setSearch] = usePersistedState<string>("admin:financeiro:search", "");
   const [statusFilter, setStatusFilter] = usePersistedState<string>("admin:financeiro:status", "all");
   const [tipoFilter, setTipoFilter] = usePersistedState<string>("admin:financeiro:tipo", "all");
-  const [dialogRow, setDialogRow] = useState<AFaturarRow | null>(null);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -288,27 +286,7 @@ const AdminFinanceiro = () => {
                       <TableRow
                         key={a.id}
                         className="cursor-pointer hover:bg-muted/40 transition-colors"
-                        onClick={() =>
-                          setDialogRow({
-                            id: a.id,
-                            cliente_nome: a.cliente_nome,
-                            oportunidade_id: a.oportunidade?.id ?? null,
-                            contrato_url: contratoUrl,
-                            valor_ef: efDisplay ?? null,
-                            valor_fee: feeDisplay ?? null,
-                            modelo_contrato: a.modelo_contrato ?? null,
-                            forma_pagamento_ef: a.forma_pagamento_ef ?? null,
-                            qtd_parcelas_ef: a.qtd_parcelas_ef ?? null,
-                            valor_ef_override: a.valor_ef_override ?? null,
-                            dia_vencimento_primeiro_ef: (a as any).dia_vencimento_primeiro_ef ?? null,
-                            dia_vencimento_demais_ef: (a as any).dia_vencimento_demais_ef ?? null,
-                            forma_pagamento_recorrente: a.forma_pagamento_recorrente ?? null,
-                            qtd_parcelas_recorrente: a.qtd_parcelas_recorrente ?? null,
-                            valor_fee_override: a.valor_fee_override ?? null,
-                            dia_vencimento_primeiro_recorrente: (a as any).dia_vencimento_primeiro_recorrente ?? null,
-                            dia_vencimento_demais_recorrente: (a as any).dia_vencimento_demais_recorrente ?? null,
-                          })
-                        }
+                        onClick={() => navigate(`/admin/financeiro/a-faturar/${a.id}`)}
                       >
                         <TableCell className="font-medium">{a.cliente_nome || "—"}</TableCell>
                         <TableCell>
@@ -329,16 +307,6 @@ const AdminFinanceiro = () => {
             </div>
           </>
         )}
-
-        <AFaturarDialog
-          open={!!dialogRow}
-          onOpenChange={(v) => !v && setDialogRow(null)}
-          row={dialogRow}
-          onValidated={() => {
-            qc.invalidateQueries({ queryKey: ["accounts", "a-faturar"] });
-            qc.invalidateQueries({ queryKey: ["cobrancas"] });
-          }}
-        />
       </main>
     </div>
   );
