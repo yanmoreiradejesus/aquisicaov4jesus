@@ -127,20 +127,35 @@ export default function AccountsList() {
                           <TableHead>Cliente</TableHead>
                           <TableHead className="w-[110px]">Saúde</TableHead>
                           <TableHead>Account</TableHead>
-                          <TableHead>GT</TableHead>
+                          <TableHead>Escopo</TableHead>
                           <TableHead className="text-right">MRR</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {rows.map((a) => {
                           const h = healthBand(a.health_score);
+                          const chips = [
+                            a.escopo.trafego && "Tráfego",
+                            a.escopo.social_media && "Social",
+                            a.escopo.design && "Design",
+                            a.escopo.crm && "CRM",
+                          ].filter(Boolean) as string[];
                           return (
                             <TableRow
                               key={a.id}
                               className="cursor-pointer hover:bg-surface-2/40"
                               onClick={() => navigate(`/comercial/accounts/${a.id}`)}
                             >
-                              <TableCell className="font-medium text-foreground">{a.cliente_nome}</TableCell>
+                              <TableCell className="font-medium text-foreground">
+                                <div className="flex items-center gap-2">
+                                  <span>{a.cliente_nome}</span>
+                                  {!a.escopo.validado && (
+                                    <span className="inline-flex items-center rounded-full bg-primary/15 text-primary border border-primary/30 px-1.5 py-0.5 text-[9px] font-bold tracking-wider uppercase">
+                                      New
+                                    </span>
+                                  )}
+                                </div>
+                              </TableCell>
                               <TableCell>
                                 <span className="inline-flex items-center gap-2 text-[12px] text-foreground/80">
                                   <span className={`h-2 w-2 rounded-full ${h.dot}`} />
@@ -148,8 +163,27 @@ export default function AccountsList() {
                                 </span>
                               </TableCell>
                               <TableCell className="text-foreground/80">{nameById.get(a.account_manager_id ?? "") ?? "—"}</TableCell>
-                              <TableCell className="text-foreground/80">{nameById.get(a.gt_id ?? "") ?? "—"}</TableCell>
-                              <TableCell className="text-right tabular-nums text-foreground">{fmtBRL(a.mrr)}</TableCell>
+                              <TableCell>
+                                {chips.length === 0 ? (
+                                  <span className="text-[11px] text-muted-foreground">—</span>
+                                ) : (
+                                  <div className="flex flex-wrap gap-1">
+                                    {chips.map((c) => (
+                                      <span
+                                        key={c}
+                                        className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] border ${
+                                          a.escopo.validado
+                                            ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+                                            : "bg-amber-500/10 text-amber-300 border-amber-500/30"
+                                        }`}
+                                      >
+                                        {c}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums text-foreground">{fmtBRL(a.effective_mrr)}</TableCell>
                             </TableRow>
                           );
                         })}
