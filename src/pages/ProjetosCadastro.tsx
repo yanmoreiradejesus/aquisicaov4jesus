@@ -117,8 +117,6 @@ const ProjetosCadastro = () => {
     return rows.filter((r) => (r.cliente_nome ?? "").toLowerCase().includes(q));
   }, [rows, search]);
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["projetos_cadastro"] });
-
   return (
     <div className="min-h-screen bg-background">
       <main className="w-full px-4 lg:px-8 py-6 lg:py-10 animate-fade-in">
