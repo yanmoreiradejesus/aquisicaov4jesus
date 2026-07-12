@@ -54,10 +54,18 @@ export default function Expansao() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [ganhoOpen, setGanhoOpen] = useState(false);
   const [ganhoTarget, setGanhoTarget] = useState<ExpansaoRow | null>(null);
-  const [ganhoForm, setGanhoForm] = useState<{ tipo: ExpansaoTipoGanho; fee: string; ef: string }>({
+  const [ganhoForm, setGanhoForm] = useState<{
+    tipo: ExpansaoTipoGanho;
+    fee: string;
+    ef: string;
+    novoFeeMensal: string;
+    contratoFile: File | null;
+  }>({
     tipo: "aumento_fee",
     fee: "",
     ef: "",
+    novoFeeMensal: "",
+    contratoFile: null,
   });
   const [perdaOpen, setPerdaOpen] = useState(false);
   const [perdaTarget, setPerdaTarget] = useState<ExpansaoRow | null>(null);
