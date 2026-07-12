@@ -94,8 +94,14 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
           {/* PDF viewer */}
           <div className="bg-muted/30 border-r overflow-hidden">
             {row?.contrato_url ? (
-              <iframe src={row.contrato_url} className="w-full h-full" title="Contrato" />
-            ) : (
+              signedUrl ? (
+                <iframe src={signedUrl} className="w-full h-full" title="Contrato" />
+              ) : (
+                <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Carregando contrato...
+                </div>
+              )
+            ) : (<div className="hidden" />) && false ? null : row?.contrato_url ? null : (
               <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
                 <FileText className="h-10 w-10 opacity-50" />
                 <p className="text-sm">Nenhum contrato anexado nesta oportunidade.</p>
