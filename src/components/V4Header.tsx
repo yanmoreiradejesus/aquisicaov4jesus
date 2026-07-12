@@ -72,8 +72,8 @@ const V4Header = () => {
   const visibleAquisicaoItems = aquisicaoItems.filter((item) => canSee(item.path));
   const isComercialActive = comercialItems.some((item) => isActive(item.path));
   const visibleComercialItems = comercialItems.filter((item) => canSee(item.path));
-  const isPegActive = pegItems.some((item) => isActive(item.path)) || location.pathname.startsWith("/comercial/accounts");
-  const visiblePegItems = pegItems.filter((item) => canSee(item.path));
+  const isPegActive = tarefasItems.some((item) => isActive(item.path)) || location.pathname.startsWith("/comercial/accounts") || location.pathname.startsWith("/tarefas");
+  const visiblePegItems = tarefasItems.filter((item) => hasPageAccess(item.path) || item.path.startsWith("/tarefas"));
   const isAdminMenuActive = adminMenuItems.some((item) => isActive(item.path));
   // Admin sempre visível para quem tem permissão de acesso — não depende do tenant_enabled_pages
   const visibleAdminMenuItems = adminMenuItems.filter((item) => hasPageAccess(item.path));
