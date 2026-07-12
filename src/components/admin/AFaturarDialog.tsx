@@ -64,6 +64,7 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
   const [mesesRec, setMesesRec] = useState<number>(12);
   const [diaPrimeiroRec, setDiaPrimeiroRec] = useState<number>(10);
   const [diaDemaisRec, setDiaDemaisRec] = useState<number>(10);
+  const [tcv, setTcv] = useState<boolean>(false);
 
   const [saving, setSaving] = useState(false);
   const [detecting, setDetecting] = useState(false);
