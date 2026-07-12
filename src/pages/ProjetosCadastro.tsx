@@ -57,7 +57,7 @@ async function fetchRows(): Promise<Row[]> {
   const { data, error } = await (supabase as any)
     .from("crm_projetos")
     .select(
-      "id, account_id, account:accounts(id, cliente_nome, squad, growth_class_transcricao, growth_class_transcricao_reuniao, pre_growth_class_relatorio, oportunidade:crm_oportunidades(id, transcricao_reuniao, contrato_url, lead:crm_leads(id, data_reuniao_agendada, data_reuniao_realizada))), growth_class_ia_relatorio"
+      "id, account_id, escopo_trafego, escopo_social_media, escopo_design, escopo_crm, escopo_validado, account:accounts(id, cliente_nome, squad, growth_class_transcricao, growth_class_transcricao_reuniao, pre_growth_class_relatorio, oportunidade:crm_oportunidades(id, transcricao_reuniao, contrato_url, lead:crm_leads(id, data_reuniao_agendada, data_reuniao_realizada))), growth_class_ia_relatorio"
     )
     .order("updated_at", { ascending: false });
   if (error) throw error;
@@ -76,6 +76,11 @@ async function fetchRows(): Promise<Row[]> {
     data_reuniao_agendada: p.account?.oportunidade?.lead?.data_reuniao_agendada ?? null,
     data_reuniao_realizada: p.account?.oportunidade?.lead?.data_reuniao_realizada ?? null,
     lead_id: p.account?.oportunidade?.lead?.id ?? null,
+    escopo_trafego: !!p.escopo_trafego,
+    escopo_social_media: !!p.escopo_social_media,
+    escopo_design: !!p.escopo_design,
+    escopo_crm: !!p.escopo_crm,
+    escopo_validado: !!p.escopo_validado,
   }));
 }
 
