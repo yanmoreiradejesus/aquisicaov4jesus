@@ -15,7 +15,7 @@ const SQUADS: SquadKey[] = ["strikers", "fenix", "saber"];
 
 function SummaryCards({ accounts }: { accounts: ReturnType<typeof useAccountsList>["data"] }) {
   const list = accounts ?? [];
-  const mrrTotal = list.reduce((acc, a) => acc + (Number(a.mrr) || 0), 0);
+  const mrrTotal = list.reduce((acc, a) => acc + (Number(a.effective_mrr) || 0), 0);
   const count = list.length;
   const buckets = list.reduce(
     (acc, a) => {
