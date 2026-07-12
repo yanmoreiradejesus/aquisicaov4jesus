@@ -163,4 +163,18 @@ All colors MUST be HSL.
     transform: translateY(-2px);
     box-shadow: var(--shadow-lg);
   }
+
+  /* Origem badges — muted organic labels (VD Brasil palette) */
+  .badge-origem-aquisicao {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-light tracking-wide border;
+    background-color: hsl(var(--vd-reseda) / 0.15);
+    color: hsl(var(--vd-ash));
+    border-color: hsl(var(--vd-reseda) / 0.3);
+  }
+  .badge-origem-expansao {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-light tracking-wide border;
+    background-color: hsl(var(--vd-beaver) / 0.15);
+    color: hsl(var(--vd-bone));
+    border-color: hsl(var(--vd-beaver) / 0.3);
+  }
 }
