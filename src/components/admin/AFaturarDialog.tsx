@@ -94,6 +94,7 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
     setDiaDemaisEf(row.dia_vencimento_demais_ef ?? row.dia_vencimento_primeiro_ef ?? 10);
     setDiaPrimeiroRec(row.dia_vencimento_primeiro_recorrente ?? 10);
     setDiaDemaisRec(row.dia_vencimento_demais_recorrente ?? row.dia_vencimento_primeiro_recorrente ?? 10);
+    setDateOverrides({});
 
     const faltando = !row.modelo_contrato || (!row.forma_pagamento_ef && !row.forma_pagamento_recorrente);
     if (faltando && row.contrato_url) {
