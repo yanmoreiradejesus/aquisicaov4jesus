@@ -142,9 +142,9 @@ export default function AccountDetail() {
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
               <span>Onboarding: <span className="text-foreground/80">{account.onboarding_status}</span></span>
-              <span>eKyte: <span className="text-foreground/80">{account.ekyte_workspace_id ?? "—"}</span></span>
               <span>Fim do contrato: <span className="text-foreground/80">{fmtDate(account.data_fim_contrato)}</span></span>
             </div>
+
           </div>
           <Button onClick={openEdit}>
             <Pencil className="h-4 w-4 mr-2" /> Editar
