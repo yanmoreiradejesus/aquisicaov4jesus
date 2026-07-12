@@ -201,7 +201,29 @@ const ProjetosCadastro = () => {
                         <StatusIcon ok={hasContrato} />
                       </TableCell>
                       <TableCell className={cellCls} onClick={() => setEditing({ row: r, field: "resumo_gc" })}>
-                        <StatusIcon ok={hasResumo} />
+                        <div className="flex items-center gap-2">
+                          <StatusIcon ok={hasResumo} />
+                          {!hasResumo && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-6 px-2 text-[10px] rounded-lg"
+                              disabled={!!generatingGc[r.account_id]}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                gerarResumoGc(r.account_id);
+                              }}
+                            >
+                              {generatingGc[r.account_id] ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <>
+                                  <Sparkles className="h-3 w-3 mr-1" /> Gerar
+                                </>
+                              )}
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className={cellCls} onClick={() => setEditing({ row: r, field: "transcricao_gc" })}>
                         <StatusIcon ok={hasTransGc} />
