@@ -164,11 +164,15 @@ export default function Expansao() {
     if (!op || op.etapa === to) return;
 
     if (to === "ganho") {
+      const currentMrr = Number(op.projeto?.account?.mrr ?? 0);
+      const feeVal = op.valor_aumento_fee != null ? Number(op.valor_aumento_fee) : 0;
       setGanhoTarget(op);
       setGanhoForm({
         tipo: op.tipo_ganho ?? "aumento_fee",
         fee: op.valor_aumento_fee != null ? String(op.valor_aumento_fee) : "",
         ef: op.valor_escopo_fechado != null ? String(op.valor_escopo_fechado) : "",
+        novoFeeMensal: op.novo_fee_mensal != null ? String(op.novo_fee_mensal) : String(currentMrr + feeVal),
+        contratoFile: null,
       });
       setGanhoOpen(true);
       return;
