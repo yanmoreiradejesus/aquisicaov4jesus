@@ -28,12 +28,14 @@ export interface ExpansaoRow {
   motivo_perda: string | null;
   data_proposta: string | null;
   data_negociacao: string | null;
+  contrato_path: string | null;
+  novo_fee_mensal: number | null;
   created_at: string;
   updated_at: string;
   projeto?: {
     id: string;
     nome: string;
-    account?: { id: string; cliente_nome: string | null } | null;
+    account?: { id: string; cliente_nome: string | null; mrr: number | null; mrr_variavel: number | null } | null;
   } | null;
 }
 
