@@ -80,6 +80,13 @@ All colors MUST be HSL.
     /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-ios: all 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+
+    /* VD Brasil identity palette */
+    --vd-reseda: 72 18% 38%;
+    --vd-bistre: 20 24% 19%;
+    --vd-ash: 78 10% 74%;
+    --vd-bone: 52 19% 81%;
+    --vd-beaver: 28 21% 49%;
   }
 }
 
