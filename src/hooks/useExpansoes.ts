@@ -28,12 +28,14 @@ export interface ExpansaoRow {
   motivo_perda: string | null;
   data_proposta: string | null;
   data_negociacao: string | null;
+  contrato_path: string | null;
+  novo_fee_mensal: number | null;
   created_at: string;
   updated_at: string;
   projeto?: {
     id: string;
     nome: string;
-    account?: { id: string; cliente_nome: string | null } | null;
+    account?: { id: string; cliente_nome: string | null; mrr: number | null; mrr_variavel: number | null } | null;
   } | null;
 }
 
@@ -45,7 +47,7 @@ export function useExpansoes() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("crm_expansoes")
-        .select("*, projeto:crm_projetos(id, nome, account:accounts(id, cliente_nome))")
+        .select("*, projeto:crm_projetos(id, nome, account:accounts(id, cliente_nome, mrr, mrr_variavel))")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as ExpansaoRow[];
@@ -100,18 +102,36 @@ export function useExpansoes() {
       valor_aumento_fee?: number | null;
       valor_escopo_fechado?: number | null;
       motivo_perda?: string;
+      contrato_path?: string | null;
+      novo_fee_mensal?: number | null;
+      account_id?: string | null;
     }) => {
       const patch: any = { etapa: args.etapa };
       if (args.etapa === "ganho") {
         patch.tipo_ganho = args.tipo_ganho ?? null;
         patch.valor_aumento_fee = args.valor_aumento_fee ?? null;
         patch.valor_escopo_fechado = args.valor_escopo_fechado ?? null;
+        if (args.contrato_path !== undefined) patch.contrato_path = args.contrato_path;
+        if (args.novo_fee_mensal !== undefined) patch.novo_fee_mensal = args.novo_fee_mensal;
       }
       if (args.etapa === "perdido" && args.motivo_perda !== undefined) {
         patch.motivo_perda = args.motivo_perda;
       }
       const { error } = await (supabase as any).from("crm_expansoes").update(patch).eq("id", args.id);
       if (error) throw error;
+
+      // Atualiza MRR da account quando houver novo fee mensal (recorrente)
+      if (
+        args.etapa === "ganho" &&
+        args.account_id &&
+        args.novo_fee_mensal != null &&
+        (args.tipo_ganho === "aumento_fee" || args.tipo_ganho === "ambos")
+      ) {
+        await (supabase as any)
+          .from("accounts")
+          .update({ mrr: args.novo_fee_mensal })
+          .eq("id", args.account_id);
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["crm_expansoes"] }),
   });

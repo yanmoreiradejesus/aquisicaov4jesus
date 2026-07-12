@@ -16,6 +16,7 @@ import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
 import { ExpansaoColumn } from "@/components/expansao/ExpansaoColumn";
 import { ExpansaoCard } from "@/components/expansao/ExpansaoCard";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 const fmtBRL = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(v);
@@ -54,10 +55,18 @@ export default function Expansao() {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [ganhoOpen, setGanhoOpen] = useState(false);
   const [ganhoTarget, setGanhoTarget] = useState<ExpansaoRow | null>(null);
-  const [ganhoForm, setGanhoForm] = useState<{ tipo: ExpansaoTipoGanho; fee: string; ef: string }>({
+  const [ganhoForm, setGanhoForm] = useState<{
+    tipo: ExpansaoTipoGanho;
+    fee: string;
+    ef: string;
+    novoFeeMensal: string;
+    contratoFile: File | null;
+  }>({
     tipo: "aumento_fee",
     fee: "",
     ef: "",
+    novoFeeMensal: "",
+    contratoFile: null,
   });
   const [perdaOpen, setPerdaOpen] = useState(false);
   const [perdaTarget, setPerdaTarget] = useState<ExpansaoRow | null>(null);
@@ -156,11 +165,15 @@ export default function Expansao() {
     if (!op || op.etapa === to) return;
 
     if (to === "ganho") {
+      const currentMrr = Number(op.projeto?.account?.mrr ?? 0);
+      const feeVal = op.valor_aumento_fee != null ? Number(op.valor_aumento_fee) : 0;
       setGanhoTarget(op);
       setGanhoForm({
         tipo: op.tipo_ganho ?? "aumento_fee",
         fee: op.valor_aumento_fee != null ? String(op.valor_aumento_fee) : "",
         ef: op.valor_escopo_fechado != null ? String(op.valor_escopo_fechado) : "",
+        novoFeeMensal: op.novo_fee_mensal != null ? String(op.novo_fee_mensal) : String(currentMrr + feeVal),
+        contratoFile: null,
       });
       setGanhoOpen(true);
       return;
@@ -178,16 +191,38 @@ export default function Expansao() {
     const tipo = ganhoForm.tipo;
     const fee = ganhoForm.fee ? Number(ganhoForm.fee) : null;
     const ef = ganhoForm.ef ? Number(ganhoForm.ef) : null;
+    const temFee = tipo === "aumento_fee" || tipo === "ambos";
+    const novoFee = temFee && ganhoForm.novoFeeMensal ? Number(ganhoForm.novoFeeMensal) : null;
     if (tipo === "aumento_fee" && !fee) return toast({ title: "Informe o valor do aumento de fee", variant: "destructive" });
     if (tipo === "escopo_fechado" && !ef) return toast({ title: "Informe o valor do escopo fechado", variant: "destructive" });
     if (tipo === "ambos" && (!fee || !ef)) return toast({ title: "Informe fee e escopo fechado", variant: "destructive" });
+    if (temFee && (!novoFee || novoFee <= 0))
+      return toast({ title: "Informe o novo fee mensal recorrente", variant: "destructive" });
+    if (!ganhoTarget.contrato_path && !ganhoForm.contratoFile)
+      return toast({ title: "Anexe o contrato assinado", variant: "destructive" });
+
     try {
+      let contratoPath = ganhoTarget.contrato_path;
+      if (ganhoForm.contratoFile) {
+        const file = ganhoForm.contratoFile;
+        const safe = file.name.replace(/[^\w.\-]+/g, "_");
+        const path = `expansoes/${ganhoTarget.tenant_id}/${ganhoTarget.id}/${crypto.randomUUID()}-${safe}`;
+        const { error: upErr } = await supabase.storage
+          .from("contratos-assinados")
+          .upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type || undefined });
+        if (upErr) throw upErr;
+        contratoPath = path;
+      }
+
       await updateEtapa.mutateAsync({
         id: ganhoTarget.id,
         etapa: "ganho",
         tipo_ganho: tipo,
         valor_aumento_fee: tipo === "escopo_fechado" ? null : fee,
         valor_escopo_fechado: tipo === "aumento_fee" ? null : ef,
+        contrato_path: contratoPath,
+        novo_fee_mensal: temFee ? novoFee : null,
+        account_id: ganhoTarget.projeto?.account?.id ?? null,
       });
       setGanhoOpen(false);
       setGanhoTarget(null);
@@ -459,9 +494,37 @@ export default function Expansao() {
                 <Input
                   type="number"
                   value={ganhoForm.fee}
-                  onChange={(e) => setGanhoForm((f) => ({ ...f, fee: e.target.value }))}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setGanhoForm((f) => {
+                      const currentMrr = Number(ganhoTarget?.projeto?.account?.mrr ?? 0);
+                      const auto = v ? String(currentMrr + Number(v)) : String(currentMrr);
+                      return { ...f, fee: v, novoFeeMensal: auto };
+                    });
+                  }}
                   placeholder="0"
                 />
+              </div>
+            )}
+            {(ganhoForm.tipo === "aumento_fee" || ganhoForm.tipo === "ambos") && (
+              <div className="space-y-1.5">
+                <Label>
+                  Novo fee mensal recorrente (R$)
+                  {ganhoTarget?.projeto?.account?.mrr != null && (
+                    <span className="ml-2 text-[10px] text-muted-foreground font-normal">
+                      atual: {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(Number(ganhoTarget.projeto.account.mrr))}
+                    </span>
+                  )}
+                </Label>
+                <Input
+                  type="number"
+                  value={ganhoForm.novoFeeMensal}
+                  onChange={(e) => setGanhoForm((f) => ({ ...f, novoFeeMensal: e.target.value }))}
+                  placeholder="0"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Valor total do fee mensal do cliente após o aumento. Substitui o MRR da conta.
+                </p>
               </div>
             )}
             {(ganhoForm.tipo === "escopo_fechado" || ganhoForm.tipo === "ambos") && (
@@ -475,6 +538,21 @@ export default function Expansao() {
                 />
               </div>
             )}
+
+            <div className="space-y-1.5 pt-2 border-t border-border/40">
+              <Label>Contrato assinado (PDF)</Label>
+              <Input
+                type="file"
+                accept="application/pdf,.pdf"
+                onChange={(e) => setGanhoForm((f) => ({ ...f, contratoFile: e.target.files?.[0] ?? null }))}
+                className="cursor-pointer"
+              />
+              {ganhoTarget?.contrato_path && !ganhoForm.contratoFile && (
+                <p className="text-[10px] text-muted-foreground truncate">
+                  Anexado: {ganhoTarget.contrato_path.split("/").pop()}
+                </p>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => { setGanhoOpen(false); setGanhoTarget(null); }}>
