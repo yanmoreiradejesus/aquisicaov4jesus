@@ -231,6 +231,11 @@ const AppRoutes = () => {
             <PageTransition><AdminFinanceiro /></PageTransition>
           </ProtectedRoute>
         } />
+        <Route path="/admin/financeiro/a-faturar/:accountId" element={
+          <ProtectedRoute requiredPath="/admin/financeiro">
+            <PageTransition><AdminFaturarContrato /></PageTransition>
+          </ProtectedRoute>
+        } />
 
         {/* Perfil (auto-edição) */}
         <Route path="/perfil" element={
