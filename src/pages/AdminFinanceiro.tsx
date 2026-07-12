@@ -33,7 +33,7 @@ function useAFaturar() {
       const { data, error } = await (supabase as any)
         .from("accounts")
         .select(
-          "id, cliente_nome, oportunidade_id, created_at, forma_pagamento, qtd_parcelas, modelo_contrato, forma_pagamento_ef, qtd_parcelas_ef, valor_ef_override, forma_pagamento_recorrente, qtd_parcelas_recorrente, valor_fee_override, oportunidade:crm_oportunidades(id, contrato_url, valor_ef, valor_fee)"
+          "id, cliente_nome, oportunidade_id, created_at, forma_pagamento, qtd_parcelas, modelo_contrato, forma_pagamento_ef, qtd_parcelas_ef, valor_ef_override, dia_vencimento_primeiro_ef, dia_vencimento_demais_ef, forma_pagamento_recorrente, qtd_parcelas_recorrente, valor_fee_override, dia_vencimento_primeiro_recorrente, dia_vencimento_demais_recorrente, oportunidade:crm_oportunidades(id, contrato_url, valor_ef, valor_fee)"
         )
         .eq("faturamento_status", "a_faturar")
         .order("created_at", { ascending: false });
@@ -300,9 +300,13 @@ const AdminFinanceiro = () => {
                                 forma_pagamento_ef: a.forma_pagamento_ef ?? null,
                                 qtd_parcelas_ef: a.qtd_parcelas_ef ?? null,
                                 valor_ef_override: a.valor_ef_override ?? null,
+                                dia_vencimento_primeiro_ef: (a as any).dia_vencimento_primeiro_ef ?? null,
+                                dia_vencimento_demais_ef: (a as any).dia_vencimento_demais_ef ?? null,
                                 forma_pagamento_recorrente: a.forma_pagamento_recorrente ?? null,
                                 qtd_parcelas_recorrente: a.qtd_parcelas_recorrente ?? null,
                                 valor_fee_override: a.valor_fee_override ?? null,
+                                dia_vencimento_primeiro_recorrente: (a as any).dia_vencimento_primeiro_recorrente ?? null,
+                                dia_vencimento_demais_recorrente: (a as any).dia_vencimento_demais_recorrente ?? null,
                               })
                             }
                           >

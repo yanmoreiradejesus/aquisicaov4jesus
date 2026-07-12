@@ -19,9 +19,13 @@ export type AFaturarRow = {
   forma_pagamento_ef?: string | null;
   qtd_parcelas_ef?: number | null;
   valor_ef_override?: number | null;
+  dia_vencimento_primeiro_ef?: number | null;
+  dia_vencimento_demais_ef?: number | null;
   forma_pagamento_recorrente?: string | null;
   qtd_parcelas_recorrente?: number | null;
   valor_fee_override?: number | null;
+  dia_vencimento_primeiro_recorrente?: number | null;
+  dia_vencimento_demais_recorrente?: number | null;
 };
 
 type Modelo = "escopo_fechado" | "recorrente" | "hibrido";
@@ -50,11 +54,15 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
   const [valorEf, setValorEf] = useState<string>("");
   const [formaEf, setFormaEf] = useState("");
   const [parcelasEf, setParcelasEf] = useState<number>(1);
+  const [diaPrimeiroEf, setDiaPrimeiroEf] = useState<number>(10);
+  const [diaDemaisEf, setDiaDemaisEf] = useState<number>(10);
 
   // Parte "Recorrente"
   const [valorFee, setValorFee] = useState<string>("");
   const [formaRec, setFormaRec] = useState("");
   const [mesesRec, setMesesRec] = useState<number>(12);
+  const [diaPrimeiroRec, setDiaPrimeiroRec] = useState<number>(10);
+  const [diaDemaisRec, setDiaDemaisRec] = useState<number>(10);
 
   const [saving, setSaving] = useState(false);
   const [detecting, setDetecting] = useState(false);
@@ -74,6 +82,10 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
     setValorFee(row.valor_fee_override != null ? String(row.valor_fee_override) : (row.valor_fee != null ? String(row.valor_fee) : ""));
     setFormaRec(row.forma_pagamento_recorrente || "");
     setMesesRec(row.qtd_parcelas_recorrente || 12);
+    setDiaPrimeiroEf(row.dia_vencimento_primeiro_ef ?? 10);
+    setDiaDemaisEf(row.dia_vencimento_demais_ef ?? row.dia_vencimento_primeiro_ef ?? 10);
+    setDiaPrimeiroRec(row.dia_vencimento_primeiro_recorrente ?? 10);
+    setDiaDemaisRec(row.dia_vencimento_demais_recorrente ?? row.dia_vencimento_primeiro_recorrente ?? 10);
 
     const faltando = !row.modelo_contrato || (!row.forma_pagamento_ef && !row.forma_pagamento_recorrente);
     if (faltando && row.contrato_url) {
@@ -151,6 +163,10 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
       p_forma_recorrente: temRec ? formaRec : null,
       p_qtd_parcelas_recorrente: temRec ? mesesRec : null,
       p_valor_fee: temRec ? parseFloat(valorFee || "0") : null,
+      p_dia_venc_primeiro_ef: temEf ? diaPrimeiroEf : null,
+      p_dia_venc_demais_ef: temEf ? diaDemaisEf : null,
+      p_dia_venc_primeiro_rec: temRec ? diaPrimeiroRec : null,
+      p_dia_venc_demais_rec: temRec ? diaDemaisRec : null,
     });
     setSaving(false);
     if (error) {
@@ -248,6 +264,16 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
                     <p className="text-[10px] text-muted-foreground">Forma sem parcelamento — as parcelas serão geradas mesmo assim como cobranças mensais.</p>
                   )}
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Dia venc. 1ª parcela</Label>
+                    <Input type="number" min={1} max={31} value={diaPrimeiroEf} onChange={(e) => setDiaPrimeiroEf(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Dia venc. demais</Label>
+                    <Input type="number" min={1} max={31} value={diaDemaisEf} onChange={(e) => setDiaDemaisEf(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} disabled={parcelasEf <= 1} />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -274,6 +300,16 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Dia venc. 1º mês</Label>
+                    <Input type="number" min={1} max={31} value={diaPrimeiroRec} onChange={(e) => setDiaPrimeiroRec(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Dia venc. demais</Label>
+                    <Input type="number" min={1} max={31} value={diaDemaisRec} onChange={(e) => setDiaDemaisRec(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} disabled={mesesRec <= 1} />
+                  </div>
                 </div>
               </div>
             )}
