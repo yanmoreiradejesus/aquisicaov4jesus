@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, DollarSign, FileText } from "lucide-react";
+import { Search, DollarSign } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
