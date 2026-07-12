@@ -271,11 +271,12 @@ export default function Expansao() {
       <div className="max-w-[1600px] mx-auto px-6 py-8">
         <header className="mb-6 flex items-end justify-between gap-4 flex-wrap">
           <div>
-            <div className="text-[11px] uppercase tracking-[0.24em] text-muted-foreground mb-1">Revenue</div>
-            <h1 className="text-3xl font-display font-light tracking-tight text-foreground">Expansão</h1>
-            <p className="text-sm text-muted-foreground mt-1 max-w-xl">
-              CRM de monetização da base ativa. Cada projeto cadastrado é candidato a expansão via aumento de fee ou escopo fechado.
+            <p className="text-[10px] font-semibold text-muted-foreground tracking-[0.2em] uppercase mb-1">
+              Revenue
             </p>
+            <h1 className="font-display text-[28px] lg:text-[34px] font-semibold text-foreground tracking-[-0.02em] normal-case">
+              Expansão
+            </h1>
           </div>
           <div className="flex items-center gap-2">
             <div className="relative">
