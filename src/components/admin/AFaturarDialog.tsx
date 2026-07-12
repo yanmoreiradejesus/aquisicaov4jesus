@@ -54,11 +54,15 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
   const [valorEf, setValorEf] = useState<string>("");
   const [formaEf, setFormaEf] = useState("");
   const [parcelasEf, setParcelasEf] = useState<number>(1);
+  const [diaPrimeiroEf, setDiaPrimeiroEf] = useState<number>(10);
+  const [diaDemaisEf, setDiaDemaisEf] = useState<number>(10);
 
   // Parte "Recorrente"
   const [valorFee, setValorFee] = useState<string>("");
   const [formaRec, setFormaRec] = useState("");
   const [mesesRec, setMesesRec] = useState<number>(12);
+  const [diaPrimeiroRec, setDiaPrimeiroRec] = useState<number>(10);
+  const [diaDemaisRec, setDiaDemaisRec] = useState<number>(10);
 
   const [saving, setSaving] = useState(false);
   const [detecting, setDetecting] = useState(false);
