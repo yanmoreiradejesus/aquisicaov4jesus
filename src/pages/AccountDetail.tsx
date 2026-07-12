@@ -10,7 +10,7 @@ import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
 import { useTenantConfig } from "@/hooks/useTenantConfig";
 import { AccountManagementFields, type AccountFieldsValue } from "@/components/accounts/AccountManagementFields";
 import { useToast } from "@/hooks/use-toast";
-import { AccountEkyteTasks } from "@/components/accounts/AccountEkyteTasks";
+
 import { ProjetoEscopoDialog } from "@/components/projetos/ProjetoEscopoDialog";
 
 const fmtBRL = (v?: number | null) =>
