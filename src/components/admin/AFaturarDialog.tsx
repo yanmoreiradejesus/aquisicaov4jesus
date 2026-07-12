@@ -47,8 +47,11 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
       .from("contratos-assinados")
       .createSignedUrl(path, 60 * 60)
       .then(({ data }) => setSignedUrl(data?.signedUrl ?? null));
+  }, [row?.contrato_url]);
+
   const fmtBRL = (v?: number | null) =>
     v == null ? "—" : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(v));
+
 
 
   const handleValidate = async () => {
