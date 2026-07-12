@@ -15,10 +15,16 @@ export type AFaturarRow = {
   contrato_url: string | null;
   valor_ef: number | null;
   valor_fee: number | null;
-  forma_pagamento?: string | null;
-  qtd_parcelas?: number | null;
   modelo_contrato?: string | null;
+  forma_pagamento_ef?: string | null;
+  qtd_parcelas_ef?: number | null;
+  valor_ef_override?: number | null;
+  forma_pagamento_recorrente?: string | null;
+  qtd_parcelas_recorrente?: number | null;
+  valor_fee_override?: number | null;
 };
+
+type Modelo = "escopo_fechado" | "recorrente" | "hibrido";
 
 const FORMA_OPTIONS: { value: string; label: string; needsParcelas: boolean }[] = [
   { value: "cartao_credito_vista", label: "Cartão de crédito à vista", needsParcelas: false },
@@ -38,32 +44,56 @@ interface Props {
 
 const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
   const { toast } = useToast();
-  const [formaPagamento, setFormaPagamento] = useState("");
-  const [qtdParcelas, setQtdParcelas] = useState<number>(1);
-  const [modelo, setModelo] = useState<"escopo_fechado" | "recorrente">("recorrente");
+  const [modelo, setModelo] = useState<Modelo>("recorrente");
+
+  // Parte "Escopo fechado"
+  const [valorEf, setValorEf] = useState<string>("");
+  const [formaEf, setFormaEf] = useState("");
+  const [parcelasEf, setParcelasEf] = useState<number>(1);
+
+  // Parte "Recorrente"
+  const [valorFee, setValorFee] = useState<string>("");
+  const [formaRec, setFormaRec] = useState("");
+  const [mesesRec, setMesesRec] = useState<number>(12);
+
   const [saving, setSaving] = useState(false);
   const [detecting, setDetecting] = useState(false);
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
 
-  const needsParcelas = FORMA_OPTIONS.find((o) => o.value === formaPagamento)?.needsParcelas ?? false;
+  const temEf = modelo === "escopo_fechado" || modelo === "hibrido";
+  const temRec = modelo === "recorrente" || modelo === "hibrido";
+  const parcelasEfLabelNeeded = FORMA_OPTIONS.find((o) => o.value === formaEf)?.needsParcelas ?? false;
 
-  // Preenche a partir da account e dispara auto-detecção se faltar dado
   useEffect(() => {
     if (!row) return;
-    setFormaPagamento(row.forma_pagamento || "");
-    setQtdParcelas(row.qtd_parcelas || 1);
-    setModelo((row.modelo_contrato as any) || "recorrente");
+    const m = (row.modelo_contrato as Modelo) || "recorrente";
+    setModelo(m);
+    setValorEf(row.valor_ef_override != null ? String(row.valor_ef_override) : (row.valor_ef != null ? String(row.valor_ef) : ""));
+    setFormaEf(row.forma_pagamento_ef || "");
+    setParcelasEf(row.qtd_parcelas_ef || 1);
+    setValorFee(row.valor_fee_override != null ? String(row.valor_fee_override) : (row.valor_fee != null ? String(row.valor_fee) : ""));
+    setFormaRec(row.forma_pagamento_recorrente || "");
+    setMesesRec(row.qtd_parcelas_recorrente || 12);
 
-    const missing = !row.forma_pagamento || !row.modelo_contrato;
-    if (missing && row.contrato_url) {
+    const faltando = !row.modelo_contrato || (!row.forma_pagamento_ef && !row.forma_pagamento_recorrente);
+    if (faltando && row.contrato_url) {
       setDetecting(true);
       (supabase as any).functions
         .invoke("extract-contract-billing", { body: { account_id: row.id } })
         .then(({ data }: any) => {
           const d = data?.detected;
-          if (d?.forma && !row.forma_pagamento) setFormaPagamento(d.forma);
-          if (d?.modelo && !row.modelo_contrato) setModelo(d.modelo);
-          if (d?.parcelas && !row.qtd_parcelas) setQtdParcelas(d.parcelas);
+          if (!d) return;
+          if (d.modelo && !row.modelo_contrato) setModelo(d.modelo);
+          if (d.escopo_fechado) {
+            if (d.escopo_fechado.valor && row.valor_ef_override == null) setValorEf(String(d.escopo_fechado.valor));
+            if (d.escopo_fechado.forma_pagamento && !row.forma_pagamento_ef) setFormaEf(d.escopo_fechado.forma_pagamento);
+            if (d.escopo_fechado.qtd_parcelas && !row.qtd_parcelas_ef) setParcelasEf(d.escopo_fechado.qtd_parcelas);
+          }
+          if (d.recorrente) {
+            if (d.recorrente.valor_mensal && row.valor_fee_override == null) setValorFee(String(d.recorrente.valor_mensal));
+            if (d.recorrente.forma_pagamento && !row.forma_pagamento_recorrente) setFormaRec(d.recorrente.forma_pagamento);
+            if (d.recorrente.qtd_meses && !row.qtd_parcelas_recorrente) setMesesRec(d.recorrente.qtd_meses);
+          }
         })
         .catch(() => {})
         .finally(() => setDetecting(false));
@@ -74,14 +104,8 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
     let objectUrl: string | null = null;
     const load = async () => {
       const path = row?.contrato_url;
-      if (!path) {
-        setSignedUrl(null);
-        return;
-      }
-      if (/^https?:\/\//i.test(path)) {
-        setSignedUrl(path);
-        return;
-      }
+      if (!path) { setSignedUrl(null); return; }
+      if (/^https?:\/\//i.test(path)) { setSignedUrl(path); return; }
       setSignedUrl(null);
       const { data: sess } = await supabase.auth.getSession();
       const token = sess.session?.access_token;
@@ -95,41 +119,38 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
         const pdfBlob = new Blob([blob], { type: "application/pdf" });
         objectUrl = URL.createObjectURL(pdfBlob);
         setSignedUrl(objectUrl);
-      } catch {
-        // ignore
-      }
+      } catch {}
     };
     load();
-    return () => {
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
+    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
   }, [row?.contrato_url]);
 
-  const openInNewTab = () => {
-    if (signedUrl) window.open(signedUrl, "_blank");
-  };
+  const openInNewTab = () => { if (signedUrl) window.open(signedUrl, "_blank"); };
 
   const fmtBRL = (v?: number | null) =>
     v == null ? "—" : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(v));
 
-
-
   const handleValidate = async () => {
     if (!row) return;
-    if (!formaPagamento.trim()) {
-      toast({ title: "Informe a forma de pagamento", variant: "destructive" });
-      return;
+    if (temEf) {
+      if (!formaEf) { toast({ title: "Informe a forma de pagamento do escopo fechado", variant: "destructive" }); return; }
+      if (!parcelasEf || parcelasEf < 1) { toast({ title: "Parcelas do escopo fechado inválidas", variant: "destructive" }); return; }
     }
-    if (needsParcelas && (!qtdParcelas || qtdParcelas < 1)) {
-      toast({ title: "Quantidade de parcelas inválida", variant: "destructive" });
-      return;
+    if (temRec) {
+      if (!formaRec) { toast({ title: "Informe a forma de pagamento da recorrência", variant: "destructive" }); return; }
+      if (!mesesRec || mesesRec < 1) { toast({ title: "Meses de recorrência inválidos", variant: "destructive" }); return; }
     }
+
     setSaving(true);
-    const { error } = await (supabase as any).rpc("validar_faturamento_account", {
+    const { error } = await (supabase as any).rpc("validar_faturamento_account_v2", {
       p_account_id: row.id,
-      p_forma_pagamento: formaPagamento,
-      p_qtd_parcelas: needsParcelas ? qtdParcelas : 1,
       p_modelo_contrato: modelo,
+      p_forma_ef: temEf ? formaEf : null,
+      p_qtd_parcelas_ef: temEf ? parcelasEf : null,
+      p_valor_ef: temEf ? parseFloat(valorEf || "0") : null,
+      p_forma_recorrente: temRec ? formaRec : null,
+      p_qtd_parcelas_recorrente: temRec ? mesesRec : null,
+      p_valor_fee: temRec ? parseFloat(valorFee || "0") : null,
     });
     setSaving(false);
     if (error) {
@@ -139,9 +160,6 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
     toast({ title: "Faturamento validado", description: "Cobranças geradas com sucesso." });
     onValidated();
     onOpenChange(false);
-    setFormaPagamento("");
-    setQtdParcelas(1);
-    setModelo("recorrente");
   };
 
   return (
@@ -150,7 +168,7 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
         <DialogHeader className="p-4 border-b">
           <DialogTitle>{row?.cliente_nome || "Contrato"} — Validar faturamento</DialogTitle>
         </DialogHeader>
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_360px] overflow-hidden">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_400px] overflow-hidden">
           {/* PDF viewer */}
           <div className="bg-muted/30 border-r overflow-hidden flex flex-col">
             {row?.contrato_url ? (
@@ -184,65 +202,79 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
 
           {/* Form */}
           <div className="p-5 space-y-5 overflow-y-auto">
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="rounded-lg border border-border/60 bg-card/40 p-3">
-                <div className="text-[10px] uppercase text-muted-foreground">EF</div>
-                <div className="font-semibold">{fmtBRL(row?.valor_ef)}</div>
-              </div>
-              <div className="rounded-lg border border-border/60 bg-card/40 p-3">
-                <div className="text-[10px] uppercase text-muted-foreground">Fee</div>
-                <div className="font-semibold">{fmtBRL(row?.valor_fee)}</div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Modelo de contrato</Label>
-              <Select value={modelo} onValueChange={(v: any) => setModelo(v)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="recorrente">Recorrente</SelectItem>
-                  <SelectItem value="escopo_fechado">Escopo fechado</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-[11px] text-muted-foreground">
-                {modelo === "recorrente"
-                  ? "Gera EF one-shot + N × fee recorrente mensal."
-                  : "Divide o valor total (EF + Fee) em N parcelas mensais."}
-              </p>
-            </div>
-
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Forma de pagamento</Label>
+                <Label>Modelo de contrato</Label>
                 {detecting && (
                   <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
                     <Loader2 className="h-3 w-3 animate-spin" /> detectando...
                   </span>
                 )}
               </div>
-              <Select value={formaPagamento} onValueChange={setFormaPagamento}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione..." />
-                </SelectTrigger>
+              <Select value={modelo} onValueChange={(v: any) => setModelo(v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {FORMA_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
+                  <SelectItem value="escopo_fechado">Somente escopo fechado</SelectItem>
+                  <SelectItem value="recorrente">Somente recorrente</SelectItem>
+                  <SelectItem value="hibrido">Escopo fechado + Recorrente</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {needsParcelas && (
-              <div className="space-y-2">
-                <Label>Quantidade de parcelas</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={qtdParcelas}
-                  onChange={(e) => setQtdParcelas(parseInt(e.target.value) || 1)}
-                />
+            {temEf && (
+              <div className="rounded-lg border border-border/60 bg-card/40 p-4 space-y-3">
+                <div className="text-xs font-semibold uppercase text-muted-foreground">Escopo fechado (one-shot)</div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Valor total</Label>
+                    <Input type="number" step="0.01" value={valorEf} onChange={(e) => setValorEf(e.target.value)} placeholder={fmtBRL(row?.valor_ef)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Parcelas</Label>
+                    <Input type="number" min={1} value={parcelasEf} onChange={(e) => setParcelasEf(parseInt(e.target.value) || 1)} />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Forma de pagamento</Label>
+                  <Select value={formaEf} onValueChange={setFormaEf}>
+                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent>
+                      {FORMA_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {!parcelasEfLabelNeeded && parcelasEf > 1 && (
+                    <p className="text-[10px] text-muted-foreground">Forma sem parcelamento — as parcelas serão geradas mesmo assim como cobranças mensais.</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {temRec && (
+              <div className="rounded-lg border border-border/60 bg-card/40 p-4 space-y-3">
+                <div className="text-xs font-semibold uppercase text-muted-foreground">Recorrente (mensal)</div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Valor mensal</Label>
+                    <Input type="number" step="0.01" value={valorFee} onChange={(e) => setValorFee(e.target.value)} placeholder={fmtBRL(row?.valor_fee)} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Meses</Label>
+                    <Input type="number" min={1} value={mesesRec} onChange={(e) => setMesesRec(parseInt(e.target.value) || 1)} />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Forma de pagamento</Label>
+                  <Select value={formaRec} onValueChange={setFormaRec}>
+                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent>
+                      {FORMA_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             )}
 

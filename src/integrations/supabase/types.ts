@@ -79,6 +79,8 @@ export type Database = {
           faturamento_validated_at: string | null
           faturamento_validated_by: string | null
           forma_pagamento: string | null
+          forma_pagamento_ef: string | null
+          forma_pagamento_recorrente: string | null
           growth_class_ata: string | null
           growth_class_data_agendada: string | null
           growth_class_data_realizada: string | null
@@ -107,11 +109,15 @@ export type Database = {
           produtos_contratados: Json | null
           proxima_revisao: string | null
           qtd_parcelas: number | null
+          qtd_parcelas_ef: number | null
+          qtd_parcelas_recorrente: number | null
           social_media_id: string | null
           squad: Database["public"]["Enums"]["squad_type"] | null
           status: Database["public"]["Enums"]["account_status"]
           tenant_id: string
           updated_at: string
+          valor_ef_override: number | null
+          valor_fee_override: number | null
         }
         Insert: {
           account_manager_id?: string | null
@@ -129,6 +135,8 @@ export type Database = {
           faturamento_validated_at?: string | null
           faturamento_validated_by?: string | null
           forma_pagamento?: string | null
+          forma_pagamento_ef?: string | null
+          forma_pagamento_recorrente?: string | null
           growth_class_ata?: string | null
           growth_class_data_agendada?: string | null
           growth_class_data_realizada?: string | null
@@ -157,11 +165,15 @@ export type Database = {
           produtos_contratados?: Json | null
           proxima_revisao?: string | null
           qtd_parcelas?: number | null
+          qtd_parcelas_ef?: number | null
+          qtd_parcelas_recorrente?: number | null
           social_media_id?: string | null
           squad?: Database["public"]["Enums"]["squad_type"] | null
           status?: Database["public"]["Enums"]["account_status"]
           tenant_id?: string
           updated_at?: string
+          valor_ef_override?: number | null
+          valor_fee_override?: number | null
         }
         Update: {
           account_manager_id?: string | null
@@ -179,6 +191,8 @@ export type Database = {
           faturamento_validated_at?: string | null
           faturamento_validated_by?: string | null
           forma_pagamento?: string | null
+          forma_pagamento_ef?: string | null
+          forma_pagamento_recorrente?: string | null
           growth_class_ata?: string | null
           growth_class_data_agendada?: string | null
           growth_class_data_realizada?: string | null
@@ -207,11 +221,15 @@ export type Database = {
           produtos_contratados?: Json | null
           proxima_revisao?: string | null
           qtd_parcelas?: number | null
+          qtd_parcelas_ef?: number | null
+          qtd_parcelas_recorrente?: number | null
           social_media_id?: string | null
           squad?: Database["public"]["Enums"]["squad_type"] | null
           status?: Database["public"]["Enums"]["account_status"]
           tenant_id?: string
           updated_at?: string
+          valor_ef_override?: number | null
+          valor_fee_override?: number | null
         }
         Relationships: [
           {
@@ -2181,6 +2199,19 @@ export type Database = {
           p_forma_pagamento: string
           p_modelo_contrato: string
           p_qtd_parcelas: number
+        }
+        Returns: undefined
+      }
+      validar_faturamento_account_v2: {
+        Args: {
+          p_account_id: string
+          p_forma_ef: string
+          p_forma_recorrente: string
+          p_modelo_contrato: string
+          p_qtd_parcelas_ef: number
+          p_qtd_parcelas_recorrente: number
+          p_valor_ef: number
+          p_valor_fee: number
         }
         Returns: undefined
       }
