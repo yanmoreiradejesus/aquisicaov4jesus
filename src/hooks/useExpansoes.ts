@@ -121,17 +121,27 @@ export function useExpansoes() {
       const { error } = await (supabase as any).from("crm_expansoes").update(patch).eq("id", args.id);
       if (error) throw error;
 
-      // Atualiza MRR da account quando houver novo fee mensal (recorrente)
-      if (
-        args.etapa === "ganho" &&
-        args.account_id &&
-        args.novo_fee_mensal != null &&
-        (args.tipo_ganho === "aumento_fee" || args.tipo_ganho === "ambos")
-      ) {
-        await (supabase as any)
-          .from("accounts")
-          .update({ mrr: args.novo_fee_mensal })
-          .eq("id", args.account_id);
+      // Ao marcar Ganho: envia o contrato para "A faturar" (aquisição/expansão)
+      // e atualiza o MRR da account se houve aumento de fee recorrente.
+      if (args.etapa === "ganho" && args.account_id) {
+        const temFee =
+          args.tipo_ganho === "aumento_fee" || args.tipo_ganho === "ambos";
+        const temEf =
+          args.tipo_ganho === "escopo_fechado" || args.tipo_ganho === "ambos";
+        const modelo = temFee && temEf ? "hibrido" : temFee ? "recorrente" : "escopo_fechado";
+
+        const accPatch: any = {
+          faturamento_status: "a_faturar",
+          origem: "expansao",
+          expansao_id: args.id,
+          modelo_contrato: modelo,
+          valor_ef_override: temEf ? args.valor_escopo_fechado ?? null : null,
+          valor_fee_override: temFee ? args.novo_fee_mensal ?? null : null,
+        };
+        if (temFee && args.novo_fee_mensal != null) {
+          accPatch.mrr = args.novo_fee_mensal;
+        }
+        await (supabase as any).from("accounts").update(accPatch).eq("id", args.account_id);
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["crm_expansoes"] }),
