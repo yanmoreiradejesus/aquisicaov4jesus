@@ -30,9 +30,24 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
   const [qtdParcelas, setQtdParcelas] = useState<number>(1);
   const [modelo, setModelo] = useState<"escopo_fechado" | "recorrente">("recorrente");
   const [saving, setSaving] = useState(false);
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
 
-  const fmtBRL = (v?: number | null) =>
-    v == null ? "—" : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(v));
+  useEffect(() => {
+    const path = row?.contrato_url;
+    if (!path) {
+      setSignedUrl(null);
+      return;
+    }
+    // If already a full URL, use as-is
+    if (/^https?:\/\//i.test(path)) {
+      setSignedUrl(path);
+      return;
+    }
+    supabase.storage
+      .from("contratos-assinados")
+      .createSignedUrl(path, 60 * 60)
+      .then(({ data }) => setSignedUrl(data?.signedUrl ?? null));
+  }, [row?.contrato_url]);
 
   const handleValidate = async () => {
     if (!row) return;
