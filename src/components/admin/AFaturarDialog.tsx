@@ -163,6 +163,10 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
       p_forma_recorrente: temRec ? formaRec : null,
       p_qtd_parcelas_recorrente: temRec ? mesesRec : null,
       p_valor_fee: temRec ? parseFloat(valorFee || "0") : null,
+      p_dia_venc_primeiro_ef: temEf ? diaPrimeiroEf : null,
+      p_dia_venc_demais_ef: temEf ? diaDemaisEf : null,
+      p_dia_venc_primeiro_rec: temRec ? diaPrimeiroRec : null,
+      p_dia_venc_demais_rec: temRec ? diaDemaisRec : null,
     });
     setSaving(false);
     if (error) {
