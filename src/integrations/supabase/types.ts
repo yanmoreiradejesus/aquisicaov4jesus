@@ -73,6 +73,10 @@ export type Database = {
           data_fim_contrato: string | null
           data_inicio_contrato: string
           designer_id: string | null
+          dia_vencimento_demais_ef: number | null
+          dia_vencimento_demais_recorrente: number | null
+          dia_vencimento_primeiro_ef: number | null
+          dia_vencimento_primeiro_recorrente: number | null
           drive_url: string | null
           ekyte_workspace_id: number | null
           faturamento_status: string
@@ -129,6 +133,10 @@ export type Database = {
           data_fim_contrato?: string | null
           data_inicio_contrato?: string
           designer_id?: string | null
+          dia_vencimento_demais_ef?: number | null
+          dia_vencimento_demais_recorrente?: number | null
+          dia_vencimento_primeiro_ef?: number | null
+          dia_vencimento_primeiro_recorrente?: number | null
           drive_url?: string | null
           ekyte_workspace_id?: number | null
           faturamento_status?: string
@@ -185,6 +193,10 @@ export type Database = {
           data_fim_contrato?: string | null
           data_inicio_contrato?: string
           designer_id?: string | null
+          dia_vencimento_demais_ef?: number | null
+          dia_vencimento_demais_recorrente?: number | null
+          dia_vencimento_primeiro_ef?: number | null
+          dia_vencimento_primeiro_recorrente?: number | null
           drive_url?: string | null
           ekyte_workspace_id?: number | null
           faturamento_status?: string
@@ -2202,19 +2214,37 @@ export type Database = {
         }
         Returns: undefined
       }
-      validar_faturamento_account_v2: {
-        Args: {
-          p_account_id: string
-          p_forma_ef: string
-          p_forma_recorrente: string
-          p_modelo_contrato: string
-          p_qtd_parcelas_ef: number
-          p_qtd_parcelas_recorrente: number
-          p_valor_ef: number
-          p_valor_fee: number
-        }
-        Returns: undefined
-      }
+      validar_faturamento_account_v2:
+        | {
+            Args: {
+              p_account_id: string
+              p_forma_ef: string
+              p_forma_recorrente: string
+              p_modelo_contrato: string
+              p_qtd_parcelas_ef: number
+              p_qtd_parcelas_recorrente: number
+              p_valor_ef: number
+              p_valor_fee: number
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_account_id: string
+              p_dia_venc_demais_ef?: number
+              p_dia_venc_demais_rec?: number
+              p_dia_venc_primeiro_ef?: number
+              p_dia_venc_primeiro_rec?: number
+              p_forma_ef: string
+              p_forma_recorrente: string
+              p_modelo_contrato: string
+              p_qtd_parcelas_ef: number
+              p_qtd_parcelas_recorrente: number
+              p_valor_ef: number
+              p_valor_fee: number
+            }
+            Returns: undefined
+          }
     }
     Enums: {
       account_status: "ativo" | "pausado" | "encerrado"
