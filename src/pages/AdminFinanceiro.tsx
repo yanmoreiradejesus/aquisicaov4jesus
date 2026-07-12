@@ -33,7 +33,7 @@ function useAFaturar() {
       const { data, error } = await (supabase as any)
         .from("accounts")
         .select(
-          "id, cliente_nome, oportunidade_id, created_at, forma_pagamento, qtd_parcelas, modelo_contrato, forma_pagamento_ef, qtd_parcelas_ef, valor_ef_override, dia_vencimento_primeiro_ef, dia_vencimento_demais_ef, forma_pagamento_recorrente, qtd_parcelas_recorrente, valor_fee_override, dia_vencimento_primeiro_recorrente, dia_vencimento_demais_recorrente, oportunidade:crm_oportunidades(id, contrato_url, valor_ef, valor_fee)"
+          "id, cliente_nome, oportunidade_id, created_at, origem, expansao_id, forma_pagamento, qtd_parcelas, modelo_contrato, forma_pagamento_ef, qtd_parcelas_ef, valor_ef_override, dia_vencimento_primeiro_ef, dia_vencimento_demais_ef, forma_pagamento_recorrente, qtd_parcelas_recorrente, valor_fee_override, dia_vencimento_primeiro_recorrente, dia_vencimento_demais_recorrente, oportunidade:crm_oportunidades(id, contrato_url, valor_ef, valor_fee), expansao:crm_expansoes(id, contrato_path, valor_aumento_fee, valor_escopo_fechado, novo_fee_mensal, tipo_ganho)"
         )
         .eq("faturamento_status", "a_faturar")
         .order("created_at", { ascending: false });
