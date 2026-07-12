@@ -38,6 +38,7 @@ import AccountsList from "./pages/AccountsList";
 import AccountDetail from "./pages/AccountDetail";
 import FunilAnalytics from "./pages/FunilAnalytics";
 import GoogleCallback from "./pages/GoogleCallback";
+import Expansao from "./pages/Expansao";
 import { useAppVersion } from "@/hooks/useAppVersion";
 import { AuthProvider } from "@/contexts/AuthContext";
 
