@@ -12,7 +12,7 @@ export interface AccountFieldsValue {
   playbook_url?: string | null;
   growthpack_url?: string | null;
   drive_url?: string | null;
-  ekyte_workspace_id?: number | null;
+  
 }
 
 interface Props {
