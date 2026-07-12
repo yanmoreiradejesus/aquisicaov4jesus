@@ -1,22 +1,17 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ArrowLeft, ExternalLink, Pencil } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAccountDetail, useUpdateAccount, healthBand, SQUAD_LABEL } from "@/hooks/useAccounts";
+import { useAccountDetail, useUpdateAccount, healthBand, SQUAD_LABEL, type AccountRow } from "@/hooks/useAccounts";
 import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
 import { useTenantConfig } from "@/hooks/useTenantConfig";
-import { useAccountScope } from "@/hooks/useAccountScope";
-import {
-  AccountManagementFields,
-  type AccountFieldsValue,
-  type ScopeItem,
-} from "@/components/accounts/AccountManagementFields";
+import { AccountManagementFields, type AccountFieldsValue } from "@/components/accounts/AccountManagementFields";
 import { useToast } from "@/hooks/use-toast";
 import { AccountEkyteTasks } from "@/components/accounts/AccountEkyteTasks";
+import { ProjetoEscopoDialog } from "@/components/projetos/ProjetoEscopoDialog";
 
 const fmtBRL = (v?: number | null) =>
   v == null
@@ -24,6 +19,13 @@ const fmtBRL = (v?: number | null) =>
     : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(Number(v));
 
 const fmtDate = (iso?: string | null) => (!iso ? "—" : new Date(iso).toLocaleDateString("pt-BR"));
+
+const SCOPE_ITEMS: { key: keyof AccountRow["escopo"]; label: string }[] = [
+  { key: "trafego", label: "Tráfego" },
+  { key: "social_media", label: "Social Media" },
+  { key: "design", label: "Design" },
+  { key: "crm", label: "CRM" },
+];
 
 export default function AccountDetail() {
   const { accountId } = useParams<{ accountId: string }>();
@@ -38,42 +40,15 @@ export default function AccountDetail() {
     return m;
   }, [profiles]);
 
-  // Escopo da conta
-  const [contractedScope, setContractedScope] = useState<ScopeItem[]>([]);
-  useEffect(() => {
-    if (!accountId) return;
-    supabase
-      .from("account_scope" as any)
-      .select("item, contratado, quantidade_contratada")
-      .eq("account_id", accountId)
-      .then(({ data }) => {
-        const items = ((data ?? []) as any[]).map((s, i) => ({
-          item: s.item,
-          contratado: s.contratado ?? (Number(s.quantidade_contratada) || 0) > 0,
-          ordem: i,
-        }));
-        setContractedScope(items);
-      });
-  }, [accountId]);
-
-  // Edit modal state
   const [editOpen, setEditOpen] = useState(false);
+  const [escopoOpen, setEscopoOpen] = useState(false);
   const [editValue, setEditValue] = useState<AccountFieldsValue>({});
-  const editSquad = editValue.squad ?? null;
-  const { scope: editScope, setScope: setEditScope } = useAccountScope({
-    accountId: editOpen ? accountId ?? null : null,
-    tenantId: tenantConfig?.id ?? null,
-    squad: editSquad,
-    enabled: editOpen,
-  });
   const update = useUpdateAccount();
 
   const openEdit = () => {
     if (!account) return;
     setEditValue({
       squad: account.squad,
-      mrr: account.mrr,
-      mrr_variavel: account.mrr_variavel,
       gt_id: account.gt_id,
       designer_id: account.designer_id,
       social_media_id: account.social_media_id,
@@ -86,28 +61,11 @@ export default function AccountDetail() {
   };
 
   const handleSave = async () => {
-    if (!account || !tenantConfig?.id) return;
+    if (!account) return;
     try {
-      await update.mutateAsync({
-        id: account.id,
-        tenantId: tenantConfig.id,
-        patch: editValue as any,
-        scope: editScope,
-      });
+      await update.mutateAsync({ id: account.id, patch: editValue as any });
       toast({ title: "Conta atualizada" });
       setEditOpen(false);
-      // refresh local scope display
-      const { data } = await supabase
-        .from("account_scope" as any)
-        .select("item, contratado, quantidade_contratada")
-        .eq("account_id", account.id);
-      setContractedScope(
-        ((data ?? []) as any[]).map((s, i) => ({
-          item: s.item,
-          contratado: s.contratado ?? (Number(s.quantidade_contratada) || 0) > 0,
-          ordem: i,
-        })),
-      );
     } catch (e: any) {
       toast({ title: "Erro ao salvar", description: e.message, variant: "destructive" });
     }
@@ -132,6 +90,7 @@ export default function AccountDetail() {
   }
 
   const h = healthBand(account.health_score);
+  const scopeChips = SCOPE_ITEMS.filter((s) => account.escopo[s.key]);
 
   const Card = ({
     title,
@@ -175,6 +134,11 @@ export default function AccountDetail() {
               <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${h.color}`}>
                 <span className={`h-1.5 w-1.5 rounded-full ${h.dot}`} /> Saúde {account.health_score ?? "—"}
               </span>
+              {!account.escopo.validado && (
+                <span className="inline-flex items-center rounded-full bg-primary/15 text-primary border border-primary/30 px-1.5 py-0.5 text-[10px] font-bold tracking-wider uppercase">
+                  New
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
               <span>Onboarding: <span className="text-foreground/80">{account.onboarding_status}</span></span>
@@ -188,22 +152,35 @@ export default function AccountDetail() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card title="Escopo contratado">
-            {contractedScope.length === 0 ? (
-              <p className="text-[12px] text-muted-foreground py-2">Sem escopo definido.</p>
+          <Card
+            title="Escopo contratado"
+            aside={
+              account.projeto_id && (
+                <Button size="sm" variant="ghost" onClick={() => setEscopoOpen(true)}>
+                  <Pencil className="h-3 w-3 mr-1" /> Editar
+                </Button>
+              )
+            }
+          >
+            {scopeChips.length === 0 ? (
+              <p className="text-[12px] text-muted-foreground py-2">
+                {account.escopo.validado
+                  ? "Nenhum escopo marcado."
+                  : "Escopo ainda não definido — edite no cadastro do projeto."}
+              </p>
             ) : (
-              <div className="space-y-1.5">
-                {contractedScope.map((s) => (
-                  <div key={s.item} className="flex items-center justify-between gap-3 text-[13px]">
-                    <span className="text-foreground/90">{s.item}</span>
-                    {s.contratado ? (
-                      <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-400">
-                        Sim
-                      </span>
-                    ) : (
-                      <span className="text-[11px] text-muted-foreground">Não</span>
-                    )}
-                  </div>
+              <div className="flex flex-wrap gap-1.5">
+                {scopeChips.map((s) => (
+                  <span
+                    key={s.key}
+                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+                      account.escopo.validado
+                        ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+                        : "bg-amber-500/10 text-amber-300 border-amber-500/30"
+                    }`}
+                  >
+                    {s.label}
+                  </span>
                 ))}
               </div>
             )}
@@ -211,9 +188,11 @@ export default function AccountDetail() {
 
           <div className="grid grid-cols-2 gap-4">
             <Card title="MRR">
-              <p className="font-display text-2xl font-semibold tabular-nums text-foreground">{fmtBRL(account.mrr)}</p>
-              {account.mrr_variavel != null && (
-                <p className="text-[11px] text-muted-foreground mt-1">+ variável {fmtBRL(account.mrr_variavel)}</p>
+              <p className="font-display text-2xl font-semibold tabular-nums text-foreground">{fmtBRL(account.effective_mrr)}</p>
+              {account.valor_fee_override != null && account.oportunidade_valor_fee != null && account.valor_fee_override !== account.oportunidade_valor_fee && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  contrato: {fmtBRL(account.oportunidade_valor_fee)}
+                </p>
               )}
             </Card>
             <TooltipProvider>
@@ -281,8 +260,6 @@ export default function AccountDetail() {
             value={editValue}
             onChange={(patch) => setEditValue((p) => ({ ...p, ...patch }))}
             profiles={profiles}
-            scope={editScope}
-            onScopeChange={setEditScope}
           />
           <DialogFooter>
             <Button variant="ghost" onClick={() => setEditOpen(false)} disabled={update.isPending}>
@@ -294,6 +271,17 @@ export default function AccountDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {escopoOpen && account.projeto_id && (
+        <ProjetoEscopoDialog
+          projetoId={account.projeto_id}
+          clienteNome={account.cliente_nome}
+          onClose={() => setEscopoOpen(false)}
+          onSaved={() => {
+            setEscopoOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }
