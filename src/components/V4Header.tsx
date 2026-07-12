@@ -47,10 +47,12 @@ const V4Header = () => {
     { path: "/comercial/expansao", label: "Expansão" },
   ];
 
-  const pegItems = [
+  const tarefasItems = [
+    { path: "/tarefas", label: "Minhas tarefas" },
+    { path: "/tarefas/projetos", label: "Por projeto" },
     { path: "/comercial/accounts", label: "Accounts" },
-    { path: "/comercial/projetos", label: "Database" },
-    { path: "/comercial/projetos/cadastro", label: "Cadastro" },
+    { path: "/comercial/projetos", label: "Database de projetos" },
+    { path: "/comercial/projetos/cadastro", label: "Cadastro de projetos" },
   ];
 
   const adminMenuItems = [
