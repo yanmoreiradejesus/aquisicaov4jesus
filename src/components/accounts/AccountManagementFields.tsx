@@ -1,14 +1,11 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { ProfileLite } from "@/hooks/useProfilesList";
 import { profileLabel } from "@/hooks/useProfilesList";
 
 export interface AccountFieldsValue {
   squad?: "strikers" | "fenix" | "saber" | null;
-  mrr?: number | null;
-  mrr_variavel?: number | null;
   gt_id?: string | null;
   designer_id?: string | null;
   social_media_id?: string | null;
@@ -18,21 +15,13 @@ export interface AccountFieldsValue {
   ekyte_workspace_id?: number | null;
 }
 
-export interface ScopeItem {
-  item: string;
-  contratado: boolean;
-  ordem: number;
-}
-
 interface Props {
   value: AccountFieldsValue;
   onChange: (patch: Partial<AccountFieldsValue>) => void;
   profiles: ProfileLite[];
-  scope: ScopeItem[];
-  onScopeChange: (next: ScopeItem[]) => void;
 }
 
-export function AccountManagementFields({ value, onChange, profiles, scope, onScopeChange }: Props) {
+export function AccountManagementFields({ value, onChange, profiles }: Props) {
   const teamFields: { key: keyof AccountFieldsValue; label: string }[] = [
     { key: "gt_id", label: "GT (Gestor de Tráfego)" },
     { key: "designer_id", label: "Designer" },
@@ -46,50 +35,25 @@ export function AccountManagementFields({ value, onChange, profiles, scope, onSc
 
   return (
     <div className="space-y-5">
-      <div className="rounded-lg border border-border/40 bg-background/40 p-4 space-y-4">
-        <div>
-          <Label className="text-xs text-muted-foreground">Squad</Label>
-          <Select
-            value={value.squad ?? "none"}
-            onValueChange={(v) => onChange({ squad: v === "none" ? null : (v as any) })}
-          >
-            <SelectTrigger className="mt-1.5">
-              <SelectValue placeholder="Selecione o squad" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Sem squad</SelectItem>
-              <SelectItem value="strikers">Strikers</SelectItem>
-              <SelectItem value="fenix">Fênix</SelectItem>
-              <SelectItem value="saber">Saber</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label className="text-xs text-muted-foreground">MRR (R$)</Label>
-            <Input
-              type="number"
-              min={0}
-              step="0.01"
-              className="mt-1.5"
-              value={value.mrr ?? ""}
-              onChange={(e) => onChange({ mrr: e.target.value === "" ? null : Number(e.target.value) })}
-            />
-          </div>
-          <div>
-            <Label className="text-xs text-muted-foreground">MRR variável (R$)</Label>
-            <Input
-              type="number"
-              min={0}
-              step="0.01"
-              className="mt-1.5"
-              value={value.mrr_variavel ?? ""}
-              onChange={(e) =>
-                onChange({ mrr_variavel: e.target.value === "" ? null : Number(e.target.value) })
-              }
-            />
-          </div>
-        </div>
+      <div className="rounded-lg border border-border/40 bg-background/40 p-4">
+        <Label className="text-xs text-muted-foreground">Squad</Label>
+        <Select
+          value={value.squad ?? "none"}
+          onValueChange={(v) => onChange({ squad: v === "none" ? null : (v as any) })}
+        >
+          <SelectTrigger className="mt-1.5">
+            <SelectValue placeholder="Selecione o squad" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Sem squad</SelectItem>
+            <SelectItem value="strikers">Strikers</SelectItem>
+            <SelectItem value="fenix">Fênix</SelectItem>
+            <SelectItem value="saber">Saber</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-[11px] text-muted-foreground mt-2">
+          MRR e escopo contratado agora vêm automaticamente da oportunidade e do cadastro do projeto.
+        </p>
       </div>
 
       <div className="rounded-lg border border-border/40 bg-background/40 p-4 space-y-3">
@@ -142,41 +106,6 @@ export function AccountManagementFields({ value, onChange, profiles, scope, onSc
           }
         />
         <p className="text-[11px] text-muted-foreground mt-1.5">Usado na integração eKyte.</p>
-      </div>
-
-      <div className="rounded-lg border border-border/40 bg-background/40 p-4 space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="font-display text-sm font-semibold tracking-[-0.01em] text-foreground/90">
-            Escopo contratado
-          </h3>
-          {!value.squad && (
-            <span className="text-[11px] text-muted-foreground">Selecione o squad primeiro</span>
-          )}
-        </div>
-        {scope.length === 0 ? (
-          <p className="text-[12px] text-muted-foreground py-2">
-            Nenhum entregável configurado para este squad.
-          </p>
-        ) : (
-          <div className="space-y-1">
-            {scope.map((s, i) => (
-              <label
-                key={s.item}
-                className="flex items-center justify-between gap-3 py-1.5 cursor-pointer"
-              >
-                <span className="flex-1 text-[13px] text-foreground/90">{s.item}</span>
-                <Switch
-                  checked={!!s.contratado}
-                  onCheckedChange={(checked) => {
-                    const next = [...scope];
-                    next[i] = { ...next[i], contratado: !!checked };
-                    onScopeChange(next);
-                  }}
-                />
-              </label>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );

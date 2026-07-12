@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { ProjetoEscopoDialog } from "@/components/projetos/ProjetoEscopoDialog";
 
 type Squad = "strikers" | "fenix" | "saber";
 const SQUADS: Squad[] = ["strikers", "fenix", "saber"];
@@ -28,6 +29,11 @@ interface Row {
   data_reuniao_agendada: string | null;
   data_reuniao_realizada: string | null;
   lead_id: string | null;
+  escopo_trafego: boolean;
+  escopo_social_media: boolean;
+  escopo_design: boolean;
+  escopo_crm: boolean;
+  escopo_validado: boolean;
 }
 
 type Field =
@@ -51,7 +57,7 @@ async function fetchRows(): Promise<Row[]> {
   const { data, error } = await (supabase as any)
     .from("crm_projetos")
     .select(
-      "id, account_id, account:accounts(id, cliente_nome, squad, growth_class_transcricao, growth_class_transcricao_reuniao, pre_growth_class_relatorio, oportunidade:crm_oportunidades(id, transcricao_reuniao, contrato_url, lead:crm_leads(id, data_reuniao_agendada, data_reuniao_realizada))), growth_class_ia_relatorio"
+      "id, account_id, escopo_trafego, escopo_social_media, escopo_design, escopo_crm, escopo_validado, account:accounts(id, cliente_nome, squad, growth_class_transcricao, growth_class_transcricao_reuniao, pre_growth_class_relatorio, oportunidade:crm_oportunidades(id, transcricao_reuniao, contrato_url, lead:crm_leads(id, data_reuniao_agendada, data_reuniao_realizada))), growth_class_ia_relatorio"
     )
     .order("updated_at", { ascending: false });
   if (error) throw error;
@@ -70,6 +76,11 @@ async function fetchRows(): Promise<Row[]> {
     data_reuniao_agendada: p.account?.oportunidade?.lead?.data_reuniao_agendada ?? null,
     data_reuniao_realizada: p.account?.oportunidade?.lead?.data_reuniao_realizada ?? null,
     lead_id: p.account?.oportunidade?.lead?.id ?? null,
+    escopo_trafego: !!p.escopo_trafego,
+    escopo_social_media: !!p.escopo_social_media,
+    escopo_design: !!p.escopo_design,
+    escopo_crm: !!p.escopo_crm,
+    escopo_validado: !!p.escopo_validado,
   }));
 }
 
@@ -87,6 +98,7 @@ const ProjetosCadastro = () => {
   const [editing, setEditing] = useState<{ row: Row; field: Field } | null>(null);
   const [novoOpen, setNovoOpen] = useState(false);
   const [generatingGc, setGeneratingGc] = useState<Record<string, boolean>>({});
+  const [escopoEditing, setEscopoEditing] = useState<Row | null>(null);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["projetos_cadastro"] });
 
@@ -165,6 +177,7 @@ const ProjetosCadastro = () => {
                   <TableHead>Resumo GC</TableHead>
                   <TableHead>Transcrição GC</TableHead>
                   <TableHead>Squad</TableHead>
+                  <TableHead className="min-w-[220px]">Escopo</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -183,7 +196,14 @@ const ProjetosCadastro = () => {
                   return (
                     <TableRow key={r.projeto_id} className="border-border/40">
                       <TableCell className="font-medium text-foreground">
-                        {r.cliente_nome ?? "—"}
+                        <div className="flex items-center gap-2">
+                          <span>{r.cliente_nome ?? "—"}</span>
+                          {!r.escopo_validado && (
+                            <span className="inline-flex items-center rounded-full bg-primary/15 text-primary border border-primary/30 px-1.5 py-0.5 text-[9px] font-bold tracking-wider uppercase">
+                              New
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className={cellCls} onClick={() => setEditing({ row: r, field: "data_reuniao_agendada" })}>
                         <div className="flex items-center gap-2">
@@ -237,12 +257,43 @@ const ProjetosCadastro = () => {
                           <StatusIcon ok={false} />
                         )}
                       </TableCell>
+                      <TableCell className={cellCls} onClick={() => setEscopoEditing(r)}>
+                        <div className="flex flex-wrap items-center gap-1">
+                          {(() => {
+                            const chips = [
+                              r.escopo_trafego && "Tráfego",
+                              r.escopo_social_media && "Social",
+                              r.escopo_design && "Design",
+                              r.escopo_crm && "CRM",
+                            ].filter(Boolean) as string[];
+                            if (chips.length === 0) {
+                              return (
+                                <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                                  <Sparkles className="h-3 w-3" /> Definir
+                                </span>
+                              );
+                            }
+                            return chips.map((c) => (
+                              <span
+                                key={c}
+                                className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] border ${
+                                  r.escopo_validado
+                                    ? "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+                                    : "bg-amber-500/10 text-amber-300 border-amber-500/30"
+                                }`}
+                              >
+                                {c}
+                              </span>
+                            ));
+                          })()}
+                        </div>
+                      </TableCell>
                     </TableRow>
                   );
                 })}
                 {filtered.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-10">
+                    <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-10">
                       Nenhum projeto encontrado.
                     </TableCell>
                   </TableRow>
@@ -271,6 +322,18 @@ const ProjetosCadastro = () => {
           onCreated={() => {
             invalidate();
             setNovoOpen(false);
+          }}
+        />
+      )}
+
+      {escopoEditing && (
+        <ProjetoEscopoDialog
+          projetoId={escopoEditing.projeto_id}
+          clienteNome={escopoEditing.cliente_nome}
+          onClose={() => setEscopoEditing(null)}
+          onSaved={() => {
+            invalidate();
+            setEscopoEditing(null);
           }}
         />
       )}

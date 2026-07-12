@@ -988,9 +988,8 @@ export const OnboardingDetailSheet = ({ open, onOpenChange, account, onSave, ful
                 value={form as any}
                 onChange={(patch) => update(patch as any)}
                 profiles={allProfiles}
-                scope={scopeItems}
-                onScopeChange={setScopeItems}
               />
+
             </TabsContent>
           )}
         </Tabs>

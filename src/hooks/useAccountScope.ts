@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { ScopeItem } from "@/components/accounts/AccountManagementFields";
+
+export interface ScopeItem {
+  item: string;
+  contratado: boolean;
+  ordem: number;
+}
 
 /**
  * Carrega o escopo contratado de uma account mesclado com o template do squad.

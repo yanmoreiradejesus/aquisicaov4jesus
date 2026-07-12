@@ -1135,6 +1135,15 @@ export type Database = {
           created_by: string | null
           descricao: string | null
           documentacao: string | null
+          escopo_crm: boolean
+          escopo_design: boolean
+          escopo_ia_gerado_em: string | null
+          escopo_ia_sugestao: Json | null
+          escopo_social_media: boolean
+          escopo_trafego: boolean
+          escopo_validado: boolean
+          escopo_validado_em: string | null
+          escopo_validado_por: string | null
           growth_class_ia_gerado_em: string | null
           growth_class_ia_relatorio: string | null
           id: string
@@ -1156,6 +1165,15 @@ export type Database = {
           created_by?: string | null
           descricao?: string | null
           documentacao?: string | null
+          escopo_crm?: boolean
+          escopo_design?: boolean
+          escopo_ia_gerado_em?: string | null
+          escopo_ia_sugestao?: Json | null
+          escopo_social_media?: boolean
+          escopo_trafego?: boolean
+          escopo_validado?: boolean
+          escopo_validado_em?: string | null
+          escopo_validado_por?: string | null
           growth_class_ia_gerado_em?: string | null
           growth_class_ia_relatorio?: string | null
           id?: string
@@ -1177,6 +1195,15 @@ export type Database = {
           created_by?: string | null
           descricao?: string | null
           documentacao?: string | null
+          escopo_crm?: boolean
+          escopo_design?: boolean
+          escopo_ia_gerado_em?: string | null
+          escopo_ia_sugestao?: Json | null
+          escopo_social_media?: boolean
+          escopo_trafego?: boolean
+          escopo_validado?: boolean
+          escopo_validado_em?: string | null
+          escopo_validado_por?: string | null
           growth_class_ia_gerado_em?: string | null
           growth_class_ia_relatorio?: string | null
           id?: string
