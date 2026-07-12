@@ -15,7 +15,19 @@ export type AFaturarRow = {
   contrato_url: string | null;
   valor_ef: number | null;
   valor_fee: number | null;
+  forma_pagamento?: string | null;
+  qtd_parcelas?: number | null;
+  modelo_contrato?: string | null;
 };
+
+const FORMA_OPTIONS: { value: string; label: string; needsParcelas: boolean }[] = [
+  { value: "cartao_credito_vista", label: "Cartão de crédito à vista", needsParcelas: false },
+  { value: "cartao_credito_recorrente", label: "Cartão de crédito recorrente", needsParcelas: false },
+  { value: "cartao_credito_parcelado", label: "Cartão de crédito parcelado", needsParcelas: true },
+  { value: "pix", label: "Pix", needsParcelas: false },
+  { value: "boleto", label: "Boleto", needsParcelas: true },
+  { value: "cheque", label: "Cheque", needsParcelas: false },
+];
 
 interface Props {
   open: boolean;
@@ -30,7 +42,33 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
   const [qtdParcelas, setQtdParcelas] = useState<number>(1);
   const [modelo, setModelo] = useState<"escopo_fechado" | "recorrente">("recorrente");
   const [saving, setSaving] = useState(false);
+  const [detecting, setDetecting] = useState(false);
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
+
+  const needsParcelas = FORMA_OPTIONS.find((o) => o.value === formaPagamento)?.needsParcelas ?? false;
+
+  // Preenche a partir da account e dispara auto-detecção se faltar dado
+  useEffect(() => {
+    if (!row) return;
+    setFormaPagamento(row.forma_pagamento || "");
+    setQtdParcelas(row.qtd_parcelas || 1);
+    setModelo((row.modelo_contrato as any) || "recorrente");
+
+    const missing = !row.forma_pagamento || !row.modelo_contrato;
+    if (missing && row.contrato_url) {
+      setDetecting(true);
+      (supabase as any).functions
+        .invoke("extract-contract-billing", { body: { account_id: row.id } })
+        .then(({ data }: any) => {
+          const d = data?.detected;
+          if (d?.forma && !row.forma_pagamento) setFormaPagamento(d.forma);
+          if (d?.modelo && !row.modelo_contrato) setModelo(d.modelo);
+          if (d?.parcelas && !row.qtd_parcelas) setQtdParcelas(d.parcelas);
+        })
+        .catch(() => {})
+        .finally(() => setDetecting(false));
+    }
+  }, [row?.id]);
 
   useEffect(() => {
     let objectUrl: string | null = null;
@@ -82,7 +120,7 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
       toast({ title: "Informe a forma de pagamento", variant: "destructive" });
       return;
     }
-    if (!qtdParcelas || qtdParcelas < 1) {
+    if (needsParcelas && (!qtdParcelas || qtdParcelas < 1)) {
       toast({ title: "Quantidade de parcelas inválida", variant: "destructive" });
       return;
     }
@@ -90,7 +128,7 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
     const { error } = await (supabase as any).rpc("validar_faturamento_account", {
       p_account_id: row.id,
       p_forma_pagamento: formaPagamento,
-      p_qtd_parcelas: qtdParcelas,
+      p_qtd_parcelas: needsParcelas ? qtdParcelas : 1,
       p_modelo_contrato: modelo,
     });
     setSaving(false);
@@ -176,25 +214,39 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
             </div>
 
             <div className="space-y-2">
-              <Label>Forma de pagamento</Label>
-              <Input
-                value={formaPagamento}
-                onChange={(e) => setFormaPagamento(e.target.value)}
-                placeholder="Boleto, Pix, cartão..."
-              />
+              <div className="flex items-center justify-between">
+                <Label>Forma de pagamento</Label>
+                {detecting && (
+                  <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" /> detectando...
+                  </span>
+                )}
+              </div>
+              <Select value={formaPagamento} onValueChange={setFormaPagamento}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {FORMA_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Quantidade de parcelas</Label>
-              <Input
-                type="number"
-                min={1}
-                value={qtdParcelas}
-                onChange={(e) => setQtdParcelas(parseInt(e.target.value) || 1)}
-              />
-            </div>
+            {needsParcelas && (
+              <div className="space-y-2">
+                <Label>Quantidade de parcelas</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={qtdParcelas}
+                  onChange={(e) => setQtdParcelas(parseInt(e.target.value) || 1)}
+                />
+              </div>
+            )}
 
-            <Button className="w-full" onClick={handleValidate} disabled={saving}>
+            <Button className="w-full" onClick={handleValidate} disabled={saving || detecting}>
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Validar e gerar cobranças
             </Button>

@@ -33,7 +33,7 @@ function useAFaturar() {
       const { data, error } = await (supabase as any)
         .from("accounts")
         .select(
-          "id, cliente_nome, oportunidade_id, created_at, oportunidade:crm_oportunidades(id, contrato_url, valor_ef, valor_fee)"
+          "id, cliente_nome, oportunidade_id, created_at, forma_pagamento, qtd_parcelas, modelo_contrato, oportunidade:crm_oportunidades(id, contrato_url, valor_ef, valor_fee)"
         )
         .eq("faturamento_status", "a_faturar")
         .order("created_at", { ascending: false });
@@ -296,6 +296,9 @@ const AdminFinanceiro = () => {
                                 contrato_url: a.oportunidade?.contrato_url ?? null,
                                 valor_ef: a.oportunidade?.valor_ef ?? null,
                                 valor_fee: a.oportunidade?.valor_fee ?? null,
+                                forma_pagamento: a.forma_pagamento ?? null,
+                                qtd_parcelas: a.qtd_parcelas ?? null,
+                                modelo_contrato: a.modelo_contrato ?? null,
                               })
                             }
                           >
