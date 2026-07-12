@@ -510,6 +510,39 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
               </div>
               );
             })()}
+            {previewInvoices.length > 0 && (
+              <div className="rounded-lg border border-border/60 bg-card/40 p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-semibold uppercase text-muted-foreground">
+                    Pré-visualização das faturas
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {previewInvoices.length} {previewInvoices.length === 1 ? "fatura" : "faturas"} · Total {fmtBRL(previewTotal)}
+                  </div>
+                </div>
+                <div className="max-h-56 overflow-y-auto rounded-md border border-border/40 divide-y divide-border/40">
+                  {previewInvoices.map((inv, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between px-3 py-2 text-xs hover:bg-muted/30"
+                    >
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-medium text-foreground/90 truncate">{inv.label}</span>
+                        <span className="text-[10px] text-muted-foreground truncate">
+                          {fmtDate(inv.date)} · {inv.forma}
+                        </span>
+                      </div>
+                      <span className="font-mono tabular-nums text-foreground/90 shrink-0 ml-3">
+                        {fmtBRL(inv.valor)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground/70 leading-relaxed">
+                  Prévia calculada com base no modelo, forma de pagamento, valores e datas informados acima. As cobranças reais serão criadas ao clicar em "Validar e gerar cobranças".
+                </p>
+              </div>
+            )}
 
             <div className="pt-2 flex items-center justify-end gap-2 border-t border-border/50">
               <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} disabled={saving}>
