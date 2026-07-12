@@ -375,16 +375,36 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">{tcv ? "Dia venc. 1ª parcela" : "Dia venc. 1º mês"}</Label>
-                    <Input type="number" min={1} max={31} value={diaPrimeiroRec} onChange={(e) => setDiaPrimeiroRec(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} />
+                {tcv ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Data de vencimento</Label>
+                      <Input type="date" value={dataVencRec} onChange={(e) => setDataVencRec(e.target.value)} />
+                    </div>
+                    {isTcvParcelado && (
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Qtd. parcelas no cartão</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={mesesRec}
+                          onChange={(e) => setMesesRec(Math.max(1, parseInt(e.target.value) || 1))}
+                        />
+                      </div>
+                    )}
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Dia venc. demais</Label>
-                    <Input type="number" min={1} max={31} value={diaDemaisRec} onChange={(e) => setDiaDemaisRec(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} disabled={tcv && !isTcvParcelado} />
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Dia venc. 1º mês</Label>
+                      <Input type="number" min={1} max={31} value={diaPrimeiroRec} onChange={(e) => setDiaPrimeiroRec(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Dia venc. demais</Label>
+                      <Input type="number" min={1} max={31} value={diaDemaisRec} onChange={(e) => setDiaDemaisRec(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
               );
             })()}
