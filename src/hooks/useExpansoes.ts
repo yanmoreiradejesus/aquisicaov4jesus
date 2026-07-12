@@ -47,7 +47,7 @@ export function useExpansoes() {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("crm_expansoes")
-        .select("*, projeto:crm_projetos(id, nome, account:accounts(id, cliente_nome))")
+        .select("*, projeto:crm_projetos(id, nome, account:accounts(id, cliente_nome, mrr, mrr_variavel))")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as ExpansaoRow[];
