@@ -245,10 +245,7 @@ export default function AccountDetail() {
           )}
         </div>
 
-        <AccountEkyteTasks
-          workspaceId={account.ekyte_workspace_id}
-          tenantId={tenantConfig?.id}
-        />
+
       </main>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
