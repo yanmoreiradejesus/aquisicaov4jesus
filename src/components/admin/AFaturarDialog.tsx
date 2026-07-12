@@ -170,7 +170,7 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
       return Number.isFinite(d) && d >= 1 && d <= 31 ? d : fallback;
     };
     const efPrimeiro = efUsaData ? dayFromISO(dataVencEf, diaPrimeiroEf) : diaPrimeiroEf;
-    const efDemais = efUsaData ? efPrimeiro : diaDemaisEf;
+    const efDemais = formaEf === "cartao_credito_parcelado" || parcelasEf <= 1 ? efPrimeiro : diaDemaisEf;
     const recPrimeiro = recUsaData ? dayFromISO(dataVencRec, diaPrimeiroRec) : diaPrimeiroRec;
     const recDemais = recUsaData ? recPrimeiro : diaDemaisRec;
 
@@ -282,22 +282,24 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className={`grid gap-3 ${formaEf === "cartao_credito_parcelado" ? "grid-cols-1" : "grid-cols-2"}`}>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Data do primeiro vencimento</Label>
                     <Input type="date" value={dataVencEf} onChange={(e) => setDataVencEf(e.target.value)} />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Dia venc. demais</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={31}
-                      value={diaDemaisEf}
-                      onChange={(e) => setDiaDemaisEf(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))}
-                      disabled={parcelasEf <= 1}
-                    />
-                  </div>
+                  {formaEf !== "cartao_credito_parcelado" && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Dia venc. demais</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={31}
+                        value={diaDemaisEf}
+                        onChange={(e) => setDiaDemaisEf(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))}
+                        disabled={parcelasEf <= 1}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             )}
