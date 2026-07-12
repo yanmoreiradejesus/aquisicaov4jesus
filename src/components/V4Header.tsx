@@ -47,12 +47,10 @@ const V4Header = () => {
     { path: "/comercial/expansao", label: "Expansão" },
   ];
 
-  const tarefasItems = [
-    { path: "/tarefas", label: "Minhas tarefas" },
-    { path: "/tarefas/projetos", label: "Por projeto" },
+  const pegItems = [
     { path: "/comercial/accounts", label: "Accounts" },
-    { path: "/comercial/projetos", label: "Database de projetos" },
-    { path: "/comercial/projetos/cadastro", label: "Cadastro de projetos" },
+    { path: "/comercial/projetos", label: "Database" },
+    { path: "/comercial/projetos/cadastro", label: "Cadastro" },
   ];
 
   const adminMenuItems = [
@@ -72,8 +70,8 @@ const V4Header = () => {
   const visibleAquisicaoItems = aquisicaoItems.filter((item) => canSee(item.path));
   const isComercialActive = comercialItems.some((item) => isActive(item.path));
   const visibleComercialItems = comercialItems.filter((item) => canSee(item.path));
-  const isPegActive = tarefasItems.some((item) => isActive(item.path)) || location.pathname.startsWith("/comercial/accounts") || location.pathname.startsWith("/tarefas");
-  const visiblePegItems = tarefasItems.filter((item) => hasPageAccess(item.path) || item.path.startsWith("/tarefas"));
+  const isPegActive = pegItems.some((item) => isActive(item.path)) || location.pathname.startsWith("/comercial/accounts");
+  const visiblePegItems = pegItems.filter((item) => canSee(item.path));
   const isAdminMenuActive = adminMenuItems.some((item) => isActive(item.path));
   // Admin sempre visível para quem tem permissão de acesso — não depende do tenant_enabled_pages
   const visibleAdminMenuItems = adminMenuItems.filter((item) => hasPageAccess(item.path));
@@ -276,7 +274,7 @@ const V4Header = () => {
                     onClick={() => setPegOpen(!pegOpen)}
                     className={`${navItemBase} ${isPegActive ? navItemActive : navItemIdle}`}
                   >
-                    <span>Tarefas</span>
+                    <span>PE&amp;G</span>
                     <ChevronDown
                       className={`h-3 w-3 opacity-60 transition-transform duration-200 ${pegOpen ? "rotate-180" : ""}`}
                     />
@@ -501,7 +499,7 @@ const V4Header = () => {
               {visiblePegItems.length > 0 && (
                 <div className="px-3 py-2">
                   <span className="px-3 text-foreground/40 text-[10px] font-semibold uppercase tracking-widest">
-                    Tarefas
+                    PE&amp;G
                   </span>
                   <div className="mt-1.5 space-y-0.5">
                     {visiblePegItems.map((item) => (

@@ -10,7 +10,7 @@ import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
 import { useTenantConfig } from "@/hooks/useTenantConfig";
 import { AccountManagementFields, type AccountFieldsValue } from "@/components/accounts/AccountManagementFields";
 import { useToast } from "@/hooks/use-toast";
-
+import { AccountEkyteTasks } from "@/components/accounts/AccountEkyteTasks";
 import { ProjetoEscopoDialog } from "@/components/projetos/ProjetoEscopoDialog";
 
 const fmtBRL = (v?: number | null) =>
@@ -55,7 +55,7 @@ export default function AccountDetail() {
       playbook_url: account.playbook_url,
       growthpack_url: account.growthpack_url,
       drive_url: account.drive_url,
-      
+      ekyte_workspace_id: account.ekyte_workspace_id,
     });
     setEditOpen(true);
   };
@@ -142,6 +142,7 @@ export default function AccountDetail() {
             </div>
             <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
               <span>Onboarding: <span className="text-foreground/80">{account.onboarding_status}</span></span>
+              <span>eKyte: <span className="text-foreground/80">{account.ekyte_workspace_id ?? "—"}</span></span>
               <span>Fim do contrato: <span className="text-foreground/80">{fmtDate(account.data_fim_contrato)}</span></span>
             </div>
           </div>
@@ -244,7 +245,10 @@ export default function AccountDetail() {
           )}
         </div>
 
-
+        <AccountEkyteTasks
+          workspaceId={account.ekyte_workspace_id}
+          tenantId={tenantConfig?.id}
+        />
       </main>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
