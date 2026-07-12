@@ -296,6 +296,9 @@ const AdminFinanceiro = () => {
                                 contrato_url: a.oportunidade?.contrato_url ?? null,
                                 valor_ef: a.oportunidade?.valor_ef ?? null,
                                 valor_fee: a.oportunidade?.valor_fee ?? null,
+                                forma_pagamento: a.forma_pagamento ?? null,
+                                qtd_parcelas: a.qtd_parcelas ?? null,
+                                modelo_contrato: a.modelo_contrato ?? null,
                               })
                             }
                           >
