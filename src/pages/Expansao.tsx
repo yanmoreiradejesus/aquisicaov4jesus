@@ -179,6 +179,13 @@ export default function Expansao() {
       return;
     }
 
+    if (to === "perdido") {
+      setPerdaTarget(op);
+      setPerdaMotivo(op.motivo_perda ?? "");
+      setPerdaOpen(true);
+      return;
+    }
+
     try {
       await updateEtapa.mutateAsync({ id, etapa: to as any });
     } catch (e: any) {
