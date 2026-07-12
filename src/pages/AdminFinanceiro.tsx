@@ -286,27 +286,7 @@ const AdminFinanceiro = () => {
                       <TableRow
                         key={a.id}
                         className="cursor-pointer hover:bg-muted/40 transition-colors"
-                        onClick={() =>
-                          setDialogRow({
-                            id: a.id,
-                            cliente_nome: a.cliente_nome,
-                            oportunidade_id: a.oportunidade?.id ?? null,
-                            contrato_url: contratoUrl,
-                            valor_ef: efDisplay ?? null,
-                            valor_fee: feeDisplay ?? null,
-                            modelo_contrato: a.modelo_contrato ?? null,
-                            forma_pagamento_ef: a.forma_pagamento_ef ?? null,
-                            qtd_parcelas_ef: a.qtd_parcelas_ef ?? null,
-                            valor_ef_override: a.valor_ef_override ?? null,
-                            dia_vencimento_primeiro_ef: (a as any).dia_vencimento_primeiro_ef ?? null,
-                            dia_vencimento_demais_ef: (a as any).dia_vencimento_demais_ef ?? null,
-                            forma_pagamento_recorrente: a.forma_pagamento_recorrente ?? null,
-                            qtd_parcelas_recorrente: a.qtd_parcelas_recorrente ?? null,
-                            valor_fee_override: a.valor_fee_override ?? null,
-                            dia_vencimento_primeiro_recorrente: (a as any).dia_vencimento_primeiro_recorrente ?? null,
-                            dia_vencimento_demais_recorrente: (a as any).dia_vencimento_demais_recorrente ?? null,
-                          })
-                        }
+                        onClick={() => navigate(`/admin/financeiro/a-faturar/${a.id}`)}
                       >
                         <TableCell className="font-medium">{a.cliente_nome || "—"}</TableCell>
                         <TableCell>
@@ -327,16 +307,6 @@ const AdminFinanceiro = () => {
             </div>
           </>
         )}
-
-        <AFaturarDialog
-          open={!!dialogRow}
-          onOpenChange={(v) => !v && setDialogRow(null)}
-          row={dialogRow}
-          onValidated={() => {
-            qc.invalidateQueries({ queryKey: ["accounts", "a-faturar"] });
-            qc.invalidateQueries({ queryKey: ["cobrancas"] });
-          }}
-        />
       </main>
     </div>
   );
