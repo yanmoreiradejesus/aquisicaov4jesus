@@ -162,7 +162,7 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
     }
 
     // Deriva dia-do-mês a partir da data completa quando aplicável
-    const efUsaData = temEf && formaEf !== "boleto";
+    const efUsaData = temEf;
     const recUsaData = temRec && tcv;
     const dayFromISO = (iso: string, fallback: number) => {
       if (!iso) return fallback;
