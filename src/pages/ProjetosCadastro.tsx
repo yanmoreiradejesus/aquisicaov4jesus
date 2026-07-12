@@ -325,6 +325,18 @@ const ProjetosCadastro = () => {
           }}
         />
       )}
+
+      {escopoEditing && (
+        <ProjetoEscopoDialog
+          projetoId={escopoEditing.projeto_id}
+          clienteNome={escopoEditing.cliente_nome}
+          onClose={() => setEscopoEditing(null)}
+          onSaved={() => {
+            invalidate();
+            setEscopoEditing(null);
+          }}
+        />
+      )}
     </div>
   );
 };
