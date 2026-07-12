@@ -693,6 +693,7 @@ export type Database = {
       }
       crm_expansoes: {
         Row: {
+          contrato_path: string | null
           created_at: string
           created_by: string | null
           data_ganho: string | null
@@ -702,6 +703,7 @@ export type Database = {
           etapa: Database["public"]["Enums"]["expansao_etapa"]
           id: string
           motivo_perda: string | null
+          novo_fee_mensal: number | null
           projeto_id: string
           responsavel_id: string | null
           tenant_id: string
@@ -713,6 +715,7 @@ export type Database = {
           valor_estimado: number | null
         }
         Insert: {
+          contrato_path?: string | null
           created_at?: string
           created_by?: string | null
           data_ganho?: string | null
@@ -722,6 +725,7 @@ export type Database = {
           etapa?: Database["public"]["Enums"]["expansao_etapa"]
           id?: string
           motivo_perda?: string | null
+          novo_fee_mensal?: number | null
           projeto_id: string
           responsavel_id?: string | null
           tenant_id: string
@@ -733,6 +737,7 @@ export type Database = {
           valor_estimado?: number | null
         }
         Update: {
+          contrato_path?: string | null
           created_at?: string
           created_by?: string | null
           data_ganho?: string | null
@@ -742,6 +747,7 @@ export type Database = {
           etapa?: Database["public"]["Enums"]["expansao_etapa"]
           id?: string
           motivo_perda?: string | null
+          novo_fee_mensal?: number | null
           projeto_id?: string
           responsavel_id?: string | null
           tenant_id?: string
