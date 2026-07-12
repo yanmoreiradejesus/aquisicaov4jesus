@@ -150,6 +150,106 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
   const fmtBRL = (v?: number | null) =>
     v == null ? "—" : new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(v));
 
+  const fmtDate = (d: Date) =>
+    d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+
+  const FORMA_LABEL: Record<string, string> = Object.fromEntries(FORMA_OPTIONS.map((o) => [o.value, o.label]));
+
+  const addMonths = (date: Date, n: number) =>
+    new Date(date.getFullYear(), date.getMonth() + n, 1);
+  const clampDay = (year: number, monthIdx: number, day: number) => {
+    const last = new Date(year, monthIdx + 1, 0).getDate();
+    return Math.min(day, last);
+  };
+
+  type PreviewInvoice = { label: string; date: Date; valor: number; forma: string; grupo: "EF" | "REC" };
+
+  const buildPreview = (): PreviewInvoice[] => {
+    const list: PreviewInvoice[] = [];
+    if (temEf && formaEf && dataVencEf) {
+      const total = parseFloat(valorEf || "0") || 0;
+      const n = Math.max(1, parcelasEf || 1);
+      const parcelaVal = total / n;
+      const base = new Date(dataVencEf + "T00:00:00");
+      const isCartao = formaEf === "cartao_credito_parcelado";
+      for (let i = 0; i < n; i++) {
+        let d: Date;
+        if (i === 0) {
+          d = base;
+        } else if (isCartao) {
+          const y = base.getFullYear();
+          const m = base.getMonth() + i;
+          d = new Date(y, m, clampDay(y, m, base.getDate()));
+        } else {
+          const y = base.getFullYear();
+          const m = base.getMonth() + i;
+          d = new Date(y, m, clampDay(y, m, diaDemaisEf || base.getDate()));
+        }
+        list.push({
+          label: `Escopo fechado — Parcela ${i + 1}/${n}`,
+          date: d,
+          valor: parcelaVal,
+          forma: FORMA_LABEL[formaEf] || formaEf,
+          grupo: "EF",
+        });
+      }
+    }
+    if (temRec && formaRec) {
+      const fee = parseFloat(valorFee || "0") || 0;
+      const n = Math.max(1, mesesRec || 1);
+      if (tcv) {
+        const total = fee * n;
+        const base = dataVencRec ? new Date(dataVencRec + "T00:00:00") : null;
+        if (base) {
+          const isCartao = formaRec === "cartao_credito_parcelado";
+          if (isCartao) {
+            const parcelaVal = total / n;
+            for (let i = 0; i < n; i++) {
+              const y = base.getFullYear();
+              const m = base.getMonth() + i;
+              const d = new Date(y, m, clampDay(y, m, base.getDate()));
+              list.push({
+                label: `TCV — Parcela ${i + 1}/${n}`,
+                date: d,
+                valor: parcelaVal,
+                forma: FORMA_LABEL[formaRec] || formaRec,
+                grupo: "REC",
+              });
+            }
+          } else {
+            list.push({
+              label: `TCV — Pagamento único`,
+              date: base,
+              valor: total,
+              forma: FORMA_LABEL[formaRec] || formaRec,
+              grupo: "REC",
+            });
+          }
+        }
+      } else {
+        const today = new Date();
+        for (let i = 0; i < n; i++) {
+          const monthDate = addMonths(new Date(today.getFullYear(), today.getMonth(), 1), i);
+          const y = monthDate.getFullYear();
+          const m = monthDate.getMonth();
+          const day = i === 0 ? diaPrimeiroRec : diaDemaisRec;
+          const d = new Date(y, m, clampDay(y, m, day || 10));
+          list.push({
+            label: `Recorrente — Mês ${i + 1}/${n}`,
+            date: d,
+            valor: fee,
+            forma: FORMA_LABEL[formaRec] || formaRec,
+            grupo: "REC",
+          });
+        }
+      }
+    }
+    return list;
+  };
+
+  const previewInvoices = buildPreview();
+  const previewTotal = previewInvoices.reduce((s, i) => s + i.valor, 0);
+
   const handleValidate = async () => {
     if (!row) return;
     if (temEf) {
