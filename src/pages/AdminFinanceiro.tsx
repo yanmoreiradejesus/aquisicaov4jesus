@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, DollarSign, FileText } from "lucide-react";
+import { Search, DollarSign } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -255,64 +255,49 @@ const AdminFinanceiro = () => {
                     <TableHead>Cliente</TableHead>
                     <TableHead className="text-right">EF</TableHead>
                     <TableHead className="text-right">Fee</TableHead>
-                    <TableHead>Contrato</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {loadingAFaturar ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
+                      <TableCell colSpan={3} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
                     </TableRow>
                   ) : filteredAFaturar.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
                         Nenhum contrato aguardando faturamento.
                       </TableCell>
                     </TableRow>
                   ) : (
                     filteredAFaturar.map((a: any) => (
-                      <TableRow key={a.id}>
+                      <TableRow
+                        key={a.id}
+                        className="cursor-pointer hover:bg-muted/40 transition-colors"
+                        onClick={() =>
+                          setDialogRow({
+                            id: a.id,
+                            cliente_nome: a.cliente_nome,
+                            oportunidade_id: a.oportunidade?.id ?? null,
+                            contrato_url: a.oportunidade?.contrato_url ?? null,
+                            valor_ef: a.oportunidade?.valor_ef ?? null,
+                            valor_fee: a.oportunidade?.valor_fee ?? null,
+                            modelo_contrato: a.modelo_contrato ?? null,
+                            forma_pagamento_ef: a.forma_pagamento_ef ?? null,
+                            qtd_parcelas_ef: a.qtd_parcelas_ef ?? null,
+                            valor_ef_override: a.valor_ef_override ?? null,
+                            dia_vencimento_primeiro_ef: (a as any).dia_vencimento_primeiro_ef ?? null,
+                            dia_vencimento_demais_ef: (a as any).dia_vencimento_demais_ef ?? null,
+                            forma_pagamento_recorrente: a.forma_pagamento_recorrente ?? null,
+                            qtd_parcelas_recorrente: a.qtd_parcelas_recorrente ?? null,
+                            valor_fee_override: a.valor_fee_override ?? null,
+                            dia_vencimento_primeiro_recorrente: (a as any).dia_vencimento_primeiro_recorrente ?? null,
+                            dia_vencimento_demais_recorrente: (a as any).dia_vencimento_demais_recorrente ?? null,
+                          })
+                        }
+                      >
                         <TableCell className="font-medium">{a.cliente_nome || "—"}</TableCell>
                         <TableCell className="text-right font-mono">{fmtBRL(a.oportunidade?.valor_ef)}</TableCell>
                         <TableCell className="text-right font-mono">{fmtBRL(a.oportunidade?.valor_fee)}</TableCell>
-                        <TableCell>
-                          {a.oportunidade?.contrato_url ? (
-                            <span className="inline-flex items-center gap-1 text-emerald-300 text-xs">
-                              <FileText className="h-3.5 w-3.5" /> Anexado
-                            </span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">Sem PDF</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            onClick={() =>
-                              setDialogRow({
-                                id: a.id,
-                                cliente_nome: a.cliente_nome,
-                                oportunidade_id: a.oportunidade?.id ?? null,
-                                contrato_url: a.oportunidade?.contrato_url ?? null,
-                                valor_ef: a.oportunidade?.valor_ef ?? null,
-                                valor_fee: a.oportunidade?.valor_fee ?? null,
-                                modelo_contrato: a.modelo_contrato ?? null,
-                                forma_pagamento_ef: a.forma_pagamento_ef ?? null,
-                                qtd_parcelas_ef: a.qtd_parcelas_ef ?? null,
-                                valor_ef_override: a.valor_ef_override ?? null,
-                                dia_vencimento_primeiro_ef: (a as any).dia_vencimento_primeiro_ef ?? null,
-                                dia_vencimento_demais_ef: (a as any).dia_vencimento_demais_ef ?? null,
-                                forma_pagamento_recorrente: a.forma_pagamento_recorrente ?? null,
-                                qtd_parcelas_recorrente: a.qtd_parcelas_recorrente ?? null,
-                                valor_fee_override: a.valor_fee_override ?? null,
-                                dia_vencimento_primeiro_recorrente: (a as any).dia_vencimento_primeiro_recorrente ?? null,
-                                dia_vencimento_demais_recorrente: (a as any).dia_vencimento_demais_recorrente ?? null,
-                              })
-                            }
-                          >
-                            Validar
-                          </Button>
-                        </TableCell>
                       </TableRow>
                     ))
                   )}
