@@ -1,75 +1,103 @@
-# Refatoração: Gestão de Contas ↔ Database ↔ Projeto
 
-## Diagnóstico do problema atual
-- `accounts.mrr` / `accounts.mrr_variavel` estão `NULL` em todos os projetos, mesmo depois do "A Faturar" ter sido validado.
-- `account_scope` está **totalmente vazia** (0 linhas) — o escopo só existiria se alguém abrisse o botão "Editar" e marcasse manualmente item por item vindo do template do squad.
-- Ou seja: hoje a tela de Gestão de Contas é 100% preenchimento manual, desconectado do CRM/faturamento. Precisamos fazê-la refletir o banco.
+# Gestor de Tarefas nativo
 
-## Modelo de dados (o que passa a ser fonte de verdade)
+Substituir o menu **PE&G** por um menu **Tarefas** com gestão nativa de tarefas, projetos e fluxos de produção. Remover integração eKyte por completo.
 
-### MRR e valores do contrato → vêm de `crm_oportunidades` + overrides de faturamento
-- **MRR** = `COALESCE(accounts.valor_fee_override, crm_oportunidades.valor_fee)` da oportunidade vinculada.
-- **Valor EF** = `COALESCE(accounts.valor_ef_override, crm_oportunidades.valor_ef)`.
-- Quando o contrato é validado em **A Faturar**, o override já é gravado (`validar_faturamento_account_v2`), então o valor efetivo aparece automaticamente na tela de Contas — sem duplicar dado.
-- Removo os inputs manuais de MRR / MRR variável no diálogo "Editar" da conta. MRR variável passa a viver dentro do projeto (variável = fee comissionado/perf) quando existir.
+## 1. Modelo de dados (novas tabelas)
 
-### Escopo contratado → migra de `account_scope` para `crm_projetos`
-- Novas colunas em **`crm_projetos`**:
-  - `escopo_trafego BOOLEAN DEFAULT false`
-  - `escopo_social_media BOOLEAN DEFAULT false`
-  - `escopo_design BOOLEAN DEFAULT false`
-  - `escopo_crm BOOLEAN DEFAULT false`
-  - `escopo_validado BOOLEAN DEFAULT false` (usado pelo badge "NEW")
-  - `escopo_ia_sugestao JSONB` (o que a IA extraiu do contrato)
-  - `escopo_ia_gerado_em TIMESTAMPTZ`
-- A tabela `account_scope` e o `squad_scope_template` deixam de ser usados pela tela de Contas (mantenho os dados para não perder histórico, mas as leituras/gravações passam para `crm_projetos`).
+```text
+tasks
+ ├─ projeto_id  → crm_projetos (opcional; se null = tarefa de squad/pessoal)
+ ├─ squad       (strikers | fenix | saber | null)
+ ├─ fase_id     → task_fases
+ ├─ titulo, descricao
+ ├─ responsavel_id → profiles
+ ├─ prioridade  (baixa | media | alta | urgente)
+ ├─ status      (backlog | em_execucao | revisao | aprovado | concluido | cancelado)
+ ├─ prazo, iniciado_em, concluido_em
+ ├─ estimativa_horas, horas_gastas
+ └─ tenant_id, created_by
 
-## Fluxo do usuário
+task_fases            — colunas do kanban por projeto (ordem, nome, cor, wip_limit)
+task_checklist_items  — subtarefas dentro de uma task
+task_comentarios      — thread por task
+task_anexos           — arquivos (bucket task-anexos)
+task_atividades       — log automático de mudanças (status, responsável, prazo)
 
-### Tela **Cadastro de projetos**
-- Cada card/linha exibe um **badge "NEW"** enquanto `escopo_validado = false`.
-- Dentro do card aparece a **seção Escopo** com 4 checkboxes: **Tráfego · Social Media · Design · CRM**.
-- Botão **"Sugerir com IA"** dispara uma edge function nova (`suggest-project-scope`) que:
-  1. Puxa `contrato_url` da oportunidade vinculada (usa `serve-contrato` para gerar signed URL do PDF).
-  2. Passa o PDF pro Lovable AI Gateway (`google/gemini-3-flash-preview`) pedindo output estruturado com os 4 booleans + justificativa.
-  3. Grava `escopo_ia_sugestao` + `escopo_ia_gerado_em` e **pré-marca** os 4 checkboxes com a sugestão (só pré-marca, ainda não valida).
-- Ao clicar em **"Confirmar escopo"** → grava os 4 booleans e marca `escopo_validado = true` (remove o badge NEW).
-- A IA roda automaticamente na primeira vez que o projeto abre a seção de escopo, se `escopo_ia_gerado_em IS NULL` e existir contrato.
+fluxos                — template de fluxo de produção (ex: "Social Media mensal")
+ ├─ nome, categoria (trafego | social | design | crm | outro)
+ ├─ escopo_gatilho   (booleanos: aplicar quando escopo do projeto tiver X)
+ └─ ativo
 
-### Tela **Gestão de Contas** (lista + detalhe)
-- Passa a fazer join com `crm_oportunidades` e `crm_projetos` para popular MRR e escopo.
-- Cards mostram: MRR (do banco), Escopo (chips: Tráfego / Social Media / Design / CRM — só os marcados como `true`), squad, health, time.
-- Diálogo **Editar** mantém: squad, time (GT/Designer/Social), links, workspace eKyte. Remove MRR e escopo (agora são derivados/gerenciados no projeto e faturamento).
+fluxo_tarefas         — tarefas-modelo de um fluxo
+ ├─ titulo, descricao, prioridade, offset_dias
+ ├─ recorrencia (nenhuma | semanal | mensal)
+ └─ papel_sugerido (Gestor de Tráfego, Designer, etc.)
 
-## Migrações (uma migration única)
-1. `ALTER TABLE crm_projetos` — add 7 colunas de escopo acima.
-2. Backfill: para cada projeto existente, `escopo_validado = false` (garante que todos apareçam como NEW).
-3. Novo função SQL `get_account_effective_mrr(account_id)` (opcional, mas ajuda em outras telas).
+projeto_fluxos        — fluxos aplicados a um projeto (instância)
+```
 
-## Edge function nova
-- `supabase/functions/suggest-project-scope/index.ts`
-  - Input: `{ projeto_id }`.
-  - Baixa o contrato via storage `contratos-assinados`, extrai texto (usa o parser já existente do `extract-contract-billing`).
-  - Chama Lovable AI com structured output → `{ trafego, social_media, design, crm, justificativa }`.
-  - Salva em `crm_projetos.escopo_ia_sugestao` + timestamp.
-  - Registra em `ai_usage_events` (mesma pattern das outras functions).
+Todas com `tenant_id`, RLS por tenant, GRANT para `authenticated`/`service_role`, triggers `updated_at` e `set_tenant_id_on_insert`.
 
-## Frontend
+## 2. Fluxos de produção
 
-### Novos/alterados
-- `src/hooks/useProjetoEscopo.ts` — hook que lê/atualiza os 4 booleans + estado da IA.
-- `src/components/projetos/ProjetoEscopoCard.tsx` — card de escopo com 4 switches, botão "Sugerir com IA", badge NEW quando `escopo_validado=false`.
-- `src/pages/ProjetosCadastro.tsx` — usa o card acima e mostra badge NEW nas linhas da tabela.
-- `src/hooks/useAccounts.ts` — passa a fazer join com oportunidade (`valor_fee`, `valor_ef`) e projeto (4 booleans). Adiciona `effectiveMrr` no retorno.
-- `src/pages/AccountsList.tsx` — colunas usam `effectiveMrr` e mostram chips de escopo.
-- `src/pages/AccountDetail.tsx` — card "MRR" usa `effectiveMrr`; card "Escopo contratado" mostra apenas os 4 chips (readonly aqui — edição fica no projeto). Diálogo de editar perde MRR e escopo.
-- `src/components/accounts/AccountManagementFields.tsx` — remove blocos MRR e Escopo.
+- Cada **fluxo** é um template com N tarefas-modelo.
+- Ao aplicar um fluxo a um projeto: gera tarefas reais com prazo = hoje + `offset_dias`, herdando responsável do papel mapeado no squad.
+- Recorrência semanal/mensal cria a próxima instância quando a anterior é concluída (via trigger + edge function `roll-fluxo-tarefas`).
+- Sugestão automática: quando escopo do projeto é validado (`escopo_trafego`, etc.), oferecer aplicar fluxos compatíveis.
 
-## Observações sobre "dados que não vieram"
-- Todas as 20 contas em `onboarding_status='concluida'` têm `oportunidade_id` preenchido e a oportunidade tem `valor_fee` e/ou `valor_ef` no banco. Depois da migration + refactor, a tela vai passar a mostrar esses valores imediatamente (nada precisa ser re-inserido).
-- O escopo vai aparecer vazio até alguém validar (ou clicar em "Sugerir com IA") — o que é o comportamento esperado do fluxo novo.
+## 3. Menu e telas
 
-## Pontos que quero confirmar antes de codar
-1. **MRR variável**: mantenho como campo manual no diálogo de editar (raro, ex.: fee comissionado sobre performance) ou removo totalmente por ora?
-2. **`account_scope` legada**: só paro de usar e mantenho a tabela, ou você prefere que eu drope de vez?
-3. **Auto-rodar IA de escopo**: rodar automaticamente quando o projeto é criado (trigger no `onboarding_status = 'concluida'`) ou só quando o usuário clica em "Sugerir com IA" na tela do projeto?
+Novo item no header substituindo **PE&G**: **Tarefas**.
+
+Submenus:
+- **/tarefas** — visão geral (minhas tarefas + filtros por projeto, squad, responsável, prazo, status)
+- **/tarefas/projeto/:id** — kanban do projeto (colunas = fases, cards = tasks, drag entre fases)
+- **/tarefas/squad/:squad** — kanban consolidado do squad
+- **/tarefas/fluxos** — CRUD de fluxos-template (admin/coordenador)
+
+Detalhe da task em `Sheet` lateral: descrição, checklist, comentários, anexos, log de atividades, campos editáveis inline.
+
+## 4. Remoção do eKyte
+
+- Deletar tabelas `ekyte_tasks`, `ekyte_projects`, `ekyte_workspaces`, `ekyte_time_trackings`, `ekyte_phase_performance`, `ekyte_sync_log` (migration com `DROP TABLE ... CASCADE`).
+- Remover edge function `sync-ekyte` e secret `EKYTE_API_KEY`.
+- Remover componente `AccountEkyteTasks` e chamadas em `AccountDetail`.
+- Remover cargo/menu "PE&G" do header e das listas em `src/lib/cargos.ts` — os cargos de PE&G migram para o novo departamento **Operação** (ou mantemos os cargos, só troca o rótulo do menu).
+
+## 5. Permissões
+
+- **Admin/Coordenador**: cria fluxos, aplica em projetos, vê tudo do tenant.
+- **Membro**: vê tarefas onde é responsável + tarefas dos projetos que participa (via `crm_projetos.time`).
+- **Super admin V4**: bypass via `has_role`.
+
+RLS: `tenant_id = current_tenant_id()` + política extra para membros verem só seu escopo.
+
+## 6. Entregas por fase
+
+**Fase 1 — Fundação (esta iteração)**
+1. Migration: cria `tasks`, `task_fases`, `task_checklist_items`, `task_comentarios`, `task_anexos`, `task_atividades` + RLS/GRANTs + triggers de log e `updated_at`.
+2. Drop das tabelas eKyte + remoção do componente/função de sync.
+3. Header: trocar **PE&G** por **Tarefas** com os 4 submenus.
+4. Página `/tarefas` (lista + filtros) e `/tarefas/projeto/:id` (kanban básico).
+5. `TaskDetailSheet` com edição inline, checklist e comentários.
+
+**Fase 2 — Fluxos**
+6. Migration `fluxos`, `fluxo_tarefas`, `projeto_fluxos`.
+7. CRUD de fluxos + aplicar-a-projeto.
+8. Job de recorrência (edge function agendada).
+9. Sugestão automática baseada no escopo do projeto.
+
+**Fase 3 — Refinos**
+10. Vista por squad, dashboards de carga, time tracking simples (start/stop).
+
+## Detalhes técnicos
+
+- Kanban: `@hello-pangea/dnd` (já usado em Oportunidades/Expansão).
+- Realtime: canal Supabase por projeto para refletir mudanças entre usuários.
+- Notificações in-app quando o usuário vira responsável ou é mencionado em comentário (fase 2).
+- Índices em `tasks(projeto_id, status)`, `tasks(responsavel_id, status)`, `tasks(tenant_id, prazo)`.
+
+## Pergunta antes de implementar
+
+O plano começa pela **Fase 1** (fundação + remoção eKyte + kanban por projeto). Confirma que posso seguir por aí, ou prefere que eu já inclua os fluxos-template (Fase 2) na primeira entrega?
