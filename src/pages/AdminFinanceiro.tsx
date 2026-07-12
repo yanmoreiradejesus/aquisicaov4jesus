@@ -253,6 +253,7 @@ const AdminFinanceiro = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Cliente</TableHead>
+                    <TableHead>Origem</TableHead>
                     <TableHead className="text-right">EF</TableHead>
                     <TableHead className="text-right">Fee</TableHead>
                   </TableRow>
@@ -260,16 +261,30 @@ const AdminFinanceiro = () => {
                 <TableBody>
                   {loadingAFaturar ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
+                      <TableCell colSpan={4} className="text-center text-muted-foreground py-8">Carregando...</TableCell>
                     </TableRow>
                   ) : filteredAFaturar.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                         Nenhum contrato aguardando faturamento.
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredAFaturar.map((a: any) => (
+                    filteredAFaturar.map((a: any) => {
+                      const isExpansao = a.origem === "expansao";
+                      const tipoG = a.expansao?.tipo_ganho as string | undefined;
+                      const temFeeExp = tipoG === "aumento_fee" || tipoG === "ambos";
+                      const temEfExp = tipoG === "escopo_fechado" || tipoG === "ambos";
+                      const efDisplay = isExpansao
+                        ? temEfExp ? a.expansao?.valor_escopo_fechado : null
+                        : a.oportunidade?.valor_ef;
+                      const feeDisplay = isExpansao
+                        ? temFeeExp ? a.expansao?.novo_fee_mensal : null
+                        : a.oportunidade?.valor_fee;
+                      const contratoUrl = isExpansao
+                        ? a.expansao?.contrato_path ?? null
+                        : a.oportunidade?.contrato_url ?? null;
+                      return (
                       <TableRow
                         key={a.id}
                         className="cursor-pointer hover:bg-muted/40 transition-colors"
@@ -278,9 +293,9 @@ const AdminFinanceiro = () => {
                             id: a.id,
                             cliente_nome: a.cliente_nome,
                             oportunidade_id: a.oportunidade?.id ?? null,
-                            contrato_url: a.oportunidade?.contrato_url ?? null,
-                            valor_ef: a.oportunidade?.valor_ef ?? null,
-                            valor_fee: a.oportunidade?.valor_fee ?? null,
+                            contrato_url: contratoUrl,
+                            valor_ef: efDisplay ?? null,
+                            valor_fee: feeDisplay ?? null,
                             modelo_contrato: a.modelo_contrato ?? null,
                             forma_pagamento_ef: a.forma_pagamento_ef ?? null,
                             qtd_parcelas_ef: a.qtd_parcelas_ef ?? null,
@@ -296,8 +311,14 @@ const AdminFinanceiro = () => {
                         }
                       >
                         <TableCell className="font-medium">{a.cliente_nome || "—"}</TableCell>
-                        <TableCell className="text-right font-mono">{fmtBRL(a.oportunidade?.valor_ef)}</TableCell>
-                        <TableCell className="text-right font-mono">{fmtBRL(a.oportunidade?.valor_fee)}</TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium border ${isExpansao ? "bg-violet-500/10 text-violet-300 border-violet-500/30" : "bg-sky-500/10 text-sky-300 border-sky-500/30"}`}>
+                            {isExpansao ? "Expansão" : "Aquisição"}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right font-mono">{fmtBRL(efDisplay)}</TableCell>
+                        <TableCell className="text-right font-mono">{fmtBRL(feeDisplay)}</TableCell>
+
                       </TableRow>
                     ))
                   )}
