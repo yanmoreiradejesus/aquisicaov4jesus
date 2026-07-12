@@ -180,146 +180,126 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl h-[85vh] p-0 flex flex-col">
-        <DialogHeader className="p-4 border-b">
-          <DialogTitle>{row?.cliente_nome || "Contrato"} — Validar faturamento</DialogTitle>
-        </DialogHeader>
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_400px] overflow-hidden">
-          {/* PDF viewer */}
-          <div className="bg-muted/30 border-r overflow-hidden flex flex-col">
-            {row?.contrato_url ? (
-              signedUrl ? (
-                <>
-                  <div className="p-2 border-b flex justify-end gap-2 bg-background/60">
-                    <Button size="sm" variant="outline" onClick={openInNewTab}>Abrir em nova aba</Button>
-                    <Button size="sm" variant="outline" asChild>
-                      <a href={signedUrl} download>Baixar</a>
-                    </Button>
-                  </div>
-                  <object data={signedUrl} type="application/pdf" className="flex-1 w-full">
-                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2 p-4">
-                      <FileText className="h-10 w-10 opacity-50" />
-                      <p className="text-sm text-center">Seu navegador não conseguiu exibir o PDF inline. Use os botões acima.</p>
-                    </div>
-                  </object>
-                </>
-              ) : (
-                <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Carregando contrato...
-                </div>
-              )
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
-                <FileText className="h-10 w-10 opacity-50" />
-                <p className="text-sm">Nenhum contrato anexado nesta oportunidade.</p>
-              </div>
+      <DialogContent className="max-w-2xl max-h-[90vh] p-0 flex flex-col">
+        <DialogHeader className="px-6 py-4 border-b border-border/40">
+          <DialogTitle className="flex items-center justify-between gap-3">
+            <span>{row?.cliente_nome || "Contrato"}</span>
+            {row?.contrato_url && signedUrl && (
+              <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-xs font-normal text-muted-foreground" onClick={openInNewTab}>
+                <ExternalLink className="h-3.5 w-3.5" />
+                Ver contrato
+              </Button>
             )}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Modelo de contrato</Label>
+              {detecting && (
+                <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
+                  <Loader2 className="h-3 w-3 animate-spin" /> detectando...
+                </span>
+              )}
+            </div>
+            <Select value={modelo} onValueChange={(v: any) => setModelo(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="escopo_fechado">Somente escopo fechado</SelectItem>
+                <SelectItem value="recorrente">Somente recorrente</SelectItem>
+                <SelectItem value="hibrido">Escopo fechado + Recorrente</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Form */}
-          <div className="p-5 space-y-5 overflow-y-auto">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>Modelo de contrato</Label>
-                {detecting && (
-                  <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
-                    <Loader2 className="h-3 w-3 animate-spin" /> detectando...
-                  </span>
+          {temEf && (
+            <div className="rounded-lg border border-border/60 bg-card/40 p-4 space-y-3">
+              <div className="text-xs font-semibold uppercase text-muted-foreground">Escopo fechado (one-shot)</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Valor total</Label>
+                  <Input type="number" step="0.01" value={valorEf} onChange={(e) => setValorEf(e.target.value)} placeholder={fmtBRL(row?.valor_ef)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Parcelas</Label>
+                  <Input type="number" min={1} value={parcelasEf} onChange={(e) => setParcelasEf(parseInt(e.target.value) || 1)} />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Forma de pagamento</Label>
+                <Select value={formaEf} onValueChange={setFormaEf}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {FORMA_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {!parcelasEfLabelNeeded && parcelasEf > 1 && (
+                  <p className="text-[10px] text-muted-foreground">Forma sem parcelamento — as parcelas serão geradas mesmo assim como cobranças mensais.</p>
                 )}
               </div>
-              <Select value={modelo} onValueChange={(v: any) => setModelo(v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="escopo_fechado">Somente escopo fechado</SelectItem>
-                  <SelectItem value="recorrente">Somente recorrente</SelectItem>
-                  <SelectItem value="hibrido">Escopo fechado + Recorrente</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Dia venc. 1ª parcela</Label>
+                  <Input type="number" min={1} max={31} value={diaPrimeiroEf} onChange={(e) => setDiaPrimeiroEf(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Dia venc. demais</Label>
+                  <Input type="number" min={1} max={31} value={diaDemaisEf} onChange={(e) => setDiaDemaisEf(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} disabled={parcelasEf <= 1} />
+                </div>
+              </div>
             </div>
+          )}
 
-            {temEf && (
-              <div className="rounded-lg border border-border/60 bg-card/40 p-4 space-y-3">
-                <div className="text-xs font-semibold uppercase text-muted-foreground">Escopo fechado (one-shot)</div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Valor total</Label>
-                    <Input type="number" step="0.01" value={valorEf} onChange={(e) => setValorEf(e.target.value)} placeholder={fmtBRL(row?.valor_ef)} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Parcelas</Label>
-                    <Input type="number" min={1} value={parcelasEf} onChange={(e) => setParcelasEf(parseInt(e.target.value) || 1)} />
-                  </div>
+          {temRec && (
+            <div className="rounded-lg border border-border/60 bg-card/40 p-4 space-y-3">
+              <div className="text-xs font-semibold uppercase text-muted-foreground">Recorrente (mensal)</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Valor mensal</Label>
+                  <Input type="number" step="0.01" value={valorFee} onChange={(e) => setValorFee(e.target.value)} placeholder={fmtBRL(row?.valor_fee)} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Forma de pagamento</Label>
-                  <Select value={formaEf} onValueChange={setFormaEf}>
-                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                    <SelectContent>
-                      {FORMA_OPTIONS.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {!parcelasEfLabelNeeded && parcelasEf > 1 && (
-                    <p className="text-[10px] text-muted-foreground">Forma sem parcelamento — as parcelas serão geradas mesmo assim como cobranças mensais.</p>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Dia venc. 1ª parcela</Label>
-                    <Input type="number" min={1} max={31} value={diaPrimeiroEf} onChange={(e) => setDiaPrimeiroEf(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Dia venc. demais</Label>
-                    <Input type="number" min={1} max={31} value={diaDemaisEf} onChange={(e) => setDiaDemaisEf(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} disabled={parcelasEf <= 1} />
-                  </div>
+                  <Label className="text-xs">Meses</Label>
+                  <Input type="number" min={1} value={mesesRec} onChange={(e) => setMesesRec(parseInt(e.target.value) || 1)} />
                 </div>
               </div>
-            )}
-
-            {temRec && (
-              <div className="rounded-lg border border-border/60 bg-card/40 p-4 space-y-3">
-                <div className="text-xs font-semibold uppercase text-muted-foreground">Recorrente (mensal)</div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Valor mensal</Label>
-                    <Input type="number" step="0.01" value={valorFee} onChange={(e) => setValorFee(e.target.value)} placeholder={fmtBRL(row?.valor_fee)} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Meses</Label>
-                    <Input type="number" min={1} value={mesesRec} onChange={(e) => setMesesRec(parseInt(e.target.value) || 1)} />
-                  </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Forma de pagamento</Label>
+                <Select value={formaRec} onValueChange={setFormaRec}>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {FORMA_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Dia venc. 1º mês</Label>
+                  <Input type="number" min={1} max={31} value={diaPrimeiroRec} onChange={(e) => setDiaPrimeiroRec(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Forma de pagamento</Label>
-                  <Select value={formaRec} onValueChange={setFormaRec}>
-                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                    <SelectContent>
-                      {FORMA_OPTIONS.map((o) => (
-                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Dia venc. 1º mês</Label>
-                    <Input type="number" min={1} max={31} value={diaPrimeiroRec} onChange={(e) => setDiaPrimeiroRec(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Dia venc. demais</Label>
-                    <Input type="number" min={1} max={31} value={diaDemaisRec} onChange={(e) => setDiaDemaisRec(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} disabled={mesesRec <= 1} />
-                  </div>
+                  <Label className="text-xs">Dia venc. demais</Label>
+                  <Input type="number" min={1} max={31} value={diaDemaisRec} onChange={(e) => setDiaDemaisRec(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} disabled={mesesRec <= 1} />
                 </div>
               </div>
-            )}
-
-            <Button className="w-full" onClick={handleValidate} disabled={saving || detecting}>
-              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Validar e gerar cobranças
-            </Button>
-          </div>
+            </div>
+          )}
         </div>
+
+        <DialogFooter className="px-6 py-4 border-t border-border/40 gap-2 sm:gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button onClick={handleValidate} disabled={saving || detecting}>
+            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Confirmar faturamento
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
