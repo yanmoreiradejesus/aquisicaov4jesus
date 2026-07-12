@@ -70,7 +70,7 @@ function mapRow(r: any): AccountRow {
     health_score: r.health_score,
     onboarding_status: r.onboarding_status,
     status: r.status,
-    ekyte_workspace_id: r.ekyte_workspace_id,
+    
     data_fim_contrato: r.data_fim_contrato,
     data_inicio_contrato: r.data_inicio_contrato,
     account_manager_id: r.account_manager_id,
