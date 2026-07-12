@@ -162,36 +162,64 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
     return Math.min(day, last);
   };
 
-  type PreviewInvoice = { label: string; date: Date; valor: number; forma: string; grupo: "EF" | "REC" };
+  type PreviewInvoice = {
+    key: string;
+    contrato: "Esc. fechado" | "Recorrente";
+    parcela: string;
+    date: Date;
+    valor: number;
+    forma: string;
+    grupo: "EF" | "REC";
+  };
+
+  const [dateOverrides, setDateOverrides] = useState<Record<string, string>>({});
+
+  const toISO = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
 
   const buildPreview = (): PreviewInvoice[] => {
     const list: PreviewInvoice[] = [];
     if (temEf && formaEf && dataVencEf) {
       const total = parseFloat(valorEf || "0") || 0;
       const n = Math.max(1, parcelasEf || 1);
-      const parcelaVal = total / n;
       const base = new Date(dataVencEf + "T00:00:00");
       const isCartao = formaEf === "cartao_credito_parcelado";
-      for (let i = 0; i < n; i++) {
-        let d: Date;
-        if (i === 0) {
-          d = base;
-        } else if (isCartao) {
-          const y = base.getFullYear();
-          const m = base.getMonth() + i;
-          d = new Date(y, m, clampDay(y, m, base.getDate()));
-        } else {
-          const y = base.getFullYear();
-          const m = base.getMonth() + i;
-          d = new Date(y, m, clampDay(y, m, diaDemaisEf || base.getDate()));
-        }
+      if (isCartao) {
+        // 1 fatura única para cartão parcelado, independente das parcelas
         list.push({
-          label: `Escopo fechado — Parcela ${i + 1}/${n}`,
-          date: d,
-          valor: parcelaVal,
+          key: "EF-single",
+          contrato: "Esc. fechado",
+          parcela: n > 1 ? `${n}x no cartão` : "À vista",
+          date: base,
+          valor: total,
           forma: FORMA_LABEL[formaEf] || formaEf,
           grupo: "EF",
         });
+      } else {
+        const parcelaVal = total / n;
+        for (let i = 0; i < n; i++) {
+          let d: Date;
+          if (i === 0) {
+            d = base;
+          } else {
+            const y = base.getFullYear();
+            const m = base.getMonth() + i;
+            d = new Date(y, m, clampDay(y, m, diaDemaisEf || base.getDate()));
+          }
+          list.push({
+            key: `EF-${i}`,
+            contrato: "Esc. fechado",
+            parcela: `${i + 1}/${n}`,
+            date: d,
+            valor: parcelaVal,
+            forma: FORMA_LABEL[formaEf] || formaEf,
+            grupo: "EF",
+          });
+        }
       }
     }
     if (temRec && formaRec) {
@@ -203,22 +231,21 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
         if (base) {
           const isCartao = formaRec === "cartao_credito_parcelado";
           if (isCartao) {
-            const parcelaVal = total / n;
-            for (let i = 0; i < n; i++) {
-              const y = base.getFullYear();
-              const m = base.getMonth() + i;
-              const d = new Date(y, m, clampDay(y, m, base.getDate()));
-              list.push({
-                label: `TCV — Parcela ${i + 1}/${n}`,
-                date: d,
-                valor: parcelaVal,
-                forma: FORMA_LABEL[formaRec] || formaRec,
-                grupo: "REC",
-              });
-            }
+            // 1 fatura única para cartão parcelado (TCV), independente das parcelas
+            list.push({
+              key: "REC-single",
+              contrato: "Recorrente",
+              parcela: n > 1 ? `${n}x no cartão` : "À vista",
+              date: base,
+              valor: total,
+              forma: FORMA_LABEL[formaRec] || formaRec,
+              grupo: "REC",
+            });
           } else {
             list.push({
-              label: `TCV — Pagamento único`,
+              key: "REC-single",
+              contrato: "Recorrente",
+              parcela: "TCV",
               date: base,
               valor: total,
               forma: FORMA_LABEL[formaRec] || formaRec,
@@ -235,7 +262,9 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
           const day = i === 0 ? diaPrimeiroRec : diaDemaisRec;
           const d = new Date(y, m, clampDay(y, m, day || 10));
           list.push({
-            label: `Recorrente — Mês ${i + 1}/${n}`,
+            key: `REC-${i}`,
+            contrato: "Recorrente",
+            parcela: `${i + 1}/${n}`,
             date: d,
             valor: fee,
             forma: FORMA_LABEL[formaRec] || formaRec,
@@ -244,7 +273,12 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
         }
       }
     }
-    return list;
+    // Aplica overrides manuais de data
+    return list.map((inv) => {
+      const ov = dateOverrides[inv.key];
+      if (ov) return { ...inv, date: new Date(ov + "T00:00:00") };
+      return inv;
+    });
   };
 
   const previewInvoices = buildPreview();
