@@ -301,8 +301,6 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
                 </div>
               </div>
             )}
-              </div>
-            )}
 
             {temRec && (() => {
               const recFormas = tcv
