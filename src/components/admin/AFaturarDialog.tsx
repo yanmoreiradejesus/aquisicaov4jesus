@@ -159,6 +159,19 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
       if (!mesesRec || mesesRec < 1) { toast({ title: "Meses de recorrência inválidos", variant: "destructive" }); return; }
     }
 
+    // Deriva dia-do-mês a partir da data completa quando aplicável
+    const efUsaData = temEf && formaEf !== "boleto";
+    const recUsaData = temRec && tcv;
+    const dayFromISO = (iso: string, fallback: number) => {
+      if (!iso) return fallback;
+      const d = parseInt(iso.slice(8, 10), 10);
+      return Number.isFinite(d) && d >= 1 && d <= 31 ? d : fallback;
+    };
+    const efPrimeiro = efUsaData ? dayFromISO(dataVencEf, diaPrimeiroEf) : diaPrimeiroEf;
+    const efDemais = efUsaData ? efPrimeiro : diaDemaisEf;
+    const recPrimeiro = recUsaData ? dayFromISO(dataVencRec, diaPrimeiroRec) : diaPrimeiroRec;
+    const recDemais = recUsaData ? recPrimeiro : diaDemaisRec;
+
     setSaving(true);
     const { error } = await (supabase as any).rpc("validar_faturamento_account_v2", {
       p_account_id: row.id,
@@ -169,10 +182,10 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
       p_forma_recorrente: temRec ? formaRec : null,
       p_qtd_parcelas_recorrente: temRec ? mesesRec : null,
       p_valor_fee: temRec ? parseFloat(valorFee || "0") : null,
-      p_dia_venc_primeiro_ef: temEf ? diaPrimeiroEf : null,
-      p_dia_venc_demais_ef: temEf ? diaDemaisEf : null,
-      p_dia_venc_primeiro_rec: temRec ? diaPrimeiroRec : null,
-      p_dia_venc_demais_rec: temRec ? diaDemaisRec : null,
+      p_dia_venc_primeiro_ef: temEf ? efPrimeiro : null,
+      p_dia_venc_demais_ef: temEf ? efDemais : null,
+      p_dia_venc_primeiro_rec: temRec ? recPrimeiro : null,
+      p_dia_venc_demais_rec: temRec ? recDemais : null,
     });
     setSaving(false);
     if (error) {
