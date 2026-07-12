@@ -691,6 +691,84 @@ export type Database = {
           },
         ]
       }
+      crm_expansoes: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          data_ganho: string | null
+          data_negociacao: string | null
+          data_proposta: string | null
+          descricao: string | null
+          etapa: Database["public"]["Enums"]["expansao_etapa"]
+          id: string
+          motivo_perda: string | null
+          projeto_id: string
+          responsavel_id: string | null
+          tenant_id: string
+          tipo_ganho: Database["public"]["Enums"]["expansao_tipo_ganho"] | null
+          titulo: string
+          updated_at: string
+          valor_aumento_fee: number | null
+          valor_escopo_fechado: number | null
+          valor_estimado: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          data_ganho?: string | null
+          data_negociacao?: string | null
+          data_proposta?: string | null
+          descricao?: string | null
+          etapa?: Database["public"]["Enums"]["expansao_etapa"]
+          id?: string
+          motivo_perda?: string | null
+          projeto_id: string
+          responsavel_id?: string | null
+          tenant_id: string
+          tipo_ganho?: Database["public"]["Enums"]["expansao_tipo_ganho"] | null
+          titulo: string
+          updated_at?: string
+          valor_aumento_fee?: number | null
+          valor_escopo_fechado?: number | null
+          valor_estimado?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          data_ganho?: string | null
+          data_negociacao?: string | null
+          data_proposta?: string | null
+          descricao?: string | null
+          etapa?: Database["public"]["Enums"]["expansao_etapa"]
+          id?: string
+          motivo_perda?: string | null
+          projeto_id?: string
+          responsavel_id?: string | null
+          tenant_id?: string
+          tipo_ganho?: Database["public"]["Enums"]["expansao_tipo_ganho"] | null
+          titulo?: string
+          updated_at?: string
+          valor_aumento_fee?: number | null
+          valor_escopo_fechado?: number | null
+          valor_estimado?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_expansoes_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "crm_projetos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_expansoes_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_leads: {
         Row: {
           arrematador: string | null
@@ -2260,6 +2338,13 @@ export type Database = {
         | "criacao"
       cobranca_status: "pendente" | "pago" | "atrasado" | "cancelado"
       cobranca_tipo: "fee_setup" | "fee_recorrente" | "ef"
+      expansao_etapa:
+        | "mapeada"
+        | "proposta"
+        | "negociacao"
+        | "ganho"
+        | "perdido"
+      expansao_tipo_ganho: "aumento_fee" | "escopo_fechado" | "ambos"
       lead_etapa:
         | "entrada"
         | "tentativa_contato"
@@ -2423,6 +2508,8 @@ export const Constants = {
       ],
       cobranca_status: ["pendente", "pago", "atrasado", "cancelado"],
       cobranca_tipo: ["fee_setup", "fee_recorrente", "ef"],
+      expansao_etapa: ["mapeada", "proposta", "negociacao", "ganho", "perdido"],
+      expansao_tipo_ganho: ["aumento_fee", "escopo_fechado", "ambos"],
       lead_etapa: [
         "entrada",
         "tentativa_contato",
