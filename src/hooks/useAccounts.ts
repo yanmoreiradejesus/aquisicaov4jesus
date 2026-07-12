@@ -47,7 +47,7 @@ export interface AccountRow {
 
 const SELECT = `
   id, cliente_nome, squad, mrr, health_score, onboarding_status, status,
-  ekyte_workspace_id, data_fim_contrato, data_inicio_contrato,
+  data_fim_contrato, data_inicio_contrato,
   account_manager_id, gt_id, designer_id, social_media_id,
   playbook_url, growthpack_url, drive_url,
   valor_fee_override, valor_ef_override, oportunidade_id,
