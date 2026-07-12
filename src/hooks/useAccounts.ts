@@ -26,7 +26,7 @@ export interface AccountRow {
   health_score: number | null;
   onboarding_status: string;
   status: string;
-  ekyte_workspace_id: number | null;
+  ekyte_workspace_id?: number | null;
   data_fim_contrato: string | null;
   data_inicio_contrato: string | null;
   account_manager_id: string | null;

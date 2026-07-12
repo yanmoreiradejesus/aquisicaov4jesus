@@ -40,6 +40,8 @@ import AccountDetail from "./pages/AccountDetail";
 import FunilAnalytics from "./pages/FunilAnalytics";
 import GoogleCallback from "./pages/GoogleCallback";
 import Expansao from "./pages/Expansao";
+import Tarefas from "./pages/Tarefas";
+import ProjetoTarefas from "./pages/ProjetoTarefas";
 import { useAppVersion } from "@/hooks/useAppVersion";
 import { AuthProvider } from "@/contexts/AuthContext";
 
@@ -198,6 +200,17 @@ const AppRoutes = () => {
           <ProtectedRoute requiredPath="/comercial/expansao">
             <PageTransition><Expansao /></PageTransition>
           </ProtectedRoute>
+        } />
+
+        {/* Tarefas */}
+        <Route path="/tarefas" element={
+          <ProtectedRoute><PageTransition><Tarefas /></PageTransition></ProtectedRoute>
+        } />
+        <Route path="/tarefas/projetos" element={
+          <ProtectedRoute><PageTransition><ProjetoTarefas /></PageTransition></ProtectedRoute>
+        } />
+        <Route path="/tarefas/projeto/:projetoId" element={
+          <ProtectedRoute><PageTransition><ProjetoTarefas /></PageTransition></ProtectedRoute>
         } />
 
         {/* Admin */}
