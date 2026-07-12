@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { FileText, Loader2 } from "lucide-react";
 
@@ -63,6 +64,7 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
   const [mesesRec, setMesesRec] = useState<number>(12);
   const [diaPrimeiroRec, setDiaPrimeiroRec] = useState<number>(10);
   const [diaDemaisRec, setDiaDemaisRec] = useState<number>(10);
+  const [tcv, setTcv] = useState<boolean>(false);
 
   const [saving, setSaving] = useState(false);
   const [detecting, setDetecting] = useState(false);
@@ -81,7 +83,8 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
     setParcelasEf(row.qtd_parcelas_ef || 1);
     setValorFee(row.valor_fee_override != null ? String(row.valor_fee_override) : (row.valor_fee != null ? String(row.valor_fee) : ""));
     setFormaRec(row.forma_pagamento_recorrente || "");
-    setMesesRec(row.qtd_parcelas_recorrente || 12);
+    setMesesRec((row.qtd_parcelas_recorrente || 12) <= 6 ? 6 : 12);
+    setTcv(row.forma_pagamento_recorrente === "cartao_credito_parcelado");
     setDiaPrimeiroEf(row.dia_vencimento_primeiro_ef ?? 10);
     setDiaDemaisEf(row.dia_vencimento_demais_ef ?? row.dia_vencimento_primeiro_ef ?? 10);
     setDiaPrimeiroRec(row.dia_vencimento_primeiro_recorrente ?? 10);
@@ -277,9 +280,33 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
               </div>
             )}
 
-            {temRec && (
+            {temRec && (() => {
+              const recFormas = tcv
+                ? FORMA_OPTIONS.filter((o) => ["pix", "boleto", "cartao_credito_parcelado"].includes(o.value))
+                : FORMA_OPTIONS.filter((o) => ["pix", "boleto", "cartao_credito_recorrente"].includes(o.value));
+              const isTcvParcelado = tcv && formaRec === "cartao_credito_parcelado";
+              return (
               <div className="rounded-lg border border-border/60 bg-card/40 p-4 space-y-3">
-                <div className="text-xs font-semibold uppercase text-muted-foreground">Recorrente (mensal)</div>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-xs font-semibold uppercase text-muted-foreground">Recorrente (mensal)</div>
+                  <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer select-none">
+                    <Checkbox
+                      checked={tcv}
+                      onCheckedChange={(v) => {
+                        const next = !!v;
+                        setTcv(next);
+                        // Reset forma to a valid option in the new set
+                        if (next) {
+                          if (!["pix", "boleto", "cartao_credito_parcelado"].includes(formaRec)) setFormaRec("");
+                        } else {
+                          if (!["pix", "boleto", "cartao_credito_recorrente"].includes(formaRec)) setFormaRec("");
+                        }
+                      }}
+                      className="h-3.5 w-3.5"
+                    />
+                    TCV (pagamento total)
+                  </label>
+                </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-xs">Valor mensal</Label>
@@ -287,15 +314,21 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Meses</Label>
-                    <Input type="number" min={1} value={mesesRec} onChange={(e) => setMesesRec(parseInt(e.target.value) || 1)} />
+                    <Select value={String(mesesRec)} onValueChange={(v) => setMesesRec(parseInt(v))}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="6">6 meses</SelectItem>
+                        <SelectItem value="12">12 meses</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Forma de pagamento</Label>
+                  <Label className="text-xs">Forma de pagamento {tcv && <span className="text-muted-foreground/70">(valor total do contrato)</span>}</Label>
                   <Select value={formaRec} onValueChange={setFormaRec}>
                     <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                     <SelectContent>
-                      {FORMA_OPTIONS.map((o) => (
+                      {recFormas.map((o) => (
                         <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                       ))}
                     </SelectContent>
@@ -303,16 +336,17 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-xs">Dia venc. 1º mês</Label>
+                    <Label className="text-xs">{tcv ? "Dia venc. 1ª parcela" : "Dia venc. 1º mês"}</Label>
                     <Input type="number" min={1} max={31} value={diaPrimeiroRec} onChange={(e) => setDiaPrimeiroRec(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} />
                   </div>
                   <div className="space-y-1.5">
                     <Label className="text-xs">Dia venc. demais</Label>
-                    <Input type="number" min={1} max={31} value={diaDemaisRec} onChange={(e) => setDiaDemaisRec(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} disabled={mesesRec <= 1} />
+                    <Input type="number" min={1} max={31} value={diaDemaisRec} onChange={(e) => setDiaDemaisRec(Math.max(1, Math.min(31, parseInt(e.target.value) || 1)))} disabled={tcv && !isTcvParcelado} />
                   </div>
                 </div>
               </div>
-            )}
+              );
+            })()}
 
             <div className="pt-2 flex items-center justify-end gap-2 border-t border-border/50">
               <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} disabled={saving}>
