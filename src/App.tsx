@@ -15,6 +15,7 @@ import AdminClienteNovo from "./pages/AdminClienteNovo";
 import AdminConsumoIA from "./pages/AdminConsumoIA";
 import AdminPeople from "./pages/AdminPeople";
 import AdminFinanceiro from "./pages/AdminFinanceiro";
+import AdminFaturarContrato from "./pages/AdminFaturarContrato";
 import Perfil from "./pages/Perfil";
 import Financeiro from "./pages/Financeiro";
 import DashboardComercial from "./pages/DashboardComercial";
