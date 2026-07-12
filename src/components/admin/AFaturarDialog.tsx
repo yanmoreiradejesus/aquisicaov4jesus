@@ -84,7 +84,7 @@ const AFaturarDialog = ({ open, onOpenChange, row, onValidated }: Props) => {
     setValorFee(row.valor_fee_override != null ? String(row.valor_fee_override) : (row.valor_fee != null ? String(row.valor_fee) : ""));
     setFormaRec(row.forma_pagamento_recorrente || "");
     setMesesRec((row.qtd_parcelas_recorrente || 12) <= 6 ? 6 : 12);
-    setTcv(row.forma_pagamento_recorrente === "cartao_credito_parcelado" || (row.forma_pagamento_recorrente === "pix" && (row.qtd_parcelas_recorrente ?? 0) === 1));
+    setTcv(row.forma_pagamento_recorrente === "cartao_credito_parcelado");
     setDiaPrimeiroEf(row.dia_vencimento_primeiro_ef ?? 10);
     setDiaDemaisEf(row.dia_vencimento_demais_ef ?? row.dia_vencimento_primeiro_ef ?? 10);
     setDiaPrimeiroRec(row.dia_vencimento_primeiro_recorrente ?? 10);
