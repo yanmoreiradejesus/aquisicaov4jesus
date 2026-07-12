@@ -44,7 +44,6 @@ const V4Header = () => {
     { path: "/comercial/leads", label: "Leads" },
     { path: "/comercial/oportunidades", label: "Oportunidades" },
     { path: "/comercial/onboarding", label: "Onboarding" },
-    { path: "/comercial/cobrancas", label: "Cobranças" },
     { path: "/comercial/expansao", label: "Expansão" },
   ];
 
@@ -74,7 +73,8 @@ const V4Header = () => {
   const isPegActive = pegItems.some((item) => isActive(item.path)) || location.pathname.startsWith("/comercial/accounts");
   const visiblePegItems = pegItems.filter((item) => canSee(item.path));
   const isAdminMenuActive = adminMenuItems.some((item) => isActive(item.path));
-  const visibleAdminMenuItems = adminMenuItems.filter((item) => canSee(item.path));
+  // Admin sempre visível para quem tem permissão de acesso — não depende do tenant_enabled_pages
+  const visibleAdminMenuItems = adminMenuItems.filter((item) => hasPageAccess(item.path));
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
