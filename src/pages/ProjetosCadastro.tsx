@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Clock, Plus, Search, X, Upload, Trash2, ExternalLink } from "lucide-react";
+import { Check, Clock, Plus, Search, X, Upload, Trash2, ExternalLink, Sparkles, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -86,14 +86,36 @@ const ProjetosCadastro = () => {
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<{ row: Row; field: Field } | null>(null);
   const [novoOpen, setNovoOpen] = useState(false);
+  const [generatingGc, setGeneratingGc] = useState<Record<string, boolean>>({});
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["projetos_cadastro"] });
+
+  const gerarResumoGc = async (accountId: string) => {
+    setGeneratingGc((s) => ({ ...s, [accountId]: true }));
+    try {
+      const { data, error } = await supabase.functions.invoke("auto-generate-pre-gc", {
+        body: { account_id: accountId, force: true },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast({ title: "Resumo GC gerado", description: "Anexado ao projeto e ao onboarding." });
+      invalidate();
+    } catch (e: any) {
+      toast({ title: "Erro ao gerar resumo GC", description: e.message ?? String(e), variant: "destructive" });
+    } finally {
+      setGeneratingGc((s) => {
+        const n = { ...s };
+        delete n[accountId];
+        return n;
+      });
+    }
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return rows;
     return rows.filter((r) => (r.cliente_nome ?? "").toLowerCase().includes(q));
   }, [rows, search]);
-
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["projetos_cadastro"] });
 
   return (
     <div className="min-h-screen bg-background">
@@ -179,7 +201,29 @@ const ProjetosCadastro = () => {
                         <StatusIcon ok={hasContrato} />
                       </TableCell>
                       <TableCell className={cellCls} onClick={() => setEditing({ row: r, field: "resumo_gc" })}>
-                        <StatusIcon ok={hasResumo} />
+                        <div className="flex items-center gap-2">
+                          <StatusIcon ok={hasResumo} />
+                          {!hasResumo && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-6 px-2 text-[10px] rounded-lg"
+                              disabled={!!generatingGc[r.account_id]}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                gerarResumoGc(r.account_id);
+                              }}
+                            >
+                              {generatingGc[r.account_id] ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <>
+                                  <Sparkles className="h-3 w-3 mr-1" /> Gerar
+                                </>
+                              )}
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className={cellCls} onClick={() => setEditing({ row: r, field: "transcricao_gc" })}>
                         <StatusIcon ok={hasTransGc} />
