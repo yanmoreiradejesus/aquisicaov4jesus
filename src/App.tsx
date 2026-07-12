@@ -202,6 +202,17 @@ const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
+        {/* Tarefas */}
+        <Route path="/tarefas" element={
+          <ProtectedRoute><PageTransition><Tarefas /></PageTransition></ProtectedRoute>
+        } />
+        <Route path="/tarefas/projetos" element={
+          <ProtectedRoute><PageTransition><ProjetoTarefas /></PageTransition></ProtectedRoute>
+        } />
+        <Route path="/tarefas/projeto/:projetoId" element={
+          <ProtectedRoute><PageTransition><ProjetoTarefas /></PageTransition></ProtectedRoute>
+        } />
+
         {/* Admin */}
         <Route path="/admin" element={
           <ProtectedRoute>
