@@ -494,9 +494,37 @@ export default function Expansao() {
                 <Input
                   type="number"
                   value={ganhoForm.fee}
-                  onChange={(e) => setGanhoForm((f) => ({ ...f, fee: e.target.value }))}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setGanhoForm((f) => {
+                      const currentMrr = Number(ganhoTarget?.projeto?.account?.mrr ?? 0);
+                      const auto = v ? String(currentMrr + Number(v)) : String(currentMrr);
+                      return { ...f, fee: v, novoFeeMensal: auto };
+                    });
+                  }}
                   placeholder="0"
                 />
+              </div>
+            )}
+            {(ganhoForm.tipo === "aumento_fee" || ganhoForm.tipo === "ambos") && (
+              <div className="space-y-1.5">
+                <Label>
+                  Novo fee mensal recorrente (R$)
+                  {ganhoTarget?.projeto?.account?.mrr != null && (
+                    <span className="ml-2 text-[10px] text-muted-foreground font-normal">
+                      atual: {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(Number(ganhoTarget.projeto.account.mrr))}
+                    </span>
+                  )}
+                </Label>
+                <Input
+                  type="number"
+                  value={ganhoForm.novoFeeMensal}
+                  onChange={(e) => setGanhoForm((f) => ({ ...f, novoFeeMensal: e.target.value }))}
+                  placeholder="0"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Valor total do fee mensal do cliente após o aumento. Substitui o MRR da conta.
+                </p>
               </div>
             )}
             {(ganhoForm.tipo === "escopo_fechado" || ganhoForm.tipo === "ambos") && (
@@ -510,6 +538,21 @@ export default function Expansao() {
                 />
               </div>
             )}
+
+            <div className="space-y-1.5 pt-2 border-t border-border/40">
+              <Label>Contrato assinado (PDF)</Label>
+              <Input
+                type="file"
+                accept="application/pdf,.pdf"
+                onChange={(e) => setGanhoForm((f) => ({ ...f, contratoFile: e.target.files?.[0] ?? null }))}
+                className="cursor-pointer"
+              />
+              {ganhoTarget?.contrato_path && !ganhoForm.contratoFile && (
+                <p className="text-[10px] text-muted-foreground truncate">
+                  Anexado: {ganhoTarget.contrato_path.split("/").pop()}
+                </p>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => { setGanhoOpen(false); setGanhoTarget(null); }}>
