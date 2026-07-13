@@ -158,7 +158,7 @@ export function NovaTarefaDialog({ open, onOpenChange, projetoIdDefault }: Props
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold">Fluxo de etapas</h3>
               <Button size="sm" variant="ghost" onClick={() =>
-                setEtapas([...etapas, { nome: "", funcao: "", responsavel_id: null, prazo: "" }])
+                setEtapas([...etapas, { nome: "", funcao: "", responsavel_id: null, dias: "" }])
               }>
                 <Plus className="h-4 w-4 mr-1" /> Etapa
               </Button>
