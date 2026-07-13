@@ -10,6 +10,7 @@ export interface AppEntry {
   href: string;
   external?: boolean;
   accessPaths: string[];
+  bypassTenantCheck?: boolean;
 }
 
 export const APPS: AppEntry[] = [
@@ -48,6 +49,14 @@ export const APPS: AppEntry[] = [
       "/comercial/accounts",
     ],
   },
+  {
+    id: "admin",
+    title: "Admin",
+    description: "People, financeiro e gestão interna.",
+    href: "/admin/people",
+    accessPaths: ["/admin/people", "/admin/financeiro"],
+    bypassTenantCheck: true,
+  },
 ];
 
 interface AppsGridProps {
@@ -57,9 +66,9 @@ interface AppsGridProps {
 export function AppsGrid({ compact = false }: AppsGridProps) {
   const { hasPageAccess, authResolved } = useAuth();
   const { isPageEnabled, isLoading: tenantPagesLoading } = useTenantEnabledPages();
-  // App é visível se houver pelo menos uma página onde usuário tem permissão E tenant tem habilitada
+  // App é visível se houver pelo menos uma página onde usuário tem permissão E (tenant tem habilitada OU app ignora tenant check)
   const visibleApps = APPS.filter((a) =>
-    a.accessPaths.some((p) => hasPageAccess(p) && isPageEnabled(p)),
+    a.accessPaths.some((p) => hasPageAccess(p) && (a.bypassTenantCheck || isPageEnabled(p))),
   );
 
   // Enquanto auth/tenant ainda não resolveram, NÃO renderiza a mensagem de "sem acesso"
