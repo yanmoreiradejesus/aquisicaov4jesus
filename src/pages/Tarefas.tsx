@@ -105,15 +105,26 @@ export default function Tarefas() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={escopoFilter} onValueChange={(v) => setEscopoFilter(v as any)}>
-            <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+          <Select value={projetoFilter} onValueChange={setProjetoFilter}>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Projeto" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos escopos</SelectItem>
-              {(Object.keys(ESCOPO_LABEL) as TarefaEscopo[]).map((k) => (
-                <SelectItem key={k} value={k}>{ESCOPO_LABEL[k]}</SelectItem>
+              <SelectItem value="all">Todos projetos</SelectItem>
+              {projetos.map((p: any) => (
+                <SelectItem key={p.id} value={p.id}>{p.nome || p.account?.cliente_nome || "—"}</SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {tab === "todas" && (
+            <Select value={executorFilter} onValueChange={setExecutorFilter}>
+              <SelectTrigger className="w-[180px]"><SelectValue placeholder="Executor" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos executores</SelectItem>
+                {profiles.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{profileLabel(p)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         {isLoading ? (
