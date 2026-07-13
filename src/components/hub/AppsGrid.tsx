@@ -1,7 +1,12 @@
 import { Link } from "react-router-dom";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useTenantEnabledPages } from "@/hooks/useTenantEnabledPages";
+
+export interface AppSubItem {
+  label: string;
+  path: string;
+}
 
 export interface AppEntry {
   id: string;
@@ -11,6 +16,7 @@ export interface AppEntry {
   external?: boolean;
   accessPaths: string[];
   bypassTenantCheck?: boolean;
+  items?: AppSubItem[];
 }
 
 export const APPS: AppEntry[] = [
@@ -27,6 +33,13 @@ export const APPS: AppEntry[] = [
       "/aquisicao/legado/funil",
       "/aquisicao/legado/meta",
     ],
+    items: [
+      { label: "Funil", path: "/aquisicao/funil" },
+      { label: "Meta", path: "/aquisicao/meta" },
+      { label: "Atividades", path: "/aquisicao/atividades" },
+      { label: "Insights Broker", path: "/aquisicao/insights" },
+      { label: "Financeiro", path: "/aquisicao/financeiro" },
+    ],
   },
   {
     id: "comercial",
@@ -39,14 +52,25 @@ export const APPS: AppEntry[] = [
       "/comercial/onboarding",
       "/comercial/cobrancas",
     ],
+    items: [
+      { label: "Leads", path: "/comercial/leads" },
+      { label: "Oportunidades", path: "/comercial/oportunidades" },
+      { label: "Onboarding", path: "/comercial/onboarding" },
+      { label: "Expansão", path: "/comercial/expansao" },
+    ],
   },
   {
     id: "peg",
     title: "PE&G",
     description: "Performance, expansão e gestão de contas.",
     href: "/comercial/accounts",
-    accessPaths: [
-      "/comercial/accounts",
+    accessPaths: ["/comercial/accounts"],
+    items: [
+      { label: "Accounts", path: "/comercial/accounts" },
+      { label: "Database", path: "/comercial/projetos" },
+      { label: "Cadastro", path: "/comercial/projetos/cadastro" },
+      { label: "Tarefas", path: "/peg/tarefas" },
+      { label: "Squad view", path: "/peg/tarefas/squad" },
     ],
   },
   {
@@ -56,6 +80,10 @@ export const APPS: AppEntry[] = [
     href: "/admin/people",
     accessPaths: ["/admin/people", "/admin/financeiro"],
     bypassTenantCheck: true,
+    items: [
+      { label: "People", path: "/admin/people" },
+      { label: "Financeiro", path: "/admin/financeiro" },
+    ],
   },
 ];
 
@@ -66,13 +94,17 @@ interface AppsGridProps {
 export function AppsGrid({ compact = false }: AppsGridProps) {
   const { hasPageAccess, authResolved } = useAuth();
   const { isPageEnabled, isLoading: tenantPagesLoading } = useTenantEnabledPages();
-  // App é visível se houver pelo menos uma página onde usuário tem permissão E (tenant tem habilitada OU app ignora tenant check)
-  const visibleApps = APPS.filter((a) =>
-    a.accessPaths.some((p) => hasPageAccess(p) && (a.bypassTenantCheck || isPageEnabled(p))),
-  );
 
-  // Enquanto auth/tenant ainda não resolveram, NÃO renderiza a mensagem de "sem acesso"
-  // (evita o flash de "Você ainda não tem acesso..." no boot e em trocas de rota).
+  const canReach = (app: AppEntry, path: string) =>
+    hasPageAccess(path) && (app.bypassTenantCheck || isPageEnabled(path));
+
+  const visibleApps = APPS
+    .map((a) => ({
+      ...a,
+      visibleItems: (a.items ?? []).filter((i) => canReach(a, i.path)),
+    }))
+    .filter((a) => a.accessPaths.some((p) => canReach(a, p)));
+
   const stillResolving = !authResolved || tenantPagesLoading;
 
   if (visibleApps.length === 0) {
@@ -112,9 +144,19 @@ export function AppsGrid({ compact = false }: AppsGridProps) {
         {visibleApps.map((app, idx) => {
           const num = String(idx + 1).padStart(2, "0");
           const minH = compact ? "min-h-[200px] lg:min-h-[240px]" : "min-h-[260px] lg:min-h-[320px]";
-          const card = (
-            <article className={`group relative h-full overflow-hidden rounded-2xl border border-border/60 bg-[hsl(var(--surface-1))] p-6 lg:p-8 transition-all duration-500 hover:border-primary/50 hover:bg-[hsl(var(--surface-2))] hover:shadow-[var(--shadow-glow)] cursor-pointer ${minH} flex flex-col justify-between`}>
-              <div className="flex items-start justify-between">
+          const hasItems = app.visibleItems.length > 0;
+
+          return (
+            <article
+              key={app.id}
+              className={`group relative h-full overflow-hidden rounded-2xl border border-border/60 bg-[hsl(var(--surface-1))] p-6 lg:p-8 transition-all duration-500 hover:border-primary/50 hover:bg-[hsl(var(--surface-2))] hover:shadow-[var(--shadow-glow)] ${minH} flex flex-col justify-between`}
+            >
+              {/* Big number + arrow → link to primary href */}
+              <Link
+                to={app.href}
+                aria-label={`Abrir ${app.title}`}
+                className="flex items-start justify-between"
+              >
                 <span
                   className="font-heading text-foreground/15 leading-none transition-all duration-500 group-hover:text-primary/40"
                   style={{ fontSize: compact ? "clamp(2.5rem, 5vw, 4rem)" : "clamp(3.5rem, 7vw, 5.5rem)" }}
@@ -122,27 +164,51 @@ export function AppsGrid({ compact = false }: AppsGridProps) {
                   {num}
                 </span>
                 <ArrowUpRight className="h-6 w-6 lg:h-7 lg:w-7 text-muted-foreground transition-all duration-500 group-hover:text-primary group-hover:-translate-y-1 group-hover:translate-x-1" />
-              </div>
-              <div>
-                <h3
-                  className="font-heading uppercase text-foreground leading-[0.95] tracking-tight mb-2"
-                  style={{ fontSize: compact ? "clamp(1.5rem, 2.5vw, 2rem)" : "clamp(1.75rem, 3vw, 2.5rem)" }}
-                >
-                  {app.title}
-                </h3>
-                <p className="text-sm text-muted-foreground">{app.description}</p>
+              </Link>
+
+              {/* Bottom stack: title + description ↔ submenu */}
+              <div className="relative">
+                <Link to={app.href} aria-label={`Abrir ${app.title}`} className="block">
+                  <h3
+                    className="font-heading uppercase text-foreground leading-[0.95] tracking-tight mb-2"
+                    style={{ fontSize: compact ? "clamp(1.5rem, 2.5vw, 2rem)" : "clamp(1.75rem, 3vw, 2.5rem)" }}
+                  >
+                    {app.title}
+                  </h3>
+                </Link>
+
+                {/* Description ↔ submenu swap zone */}
+                <div className="relative min-h-[6.5rem]">
+                  <p
+                    className={`absolute inset-x-0 top-0 text-sm text-muted-foreground transition-all duration-300 ${
+                      hasItems ? "group-hover:opacity-0 group-hover:-translate-y-1" : ""
+                    }`}
+                  >
+                    {app.description}
+                  </p>
+
+                  {hasItems && (
+                    <ul className="absolute inset-x-0 top-0 pointer-events-none opacity-0 translate-y-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto">
+                      {app.visibleItems.map((it, i) => (
+                        <li
+                          key={it.path}
+                          style={{ transitionDelay: `${80 + i * 40}ms` }}
+                          className="opacity-0 -translate-x-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0"
+                        >
+                          <Link
+                            to={it.path}
+                            className="group/item flex items-center justify-between border-b border-border/40 py-1.5 text-sm text-foreground/85 hover:text-primary hover:border-primary/60 hover:pl-1 transition-all duration-200"
+                          >
+                            <span className="font-medium tracking-tight">{it.label}</span>
+                            <ArrowRight className="h-3.5 w-3.5 opacity-0 -translate-x-1 transition-all duration-200 group-hover/item:opacity-100 group-hover/item:translate-x-0" />
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
             </article>
-          );
-
-          return app.external ? (
-            <a key={app.id} href={app.href} target="_blank" rel="noopener noreferrer" aria-label={`Abrir ${app.title}`}>
-              {card}
-            </a>
-          ) : (
-            <Link key={app.id} to={app.href} aria-label={`Abrir ${app.title}`}>
-              {card}
-            </Link>
           );
         })}
       </div>
