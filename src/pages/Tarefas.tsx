@@ -8,8 +8,9 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { NovaTarefaDialog } from "@/components/tarefas/NovaTarefaDialog";
 import { TarefaDetailSheet } from "@/components/tarefas/TarefaDetailSheet";
-import { useTarefas, STATUS_LABEL, ESCOPO_LABEL, PRIORIDADE_LABEL, type TarefaStatus, type TarefaEscopo } from "@/hooks/useTarefas";
+import { useTarefas, STATUS_LABEL, ESCOPO_LABEL, PRIORIDADE_LABEL, type TarefaStatus } from "@/hooks/useTarefas";
 import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
+import { useProjetos } from "@/hooks/useProjetos";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
