@@ -90,6 +90,13 @@ export const PAGE_CATALOG: Array<{
       { path: "/comercial/cobrancas", label: "Cobranças (em breve)" },
     ],
   },
+  {
+    group: "PE&G",
+    pages: [
+      { path: "/peg/tarefas", label: "Tarefas" },
+      { path: "/peg/tarefas/squad", label: "Squad view" },
+    ],
+  },
 ];
 
 export const ALL_PAGE_PATHS = PAGE_CATALOG.flatMap((g) => g.pages.map((p) => p.path));
