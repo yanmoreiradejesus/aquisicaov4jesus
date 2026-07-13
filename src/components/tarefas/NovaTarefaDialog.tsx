@@ -195,8 +195,8 @@ export function NovaTarefaDialog({ open, onOpenChange, projetoIdDefault }: Props
                       ))}
                     </SelectContent>
                   </Select>
-                  <Input type="date" value={e.prazo} onChange={(ev) => {
-                    const n = [...etapas]; n[idx].prazo = ev.target.value; setEtapas(n);
+                  <Input type="number" min={0} placeholder="Dias" value={e.dias} onChange={(ev) => {
+                    const n = [...etapas]; n[idx].dias = ev.target.value; setEtapas(n);
                   }} />
                 </div>
               </div>
