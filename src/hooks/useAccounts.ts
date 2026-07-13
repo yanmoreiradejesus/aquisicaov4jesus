@@ -26,7 +26,7 @@ export interface AccountRow {
   health_score: number | null;
   onboarding_status: string;
   status: string;
-  ekyte_workspace_id: number | null;
+  
   data_fim_contrato: string | null;
   data_inicio_contrato: string | null;
   account_manager_id: string | null;
@@ -47,7 +47,7 @@ export interface AccountRow {
 
 const SELECT = `
   id, cliente_nome, squad, mrr, health_score, onboarding_status, status,
-  ekyte_workspace_id, data_fim_contrato, data_inicio_contrato,
+  data_fim_contrato, data_inicio_contrato,
   account_manager_id, gt_id, designer_id, social_media_id,
   playbook_url, growthpack_url, drive_url,
   valor_fee_override, valor_ef_override, oportunidade_id,
@@ -70,7 +70,7 @@ function mapRow(r: any): AccountRow {
     health_score: r.health_score,
     onboarding_status: r.onboarding_status,
     status: r.status,
-    ekyte_workspace_id: r.ekyte_workspace_id,
+    
     data_fim_contrato: r.data_fim_contrato,
     data_inicio_contrato: r.data_inicio_contrato,
     account_manager_id: r.account_manager_id,

@@ -12,7 +12,7 @@ export interface AccountFieldsValue {
   playbook_url?: string | null;
   growthpack_url?: string | null;
   drive_url?: string | null;
-  ekyte_workspace_id?: number | null;
+  
 }
 
 interface Props {
@@ -93,19 +93,6 @@ export function AccountManagementFields({ value, onChange, profiles }: Props) {
             />
           </div>
         ))}
-      </div>
-
-      <div className="rounded-lg border border-border/40 bg-background/40 p-4">
-        <Label className="text-xs text-muted-foreground">eKyte workspace ID</Label>
-        <Input
-          type="number"
-          className="mt-1.5"
-          value={value.ekyte_workspace_id ?? ""}
-          onChange={(e) =>
-            onChange({ ekyte_workspace_id: e.target.value === "" ? null : Number(e.target.value) })
-          }
-        />
-        <p className="text-[11px] text-muted-foreground mt-1.5">Usado na integração eKyte.</p>
       </div>
     </div>
   );

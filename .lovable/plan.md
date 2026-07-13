@@ -1,75 +1,128 @@
-# Refatoração: Gestão de Contas ↔ Database ↔ Projeto
 
-## Diagnóstico do problema atual
-- `accounts.mrr` / `accounts.mrr_variavel` estão `NULL` em todos os projetos, mesmo depois do "A Faturar" ter sido validado.
-- `account_scope` está **totalmente vazia** (0 linhas) — o escopo só existiria se alguém abrisse o botão "Editar" e marcasse manualmente item por item vindo do template do squad.
-- Ou seja: hoje a tela de Gestão de Contas é 100% preenchimento manual, desconectado do CRM/faturamento. Precisamos fazê-la refletir o banco.
+# Gestor de Tarefas (PE&G → Tarefas)
 
-## Modelo de dados (o que passa a ser fonte de verdade)
+Novo submenu **PE&G → Tarefas** que substitui completamente a integração com o eKyte. O foco é operar produção dentro do V4: criar tarefas em projetos (accounts com onboarding concluído), definir manualmente o fluxo de aprovação/execução por tarefa, e acompanhar carga do squad.
 
-### MRR e valores do contrato → vêm de `crm_oportunidades` + overrides de faturamento
-- **MRR** = `COALESCE(accounts.valor_fee_override, crm_oportunidades.valor_fee)` da oportunidade vinculada.
-- **Valor EF** = `COALESCE(accounts.valor_ef_override, crm_oportunidades.valor_ef)`.
-- Quando o contrato é validado em **A Faturar**, o override já é gravado (`validar_faturamento_account_v2`), então o valor efetivo aparece automaticamente na tela de Contas — sem duplicar dado.
-- Removo os inputs manuais de MRR / MRR variável no diálogo "Editar" da conta. MRR variável passa a viver dentro do projeto (variável = fee comissionado/perf) quando existir.
+## Conceito central: fluxo manual por tarefa
 
-### Escopo contratado → migra de `account_scope` para `crm_projetos`
-- Novas colunas em **`crm_projetos`**:
-  - `escopo_trafego BOOLEAN DEFAULT false`
-  - `escopo_social_media BOOLEAN DEFAULT false`
-  - `escopo_design BOOLEAN DEFAULT false`
-  - `escopo_crm BOOLEAN DEFAULT false`
-  - `escopo_validado BOOLEAN DEFAULT false` (usado pelo badge "NEW")
-  - `escopo_ia_sugestao JSONB` (o que a IA extraiu do contrato)
-  - `escopo_ia_gerado_em TIMESTAMPTZ`
-- A tabela `account_scope` e o `squad_scope_template` deixam de ser usados pela tela de Contas (mantenho os dados para não perder histórico, mas as leituras/gravações passam para `crm_projetos`).
+Cada tarefa tem seu próprio fluxo, montado na hora da criação, em vez de colunas fixas por projeto. O fluxo é uma sequência ordenada de **etapas**, e cada etapa tem uma **pessoa responsável** e uma **função** (papel naquela etapa).
 
-## Fluxo do usuário
+Exemplo típico para uma peça de social:
 
-### Tela **Cadastro de projetos**
-- Cada card/linha exibe um **badge "NEW"** enquanto `escopo_validado = false`.
-- Dentro do card aparece a **seção Escopo** com 4 checkboxes: **Tráfego · Social Media · Design · CRM**.
-- Botão **"Sugerir com IA"** dispara uma edge function nova (`suggest-project-scope`) que:
-  1. Puxa `contrato_url` da oportunidade vinculada (usa `serve-contrato` para gerar signed URL do PDF).
-  2. Passa o PDF pro Lovable AI Gateway (`google/gemini-3-flash-preview`) pedindo output estruturado com os 4 booleans + justificativa.
-  3. Grava `escopo_ia_sugestao` + `escopo_ia_gerado_em` e **pré-marca** os 4 checkboxes com a sugestão (só pré-marca, ainda não valida).
-- Ao clicar em **"Confirmar escopo"** → grava os 4 booleans e marca `escopo_validado = true` (remove o badge NEW).
-- A IA roda automaticamente na primeira vez que o projeto abre a seção de escopo, se `escopo_ia_gerado_em IS NULL` e existir contrato.
+```text
+1. Briefing        → Ana        (Estrategista)
+2. Copy            → Bruno      (Redator)
+3. Design          → Camila     (Designer)
+4. Revisão interna → Diego      (Coordenador)
+5. Aprovação cliente → cliente  (Aprovador externo — opcional)
+6. Publicação      → Ana        (Estrategista)
+```
 
-### Tela **Gestão de Contas** (lista + detalhe)
-- Passa a fazer join com `crm_oportunidades` e `crm_projetos` para popular MRR e escopo.
-- Cards mostram: MRR (do banco), Escopo (chips: Tráfego / Social Media / Design / CRM — só os marcados como `true`), squad, health, time.
-- Diálogo **Editar** mantém: squad, time (GT/Designer/Social), links, workspace eKyte. Remove MRR e escopo (agora são derivados/gerenciados no projeto e faturamento).
+A tarefa "anda" pelas etapas: enquanto está na etapa 2, aparece para o Bruno como pendente; quando ele conclui, avança para Camila; e assim por diante. Cada etapa registra quem executou e quando concluiu. Templates de fluxo podem ser salvos por squad para reuso (ex.: "Post social padrão", "Campanha de tráfego"), mas cada tarefa pode ajustar antes de criar.
 
-## Migrações (uma migration única)
-1. `ALTER TABLE crm_projetos` — add 7 colunas de escopo acima.
-2. Backfill: para cada projeto existente, `escopo_validado = false` (garante que todos apareçam como NEW).
-3. Novo função SQL `get_account_effective_mrr(account_id)` (opcional, mas ajuda em outras telas).
+## Estrutura de tarefa
 
-## Edge function nova
-- `supabase/functions/suggest-project-scope/index.ts`
-  - Input: `{ projeto_id }`.
-  - Baixa o contrato via storage `contratos-assinados`, extrai texto (usa o parser já existente do `extract-contract-billing`).
-  - Chama Lovable AI com structured output → `{ trafego, social_media, design, crm, justificativa }`.
-  - Salva em `crm_projetos.escopo_ia_sugestao` + timestamp.
-  - Registra em `ai_usage_events` (mesma pattern das outras functions).
+- **Título, descrição**
+- **Projeto** (account) — obrigatório
+- **Escopo contratado** — Tráfego / Social Media / Design / CRM (bate com `crm_projetos.escopo_*`; só permite marcar escopos ativos naquele projeto)
+- **Prioridade** — baixa / média / alta / urgente
+- **Prazo final** da tarefa
+- **Fluxo de etapas** (ver acima) com prazo opcional por etapa
+- **Status geral** — a fazer / em execução / bloqueada / concluída / cancelada
+- **Checklist**, **anexos**, **comentários** por tarefa
+- **Atividade** (log automático: criação, avanço de etapa, mudança de responsável, conclusão)
 
-## Frontend
+## Visões
 
-### Novos/alterados
-- `src/hooks/useProjetoEscopo.ts` — hook que lê/atualiza os 4 booleans + estado da IA.
-- `src/components/projetos/ProjetoEscopoCard.tsx` — card de escopo com 4 switches, botão "Sugerir com IA", badge NEW quando `escopo_validado=false`.
-- `src/pages/ProjetosCadastro.tsx` — usa o card acima e mostra badge NEW nas linhas da tabela.
-- `src/hooks/useAccounts.ts` — passa a fazer join com oportunidade (`valor_fee`, `valor_ef`) e projeto (4 booleans). Adiciona `effectiveMrr` no retorno.
-- `src/pages/AccountsList.tsx` — colunas usam `effectiveMrr` e mostram chips de escopo.
-- `src/pages/AccountDetail.tsx` — card "MRR" usa `effectiveMrr`; card "Escopo contratado" mostra apenas os 4 chips (readonly aqui — edição fica no projeto). Diálogo de editar perde MRR e escopo.
-- `src/components/accounts/AccountManagementFields.tsx` — remove blocos MRR e Escopo.
+1. **Minhas tarefas** (`/peg/tarefas`) — lista/kanban das tarefas onde o usuário logado é responsável em qualquer etapa ativa. Agrupa por: Atrasadas / Hoje / Esta semana / Depois / Concluídas. Filtro por projeto e escopo.
+2. **Squad** (`/peg/tarefas/squad`) — para gestores/coordenadores: matriz de pessoas × status, com carga (nº de tarefas ativas), atrasadas e conclusão da semana. Filtro por squad (Strikers/Fenix/Saber) e projeto. Só aparece para usuários com role de admin ou coordenador do squad.
+3. **Detalhe da tarefa** (drawer) — abre de qualquer visão: mostra fluxo, checklist, comentários, anexos, histórico.
 
-## Observações sobre "dados que não vieram"
-- Todas as 20 contas em `onboarding_status='concluida'` têm `oportunidade_id` preenchido e a oportunidade tem `valor_fee` e/ou `valor_ef` no banco. Depois da migration + refactor, a tela vai passar a mostrar esses valores imediatamente (nada precisa ser re-inserido).
-- O escopo vai aparecer vazio até alguém validar (ou clicar em "Sugerir com IA") — o que é o comportamento esperado do fluxo novo.
+Sem visão Kanban por projeto nesta primeira versão — o fluxo é da tarefa, não do projeto.
 
-## Pontos que quero confirmar antes de codar
-1. **MRR variável**: mantenho como campo manual no diálogo de editar (raro, ex.: fee comissionado sobre performance) ou removo totalmente por ora?
-2. **`account_scope` legada**: só paro de usar e mantenho a tabela, ou você prefere que eu drope de vez?
-3. **Auto-rodar IA de escopo**: rodar automaticamente quando o projeto é criado (trigger no `onboarding_status = 'concluida'`) ou só quando o usuário clica em "Sugerir com IA" na tela do projeto?
+## Migração eKyte — descartar tudo
+
+- Remove o submenu/aba de tarefas do eKyte em `AccountDetail`.
+- Remove `AccountEkyteTasks.tsx`, `AdminBackfill3CPlusCard`-relacionados ao eKyte se houver, e a edge function `sync-ekyte`.
+- Dropa tabelas `ekyte_tasks` (e correlatas, se existirem) e o segredo `EKYTE_API_KEY` fica órfão — aviso o usuário para removê-lo depois.
+- Nenhum dado é importado.
+
+## Detalhes técnicos
+
+### Schema (migração)
+
+```text
+tarefa_status       enum: a_fazer, em_execucao, bloqueada, concluida, cancelada
+tarefa_prioridade   enum: baixa, media, alta, urgente
+tarefa_escopo       enum: trafego, social_media, design, crm
+
+tarefas
+  id, tenant_id, projeto_id (crm_projetos), account_id (denormalizado p/ filtro rápido)
+  titulo, descricao, escopo (tarefa_escopo), prioridade, status,
+  prazo_final, criado_por, etapa_atual_id (fk → tarefa_etapas),
+  concluida_em, cancelada_em, created_at, updated_at
+
+tarefa_etapas
+  id, tarefa_id, ordem, nome, funcao (texto livre: "Redator", "Designer"...),
+  responsavel_id (profiles), prazo, status (pendente/em_execucao/concluida/pulada),
+  iniciada_em, concluida_em, observacao_conclusao
+
+tarefa_checklist_items
+  id, tarefa_id, texto, concluido, concluido_em, concluido_por, ordem
+
+tarefa_comentarios
+  id, tarefa_id, autor_id, texto, created_at
+
+tarefa_anexos
+  id, tarefa_id, storage_path, nome_arquivo, mime, tamanho, uploaded_by
+
+tarefa_atividades
+  id, tarefa_id, tipo, descricao, usuario_id, created_at
+  (log automático via trigger para criação/avanço de etapa/conclusão)
+
+tarefa_fluxo_templates
+  id, tenant_id, squad, nome, descricao, created_by
+tarefa_fluxo_template_etapas
+  id, template_id, ordem, nome, funcao_sugerida
+```
+
+RLS: tudo isolado por `tenant_id` (padrão do projeto). GRANT `SELECT, INSERT, UPDATE, DELETE` para `authenticated`, `ALL` para `service_role`. Trigger `set_tenant_id_on_insert`, trigger `update_updated_at_column`, trigger de log em `tarefa_etapas` (mudança de status → linha em `tarefa_atividades`) e em `tarefas` (criação/conclusão/cancelamento). Trigger que, ao concluir a etapa atual, promove a próxima etapa a `em_execucao` e atualiza `tarefas.etapa_atual_id`; quando não há próxima, marca a tarefa como `concluida`.
+
+Reaproveita `task_*` existentes? **Não** — as tabelas `tasks`, `task_fases`, `task_atividades` etc. já existem no schema mas seguem outro modelo (fases de projeto, não fluxo por tarefa). Para não brigar com o que já roda, uso o namespace `tarefas_*` novo. Depois de estabilizado avaliamos consolidar.
+
+### Frontend
+
+Rotas novas dentro do bloco PE&G no `V4Header`:
+
+- `/peg/tarefas` → `Tarefas.tsx` (Minhas tarefas — default)
+- `/peg/tarefas/squad` → `TarefasSquad.tsx`
+- `/peg/tarefas/nova` → `TarefaNovaDialog` (dialog, mesma URL com query)
+
+Componentes:
+
+- `src/pages/Tarefas.tsx` — Minhas tarefas com agrupamento por prazo.
+- `src/pages/TarefasSquad.tsx` — matriz pessoas × status, com carga e atrasos.
+- `src/components/tarefas/TarefaCard.tsx` — card com título, projeto, escopo (chip), etapa atual + responsável, prazo.
+- `src/components/tarefas/TarefaDetailSheet.tsx` — drawer com fluxo, checklist, comentários, anexos, atividade.
+- `src/components/tarefas/TarefaFluxoEditor.tsx` — editor da sequência de etapas (drag-and-drop `@dnd-kit`, já usado no projeto).
+- `src/components/tarefas/TarefaNovaDialog.tsx` — criação com opção "usar template" (lista `tarefa_fluxo_templates` do squad).
+- `src/hooks/useTarefas.ts`, `useTarefa.ts`, `useTarefaFluxoTemplates.ts`.
+
+Ações no drawer: **Concluir etapa atual** (com campo de observação), **Pular etapa**, **Reatribuir responsável**, **Bloquear/desbloquear**, **Cancelar tarefa**.
+
+### Menu
+
+Em `V4Header.tsx`, dentro do bloco **PE&G**, adiciona o submenu **Tarefas** apontando para `/peg/tarefas`. Remove qualquer referência ao eKyte no menu.
+
+### Limpeza eKyte
+
+- Deleta `src/components/accounts/AccountEkyteTasks.tsx` e o ponto de uso em `AccountDetail.tsx`.
+- Deleta `supabase/functions/sync-ekyte/`.
+- Migração: `DROP TABLE IF EXISTS public.ekyte_tasks CASCADE;` e correlatas.
+- Remove colunas de vínculo eKyte em `accounts` (ex.: `workspace_ekyte_id`) se existirem — confirmo por leitura antes de dropar.
+
+## Notas fora de escopo desta fase
+
+- Recorrência de tarefas, dependências entre tarefas e apontamento de horas ficam para uma v2.
+- Visão calendário/timeline fica para v2.
+- Notificações (in-app, e-mail) para "virou minha vez na etapa" ficam para v2 — na v1 aparece só na lista Minhas tarefas.

@@ -1,0 +1,198 @@
+import { useState } from "react";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
+import { useCreateTarefa, ESCOPO_LABEL, PRIORIDADE_LABEL, type TarefaEscopo, type TarefaPrioridade } from "@/hooks/useTarefas";
+import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
+import { useProjetos } from "@/hooks/useProjetos";
+import { useToast } from "@/hooks/use-toast";
+
+interface Props {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  projetoIdDefault?: string | null;
+}
+
+interface EtapaDraft {
+  nome: string;
+  funcao: string;
+  responsavel_id: string | null;
+  prazo: string;
+}
+
+export function NovaTarefaDialog({ open, onOpenChange, projetoIdDefault }: Props) {
+  const { profiles } = useProfilesList({});
+  const { data: projetos = [] } = useProjetos();
+  const create = useCreateTarefa();
+  const { toast } = useToast();
+
+  const [titulo, setTitulo] = useState("");
+  const [descricao, setDescricao] = useState("");
+  const [projetoId, setProjetoId] = useState<string>(projetoIdDefault ?? "");
+  const [escopo, setEscopo] = useState<TarefaEscopo | "">("");
+  const [prioridade, setPrioridade] = useState<TarefaPrioridade>("media");
+  const [prazoFinal, setPrazoFinal] = useState("");
+  const [etapas, setEtapas] = useState<EtapaDraft[]>([
+    { nome: "", funcao: "", responsavel_id: null, prazo: "" },
+  ]);
+
+  const reset = () => {
+    setTitulo(""); setDescricao(""); setProjetoId(projetoIdDefault ?? "");
+    setEscopo(""); setPrioridade("media"); setPrazoFinal("");
+    setEtapas([{ nome: "", funcao: "", responsavel_id: null, prazo: "" }]);
+  };
+
+  const move = (idx: number, dir: -1 | 1) => {
+    const next = [...etapas];
+    const to = idx + dir;
+    if (to < 0 || to >= next.length) return;
+    [next[idx], next[to]] = [next[to], next[idx]];
+    setEtapas(next);
+  };
+
+  const handleSave = async () => {
+    if (!titulo.trim()) return toast({ title: "Título obrigatório", variant: "destructive" });
+    const etapasValidas = etapas.filter((e) => e.nome.trim());
+    if (!etapasValidas.length) return toast({ title: "Adicione pelo menos uma etapa", variant: "destructive" });
+    try {
+      await create.mutateAsync({
+        titulo: titulo.trim(),
+        descricao: descricao || undefined,
+        projeto_id: projetoId || null,
+        escopo: escopo || null,
+        prioridade,
+        prazo_final: prazoFinal || null,
+        etapas: etapasValidas.map((e) => ({
+          nome: e.nome.trim(),
+          funcao: e.funcao || null,
+          responsavel_id: e.responsavel_id,
+          prazo: e.prazo || null,
+        })),
+      });
+      toast({ title: "Tarefa criada" });
+      reset();
+      onOpenChange(false);
+    } catch (e: any) {
+      toast({ title: "Erro ao criar", description: e.message, variant: "destructive" });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Nova tarefa</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label>Título</Label>
+            <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Criar campanha Meta Ads..." />
+          </div>
+          <div>
+            <Label>Descrição</Label>
+            <Textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={3} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Projeto</Label>
+              <Select value={projetoId || "none"} onValueChange={(v) => setProjetoId(v === "none" ? "" : v)}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem projeto</SelectItem>
+                  {projetos.map((p: any) => (
+                    <SelectItem key={p.id} value={p.id}>{p.nome || p.cliente_nome || "—"}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Escopo</Label>
+              <Select value={escopo || "none"} onValueChange={(v) => setEscopo(v === "none" ? "" : (v as TarefaEscopo))}>
+                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">—</SelectItem>
+                  {(Object.keys(ESCOPO_LABEL) as TarefaEscopo[]).map((k) => (
+                    <SelectItem key={k} value={k}>{ESCOPO_LABEL[k]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Prioridade</Label>
+              <Select value={prioridade} onValueChange={(v) => setPrioridade(v as TarefaPrioridade)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(PRIORIDADE_LABEL) as TarefaPrioridade[]).map((k) => (
+                    <SelectItem key={k} value={k}>{PRIORIDADE_LABEL[k]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Prazo final</Label>
+              <Input type="date" value={prazoFinal} onChange={(e) => setPrazoFinal(e.target.value)} />
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border/40 bg-background/40 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold">Fluxo de etapas</h3>
+              <Button size="sm" variant="ghost" onClick={() =>
+                setEtapas([...etapas, { nome: "", funcao: "", responsavel_id: null, prazo: "" }])
+              }>
+                <Plus className="h-4 w-4 mr-1" /> Etapa
+              </Button>
+            </div>
+            {etapas.map((e, idx) => (
+              <div key={idx} className="rounded-md border border-border/50 p-3 space-y-2 relative">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground font-semibold">#{idx + 1}</span>
+                  <Input placeholder="Nome da etapa" value={e.nome} onChange={(ev) => {
+                    const n = [...etapas]; n[idx].nome = ev.target.value; setEtapas(n);
+                  }} className="flex-1" />
+                  <Button size="icon" variant="ghost" onClick={() => move(idx, -1)} disabled={idx === 0}>
+                    <ArrowUp className="h-4 w-4" />
+                  </Button>
+                  <Button size="icon" variant="ghost" onClick={() => move(idx, 1)} disabled={idx === etapas.length - 1}>
+                    <ArrowDown className="h-4 w-4" />
+                  </Button>
+                  <Button size="icon" variant="ghost" onClick={() => setEtapas(etapas.filter((_, i) => i !== idx))} disabled={etapas.length === 1}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <Input placeholder="Função (ex: Designer)" value={e.funcao} onChange={(ev) => {
+                    const n = [...etapas]; n[idx].funcao = ev.target.value; setEtapas(n);
+                  }} />
+                  <Select value={e.responsavel_id ?? "none"} onValueChange={(v) => {
+                    const n = [...etapas]; n[idx].responsavel_id = v === "none" ? null : v; setEtapas(n);
+                  }}>
+                    <SelectTrigger><SelectValue placeholder="Responsável" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem responsável</SelectItem>
+                      {profiles.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>{profileLabel(p)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input type="date" value={e.prazo} onChange={(ev) => {
+                    const n = [...etapas]; n[idx].prazo = ev.target.value; setEtapas(n);
+                  }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={handleSave} disabled={create.isPending}>Criar tarefa</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
