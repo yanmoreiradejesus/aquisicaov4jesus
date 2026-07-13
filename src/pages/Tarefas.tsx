@@ -36,12 +36,15 @@ export default function Tarefas() {
   const [tab, setTab] = useState<"minhas" | "todas">("minhas");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<TarefaStatus | "all">("all");
-  const [escopoFilter, setEscopoFilter] = useState<TarefaEscopo | "all">("all");
+  const [projetoFilter, setProjetoFilter] = useState<string>("all");
+  const [executorFilter, setExecutorFilter] = useState<string>("all");
 
   const { data: tarefas = [], isLoading } = useTarefas({
-    responsavelId: tab === "minhas" ? user?.id : undefined,
+    responsavelId: tab === "minhas" ? user?.id : (executorFilter !== "all" ? executorFilter : undefined),
+    projetoId: projetoFilter !== "all" ? projetoFilter : undefined,
   });
   const { profiles } = useProfilesList({});
+  const { data: projetos = [] } = useProjetos();
   const nameById = useMemo(() => {
     const m = new Map<string, string>();
     profiles.forEach((p) => m.set(p.id, profileLabel(p)));
