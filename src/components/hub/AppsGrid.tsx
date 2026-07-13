@@ -177,38 +177,36 @@ export function AppsGrid({ compact = false }: AppsGridProps) {
                   </h3>
                 </Link>
 
-                {/* Description — fades out on hover */}
-                <p
-                  className={`text-sm text-muted-foreground transition-all duration-300 ${
-                    hasItems ? "group-hover:opacity-0 group-hover:-translate-y-1" : ""
-                  }`}
-                >
-                  {app.description}
-                </p>
-
-                {/* Submenu — slides up on hover */}
-                {hasItems && (
-                  <ul
-                    className="absolute inset-x-0 top-full mt-[-1.25rem] pointer-events-none opacity-0 translate-y-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto"
-                    aria-hidden="true"
+                {/* Description ↔ submenu swap zone */}
+                <div className="relative min-h-[6.5rem]">
+                  <p
+                    className={`absolute inset-x-0 top-0 text-sm text-muted-foreground transition-all duration-300 ${
+                      hasItems ? "group-hover:opacity-0 group-hover:-translate-y-1" : ""
+                    }`}
                   >
-                    {app.visibleItems.map((it, i) => (
-                      <li
-                        key={it.path}
-                        style={{ transitionDelay: `${80 + i * 40}ms` }}
-                        className="opacity-0 -translate-x-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0"
-                      >
-                        <Link
-                          to={it.path}
-                          className="group/item flex items-center justify-between border-b border-border/40 py-1.5 text-sm text-foreground/85 hover:text-primary hover:border-primary/60 hover:pl-1 transition-all duration-200"
+                    {app.description}
+                  </p>
+
+                  {hasItems && (
+                    <ul className="absolute inset-x-0 top-0 pointer-events-none opacity-0 translate-y-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto">
+                      {app.visibleItems.map((it, i) => (
+                        <li
+                          key={it.path}
+                          style={{ transitionDelay: `${80 + i * 40}ms` }}
+                          className="opacity-0 -translate-x-2 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0"
                         >
-                          <span className="font-medium tracking-tight">{it.label}</span>
-                          <ArrowRight className="h-3.5 w-3.5 opacity-0 -translate-x-1 transition-all duration-200 group-hover/item:opacity-100 group-hover/item:translate-x-0" />
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                          <Link
+                            to={it.path}
+                            className="group/item flex items-center justify-between border-b border-border/40 py-1.5 text-sm text-foreground/85 hover:text-primary hover:border-primary/60 hover:pl-1 transition-all duration-200"
+                          >
+                            <span className="font-medium tracking-tight">{it.label}</span>
+                            <ArrowRight className="h-3.5 w-3.5 opacity-0 -translate-x-1 transition-all duration-200 group-hover/item:opacity-100 group-hover/item:translate-x-0" />
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
             </article>
           );
