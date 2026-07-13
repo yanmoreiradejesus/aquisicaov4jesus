@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
-import { useCreateTarefa, ESCOPO_LABEL, PRIORIDADE_LABEL, type TarefaEscopo, type TarefaPrioridade } from "@/hooks/useTarefas";
+import { useCreateTarefa, PRIORIDADE_LABEL, type TarefaPrioridade } from "@/hooks/useTarefas";
 import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
 import { useProjetos } from "@/hooks/useProjetos";
 import { useToast } from "@/hooks/use-toast";
