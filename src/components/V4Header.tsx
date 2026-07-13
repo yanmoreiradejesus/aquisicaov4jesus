@@ -51,6 +51,8 @@ const V4Header = () => {
     { path: "/comercial/accounts", label: "Accounts" },
     { path: "/comercial/projetos", label: "Database" },
     { path: "/comercial/projetos/cadastro", label: "Cadastro" },
+    { path: "/peg/tarefas", label: "Tarefas" },
+    { path: "/peg/tarefas/squad", label: "Squad view" },
   ];
 
   const adminMenuItems = [
