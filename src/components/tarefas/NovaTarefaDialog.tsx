@@ -133,16 +133,8 @@ export function NovaTarefaDialog({ open, onOpenChange, projetoIdDefault }: Props
               </Select>
             </div>
             <div>
-              <Label>Escopo</Label>
-              <Select value={escopo || "none"} onValueChange={(v) => setEscopo(v === "none" ? "" : (v as TarefaEscopo))}>
-                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">—</SelectItem>
-                  {(Object.keys(ESCOPO_LABEL) as TarefaEscopo[]).map((k) => (
-                    <SelectItem key={k} value={k}>{ESCOPO_LABEL[k]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Prazo final</Label>
+              <Input type="date" value={prazoFinal} onChange={(e) => setPrazoFinal(e.target.value)} />
             </div>
             <div>
               <Label>Prioridade</Label>
