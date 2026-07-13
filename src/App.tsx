@@ -202,6 +202,19 @@ const AppRoutes = () => {
           </ProtectedRoute>
         } />
 
+        {/* PE&G Tarefas */}
+        <Route path="/peg/tarefas" element={
+          <ProtectedRoute requiredPath="/peg/tarefas">
+            <PageTransition><Tarefas /></PageTransition>
+          </ProtectedRoute>
+        } />
+        <Route path="/peg/tarefas/squad" element={
+          <ProtectedRoute requiredPath="/peg/tarefas">
+            <PageTransition><TarefasSquad /></PageTransition>
+          </ProtectedRoute>
+        } />
+
+
         {/* Admin */}
         <Route path="/admin" element={
           <ProtectedRoute>
