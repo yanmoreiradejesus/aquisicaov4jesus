@@ -21,7 +21,7 @@ interface EtapaDraft {
   nome: string;
   funcao: string;
   responsavel_id: string | null;
-  prazo: string;
+  dias: string;
 }
 
 export function NovaTarefaDialog({ open, onOpenChange, projetoIdDefault }: Props) {
@@ -33,17 +33,25 @@ export function NovaTarefaDialog({ open, onOpenChange, projetoIdDefault }: Props
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
   const [projetoId, setProjetoId] = useState<string>(projetoIdDefault ?? "");
-  const [escopo, setEscopo] = useState<TarefaEscopo | "">("");
   const [prioridade, setPrioridade] = useState<TarefaPrioridade>("media");
   const [prazoFinal, setPrazoFinal] = useState("");
   const [etapas, setEtapas] = useState<EtapaDraft[]>([
-    { nome: "", funcao: "", responsavel_id: null, prazo: "" },
+    { nome: "", funcao: "", responsavel_id: null, dias: "" },
   ]);
+
+  // Delta em dias entre hoje e o prazo final (referência para distribuir dias por etapa)
+  const deltaDias = (() => {
+    if (!prazoFinal) return null;
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    const fim = new Date(prazoFinal + "T00:00:00");
+    return Math.max(0, Math.round((fim.getTime() - hoje.getTime()) / 86400000));
+  })();
+  const somaDias = etapas.reduce((s, e) => s + (Number(e.dias) || 0), 0);
 
   const reset = () => {
     setTitulo(""); setDescricao(""); setProjetoId(projetoIdDefault ?? "");
-    setEscopo(""); setPrioridade("media"); setPrazoFinal("");
-    setEtapas([{ nome: "", funcao: "", responsavel_id: null, prazo: "" }]);
+    setPrioridade("media"); setPrazoFinal("");
+    setEtapas([{ nome: "", funcao: "", responsavel_id: null, dias: "" }]);
   };
 
   const move = (idx: number, dir: -1 | 1) => {
@@ -54,24 +62,38 @@ export function NovaTarefaDialog({ open, onOpenChange, projetoIdDefault }: Props
     setEtapas(next);
   };
 
+  // Converte "dias" cumulativos em uma data ISO (yyyy-mm-dd) a partir de hoje
+  const dataFromDias = (cumDias: number): string | null => {
+    if (!cumDias || cumDias <= 0) return null;
+    const d = new Date(); d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + cumDias);
+    return d.toISOString().slice(0, 10);
+  };
+
   const handleSave = async () => {
     if (!titulo.trim()) return toast({ title: "Título obrigatório", variant: "destructive" });
     const etapasValidas = etapas.filter((e) => e.nome.trim());
     if (!etapasValidas.length) return toast({ title: "Adicione pelo menos uma etapa", variant: "destructive" });
+    let cum = 0;
+    const etapasPayload = etapasValidas.map((e) => {
+      const dias = Number(e.dias) || 0;
+      cum += dias;
+      return {
+        nome: e.nome.trim(),
+        funcao: e.funcao || null,
+        responsavel_id: e.responsavel_id,
+        prazo: dias > 0 ? dataFromDias(cum) : null,
+      };
+    });
     try {
       await create.mutateAsync({
         titulo: titulo.trim(),
         descricao: descricao || undefined,
         projeto_id: projetoId || null,
-        escopo: escopo || null,
+        escopo: null,
         prioridade,
         prazo_final: prazoFinal || null,
-        etapas: etapasValidas.map((e) => ({
-          nome: e.nome.trim(),
-          funcao: e.funcao || null,
-          responsavel_id: e.responsavel_id,
-          prazo: e.prazo || null,
-        })),
+        etapas: etapasPayload,
       });
       toast({ title: "Tarefa criada" });
       reset();
