@@ -133,10 +133,6 @@ export function NovaTarefaDialog({ open, onOpenChange, projetoIdDefault }: Props
               </Select>
             </div>
             <div>
-              <Label>Prazo final</Label>
-              <Input type="date" value={prazoFinal} onChange={(e) => setPrazoFinal(e.target.value)} />
-            </div>
-            <div>
               <Label>Prioridade</Label>
               <Select value={prioridade} onValueChange={(v) => setPrioridade(v as TarefaPrioridade)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -147,9 +143,14 @@ export function NovaTarefaDialog({ open, onOpenChange, projetoIdDefault }: Props
                 </SelectContent>
               </Select>
             </div>
-            <div>
+            <div className="col-span-2">
               <Label>Prazo final</Label>
               <Input type="date" value={prazoFinal} onChange={(e) => setPrazoFinal(e.target.value)} />
+              {deltaDias !== null && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  {deltaDias} dia(s) entre hoje e o prazo final · distribuído nas etapas: {somaDias} dia(s)
+                </p>
+              )}
             </div>
           </div>
 
