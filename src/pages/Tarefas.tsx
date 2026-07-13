@@ -53,7 +53,6 @@ export default function Tarefas() {
 
   const filtered = tarefas.filter((t) => {
     if (statusFilter !== "all" && t.status !== statusFilter) return false;
-    if (escopoFilter !== "all" && t.escopo !== escopoFilter) return false;
     if (search && !t.titulo.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
