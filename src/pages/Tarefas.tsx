@@ -8,8 +8,9 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { NovaTarefaDialog } from "@/components/tarefas/NovaTarefaDialog";
 import { TarefaDetailSheet } from "@/components/tarefas/TarefaDetailSheet";
-import { useTarefas, STATUS_LABEL, ESCOPO_LABEL, PRIORIDADE_LABEL, type TarefaStatus, type TarefaEscopo } from "@/hooks/useTarefas";
+import { useTarefas, STATUS_LABEL, ESCOPO_LABEL, PRIORIDADE_LABEL, type TarefaStatus } from "@/hooks/useTarefas";
 import { useProfilesList, profileLabel } from "@/hooks/useProfilesList";
+import { useProjetos } from "@/hooks/useProjetos";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 
@@ -35,12 +36,15 @@ export default function Tarefas() {
   const [tab, setTab] = useState<"minhas" | "todas">("minhas");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<TarefaStatus | "all">("all");
-  const [escopoFilter, setEscopoFilter] = useState<TarefaEscopo | "all">("all");
+  const [projetoFilter, setProjetoFilter] = useState<string>("all");
+  const [executorFilter, setExecutorFilter] = useState<string>("all");
 
   const { data: tarefas = [], isLoading } = useTarefas({
-    responsavelId: tab === "minhas" ? user?.id : undefined,
+    responsavelId: tab === "minhas" ? user?.id : (executorFilter !== "all" ? executorFilter : undefined),
+    projetoId: projetoFilter !== "all" ? projetoFilter : undefined,
   });
   const { profiles } = useProfilesList({});
+  const { data: projetos = [] } = useProjetos();
   const nameById = useMemo(() => {
     const m = new Map<string, string>();
     profiles.forEach((p) => m.set(p.id, profileLabel(p)));
@@ -49,7 +53,6 @@ export default function Tarefas() {
 
   const filtered = tarefas.filter((t) => {
     if (statusFilter !== "all" && t.status !== statusFilter) return false;
-    if (escopoFilter !== "all" && t.escopo !== escopoFilter) return false;
     if (search && !t.titulo.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
@@ -102,15 +105,26 @@ export default function Tarefas() {
               ))}
             </SelectContent>
           </Select>
-          <Select value={escopoFilter} onValueChange={(v) => setEscopoFilter(v as any)}>
-            <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+          <Select value={projetoFilter} onValueChange={setProjetoFilter}>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Projeto" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos escopos</SelectItem>
-              {(Object.keys(ESCOPO_LABEL) as TarefaEscopo[]).map((k) => (
-                <SelectItem key={k} value={k}>{ESCOPO_LABEL[k]}</SelectItem>
+              <SelectItem value="all">Todos projetos</SelectItem>
+              {projetos.map((p: any) => (
+                <SelectItem key={p.id} value={p.id}>{p.nome || p.account?.cliente_nome || "—"}</SelectItem>
               ))}
             </SelectContent>
           </Select>
+          {tab === "todas" && (
+            <Select value={executorFilter} onValueChange={setExecutorFilter}>
+              <SelectTrigger className="w-[180px]"><SelectValue placeholder="Executor" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos executores</SelectItem>
+                {profiles.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{profileLabel(p)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         {isLoading ? (
